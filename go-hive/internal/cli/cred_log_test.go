@@ -24,6 +24,11 @@ func TestCredLogFileMatchesPythonLineFormat(t *testing.T) {
 	t.Setenv("HIVE_HOME", t.TempDir())
 	logPath := filepath.Join(t.TempDir(), "cred.log")
 	t.Setenv("HIVE_CRED_LOG", logPath)
+	// The warning below is only emitted when the store mints a key. Pin that
+	// premise: a value exported by the developer's shell or leaked by an
+	// earlier test in the same binary (-count=2 / -shuffle) would silently take
+	// the reusable-key branch and leave the log empty.
+	unsetEnvVar(t, credentials.CredentialKeyEnvVar)
 	previous := log.Writer()
 	t.Cleanup(func() {
 		credentials.SetLogSink(nil)

@@ -188,6 +188,22 @@ def check_surface_audit(strict: bool):
     return code == 0, evidence + "；报告模式"
 
 
+def check_integrations_evidence():
+    """C9：证据审计锚点（file 存在 + 行号在范围内 + 行内含预期 token）。
+
+    go_hive/scripts/check_integrations_evidence.py 自带锚点登记表（P2 拆包
+    漂移过的 GA/GSC/GW/freshdesk 四处 auth 证据），要求 JSON 证据串与登记表
+    一致；拆分/改名再漂移即 FAIL，--fix 只提示候选位置。
+    """
+    script = ROOT / "go_hive/scripts/check_integrations_evidence.py"
+    if not script.exists():
+        return False, f"缺脚本：{script}"
+    code, out = run([sys.executable, str(script), "--root", str(ROOT)], cwd=ROOT, timeout=60)
+    lines = [ln.strip() for ln in out.strip().splitlines() if ln.strip()]
+    summary = lines[-1] if lines else f"exit={code}"
+    return code == 0, summary[:200]
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--full", action="store_true")
@@ -263,6 +279,10 @@ def main():
     surface_ok, surface_ev = check_surface_audit(strict_surface)
     label = "C8 表面审计（强制）" if strict_surface else "C8 表面审计（报告）"
     checks.append((label, surface_ok, surface_ev))
+
+    # C9 证据审计锚点（integrations-evidence-audit.json）
+    evidence_ok, evidence_ev = check_integrations_evidence()
+    checks.append(("C9 证据审计锚点", evidence_ok, evidence_ev))
 
     if args.full:
         code, out = run(["make", "ci"], timeout=900)

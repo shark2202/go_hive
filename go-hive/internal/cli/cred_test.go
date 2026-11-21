@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"log"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -121,6 +122,18 @@ func (a *fakeCredAdapter) GetAllAccountInfo() []map[string]any { return a.accoun
 
 func runCred(t *testing.T, argv ...string) (int, string, string) {
 	t.Helper()
+	// CredRunner.Run calls setupCredLogging, which installs process-global log
+	// wiring (credentials.SetLogSink + log.SetOutput/SetFlags). Give each test
+	// its own sink file and restore the globals on cleanup so an ambient
+	// HIVE_CRED_LOG or a previous test's wiring cannot bleed into this one or
+	// into later tests in the same binary.
+	t.Setenv("HIVE_CRED_LOG", filepath.Join(t.TempDir(), "cred.log"))
+	previousWriter, previousFlags := log.Writer(), log.Flags()
+	t.Cleanup(func() {
+		credentials.SetLogSink(nil)
+		log.SetOutput(previousWriter)
+		log.SetFlags(previousFlags)
+	})
 	var stdout, stderr bytes.Buffer
 	runner := &CredRunner{Stdout: &stdout, Stderr: &stderr}
 	code := runner.Run(argv)

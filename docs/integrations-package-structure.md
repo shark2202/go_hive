@@ -173,12 +173,14 @@ internal/tools/
 | --- | --- | --- |
 | lane 前缀预算 | `internal/quality/lane_prefix_test.go` + `lane_prefix_waiver.json` | 1908（brief 标称）→ 1906（冻结实测）→ 1902（excel 迁出后）→ 1818（devops 迁出后）→ 1357→1265（helpers+ai/social）→ 1172（三 lane）→ 1089→1014（infra/cloudflare）→ 957（webintel）→ **876**（八领域全部迁出后实测）；只减不增 |
 | 行为冻结 | `make refactor-freeze`（compare wave15-base） | 契约文件 sha256 不变；不进 ci，重构 lane 必跑 |
+| 证据审计锚点 | `go_hive/scripts/check_integrations_evidence.py`（qc C9） | `integrations-evidence-audit.json` 的 GA/GSC/GW/freshdesk 四处 auth 证据逐条校验：file 存在、line 在范围内、行内含预期 token（`googleJWT` / `GOOGLE_SEARCH_CONSOLE_TOKEN` / `Bearer` / `basicAuth`）；JSON 证据串必须与锚点登记表一致，拆分/改名再漂移即 FAIL；P2 拆包后已刷新（GA 96→94、72→70；GSC 623→127；GW 192→223；freshdesk 285 复核不变） |
 
 本地验证：
 ```
 cd go_hive/go-hive
 CGO_ENABLED=0 GOPROXY=off GOSUMDB=off GOFLAGS=-mod=mod go build ./...
 CGO_ENABLED=0 GOPROXY=off GOSUMDB=off GOFLAGS=-mod=mod go test -count=1 ./internal/tools/... ./internal/quality
+uv run python ../scripts/check_integrations_evidence.py   # 证据锚点（--fix 只提示候选行）
 make refactor-freeze
 make cross && make arch-check
 ```

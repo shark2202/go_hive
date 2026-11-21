@@ -772,7 +772,7 @@
         "kind": "bearer",
         "detail": "Authorization: Bearer <GOOGLE_ACCESS_TOKEN>",
         "oauth": "static_token",
-        "evidence": "google_workspace.go:192"
+        "evidence": "google_workspace.go:223"
       },
       "oauth_refresh": true,
       "pagination": {
@@ -1868,7 +1868,7 @@
         "kind": "bearer",
         "detail": "Authorization: Bearer <GOOGLE_ACCESS_TOKEN>",
         "oauth": "static_token",
-        "evidence": "google_workspace.go:192"
+        "evidence": "google_workspace.go:223"
       },
       "oauth_refresh": true,
       "pagination": {
@@ -1949,7 +1949,7 @@
         "kind": "bearer",
         "detail": "Bearer <GA_ACCESS_TOKEN|GOOGLE_ACCESS_TOKEN>，或 SA JWT 换 token",
         "oauth": "service_account_mint",
-        "evidence": "marketing_productivity.go:72 + google_analytics.go:96"
+        "evidence": "marketing_productivity.go:70 + google_analytics.go:94"
       },
       "oauth_refresh": false,
       "pagination": {
@@ -2010,7 +2010,7 @@
         "kind": "bearer",
         "detail": "Authorization: Bearer <GOOGLE_ACCESS_TOKEN>",
         "oauth": "static_token",
-        "evidence": "google_workspace.go:192"
+        "evidence": "google_workspace.go:223"
       },
       "oauth_refresh": true,
       "pagination": {
@@ -2142,7 +2142,7 @@
         "kind": "bearer",
         "detail": "Bearer <GOOGLE_SEARCH_CONSOLE_TOKEN|GOOGLE_ACCESS_TOKEN>，或 SA JWT",
         "oauth": "service_account_mint",
-        "evidence": "google_analytics.go:623-654"
+        "evidence": "google_analytics_search_console.go:127"
       },
       "oauth_refresh": false,
       "pagination": {
@@ -2201,7 +2201,7 @@
         "kind": "bearer",
         "detail": "Authorization: Bearer <GOOGLE_ACCESS_TOKEN>",
         "oauth": "static_token",
-        "evidence": "google_workspace.go:192"
+        "evidence": "google_workspace.go:223"
       },
       "oauth_refresh": true,
       "pagination": {

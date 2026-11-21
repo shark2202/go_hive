@@ -1,0 +1,216 @@
+{
+  "collision_cross_server": [
+    {
+      "server": "a-b",
+      "registered_count": 4,
+      "server_tools": [
+        "echo_text",
+        "tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "x-y",
+        "x_y"
+      ],
+      "registry_names": [
+        "echo_text",
+        "tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "x-y",
+        "x_y"
+      ]
+    },
+    {
+      "server": "a_b",
+      "registered_count": 1,
+      "server_tools": [
+        "only_b"
+      ],
+      "registry_names": [
+        "echo_text",
+        "only_b",
+        "tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "x-y",
+        "x_y"
+      ]
+    }
+  ],
+  "collision_tool_names_in_one_server": {
+    "x-y_registered": true,
+    "x_y_registered": true,
+    "both_servers_have_echo_text": [
+      [
+        "echo_text",
+        "tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
+        "x-y",
+        "x_y"
+      ],
+      [
+        "only_b"
+      ]
+    ]
+  },
+  "collision_call_x_y": {
+    "content": "a-b:x_y",
+    "is_error": false,
+    "image_content": null
+  },
+  "collision_call_echo_text_preserve_false": {
+    "content": "a_b:echo_text",
+    "is_error": false,
+    "image_content": null
+  },
+  "collision_calls_seen_preserve_false": [
+    [
+      "a_b",
+      "echo_text"
+    ]
+  ],
+  "long_name": {
+    "registered_key": "tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
+    "registered_len": 70,
+    "clean_tool_name_70": "tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
+    "clean_tool_name_70_len": 64,
+    "clean_tool_name_space_slash": "my_tool_name",
+    "clean_tool_name_lead_digit": "_9lives",
+    "clean_tool_name_hyphen": "a-b",
+    "clean_tool_name_128": "uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu"
+  },
+  "split": {
+    "two_texts": {
+      "text": "hello\nworld",
+      "images": []
+    },
+    "text_image": {
+      "text": "alt",
+      "images": [
+        {
+          "type": "image_url",
+          "image_url": {
+            "url": "data:image/png;base64,AAA"
+          }
+        }
+      ]
+    },
+    "text_pdf_meta": {
+      "text": "",
+      "images": [
+        {
+          "type": "file",
+          "file": {
+            "file_data": "data:application/pdf;base64,JVBE",
+            "filename": "q3.pdf"
+          }
+        }
+      ]
+    },
+    "pdf_upper_mime": {
+      "text": "",
+      "images": [
+        {
+          "type": "file",
+          "file": {
+            "file_data": "data:application/pdf;base64,JVBE",
+            "filename": "document.pdf"
+          }
+        }
+      ]
+    },
+    "empty_mime": {
+      "text": "",
+      "images": [
+        {
+          "type": "image_url",
+          "image_url": {
+            "url": "data:;base64,AAA"
+          }
+        }
+      ]
+    },
+    "null_mime": {
+      "text": "",
+      "images": [
+        {
+          "type": "image_url",
+          "image_url": {
+            "url": "data:None;base64,AAA"
+          }
+        }
+      ]
+    },
+    "data_only": {
+      "text": "raw-blob",
+      "images": []
+    },
+    "data_only_bytes": {
+      "text": "b'bytes-blob'",
+      "images": []
+    },
+    "resource_link_only": {
+      "text": "",
+      "images": []
+    },
+    "unknown_object": {
+      "text": "",
+      "images": []
+    },
+    "mixed_all": {
+      "text": "a\nb",
+      "images": [
+        {
+          "type": "image_url",
+          "image_url": {
+            "url": "data:image/jpeg;base64,img1"
+          }
+        },
+        {
+          "type": "file",
+          "file": {
+            "file_data": "data:application/pdf;base64,pdf1",
+            "filename": "document.pdf"
+          }
+        }
+      ]
+    }
+  },
+  "model_visible": {
+    "stdio-like": {
+      "content": "a\nb",
+      "is_error": false,
+      "image_content": null
+    },
+    "stdio-image": {
+      "content": "caption",
+      "is_error": false,
+      "image_content": [
+        {
+          "type": "image_url",
+          "image_url": {
+            "url": "data:image/png;base64,AAA"
+          }
+        }
+      ]
+    },
+    "http-like": {
+      "content": "a",
+      "is_error": false,
+      "image_content": null
+    },
+    "http-image": {
+      "content": "caption",
+      "is_error": false,
+      "image_content": null
+    },
+    "http-image-first": {
+      "content": "{\"type\": \"image\", \"data\": \"AAA\", \"mimeType\": \"image/png\"}",
+      "is_error": false,
+      "image_content": null
+    },
+    "http-empty": {
+      "content": "[]",
+      "is_error": false,
+      "image_content": null
+    },
+    "http-none": {
+      "content": "null",
+      "is_error": false,
+      "image_content": null
+    }
+  }
+}

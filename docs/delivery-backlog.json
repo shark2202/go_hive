@@ -290,22 +290,29 @@
     "id": "cli-log-global-count2",
     "label": "cli 包 -count=2 压力模式下 cred log 与 serve log 全局状态互染（CI -count=1 不受影响）：setupCredLogging 的 log.SetOutput(file) 与 installRuntimeLogBuffer 的 TimestampWriter 全局重定向在二次迭代时串味",
     "hours": 2,
-    "done": false,
-    "note": "2026-11-22 观察：go test -count=2 ./internal/cli/ 时 TestCredLogFileMatchesPythonLineFormat 偶发读到其它用例的 serve-log 探针行；-count=1 全包 5 轮全绿，CI 用 -count=1，不阻塞；修法方向=日志输出按 test 作用域隔离（或该测试改用独立 sink 断言）。"
+    "done": true,
+    "note": "2026-11-22 观察：go test -count=2 ./internal/cli/ 时 TestCredLogFileMatchesPythonLineFormat 偶发读到其它用例的 serve-log 探针行；-count=1 全包 5 轮全绿，CI 用 -count=1，不阻塞；修法方向=日志输出按 test 作用域隔离（或该测试改用独立 sink 断言）。 | DONE：根因=夹具未钉 HIVE_HOME，进程级 os.Setenv(HIVE_CREDENTIAL_KEY) 泄漏（17 个命中点）；修 4 个测试文件（tempdir helper/生命周期夹具/cred log 独立），-count=2 -shuffle=on ×4 轮全绿。"
    },
    {
     "id": "server-relay-flake",
     "label": "server 包 TestChatRuntimeRelaysClientMessageToOverseer 偶发失败（1/3）：中继顺序断言，pristine 45aa262e 上可复现",
     "hours": 2,
-    "done": false,
-    "note": "2026-11-22 观察（int-p2-mid lane 主席）：失败签名与 docs/judge-parity.md §6 登记一致；修法方向=等中继落定再断言（与 EventBus 异步派发同类）。"
+    "done": true,
+    "note": "2026-11-22 观察（int-p2-mid lane 主席）：失败签名与 docs/judge-parity.md §6 登记一致；修法方向=等中继落定再断言（与 EventBus 异步派发同类）。 | DONE：分类=测试时序（队列先中继后记录，Close 前缺有界等待）；改为等 execution_completed 边界再断言，-count=300 ×2 共 610 连跑 0 失败；产品零改动。"
    },
    {
     "id": "integrations-evidence-audit-anchors",
     "label": "docs/integrations-evidence-audit.json 四处 file:line 锚点漂移（GA 96/623、GW 192、freshdesk 285）",
     "hours": 1,
-    "done": false,
-    "note": "无门禁校验该文件；随文件拆分/改名刷新锚点或加 --check。"
+    "done": true,
+    "note": "无门禁校验该文件；随文件拆分/改名刷新锚点或加 --check。 | DONE：4 处锚点修复（GA/GSC/GW/freshdesk）+ 新门禁 check_integrations_evidence.py（qc C9），QC 8/8→9/9。"
+   },
+   {
+    "id": "mcp-ns-residuals-registered",
+    "label": "MCP 命名空间残余三组已用 Python 参考实跑对照并登记（R1 折叠不可逆/R2 >64 无截断/R3 序列化与畸形载荷）",
+    "hours": 3,
+    "done": true,
+    "note": "DONE 2026-11-22：13 用例冻结（mcp_namespace_parity_test.go）+ docs/mcp-namespace-residuals.md；折叠字符集属冻结契约不修，长名上限双侧缺位。"
    }
   ]
  }

@@ -55,6 +55,12 @@ func newLifecycleFixture(t *testing.T) *lifecycleFixture {
 	if err != nil {
 		t.Fatalf("resolve home: %v", err)
 	}
+	// The session credential adapter resolves the persisted encryption key
+	// through LoadCredentialKey, which reads HIVE_HOME from the process env and
+	// exports HIVE_CREDENTIAL_KEY when it finds the file. Pin the env to this
+	// fixture's fresh home so the lookup cannot read (and leak) the developer's
+	// or another test's key.
+	t.Setenv("HIVE_HOME", home.Root)
 	manager := hiveserver.NewSessionManager()
 	var liveMu sync.Mutex
 	live := make([]*hiveserver.Session, 0)

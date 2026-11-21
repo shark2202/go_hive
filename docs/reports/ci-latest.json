@@ -1,9 +1,9 @@
 {
- "wave": 40,
- "at": "2026-11-22 06:01",
- "head": "df2baca3",
- "ci": 2,
+ "wave": 41,
+ "at": "2026-11-22 06:27",
+ "head": "ede15082",
+ "ci": 0,
  "qc": 0,
  "publish": 0,
- "note": "P2 收尾（pdf+包内拆分+waivers 清零）后"
+ "note": "charts teardown 产物接受后"
 }

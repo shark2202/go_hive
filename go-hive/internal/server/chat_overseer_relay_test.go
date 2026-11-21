@@ -74,8 +74,10 @@ func TestChatRuntimeRelaysClientMessageToOverseer(t *testing.T) {
 	chatRuntime.BindColony(colonyHostStub{runtime: colonyRuntime})
 
 	var (
-		mu     sync.Mutex
-		deltas []relayedDelta
+		mu             sync.Mutex
+		deltas         []relayedDelta
+		answerDeltaSeq int
+		answerTurnDone bool
 	)
 	subscription := sessionBus.Subscribe([]eventbus.EventType{eventbus.EventClientOutputDelta}, func(event *eventbus.AgentEvent) {
 		if event == nil || event.Data == nil {
@@ -85,9 +87,30 @@ func TestChatRuntimeRelaysClientMessageToOverseer(t *testing.T) {
 		relayed, _ := event.Data["relayed_from"].(string)
 		mu.Lock()
 		deltas = append(deltas, relayedDelta{stream: event.StreamID, relayedFrom: relayed, snapshot: snapshot, eventType: event.Type})
+		if event.StreamID == chatStreamID && relayed == overseerStreamID && strings.Contains(snapshot, "north field is clear") {
+			answerDeltaSeq = event.Seq
+		}
 		mu.Unlock()
 	})
 	t.Cleanup(func() { sessionBus.Unsubscribe(subscription) })
+	// The bridge enqueues the record-only assistant turn for the overseer's
+	// reply before it publishes the mirrored turn completion, so a completion
+	// on the queen stream after the answer delta proves the reply is on the
+	// runtime's queue.
+	completed := sessionBus.Subscribe([]eventbus.EventType{eventbus.EventExecutionCompleted}, func(event *eventbus.AgentEvent) {
+		if event == nil || event.Data == nil {
+			return
+		}
+		if relayed, _ := event.Data["relayed_from"].(string); relayed != overseerStreamID {
+			return
+		}
+		mu.Lock()
+		defer mu.Unlock()
+		if answerDeltaSeq != 0 && event.Seq > answerDeltaSeq {
+			answerTurnDone = true
+		}
+	})
+	t.Cleanup(func() { sessionBus.Unsubscribe(completed) })
 
 	question := "what is the state of the north field?"
 	if err := chatRuntime.Deliver(question); err != nil {
@@ -118,6 +141,17 @@ func TestChatRuntimeRelaysClientMessageToOverseer(t *testing.T) {
 		t.Fatalf("session-bus deltas = %#v, want the overseer reply on the queen stream", deltas)
 	}
 
+	// The reply mirror rides the runtime's queue: wait (bounded) for the
+	// overseer turn to complete after its answer delta so Close() flushes the
+	// queued assistant record instead of racing its enqueue.
+	if !waitForServerCondition(2*time.Second, func() bool {
+		mu.Lock()
+		defer mu.Unlock()
+		return answerTurnDone
+	}) {
+		t.Fatal("the overseer turn never completed on the session bus")
+	}
+
 	// The user turn is recorded in the session transcript, client-input tagged,
 	// so a reload still shows what was asked. Close first: the transcript has a
 	// single writer (the runtime's queue goroutine).
@@ -125,12 +159,24 @@ func TestChatRuntimeRelaysClientMessageToOverseer(t *testing.T) {
 		t.Fatalf("Close: %v", err)
 	}
 	messages := chatRuntime.conv.Messages()
-	if len(messages) == 0 {
-		t.Fatal("relayed user turn was not recorded in the session transcript")
+	// The ask and the mirrored reply are two independent transcript records
+	// with no fixed queue order (the relay reaches the overseer before the ask
+	// is queued, so the reply can even be recorded first), so check both by
+	// content instead of position.
+	var recordedAsk, recordedReply bool
+	for _, message := range messages {
+		if message.Role == agentloop.RoleUser && message.IsClientInput && strings.Contains(message.Content, question) {
+			recordedAsk = true
+		}
+		if message.Role == agentloop.RoleAssistant && strings.Contains(message.Content, "[overseer] the north field is clear") {
+			recordedReply = true
+		}
 	}
-	last := messages[len(messages)-1]
-	if last.Role != agentloop.RoleUser || !last.IsClientInput || !strings.Contains(last.Content, question) {
-		t.Fatalf("recorded turn = %#v, want a client user turn containing the question", last)
+	if !recordedAsk {
+		t.Fatalf("session transcript = %#v, want the client user turn containing the question", messages)
+	}
+	if !recordedReply {
+		t.Fatalf("session transcript = %#v, want the overseer reply recorded as an assistant turn", messages)
 	}
 }
 
