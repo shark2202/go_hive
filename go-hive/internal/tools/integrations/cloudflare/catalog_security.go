@@ -1,0 +1,106 @@
+package cloudflare
+
+// Security & firewall rows: events, settings, page rules, WAF, bot
+// management, managed transforms, DDoS and custom rules.
+
+import "net/http"
+
+var securityRows = []actionSpec{
+	{
+		Name:     "cloudflare_list_firewall_events",
+		Summary:  "List recent firewall/security events for a zone.",
+		Method:   http.MethodGet,
+		Path:     "/zones/{zone_id}/firewall/events",
+		Params:   zoneParams(map[string]any{"limit": paramDefault("integer", 10)}),
+		Required: []string{"zone_id"},
+		Run:      listFirewallEvents,
+	},
+	{
+		Name:     "cloudflare_get_security_settings",
+		Summary:  "Get current security settings for a zone (level, SSL mode, WAF).",
+		Method:   http.MethodGet,
+		Path:     "/zones/{zone_id}/settings/security_level",
+		Params:   zoneParams(nil),
+		Required: []string{"zone_id"},
+		Run:      getSecuritySettings,
+	},
+	{
+		Name:     "cloudflare_list_page_rules",
+		Summary:  "List custom page rules (redirects, cache overrides) for a zone.",
+		Method:   http.MethodGet,
+		Path:     "/zones/{zone_id}/pagerules",
+		Params:   zoneParams(nil),
+		Required: []string{"zone_id"},
+		Shape:    shapePageRules,
+	},
+	{
+		Name:     "cloudflare_list_waf_rulesets",
+		Summary:  "List WAF rulesets for a zone (modern WAF engine).",
+		Method:   http.MethodGet,
+		Path:     "/zones/{zone_id}/rulesets",
+		Params:   zoneParams(nil),
+		Required: []string{"zone_id"},
+		Wrap:     "waf_rulesets",
+	},
+	{
+		Name:     "cloudflare_get_bot_management_settings",
+		Summary:  "Get Bot Management configuration for a zone (Bot Fight Mode, etc.).",
+		Method:   http.MethodGet,
+		Path:     "/zones/{zone_id}/bot_management",
+		Params:   zoneParams(nil),
+		Required: []string{"zone_id"},
+		Wrap:     "bot_management",
+	},
+	{
+		Name:     "cloudflare_list_managed_transforms",
+		Summary:  "List Managed Transforms (HTTP header modifications) for a zone.",
+		Method:   http.MethodGet,
+		Path:     "/zones/{zone_id}/managed_headers",
+		Params:   zoneParams(nil),
+		Required: []string{"zone_id"},
+		Wrap:     "managed_transforms",
+	},
+	{
+		Name:       "cloudflare_get_ddos_protection_settings",
+		Summary:    "Get HTTP/L7 DDoS protection settings for a zone.",
+		Method:     http.MethodGet,
+		Path:       "/zones/{zone_id}/ddos_protection/settings",
+		Params:     zoneParams(nil),
+		Required:   []string{"zone_id"},
+		Wrap:       "ddos_protection",
+		WrapErrors: true,
+	},
+	{
+		Name:    "cloudflare_create_firewall_rule",
+		Summary: "Create a custom firewall rule (rule_action: block/challenge/js_challenge/managed_challenge/skip/log) via the Rulesets API.",
+		Method:  http.MethodPost,
+		Path:    "/zones/{zone_id}/rulesets/phases/http_request_firewall_custom/entrypoint/rules",
+		Params: zoneParams(map[string]any{
+			"rule_action": param("string"),
+			"expression":  param("string"),
+			"description": param("string"),
+			"priority":    paramDefault("integer", 1),
+		}),
+		Required: []string{"zone_id", "rule_action", "expression"},
+		Run:      createFirewallRule,
+	},
+	{
+		Name:       "cloudflare_delete_firewall_rule",
+		Summary:    "Delete a firewall rule by its Ruleset rule ID.",
+		Method:     http.MethodDelete,
+		Path:       "/zones/{zone_id}/rulesets/phases/http_request_firewall_custom/entrypoint/rules/{rule_id}",
+		Params:     zoneParams(map[string]any{"rule_id": param("string")}),
+		Required:   []string{"zone_id", "rule_id"},
+		Wrap:       "deleted",
+		WrapErrors: true,
+	},
+	{
+		Name:     "cloudflare_list_firewall_rules",
+		Summary:  "List custom firewall rules for a zone (modern Rulesets API).",
+		Method:   http.MethodGet,
+		Path:     "/zones/{zone_id}/rulesets/phases/http_request_firewall_custom/entrypoint",
+		Params:   zoneParams(nil),
+		Required: []string{"zone_id"},
+		Shape:    shapeFirewallRules,
+	},
+}

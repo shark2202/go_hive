@@ -1,6 +1,7 @@
 package integrations
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -8,6 +9,28 @@ import (
 	"testing"
 	"time"
 )
+
+// infraInt reads a numeric JSON field with a fallback; the production helper
+// moved into the infra subpackage with the implementation, so the lane test
+// keeps a local copy for its decoded-response assertions.
+func infraInt(object map[string]any, name string, fallback int) int {
+	if object == nil {
+		return fallback
+	}
+	switch typed := object[name].(type) {
+	case float64:
+		return int(typed)
+	case int:
+		return typed
+	case int64:
+		return int(typed)
+	case json.Number:
+		if parsed, err := typed.Int64(); err == nil {
+			return int(parsed)
+		}
+	}
+	return fallback
+}
 
 // batch7Lane3TestRegistry builds a lane-3 registry pointed at one fake
 // upstream, with environment injection for multi-field credentials.
@@ -150,12 +173,12 @@ func TestBatch7Lane3TerraformListWorkspaces(t *testing.T) {
 	result := batch4Execute(t, registry, "terraform", map[string]any{
 		"action": "terraform_list_workspaces", "organization": "my-org", "search": "prod", "page_size": 10,
 	})
-	if result["count"] != 1 || batch7Lane3Int(result, "total_count", -1) != 1 {
+	if result["count"] != 1 || infraInt(result, "total_count", -1) != 1 {
 		t.Fatalf("result = %v", result)
 	}
 	workspace := batch4BodyMap(t, batch4BodySlice(t, result["workspaces"])[0])
 	if workspace["name"] != "production" || workspace["id"] != "ws-abc123" ||
-		batch7Lane3Int(workspace, "resource_count", -1) != 42 {
+		infraInt(workspace, "resource_count", -1) != 42 {
 		t.Fatalf("workspace = %v", workspace)
 	}
 	if workspace["terraform_version"] != "1.9.0" || workspace["execution_mode"] != "remote" {
@@ -625,7 +648,7 @@ func TestBatch7Lane3PagerDutyListOncalls(t *testing.T) {
 	}
 	oncall := batch4BodyMap(t, batch4BodySlice(t, result["oncalls"])[0])
 	if oncall["user_name"] != "John Doe" || oncall["schedule_name"] != "Primary" ||
-		oncall["escalation_policy"] != "Default" || batch7Lane3Int(oncall, "escalation_level", -1) != 1 {
+		oncall["escalation_policy"] != "Default" || infraInt(oncall, "escalation_level", -1) != 1 {
 		t.Fatalf("oncall = %v", oncall)
 	}
 	query := recorder.last(t).Query
@@ -683,8 +706,8 @@ func TestBatch7Lane3PagerDutyListEscalationPolicies(t *testing.T) {
 		t.Fatalf("result = %v", result)
 	}
 	policy := batch4BodyMap(t, batch4BodySlice(t, result["escalation_policies"])[0])
-	if policy["name"] != "Default" || batch7Lane3Int(policy, "num_loops", -1) != 2 ||
-		batch7Lane3Int(policy, "escalation_rules_count", -1) != 2 {
+	if policy["name"] != "Default" || infraInt(policy, "num_loops", -1) != 2 ||
+		infraInt(policy, "escalation_rules_count", -1) != 2 {
 		t.Fatalf("policy = %v", policy)
 	}
 	if teams := batch4BodySlice(t, policy["teams"]); len(teams) != 1 || teams[0] != "SRE" {
@@ -874,7 +897,7 @@ func TestBatch7Lane3KafkaListTopics(t *testing.T) {
 		t.Fatalf("result = %v", result)
 	}
 	topic := batch4BodyMap(t, batch4BodySlice(t, result["topics"])[0])
-	if topic["name"] != "orders" || batch7Lane3Int(topic, "partitions_count", -1) != 6 {
+	if topic["name"] != "orders" || infraInt(topic, "partitions_count", -1) != 6 {
 		t.Fatalf("topic = %v", topic)
 	}
 }
@@ -933,12 +956,12 @@ func TestBatch7Lane3KafkaCreateTopic(t *testing.T) {
 	result := batch4Execute(t, registry, "kafka", map[string]any{
 		"action": "kafka_create_topic", "topic_name": "new-topic", "partitions_count": 3,
 	})
-	if result["name"] != "new-topic" || batch7Lane3Int(result, "partitions_count", -1) != 3 {
+	if result["name"] != "new-topic" || infraInt(result, "partitions_count", -1) != 3 {
 		t.Fatalf("result = %v", result)
 	}
 	payload := recorder.last(t).Body
-	if payload["topic_name"] != "new-topic" || batch7Lane3Int(payload, "partitions_count", -1) != 3 ||
-		batch7Lane3Int(payload, "replication_factor", -1) != 3 {
+	if payload["topic_name"] != "new-topic" || infraInt(payload, "partitions_count", -1) != 3 ||
+		infraInt(payload, "replication_factor", -1) != 3 {
 		t.Fatalf("payload = %v", payload)
 	}
 }
@@ -972,7 +995,7 @@ func TestBatch7Lane3KafkaProduceMessage(t *testing.T) {
 		"action": "kafka_produce_message", "topic_name": "orders",
 		"value": `{"order_id": 123}`, "key": "order-123",
 	})
-	if result["topic"] != "orders" || batch7Lane3Int(result, "offset", -1) != 42 {
+	if result["topic"] != "orders" || infraInt(result, "offset", -1) != 42 {
 		t.Fatalf("result = %v", result)
 	}
 	payload := recorder.last(t).Body
@@ -1037,7 +1060,7 @@ func TestBatch7Lane3KafkaGetConsumerGroupLag(t *testing.T) {
 	result := batch4Execute(t, registry, "kafka", map[string]any{
 		"action": "kafka_get_consumer_group_lag", "consumer_group_id": "my-group",
 	})
-	if batch7Lane3Int(result, "max_lag", -1) != 100 || batch7Lane3Int(result, "total_lag", -1) != 250 ||
+	if infraInt(result, "max_lag", -1) != 100 || infraInt(result, "total_lag", -1) != 250 ||
 		result["max_lag_topic"] != "orders" {
 		t.Fatalf("result = %v", result)
 	}
@@ -1097,7 +1120,7 @@ func TestBatch7Lane3N8nListWorkflows(t *testing.T) {
 		t.Fatalf("result = %v", result)
 	}
 	workflow := batch4BodyMap(t, batch4BodySlice(t, result["workflows"])[0])
-	if workflow["name"] != "Email Workflow" || workflow["active"] != true || batch7Lane3Int(workflow, "node_count", -1) != 2 {
+	if workflow["name"] != "Email Workflow" || workflow["active"] != true || infraInt(workflow, "node_count", -1) != 2 {
 		t.Fatalf("workflow = %v", workflow)
 	}
 	if tags := batch4BodySlice(t, workflow["tags"]); len(tags) != 1 || tags[0] != "production" {
@@ -1152,7 +1175,7 @@ func TestBatch7Lane3N8nGetWorkflow(t *testing.T) {
 			})
 		})
 	result := batch4Execute(t, registry, "n8n", map[string]any{"action": "n8n_get_workflow", "workflow_id": "wf1"})
-	if result["name"] != "Email Workflow" || batch7Lane3Int(result, "node_count", -1) != 1 {
+	if result["name"] != "Email Workflow" || infraInt(result, "node_count", -1) != 1 {
 		t.Fatalf("result = %v", result)
 	}
 	node := batch4BodyMap(t, batch4BodySlice(t, result["nodes"])[0])
@@ -1368,7 +1391,7 @@ func TestBatch7Lane3TinesGetStory(t *testing.T) {
 			})
 		})
 	result := batch4Execute(t, registry, "tines", map[string]any{"action": "tines_get_story", "story_id": 7})
-	if result["name"] != "Phishing triage" || batch7Lane3Int(result, "folder_id", -1) != 3 ||
+	if result["name"] != "Phishing triage" || infraInt(result, "folder_id", -1) != 3 ||
 		result["send_to_story_enabled"] != true {
 		t.Fatalf("result = %v", result)
 	}
@@ -1465,7 +1488,7 @@ func TestBatch7Lane3TinesGetActionLogs(t *testing.T) {
 		t.Fatalf("result = %v", result)
 	}
 	entry := batch4BodyMap(t, batch4BodySlice(t, result["logs"])[0])
-	if entry["message"] != "boom" || batch7Lane3Int(entry, "level", -1) != 4 {
+	if entry["message"] != "boom" || infraInt(entry, "level", -1) != 4 {
 		t.Fatalf("log = %v", entry)
 	}
 	if query := recorder.last(t).Query; query.Get("level") != "4" || query.Get("per_page") != "20" {

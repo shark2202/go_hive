@@ -45,17 +45,3 @@ func moduleToken(rt *Runtime, moduleID string) string {
 	token, _ := cfg.ResolvedToken(getenv)
 	return strings.TrimSpace(token)
 }
-
-// batch7Lane8AccountProvider maps a lane-8 module to the upstream OAuth
-// provider name its `account` parameter selects. Empty means the module has no
-// account-aware credential (brevo/calcom/calendly keep their single token).
-func batch7Lane8AccountProvider(moduleID string) string {
-	switch moduleID {
-	case "discord_tool":
-		return "discord"
-	case "mattermost_tool":
-		return "mattermost"
-	default:
-		return ""
-	}
-}

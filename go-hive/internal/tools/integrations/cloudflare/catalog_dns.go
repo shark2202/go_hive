@@ -1,0 +1,110 @@
+package cloudflare
+
+// DNS rows: records, scans, DNS settings/analytics and the domain health
+// composite action.
+
+import "net/http"
+
+var dnsRows = []actionSpec{
+	{
+		Name:    "cloudflare_list_dns_records",
+		Summary: "List DNS records for a zone, optionally filtered by name and type.",
+		Method:  http.MethodGet,
+		Path:    "/zones/{zone_id}/dns_records",
+		Params: zoneParams(map[string]any{
+			"name":     param("string"),
+			"type":     param("string"),
+			"page":     paramDefault("integer", 1),
+			"per_page": paramDefault("integer", 20),
+		}),
+		Required: []string{"zone_id"},
+		Run:      listDNSRecords,
+	},
+	{
+		Name:     "cloudflare_get_dns_record",
+		Summary:  "Get a specific DNS record by ID.",
+		Method:   http.MethodGet,
+		Path:     "/zones/{zone_id}/dns_records/{record_id}",
+		Params:   zoneParams(map[string]any{"record_id": param("string")}),
+		Required: []string{"zone_id", "record_id"},
+		Shape:    shapeRecordDetail,
+	},
+	{
+		Name:     "cloudflare_list_dns_record_scan",
+		Summary:  "Scan for common DNS records that are missing from Cloudflare.",
+		Method:   http.MethodPost,
+		Path:     "/zones/{zone_id}/dns_records/scan",
+		Params:   zoneParams(nil),
+		Required: []string{"zone_id"},
+		Wrap:     "scan_result",
+	},
+	{
+		Name:     "cloudflare_get_dns_settings",
+		Summary:  "Get DNS-specific settings for a zone (multi-provider, CNAME flattening).",
+		Method:   http.MethodGet,
+		Path:     "/zones/{zone_id}/dns_settings",
+		Params:   zoneParams(nil),
+		Required: []string{"zone_id"},
+		Wrap:     "dns_settings",
+	},
+	{
+		Name:     "cloudflare_list_dns_analytics_report",
+		Summary:  "Get DNS query analytics and statistics for a zone.",
+		Method:   http.MethodGet,
+		Path:     "/zones/{zone_id}/dns_analytics/report",
+		Params:   zoneParams(map[string]any{"limit": paramDefault("integer", 10)}),
+		Required: []string{"zone_id"},
+		Wrap:     "dns_analytics",
+	},
+	{
+		Name:     "cloudflare_check_domain_dns_health",
+		Summary:  "Check DNS health and configuration for a domain.",
+		Method:   http.MethodGet,
+		Path:     "/zones",
+		Params:   map[string]any{"domain": param("string")},
+		Required: []string{"domain"},
+		Run:      domainHealth,
+	},
+	{
+		Name:    "cloudflare_create_dns_record",
+		Summary: "Create a new DNS record for a zone.",
+		Method:  http.MethodPost,
+		Path:    "/zones/{zone_id}/dns_records",
+		Params: zoneParams(map[string]any{
+			"type":     param("string"),
+			"name":     param("string"),
+			"content":  param("string"),
+			"ttl":      paramDefault("integer", 1),
+			"proxied":  paramDefault("boolean", false),
+			"priority": param("integer"),
+		}),
+		Required: []string{"zone_id", "type", "name", "content"},
+		Run:      createDNSRecord,
+	},
+	{
+		Name:    "cloudflare_update_dns_record",
+		Summary: "Update an existing DNS record (only supplied fields change).",
+		Method:  http.MethodPatch,
+		Path:    "/zones/{zone_id}/dns_records/{record_id}",
+		Params: zoneParams(map[string]any{
+			"record_id": param("string"),
+			"type":      param("string"),
+			"name":      param("string"),
+			"content":   param("string"),
+			"ttl":       param("integer"),
+			"proxied":   param("boolean"),
+		}),
+		Required: []string{"zone_id", "record_id"},
+		Run:      updateDNSRecord,
+	},
+	{
+		Name:       "cloudflare_delete_dns_record",
+		Summary:    "Delete a single DNS record permanently.",
+		Method:     http.MethodDelete,
+		Path:       "/zones/{zone_id}/dns_records/{record_id}",
+		Params:     zoneParams(map[string]any{"record_id": param("string")}),
+		Required:   []string{"zone_id", "record_id"},
+		Wrap:       "deleted",
+		WrapErrors: true,
+	},
+}

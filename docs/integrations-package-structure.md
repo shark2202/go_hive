@@ -43,14 +43,26 @@ internal/tools/
     │   ├── doc.go / kit.go / register.go / common.go
     │   ├── gitlab.go / s3.go / vercel.go / dockerhub.go
     │   └── digest_test.go
-    └── social/              # ✅ 社交媒体领域子包（int-p2-social）
+    ├── social/              # ✅ 社交媒体领域子包（int-p2-social）
+    │   ├── doc.go / kit.go / register.go / common.go
+    │   ├── youtube.go / reddit.go / twitter.go / twilio.go / pushover.go
+    │   └── social_media_test.go / digest_test.go
+    ├── enrichment/          # ✅ Enrichment/search 领域子包（int-p2-enrichment）
+    │   ├── doc.go / kit.go / register.go / common.go
+    │   ├── apify.go / apollo.go / lusha.go / serpapi.go / exa.go
+    │   └── digest_test.go
+    └── schedchat/           # ✅ 调度/聊天领域子包（int-p2-schedchat）
         ├── doc.go / kit.go / register.go / common.go
-        ├── youtube.go / reddit.go / twitter.go / twilio.go / pushover.go
-        └── social_media_test.go / digest_test.go
-    └── enrichment/          # ✅ Enrichment/search 领域子包（int-p2-enrichment）
-        ├── doc.go / kit.go / register.go / common.go
-        ├── apify.go / apollo.go / lusha.go / serpapi.go / exa.go
+        ├── brevo.go / calcom.go / calendly.go / discord.go / mattermost.go
         └── digest_test.go
+    └── infra/               # ✅ 基础设施自动化领域子包（int-p2-infra）
+        ├── doc.go / kit.go / register.go / common.go
+        ├── terraform.go / pagerduty.go / prometheus.go / kafka.go / n8n.go / tines.go
+        └── digest_test.go
+    └── webintel/            # ✅ Web-intelligence 领域子包（int-p2-webintel）
+        ├── doc.go / kit.go / register.go / common.go
+        ├── similarweb.go / news.go / google_maps.go
+        └── web_intelligence_test.go / digest_test.go
 ```
 
 ## 依赖规则
@@ -104,7 +116,7 @@ internal/tools/
 | `greenhouse.go` | `greenhouse` |
 | `hubspot.go` | `hubspot` |
 | `image.go` | `image_generate` |
-| `infra_automation.go` | `kafka`, `n8n`, `pagerduty`, `prometheus`, `terraform`, `tines` |
+| `infra/（子包）` | `kafka`, `n8n`, `pagerduty`, `prometheus`, `terraform`, `tines` |
 | `intercom.go` | `intercom` |
 | `jira.go` | `jira` |
 | `linear.go` | `linear` |
@@ -124,13 +136,13 @@ internal/tools/
 | `research_registry.go` | `arxiv`, `dns_security_scan`, `duckduckgo`, `http_headers_scan`, `openmeteo`, `port_scan`, `search_wikipedia`, `ssl_tls_scan`, `yahoo_finance`, `youtube_transcript` |
 | `salesforce.go` | `salesforce` |
 | `sap.go` | `sap` |
-| `scheduling_chat.go` | `brevo`, `calcom`, `calendly`, `discord`, `mattermost` |
+| `schedchat/（子包）` | `brevo`, `calcom`, `calendly`, `discord`, `mattermost` |
 | `scrape.go` | `web_scrape` |
 | `shopify.go` | `shopify` |
 | `snowflake.go` | `snowflake` |
 | `social/（子包）` | `pushover`, `reddit`, `twilio`, `twitter`, `youtube` |
 | `supabase.go` | `supabase` |
-| `web_intelligence.go` | `google_maps`, `news`, `similarweb` |
+| `webintel/（子包）` | `google_maps`, `news`, `similarweb` |
 | `web_search.go` | `web_search` |
 | `zendesk.go` | `zendesk` |
 | `zoho_crm.go` | `zoho_crm` |
@@ -149,7 +161,9 @@ internal/tools/
 | social | ✅ 已迁入 `social/`（int-p2-social） | 5 tools / 36 actions；`{names, actions, entries}` digest 与迁移前逐字节一致；文件 ≤800 行；根包 `social_install.go` 薄入口；测试随实现迁入子包 |
 | ai | ✅ 已迁入 `ai/`（int-p2-ai） | 5 tools / 39 actions；catalog digest 与迁移前逐字节一致（sha 9d261735…）；文件 ≤800 行；根包 `ai_install.go` 薄入口 |
 | enrichment | ✅ 已迁入 `enrichment/`（int-p2-enrichment） | 5 tools / 36 actions；catalog digest 与迁移前逐字节一致；文件 ≤800 行；根包 `enrichment_install.go` 薄入口 |
-| scheduling_chat / infra_automation / web_intelligence | ⏳ 第二阶段 | 已冻结 size waiver 的大文件 |
+| infra | ✅ 已迁入 `infra/`（int-p2-infra） | 6 tools / 32 actions；`{names, actions, entries}` digest 与迁移前逐字节一致（sha aae7d29d…）；文件 ≤800 行；根包 `infra_install.go` 薄入口 |
+| webintel | ✅ 已迁入 `webintel/`（int-p2-webintel） | 3 tools / 42 actions；`{names, actions, entries}` digest 与迁移前逐字节一致（sha 59b37c4c…）；文件 ≤800 行；根包 `webintel_install.go` 薄入口；测试随实现迁入子包 |
+| schedchat | ✅ 已迁入 `schedchat/`（int-p2-schedchat） | 5 tools / 40 actions；`{names, actions, entries}` digest 与迁移前逐字节一致（sha b4f85f8c…）；文件 ≤800 行；根包 `schedchat_install.go` 薄入口 |
 | 其余 40+ 领域文件 | ⏳ 第二阶段/第三阶段 | 按领域逐个迁出，根包只留装配 |
 | integrationkit | ✅ 内核已就位 | 新增 registry/params/httpx/files；行为零变化 |
 
@@ -157,7 +171,7 @@ internal/tools/
 
 | 门禁 | 位置 | 当前基线 |
 | --- | --- | --- |
-| lane 前缀预算 | `internal/quality/lane_prefix_test.go` + `lane_prefix_waiver.json` | 1908（brief 标称）→ 1906（冻结实测）→ 1902（excel 迁出后）→ 1818（devops 迁出后）→ 1357→1265（helpers+ai/social 合并）→ **1172**（ai/social/enrichment 三 lane 合并后实测）；只减不增 |
+| lane 前缀预算 | `internal/quality/lane_prefix_test.go` + `lane_prefix_waiver.json` | 1908（brief 标称）→ 1906（冻结实测）→ 1902（excel 迁出后）→ 1818（devops 迁出后）→ 1357→1265（helpers+ai/social）→ 1172（三 lane）→ 1089→1014（infra/cloudflare）→ 957（webintel）→ **876**（八领域全部迁出后实测）；只减不增 |
 | 行为冻结 | `make refactor-freeze`（compare wave15-base） | 契约文件 sha256 不变；不进 ci，重构 lane 必跑 |
 
 本地验证：
@@ -179,11 +193,12 @@ integrations 任何包）；`internal/colony` 的 playbook 迁移用例单跑 0.
 ## 第二阶段计划（留给后续 lane）
 
 1. `devops_hosting` 已迁入 `devops/`（int-p2-devops），`ai_platform` 已迁入 `ai/`（int-p2-ai），`social_media` 已迁入
-   `social/`（int-p2-social），`enrichment_search` 已迁入 `enrichment/`（int-p2-enrichment）；其余按 `cloudflare →
-   infra_automation → web_intelligence → scheduling_chat` 的顺序迁出 5–8 个领域子包；每个子包保持只依赖 integrationkit。
-2. 消重 lane 前缀 helper：把残留的 `batch4AsString` 等收敛为 kit 的
-   `StringArg`/`Object`/`Number`/`Round`；devops/ai/social/enrichment 迁出时已把
-   `batch7Lane1*`/`4*`/`5*`/`7*` 改成领域名，每迁一个领域继续下调 lane prefix limit
+1. 全部八个领域文件已迁入领域子包：devops_hosting（devops/）、ai_platform（ai/）、social_media（social/）、
+   enrichment_search（enrichment/）、cloudflare（cloudflare/）、infra_automation（infra/）、
+   web_intelligence（webintel/）、scheduling_chat（schedchat/）；剩余 pdf/excel/scrape 的拆分按同模板继续；
+   每个子包只依赖 integrationkit。
+2. 消重 lane 前缀 helper：残留 `batch4AsString` 等收敛为 kit 的 `StringArg`/`Object`/`Number`/`Round`；
+   每迁一个领域立即下调 lane prefix limit（当前实测与上限见上表）。
    （当前实测与 limit 见上表）。
 3. 拆分 `integrationSizeWaivers` 里 7 个 800–1500 行文件与 fileWaivers 里的大文件，
    每拆完一个删除对应 waiver（只减不增）。

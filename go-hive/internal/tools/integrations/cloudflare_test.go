@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/aden-hive/hive-go/internal/tools"
+	"github.com/aden-hive/hive-go/internal/tools/integrations/cloudflare"
 )
 
 const (
@@ -100,10 +101,10 @@ func batch7Lane2TestRegistry(
 	recorder := &batch7Lane2Recorder{}
 	server := httptest.NewServer(recorder.wrap(handler))
 	t.Cleanup(server.Close)
-	registry := batch7Lane2NewRegistry(
-		WithBaseURL(batch7Lane2ModuleID, server.URL),
+	registry := newCloudflareRegistry(
+		WithBaseURL(cloudflare.ModuleID, server.URL),
 		WithHTTPClient(server.Client()),
-		WithCredential(batch7Lane2ModuleID, "test-token"),
+		WithCredential(cloudflare.ModuleID, "test-token"),
 	)
 	return registry, recorder
 }
@@ -357,7 +358,7 @@ func batch7Lane2ProbeInput(t *testing.T, action Action) map[string]any {
 
 // Parity: tools/tests/tools/test_cloudflare.py::TestCloudflareIntegration::test_spec_tools_registered
 func TestBatch7Lane2Catalog(t *testing.T) {
-	registry := batch7Lane2NewRegistry()
+	registry := newCloudflareRegistry()
 	if names := registry.Names(); len(names) != 1 || names[0] != "cloudflare" {
 		t.Fatalf("names = %v", names)
 	}
@@ -371,7 +372,7 @@ func TestBatch7Lane2Catalog(t *testing.T) {
 	if !ok {
 		t.Fatal("cloudflare tool missing")
 	}
-	if tool.ID != batch7Lane2ModuleID || tool.DisplayName == "" || tool.Summary == "" {
+	if tool.ID != cloudflare.ModuleID || tool.DisplayName == "" || tool.Summary == "" {
 		t.Fatalf("tool identity = %+v", tool)
 	}
 	if len(tool.Actions) != len(batch7Lane2ExpectedRoutes) {
@@ -1016,7 +1017,7 @@ func TestBatch7Lane2WrappedProviderErrors(t *testing.T) {
 
 // Parity: tools/tests/tools/test_cloudflare.py::TestCloudflareEdgeCases::test_missing_or_invalid_token
 func TestBatch7Lane2MissingToken(t *testing.T) {
-	registry := batch7Lane2NewRegistry(WithGetenv(func(string) string { return "" }))
+	registry := newCloudflareRegistry(WithGetenv(func(string) string { return "" }))
 	result := batch7Lane2Execute(t, registry, map[string]any{"action": "cloudflare_list_zones"})
 	if got := batch7Lane2ErrorText(t, result); got != "CLOUDFLARE_API_TOKEN is required" {
 		t.Fatalf("error = %q", got)
@@ -1246,7 +1247,7 @@ func TestInstallBatch7Lane2(t *testing.T) {
 
 // Parity-exempt: unknown-action dispatch is a Go-side registry contract.
 func TestBatch7Lane2UnknownAction(t *testing.T) {
-	registry := batch7Lane2NewRegistry()
+	registry := newCloudflareRegistry()
 	_, err := registry.Execute(context.Background(), "cloudflare", map[string]any{"action": "nope"})
 	if !errors.Is(err, ErrUnknownAction) {
 		t.Fatalf("err = %v, want ErrUnknownAction", err)
@@ -1255,7 +1256,7 @@ func TestBatch7Lane2UnknownAction(t *testing.T) {
 
 // Parity-exempt: schema shape is a Go-side contract with tools.ToolRegistry.
 func TestBatch7Lane2SchemaShape(t *testing.T) {
-	registry := batch7Lane2NewRegistry()
+	registry := newCloudflareRegistry()
 	tool, _ := registry.Lookup("cloudflare")
 	schema := tool.Schema()
 	if schema["type"] != "object" {

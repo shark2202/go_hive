@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/aden-hive/hive-go/internal/tools"
+	"github.com/aden-hive/hive-go/internal/tools/integrations/schedchat"
 )
 
 // batch7Lane8TestRegistry builds a lane-8 registry pointed at one fake
@@ -31,9 +32,9 @@ func batch7Lane8TestRegistry(t *testing.T, module string, env map[string]string,
 // batch7Lane8NoSleep removes the 429 backoff so retry tests stay fast.
 func batch7Lane8NoSleep(t *testing.T) {
 	t.Helper()
-	previous := batch7Lane8Sleep
-	batch7Lane8Sleep = func(time.Duration) {}
-	t.Cleanup(func() { batch7Lane8Sleep = previous })
+	previous := schedchat.RetrySleep
+	schedchat.RetrySleep = func(time.Duration) {}
+	t.Cleanup(func() { schedchat.RetrySleep = previous })
 }
 
 // batch7Lane8JSONText renders a decoded JSON value for body assertions.
@@ -963,10 +964,10 @@ func TestBatch7Lane8DiscordSendMessageLength(t *testing.T) {
 		})
 	result := batch4Execute(t, registry, "discord", map[string]any{
 		"action": "discord_send_message", "channel_id": "c1",
-		"content": strings.Repeat("x", batch7Lane8DiscordMaxMessage+1),
+		"content": strings.Repeat("x", schedchat.DiscordMaxMessage+1),
 	})
 	batch4ErrorText(t, result)
-	if result["max_length"] != batch7Lane8DiscordMaxMessage {
+	if result["max_length"] != schedchat.DiscordMaxMessage {
 		t.Fatalf("result = %v", result)
 	}
 	if recorder.count() != 0 {
@@ -1089,8 +1090,8 @@ func TestBatch7Lane8DiscordRateLimit(t *testing.T) {
 	if result["retry_after"] != float64(5) {
 		t.Fatalf("retry_after = %v", result["retry_after"])
 	}
-	if recorder.count() != batch7Lane8MaxRetries+1 {
-		t.Fatalf("requests = %d, want %d", recorder.count(), batch7Lane8MaxRetries+1)
+	if recorder.count() != schedchat.MaxRetries+1 {
+		t.Fatalf("requests = %d, want %d", recorder.count(), schedchat.MaxRetries+1)
 	}
 }
 
@@ -1207,10 +1208,10 @@ func TestBatch7Lane8MattermostSendMessageLength(t *testing.T) {
 		})
 	result := batch4Execute(t, registry, "mattermost", map[string]any{
 		"action": "mattermost_send_message", "channel_id": "c1",
-		"message": strings.Repeat("x", batch7Lane8MattermostMaxText+1),
+		"message": strings.Repeat("x", schedchat.MattermostMaxText+1),
 	})
 	batch4ErrorText(t, result)
-	if result["max_length"] != batch7Lane8MattermostMaxText {
+	if result["max_length"] != schedchat.MattermostMaxText {
 		t.Fatalf("result = %v", result)
 	}
 	if recorder.count() != 0 {
@@ -1319,8 +1320,8 @@ func TestBatch7Lane8MattermostRateLimit(t *testing.T) {
 	if result["retry_after"] != float64(5) {
 		t.Fatalf("retry_after = %v", result["retry_after"])
 	}
-	if recorder.count() != batch7Lane8MaxRetries+1 {
-		t.Fatalf("requests = %d, want %d", recorder.count(), batch7Lane8MaxRetries+1)
+	if recorder.count() != schedchat.MaxRetries+1 {
+		t.Fatalf("requests = %d, want %d", recorder.count(), schedchat.MaxRetries+1)
 	}
 }
 

@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "module": "github.com/aden-hive/hive-go",
-  "generated_at_commit": "49fb8349b083",
+  "generated_at_commit": "4810576d234e",
   "generated_from": "architecture/model.yaml + go list -json ./... + internal/server mux.HandleFunc + internal/eventbus event_type.go",
   "stats": {
-    "packages": 77,
-    "package_edges": 204,
+    "packages": 81,
+    "package_edges": 212,
     "capabilities": 12,
     "capability_edges": 85,
     "layers": 8,
@@ -131,13 +131,17 @@
         "internal/tools/integrationkit",
         "internal/tools/integrations",
         "internal/tools/integrations/ai",
+        "internal/tools/integrations/cloudflare",
         "internal/tools/integrations/devops",
         "internal/tools/integrations/enrichment",
         "internal/tools/integrations/excel",
+        "internal/tools/integrations/infra",
+        "internal/tools/integrations/schedchat",
         "internal/tools/integrations/social",
+        "internal/tools/integrations/webintel",
         "internal/visionfallback"
       ],
-      "package_count": 24
+      "package_count": 28
     },
     {
       "id": "foundation",
@@ -812,7 +816,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 1,
-      "dependents": 6
+      "dependents": 10
     },
     {
       "id": "pkg:internal/tools/integrations",
@@ -823,7 +827,7 @@
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 9,
+      "direct_dependencies": 13,
       "dependents": 1
     },
     {
@@ -832,6 +836,18 @@
       "package": "internal/tools/integrations/ai",
       "layer": "capability",
       "responsibility": "AI 平台领域子包：Pinecone / Weights & Biases / Langfuse / Hugging Face / Google Cloud Vision 的目录、39 个 action 实现与共享 helper；只 import integrationkit。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 1,
+      "dependents": 1
+    },
+    {
+      "id": "pkg:internal/tools/integrations/cloudflare",
+      "kind": "technical",
+      "package": "internal/tools/integrations/cloudflare",
+      "layer": "capability",
+      "responsibility": "Cloudflare 领域子包（第六个领域子包）：zones / DNS / analytics / security / cache / Workers·R2·Pages / 账户管理的目录、54 个 action 实现与共享 helper；只 import integrationkit。",
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
@@ -875,11 +891,47 @@
       "dependents": 1
     },
     {
+      "id": "pkg:internal/tools/integrations/infra",
+      "kind": "technical",
+      "package": "internal/tools/integrations/infra",
+      "layer": "capability",
+      "responsibility": "基础设施自动化领域子包（第七个领域子包）：Terraform / PagerDuty / Prometheus / Kafka / n8n / Tines 的目录、32 个 action 实现与共享 helper；只 import integrationkit。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 1,
+      "dependents": 1
+    },
+    {
+      "id": "pkg:internal/tools/integrations/schedchat",
+      "kind": "technical",
+      "package": "internal/tools/integrations/schedchat",
+      "layer": "capability",
+      "responsibility": "调度/聊天领域子包（第九个领域子包）：Brevo / Cal.com / Calendly / Discord / Mattermost 的目录、40 个 action 实现与共享 helper；只 import integrationkit。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 1,
+      "dependents": 1
+    },
+    {
       "id": "pkg:internal/tools/integrations/social",
       "kind": "technical",
       "package": "internal/tools/integrations/social",
       "layer": "capability",
       "responsibility": "社交媒体领域子包（第四个领域子包）：YouTube / Reddit / Twitter-X / Twilio / Pushover 的目录、36 个 action 实现与共享 helper；只 import integrationkit。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 1,
+      "dependents": 1
+    },
+    {
+      "id": "pkg:internal/tools/integrations/webintel",
+      "kind": "technical",
+      "package": "internal/tools/integrations/webintel",
+      "layer": "capability",
+      "responsibility": "Web-intelligence 领域子包（第八个领域子包）：SimilarWeb / News / Google Maps 的目录、42 个 action 实现与共享 helper；只 import integrationkit。",
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
@@ -2497,6 +2549,11 @@
     },
     {
       "from": "pkg:internal/tools/integrations",
+      "to": "pkg:internal/tools/integrations/cloudflare",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tools/integrations",
       "to": "pkg:internal/tools/integrations/devops",
       "kind": "depends"
     },
@@ -2512,11 +2569,31 @@
     },
     {
       "from": "pkg:internal/tools/integrations",
+      "to": "pkg:internal/tools/integrations/infra",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tools/integrations",
+      "to": "pkg:internal/tools/integrations/schedchat",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tools/integrations",
       "to": "pkg:internal/tools/integrations/social",
       "kind": "depends"
     },
     {
+      "from": "pkg:internal/tools/integrations",
+      "to": "pkg:internal/tools/integrations/webintel",
+      "kind": "depends"
+    },
+    {
       "from": "pkg:internal/tools/integrations/ai",
+      "to": "pkg:internal/tools/integrationkit",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tools/integrations/cloudflare",
       "to": "pkg:internal/tools/integrationkit",
       "kind": "depends"
     },
@@ -2536,7 +2613,22 @@
       "kind": "depends"
     },
     {
+      "from": "pkg:internal/tools/integrations/infra",
+      "to": "pkg:internal/tools/integrationkit",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tools/integrations/schedchat",
+      "to": "pkg:internal/tools/integrationkit",
+      "kind": "depends"
+    },
+    {
       "from": "pkg:internal/tools/integrations/social",
+      "to": "pkg:internal/tools/integrationkit",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tools/integrations/webintel",
       "to": "pkg:internal/tools/integrationkit",
       "kind": "depends"
     },

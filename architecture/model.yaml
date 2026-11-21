@@ -201,6 +201,22 @@ packages:
     layer: capability
     responsibility: "Enrichment/search 领域子包（第五个领域子包）：Apify / Apollo.io / Lusha / SerpAPI / Exa 的目录、36 个 action 实现与共享 helper；只 import integrationkit。"
     stability: evolving
+  - package: internal/tools/integrations/cloudflare
+    layer: capability
+    responsibility: "Cloudflare 领域子包（第六个领域子包）：zones / DNS / analytics / security / cache / Workers·R2·Pages / 账户管理的目录、54 个 action 实现与共享 helper；只 import integrationkit。"
+    stability: evolving
+  - package: internal/tools/integrations/infra
+    layer: capability
+    responsibility: "基础设施自动化领域子包（第七个领域子包）：Terraform / PagerDuty / Prometheus / Kafka / n8n / Tines 的目录、32 个 action 实现与共享 helper；只 import integrationkit。"
+    stability: evolving
+  - package: internal/tools/integrations/webintel
+    layer: capability
+    responsibility: "Web-intelligence 领域子包（第八个领域子包）：SimilarWeb / News / Google Maps 的目录、42 个 action 实现与共享 helper；只 import integrationkit。"
+    stability: evolving
+  - package: internal/tools/integrations/schedchat
+    layer: capability
+    responsibility: "调度/聊天领域子包（第九个领域子包）：Brevo / Cal.com / Calendly / Discord / Mattermost 的目录、40 个 action 实现与共享 helper；只 import integrationkit。"
+    stability: evolving
   - package: internal/llm
     layer: capability
     responsibility: "LLM 传输：provider 选择、Anthropic/OpenAI 协议、流式事件、模型目录与出站限速门。"
