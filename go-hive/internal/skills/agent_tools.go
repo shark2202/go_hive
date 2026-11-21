@@ -294,8 +294,13 @@ func writeQueenScopeSkill(draft *SkillDraft, dirs ToolDirs, sourcePath string, f
 			return map[string]any{"error": fmt.Sprintf("skill '%s' was written but its queen override could not be saved: %v", draft.Name, err)}
 		}
 	}
-	message := fmt.Sprintf("Skill '%s' is in your own skills. It is in your catalog from your next turn. "+
-		"Workers see colony-scope skills; write this protocol with scope='colony' if they must load it. "+
+	// A queen-scope skill is visible to her own sessions AND to the workers of
+	// every colony she owns (queen_ui scope), so the old "workers see
+	// colony-scope skills only" guidance no longer holds — upstream:
+	// "your colonies' workers spawned from now on see it"
+	// (_write_queen_skill, framework/tools/queen_lifecycle_tools.py).
+	message := fmt.Sprintf("Skill '%s' is in your own skills. It is in your catalog from your next turn, "+
+		"and your colonies' workers spawned from now on also see it. "+
 		"No other queen sees it: scope='global' asks the user to add it to the shared library.", draft.Name)
 	if entry != nil && entry.Enabled != nil && !*entry.Enabled {
 		message += " The user has turned this skill off, so it stays off until they turn it back on."
@@ -548,37 +553,66 @@ func availableSkillNames(roots []skillRoot) []string {
 	return out
 }
 
-// ScopedCatalogPrompt renders the <available_skills> block for a single skill
-// directory (the colony's skills/ folder for workers). An empty directory
-// yields an empty prompt.
-func ScopedCatalogPrompt(dir, scopeLabel string) string {
-	if strings.TrimSpace(dir) == "" {
-		return ""
+// ScopedCatalogPromptForScopes renders the <available_skills> block for an
+// ordered list of extra skill scopes. Later scopes override earlier ones on
+// name collisions (discovery scans in order and resolves last-wins), which is
+// how the queen's scope (queen_ui) and the colony's own scope (colony_ui)
+// combine for a worker: a colony skill overrides the queen's copy of the same
+// name, mirroring the upstream scan order in
+// framework/host/colony_runtime.py::_build_default_skills_config.
+// Non-existent directories are skipped; no usable scope yields "".
+func ScopedCatalogPromptForScopes(scopes []ExtraScope) string {
+	filtered := make([]ExtraScope, 0, len(scopes))
+	for _, scope := range scopes {
+		dir := strings.TrimSpace(scope.Directory)
+		if dir == "" {
+			continue
+		}
+		if info, err := os.Stat(dir); err != nil || !info.IsDir() {
+			continue
+		}
+		scope.Directory = dir
+		if strings.TrimSpace(scope.Label) == "" {
+			scope.Label = "colony"
+		}
+		filtered = append(filtered, scope)
 	}
-	if info, err := os.Stat(dir); err != nil || !info.IsDir() {
+	if len(filtered) == 0 {
 		return ""
-	}
-	if strings.TrimSpace(scopeLabel) == "" {
-		scopeLabel = "colony"
 	}
 	discovery := NewSkillDiscovery(DiscoveryConfig{
 		SkipFrameworkScope: true,
 		SkipUserScope:      true,
-		ExtraScopes:        []ExtraScope{{Directory: dir, Label: scopeLabel}},
+		ExtraScopes:        filtered,
 	})
 	return NewSkillCatalog(discovery.Discover()).ToPrompt(nil)
 }
 
-// ExistingColonySkillsDir returns colonyDir/skills when it exists, else "".
-func ExistingColonySkillsDir(colonyDir string) string {
-	if strings.TrimSpace(colonyDir) == "" {
+// ScopedCatalogPrompt renders the <available_skills> block for a single skill
+// directory (e.g. the colony's skills/ folder for workers). An empty or
+// missing directory yields an empty prompt.
+func ScopedCatalogPrompt(dir, scopeLabel string) string {
+	if strings.TrimSpace(scopeLabel) == "" {
+		scopeLabel = "colony"
+	}
+	return ScopedCatalogPromptForScopes([]ExtraScope{{Directory: dir, Label: scopeLabel}})
+}
+
+// ExistingSkillsDir returns root/skills when it exists, else "".
+func ExistingSkillsDir(root string) string {
+	if strings.TrimSpace(root) == "" {
 		return ""
 	}
-	dir := filepath.Join(colonyDir, "skills")
+	dir := filepath.Join(root, "skills")
 	if info, err := os.Stat(dir); err == nil && info.IsDir() {
 		return dir
 	}
 	return ""
+}
+
+// ExistingColonySkillsDir returns colonyDir/skills when it exists, else "".
+func ExistingColonySkillsDir(colonyDir string) string {
+	return ExistingSkillsDir(colonyDir)
 }
 
 func expandHomePath(raw string) string {

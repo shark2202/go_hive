@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/aden-hive/hive-go/internal/llm"
+	"gopkg.in/yaml.v3"
 )
 
 const reflectionTestQueen = "queen_x"
@@ -115,6 +116,34 @@ func (h *reflectionTestHome) profile(t *testing.T, name string) {
 	t.Helper()
 	writeReflectionTestText(t, filepath.Join(h.queensDir, reflectionTestQueen, "profile.yaml"),
 		"name: "+name+"\ntitle: Sketch artist\ncore_traits: "+name+" draws.\n")
+}
+
+// reflectionTestProfileSource is the reflection's profile seam in tests: it
+// reads the profile.yaml the tests write and renders its core traits as the
+// identity block. The queen-backed source lives in internal/cli
+// (soulProfileSource) so internal/soul never imports internal/queen; the fake
+// still proves that the name and identity the profile carries reach the
+// reflection prompt.
+type reflectionTestProfileSource struct{}
+
+func (reflectionTestProfileSource) LoadQueenProfile(queensDir, queenID string) (map[string]any, error) {
+	data, err := os.ReadFile(filepath.Join(queensDir, queenID, "profile.yaml"))
+	if err != nil {
+		return nil, err
+	}
+	profile := map[string]any{}
+	if err := yaml.Unmarshal(data, &profile); err != nil {
+		return nil, err
+	}
+	return profile, nil
+}
+
+func (reflectionTestProfileSource) FormatQueenIdentityPrompt(profile map[string]any, maxExamples *int) string {
+	core, _ := profile["core_traits"].(string)
+	if core == "" {
+		return ""
+	}
+	return "<core_identity>\n" + core + "\n</core_identity>"
 }
 
 func (h *reflectionTestHome) session(t *testing.T, sessionID string, events []map[string]any, title string, channel any) string {
@@ -270,13 +299,14 @@ func reflectionTestReflect(t *testing.T, home *reflectionTestHome, llm *reflecti
 	t.Helper()
 	home.profile(t, "Fox")
 	proposal, err := Reflect(ReflectionOptions{
-		HomeRoot:  home.root,
-		QueensDir: home.queensDir,
-		QueenID:   reflectionTestQueen,
-		Config:    home.soulConfig(t),
-		Completer: llm,
-		Bootstrap: bootstrap,
-		Now:       reflectionTestNow(),
+		HomeRoot:      home.root,
+		QueensDir:     home.queensDir,
+		QueenID:       reflectionTestQueen,
+		Config:        home.soulConfig(t),
+		Completer:     llm,
+		ProfileSource: reflectionTestProfileSource{},
+		Bootstrap:     bootstrap,
+		Now:           reflectionTestNow(),
 	})
 	if err != nil {
 		t.Fatalf("reflect: %v", err)
@@ -408,6 +438,41 @@ func TestAChangeRestingOnWhatWasSaidWaitsForApproval(t *testing.T) {
 	system := llm.firstRequest().System
 	if !strings.HasPrefix(system, "You are Fox.") || !strings.Contains(system, "Fox draws.") {
 		t.Fatalf("system prompt = %q", system)
+	}
+}
+
+// Parity-exempt: the profile seam is Go-specific (internal/soul must not
+// import internal/queen); upstream reads the profile store in the same
+// package. Without an injected source a queen reads like one without a
+// profile: her id, and no identity block.
+func TestReflectionWithoutAProfileSourceUsesTheQueenID(t *testing.T) {
+	home := newReflectionTestHome(t)
+	home.profile(t, "Fox")
+	home.session(t, "s_group", reflectionGroupEvents(), "Night owls", "x")
+	llm := newReflectionTestLLM(
+		reflectionAsk("finish", map[string]any{"summary": "nothing changed"}),
+	)
+
+	proposal, err := Reflect(ReflectionOptions{
+		HomeRoot:  home.root,
+		QueensDir: home.queensDir,
+		QueenID:   reflectionTestQueen,
+		Config:    home.soulConfig(t),
+		Completer: llm,
+		Now:       reflectionTestNow(),
+	})
+	if err != nil {
+		t.Fatalf("reflect: %v", err)
+	}
+	if proposal == nil || len(proposal.Edits) != 0 {
+		t.Fatalf("proposal = %#v", proposal)
+	}
+	system := llm.firstRequest().System
+	if !strings.HasPrefix(system, "You are "+reflectionTestQueen+".") {
+		t.Fatalf("system prompt = %q", system)
+	}
+	if strings.Contains(system, "Fox") {
+		t.Fatalf("a reflection without a profile source read the profile anyway: %q", system)
 	}
 }
 

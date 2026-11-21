@@ -47,7 +47,8 @@ func (r *Runner) newColonyHost(colonyPath, colonyID string, home hivehome.Home, 
 	// A colony belongs to a queen: when she has a model of her own
 	// (queen_llm.<id>), her colony's overseer and workers run on it too.
 	// Upstream shares session.llm with the colony runtime for the same reason.
-	provider, err := queenAwareChatProvider(home, model, colonyQueenName(home, colonyID))
+	queenID := colonyQueenName(home, colonyID)
+	provider, err := queenAwareChatProvider(home, model, queenID)
 	if err != nil {
 		return nil, err
 	}
@@ -85,6 +86,13 @@ func (r *Runner) newColonyHost(colonyPath, colonyID string, home hivehome.Home, 
 		// so a colony that declares an integration tool actually gets it.
 		DeclaredTools: declaredTools,
 		ToolExecutor:  executeTool,
+		// The colony's workers see the owning queen's skill scope ahead of
+		// the colony's own (colony overrides queen on collisions) — upstream
+		// wires queen_ui into the colony runtime from the session's queen
+		// (colony_runtime.py::_build_default_skills_config). A colony with no
+		// recorded queen inherits the shared "default" queen, the same scope
+		// its session tree uses.
+		QueenDir: home.QueenDir(chatSessionQueenScope(queenID)),
 	})
 }
 

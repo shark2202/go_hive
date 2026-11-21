@@ -1,5 +1,5 @@
 // go_hive 分层依赖图（生成物，勿手改）
-// 源：architecture/model.yaml + go list -json ./... · commit 81e2f9356409
+// 源：architecture/model.yaml + go list -json ./... · commit 6624019b734d
 // 箭头 A -> B 读作 A imports B。
 digraph go_hive {
   graph [rankdir=LR, fontname="Helvetica", nodesep=0.28, ranksep=0.9, splines=true];
@@ -286,7 +286,6 @@ digraph go_hive {
   "internal/skills" -> "internal/hivehome";
   "internal/skills" -> "internal/llm";
   "internal/soul" -> "internal/llm";
-  "internal/soul" -> "internal/queen";
   "internal/storage" -> "internal/atomicfs";
   "internal/storage" -> "internal/hivehome";
   "internal/storage" -> "internal/schemas";

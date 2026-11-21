@@ -253,3 +253,55 @@ func TestSkillViewRejectsTraversal(t *testing.T) {
 		t.Fatalf("error = %q", content)
 	}
 }
+
+// writeScopedSkill materialises one skill folder under an explicit skills root.
+func writeScopedSkill(t *testing.T, skillsDir, name, description, skillBody string) {
+	t.Helper()
+	skillDir := filepath.Join(skillsDir, name)
+	if err := os.MkdirAll(skillDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	body := "---\nname: " + name + "\ndescription: " + description + "\n---\n\n" + skillBody + "\n"
+	if err := os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// Parity: core/tests/test_skill_overrides.py::TestSkillsManagerOverrides::test_queen_disable_applies_to_colony_ui_skills
+//
+// Scoped catalogs scan their extra scopes in order and resolve last-wins, which
+// is what makes a colony's copy of a skill override the owning queen's copy of
+// the same name (queen_ui then colony_ui, upstream
+// framework/host/colony_runtime.py::_build_default_skills_config).
+func TestScopedCatalogPromptForScopesResolvesLaterScopeOverEarlier(t *testing.T) {
+	root := t.TempDir()
+	queenSkills := filepath.Join(root, "queen", "skills")
+	colonySkills := filepath.Join(root, "colony", "skills")
+	writeScopedSkill(t, queenSkills, "queen-only", "queen skill", "Queen procedure.")
+	writeScopedSkill(t, queenSkills, "shared", "queen copy", "Queen copy.")
+	writeScopedSkill(t, colonySkills, "shared", "colony copy", "Colony copy.")
+
+	prompt := ScopedCatalogPromptForScopes([]ExtraScope{
+		{Directory: queenSkills, Label: "queen_ui", Priority: 2},
+		{Directory: colonySkills, Label: "colony_ui", Priority: 3},
+	})
+	for _, want := range []string{"<name>queen-only</name>", "<name>shared</name>"} {
+		if !strings.Contains(prompt, want) {
+			t.Fatalf("catalog missing %s: %q", want, prompt)
+		}
+	}
+	if !strings.Contains(prompt, filepath.Join(colonySkills, "shared", "SKILL.md")) {
+		t.Fatalf("catalog did not resolve 'shared' to the later scope: %q", prompt)
+	}
+	if strings.Contains(prompt, filepath.Join(queenSkills, "shared", "SKILL.md")) {
+		t.Fatalf("catalog kept the earlier scope's 'shared': %q", prompt)
+	}
+
+	// Missing directories are skipped; no usable scope yields an empty prompt.
+	if got := ScopedCatalogPromptForScopes([]ExtraScope{{Directory: filepath.Join(root, "missing"), Label: "queen_ui"}}); got != "" {
+		t.Fatalf("missing-only scopes = %q, want empty", got)
+	}
+	if got := ScopedCatalogPromptForScopes(nil); got != "" {
+		t.Fatalf("no scopes = %q, want empty", got)
+	}
+}

@@ -1,6 +1,6 @@
 # 模块清单（生成物，勿手改）
 
-> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` + `go list` 生成。commit: `81e2f9356409`
+> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` + `go list` 生成。commit: `6624019b734d`
 > 修改分层或职责请改 `architecture/model.yaml`，不要编辑本文件。
 
 ## 分层统计
@@ -16,7 +16,7 @@
 | 能力层（`capability`） | 20 | 可被循环调用的能力：工具、集成、LLM 传输、记忆、技能、soul、凭据、出站消息。 |
 | 基础层（`foundation`） | 16 | 无业务语义的底座：事件总线、文件存储、schema、原子写、目录布局、限速、质量门禁。 |
 
-共 73 个包、197 条包间 import 边。
+共 73 个包、196 条包间 import 边。
 
 ## 模块表
 
@@ -48,7 +48,7 @@
 | `internal/host` | orchestration | Host 组合根：把 colony 运行时、事件总线与 run 注册表装成可 Start/Spawn 的宿主，供传输层调用。 | 7 | 1 |  |
 | `internal/longmemeval` | orchestration | LongMemEval 基准运行器：数据集读取、题目选择、会话播种、判分与结果汇总（内部评测工具）。 | 1 | 2 |  |
 | `internal/playbook` | orchestration | Playbook 定义与带并发上限的 lane 执行器。 | 1 | 2 |  |
-| `internal/queen` | orchestration | Queen 档案与身份定义（queen_profiles 的 Go 移植）。 | 0 | 4 |  |
+| `internal/queen` | orchestration | Queen 档案与身份定义（queen_profiles 的 Go 移植）。 | 0 | 3 |  |
 | `internal/queenmail` | orchestration | Queen 之间的信件引擎：信件存储、待投递队列、queens/mail.jsonl 审计日志与 hive MCP stdio 面。 | 3 | 3 |  |
 | `internal/sentinel` | orchestration | Queen 停泊期的自治监督：nudge / escalate 判定、升级投递、入站回复路由与恢复。 | 6 | 1 |  |
 | `internal/session` | orchestration | 会话记录与磁盘布局：状态、transcript、游标、fork 与冷恢复。 | 3 | 4 |  |
@@ -72,7 +72,7 @@
 | `internal/pipeline` | capability | 配置驱动的 trigger 中间件：Stage 接口、按 order 执行/reject 短路/transform 的 Runner、stage 注册表与 7 个内置 stage（llm_provider/credential_resolver/mcp_registry/skill_registry/input_validation/rate_limit/cost_guard）。 | 7 | 1 |  |
 | `internal/senders` | capability | 出站消息发送：正文渲染、抑制列表、每发件人锁与发送日志。 | 2 | 2 |  |
 | `internal/skills` | capability | 技能发现/安装/校验，以及 agent 侧的技能读取工具。 | 3 | 6 |  |
-| `internal/soul` | capability | Queen 的 soul：分区、字符上限、版本历史、提案与回滚。 | 2 | 2 |  |
+| `internal/soul` | capability | Queen 的 soul：分区、字符上限、版本历史、提案与回滚。 | 1 | 2 |  |
 | `internal/tools` | capability | 工具注册表：eager/searchable 分层、MCP 服务器加载与代理执行、结果规范化与溢出落盘。 | 2 | 12 |  |
 | `internal/tools/builtin` | capability | 内置工具实现：read_file / write_file / terminal_exec 等，刻意不依赖 server 与 agentloop。 | 3 | 1 |  |
 | `internal/tools/integrationkit` | capability | 集成工具的共享原语：传输、凭据与参数 schema 复用件，供 internal/tools/integrations 各模块使用。 | 1 | 2 |  |
@@ -98,9 +98,7 @@
 
 ## 分层检查
 
-发现反向依赖（低层 import 高层）：
-
-- 反向依赖：internal/soul（capability）导入了更高层 internal/queen（orchestration）
+未发现反向依赖：所有 import 边都从浅层指向深层。
 
 ## 无导入方的包
 
@@ -112,7 +110,7 @@
 
 - `internal/orchestrator`：未接线：仓库内无调用方；本 port 以 run_worker 的扇出取代图编排。
 - `internal/charts`：未接线：chart_render 尚未注册进 ToolRegistry。
-- `internal/soul`：已知反向依赖：反思模块读取内层 profile（internal/queen.LoadQueenProfile / FormatQueenIdentityPrompt）。治理方向是把 profile 读取拆到低层包，暂列 warning 不阻断。
+- `internal/soul`：反思的身份读取通过 soul 侧接口 QueenProfileSource（LoadQueenProfile / FormatQueenIdentityPrompt）由装配层 internal/cli 注入 queen 实现；soul 不再 import internal/queen，反向依赖已清零。
 
 ---
 

@@ -1,18 +1,18 @@
 {
   "schema_version": 1,
   "module": "github.com/aden-hive/hive-go",
-  "generated_at_commit": "81e2f9356409",
+  "generated_at_commit": "6624019b734d",
   "generated_from": "architecture/model.yaml + go list -json ./... + internal/server mux.HandleFunc + internal/eventbus event_type.go",
   "stats": {
     "packages": 73,
-    "package_edges": 197,
+    "package_edges": 196,
     "capabilities": 12,
     "capability_edges": 85,
     "layers": 8,
     "contracts": 34,
     "http_routes": 220,
     "event_types": 77,
-    "warnings": 2
+    "warnings": 1
   },
   "layers": [
     {
@@ -484,7 +484,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 0,
-      "dependents": 4
+      "dependents": 3
     },
     {
       "id": "pkg:internal/queenmail",
@@ -770,8 +770,8 @@
       "responsibility": "Queen 的 soul：分区、字符上限、版本历史、提案与回滚。",
       "stability": "evolving",
       "entrypoint": false,
-      "note": "已知反向依赖：反思模块读取内层 profile（internal/queen.LoadQueenProfile / FormatQueenIdentityPrompt）。治理方向是把 profile 读取拆到低层包，暂列 warning 不阻断。",
-      "direct_dependencies": 2,
+      "note": "反思的身份读取通过 soul 侧接口 QueenProfileSource（LoadQueenProfile / FormatQueenIdentityPrompt）由装配层 internal/cli 注入 queen 实现；soul 不再 import internal/queen，反向依赖已清零。",
+      "direct_dependencies": 1,
       "dependents": 2
     },
     {
@@ -2356,11 +2356,6 @@
     {
       "from": "pkg:internal/soul",
       "to": "pkg:internal/llm",
-      "kind": "depends"
-    },
-    {
-      "from": "pkg:internal/soul",
-      "to": "pkg:internal/queen",
       "kind": "depends"
     },
     {
@@ -4122,11 +4117,6 @@
     ]
   },
   "warnings": [
-    {
-      "code": "reverse_dependency",
-      "severity": "warning",
-      "message": "反向依赖：internal/soul（capability）导入了更高层 internal/queen（orchestration）"
-    },
     {
       "code": "no_importer",
       "severity": "info",

@@ -41,8 +41,9 @@ func (r *Runner) startSoulDailyReflection(home hivehome.Home) func() {
 		BuildCompleter: func(queenID string, cfg *soulstore.SoulConfig) (llm.Completer, error) {
 			return resolveChatProvider(home, "")
 		},
-		Log:       log.Printf,
-		MaxTokens: soulDailyMaxTokens(home),
+		ProfileSource: soulProfileSource{},
+		Log:           log.Printf,
+		MaxTokens:     soulDailyMaxTokens(home),
 	})
 	go runner.Run(stop, soulDailyInterval, 0)
 	var once sync.Once

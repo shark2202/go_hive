@@ -168,13 +168,15 @@
     "id": "inventory-triage-fixes",
     "label": "清单误判/注解修正：tracker_tools/tracker_db/worker_profiles/colony_tools_config/outcome_aggregator + skills/discovery + server/sse + pipeline/registry 错配",
     "hours": 3,
-    "done": false
+    "done": true,
+    "note": "done: merge 6624019b + registry 重生成 283d16d6（ported 202；C12 PASS）"
    },
    {
     "id": "server-readme-delta",
     "label": "上游 server/README 文档债清单（graph 时代路由 vs 现役代码 vs Go 覆盖）",
     "hours": 2,
-    "done": false
+    "done": true,
+    "note": "done: merge e3c4517d（docs/server-readme-delta.md）"
    },
    {
     "id": "pipeline-stages",
@@ -192,13 +194,15 @@
     "id": "streamtoken-refresh-scope",
     "label": "server/streamtoken_refresh.py（云端 streamToken 轮换）归属：实现或登记 out_of_scope(cloud)",
     "hours": 2,
-    "done": false
+    "done": true,
+    "note": "done: merge e3c4517d（out_of_scope(cloud) + CURATED）"
    },
    {
     "id": "browser-audit-d02-refresh",
     "label": "browser 审计页 D02 文案与 tool-surface 22/22 sha 证据不一致，需刷新口径",
     "hours": 1,
-    "done": false
+    "done": true,
+    "note": "done: merge e3c4517d（D02 → 可宣布对齐，22/22 sha）"
    },
    {
     "id": "memory-tools-defs",
@@ -210,7 +214,8 @@
     "id": "tool-desc-residual-7",
     "label": "tool-contract-diff 当前 description 34/41（7 条未逐字）+ schema 归一 20/41 收口",
     "hours": 2,
-    "done": false
+    "done": true,
+    "note": "done: 已被 round 8 live recheck 口径取代（desc 47/47）；旧 34/41 数字作废"
    },
    {
     "id": "integrations-structure-p1",
@@ -229,7 +234,8 @@
     "id": "queen-mail-mcp-parity",
     "label": "queen-mail MCP stdio 协议面收口：description 逐字/title/outputSchema/structuredContent+isError/错误码，capabilities 与 serverInfo.version 登记例外；docs/queen-mail.md §6 补录",
     "hours": 3,
-    "done": false
+    "done": true,
+    "note": "done: merged 71bd29cd"
    },
    {
     "id": "qmail-package-split",
@@ -242,31 +248,36 @@
     "id": "reflection-atomic-write",
     "label": "reflection.go:302 os.WriteFile 非原子写 → temp+rename，消除 TestChatRuntimeTurnDoneReflectsIntoQueenMemory flake 根因",
     "hours": 1,
-    "done": false
+    "done": true,
+    "note": "done: merged cfd0d415（原子写+回归测试）"
    },
    {
     "id": "soul-queen-reverse-dep",
     "label": "结构：消除 internal/soul → internal/queen 反向依赖（QueenProfile 格式化下沉/注入），arch 仅剩 0 条反向边",
     "hours": 2,
-    "done": false
+    "done": true,
+    "note": "done: merge 187c5204（QueenProfileSource 注入；arch 196 边/1 info，grep 0）"
    },
    {
     "id": "skills-worker-scope",
     "label": "worker 技能可见面：补齐 queen scope 对其名下 colony 的可见性（GAP-07），或登记为有意偏差",
     "hours": 3,
-    "done": false
+    "done": true,
+    "note": "done: merge 98c0937b（queen_ui→colony_ui；GAP-07 已修复）"
    },
    {
     "id": "colony-audit-refresh",
     "label": "刷新 queen-worker-colony-parity-audit.html：GAP-04 playbook 已修、GAP-09 LongMemEval 已有 n=20、turn_context P-05 已注入等过时条目",
     "hours": 1,
-    "done": false
+    "done": true,
+    "note": "done: merge e3c4517d（GAP-04/09/P-05 刷新）"
    },
    {
     "id": "qmail-split-frozen-surfaces",
     "label": "qmail→queenmail 后刷新冻结面引用：module-inventory/appearance registry/矩阵中的旧包路径（走 allowlist/重生流程）",
     "hours": 1,
-    "done": false
+    "done": true,
+    "note": "done: module-inventory/appearance registry 已随 qmail-split 刷新并入 allowlist"
    },
    {
     "id": "tool-metric-unify",

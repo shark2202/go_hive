@@ -1,5 +1,8 @@
 package tracker
 
+// Parity: framework/tools/tracker_tools.py::build_tracker_tools
+// Parity: framework/tools/tracker_tools.py::register_tracker_tools
+
 import (
 	"database/sql"
 	"encoding/json"

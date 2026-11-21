@@ -1,9 +1,10 @@
 package colony
 
-// Colony skill surface: the `skills/` folder a colony owns, the catalog workers
-// see, and the read tools they use. Writing a skill is the queen's job (the
-// session catalogue owns write_skill); a worker only reads, so this surface
-// adds skill_view/list_skills and an allowlisted SkillDirs root for view_file.
+// Colony skill surface: the `skills/` folders a worker sees (the colony's own
+// plus the owning queen's), the catalog workers read, and the read tools they
+// use. Writing a skill is the queen's job (the session catalogue owns
+// write_skill); a worker only reads, so this surface adds skill_view/list_skills
+// and an allowlisted SkillDirs root for view_file.
 
 import (
 	"unicode/utf8"
@@ -20,43 +21,77 @@ func (r *ColonyRuntime) colonySkillsDir() string {
 	return skills.ExistingColonySkillsDir(r.storagePath)
 }
 
-// colonySkills returns the colony catalog for the read routes. It is only
-// populated when the colony actually has a skills/ directory; false mirrors
-// upstream's absent skills_manager.
+// queenSkillsDir returns the owning queen's skills/ directory when she is
+// known and the directory exists. Upstream a queen's skill scope is visible to
+// every colony she owns, so her colonies' workers see it too
+// (framework/host/colony_runtime.py::_build_default_skills_config wires the
+// queen_ui scope into the colony runtime; 07-memory-and-skills.md §4.2).
+func (r *ColonyRuntime) queenSkillsDir() string {
+	if r == nil {
+		return ""
+	}
+	return skills.ExistingSkillsDir(r.queenDir)
+}
+
+// workerSkillScopes is the ordered skill scope list a worker (and the colony's
+// own read surface) sees: the owning queen's scope first, then the colony's
+// own. Discovery resolves later scopes over earlier ones, so a colony skill
+// overrides the queen's copy of the same name — the upstream scan order in
+// _build_default_skills_config (queen_ui, then colony_ui).
+func (r *ColonyRuntime) workerSkillScopes() []skills.ExtraScope {
+	if r == nil {
+		return nil
+	}
+	scopes := make([]skills.ExtraScope, 0, 2)
+	if dir := r.queenSkillsDir(); dir != "" {
+		scopes = append(scopes, skills.ExtraScope{Directory: dir, Label: "queen_ui", Priority: 2})
+	}
+	if dir := r.colonySkillsDir(); dir != "" {
+		scopes = append(scopes, skills.ExtraScope{Directory: dir, Label: "colony_ui", Priority: 3})
+	}
+	return scopes
+}
+
+// colonySkills returns the skills the colony sees for the read routes (the
+// colony's own scope plus the owning queen's). It is only populated when at
+// least one of those folders exists; false mirrors upstream's absent
+// skills_manager.
 func (r *ColonyRuntime) colonySkills() ([]*skills.ParsedSkill, bool) {
-	dir := r.colonySkillsDir()
-	if dir == "" {
+	scopes := r.workerSkillScopes()
+	if len(scopes) == 0 {
 		return nil, false
 	}
 	discovery := skills.NewSkillDiscovery(skills.DiscoveryConfig{
 		SkipFrameworkScope: true,
 		SkipUserScope:      true,
-		ExtraScopes:        []skills.ExtraScope{{Directory: dir, Label: "colony"}},
+		ExtraScopes:        scopes,
 	})
 	return discovery.Discover(), true
 }
 
-// workerSkillDirs is the Tier-3 read allowlist a worker's view_file uses. It
-// only names the colony folder: a worker must not read the queen's private
-// skills through a filesystem path.
+// workerSkillDirs is the Tier-3 read allowlist a worker's view_file uses: the
+// colony's skills/ folder plus the owning queen's skills/ folder. The queen
+// scope is visible to her colonies' workers upstream (queen_ui in
+// _build_default_skills_config); a queen the colony does not belong to is
+// never exposed.
 func (r *ColonyRuntime) workerSkillDirs() []string {
-	dir := r.colonySkillsDir()
-	if dir == "" {
-		return nil
+	dirs := make([]string, 0, 2)
+	if dir := r.colonySkillsDir(); dir != "" {
+		dirs = append(dirs, dir)
 	}
-	return []string{dir}
+	if dir := r.queenSkillsDir(); dir != "" {
+		dirs = append(dirs, dir)
+	}
+	return dirs
 }
 
-// workerSkillsCatalogPrompt renders the colony catalog a spawning worker's
-// prompt announces, straight off disk (the freshness a new worker always had),
-// and primes the memo in-flight workers read. ReloadSkills refreshes the same
-// memo when a skill changes while workers are running.
+// workerSkillsCatalogPrompt renders the catalog a spawning worker's prompt
+// announces: the owning queen's skills overridden by the colony's own, straight
+// off disk (the freshness a new worker always had). It primes the memo
+// in-flight workers read; ReloadSkills refreshes the same memo when a skill
+// changes while workers are running.
 func (r *ColonyRuntime) workerSkillsCatalogPrompt() string {
-	dir := r.colonySkillsDir()
-	prompt := ""
-	if dir != "" {
-		prompt = skills.ScopedCatalogPrompt(dir, "colony")
-	}
+	prompt := skills.ScopedCatalogPromptForScopes(r.workerSkillScopes())
 	r.storeSkillsCatalog(prompt)
 	return prompt
 }
@@ -86,20 +121,15 @@ func (r *ColonyRuntime) ReloadSkills() (map[string]any, error) {
 	if r == nil {
 		return nil, nil
 	}
-	dir := r.colonySkillsDir()
-	prompt := ""
-	if dir != "" {
-		prompt = skills.ScopedCatalogPrompt(dir, "colony")
-	}
-	// Publish even the empty result: a colony whose skills folder disappeared
+	prompt := r.workerSkillsCatalogPrompt()
+	// Publish even the empty result: a colony whose skill folders disappeared
 	// must drop the stale catalog instead of keeping the last one.
-	r.storeSkillsCatalog(prompt)
 	stats := map[string]any{"catalog_chars": utf8.RuneCountInString(prompt)}
-	if dir != "" {
-		stats["skill_dirs"] = []string{dir}
-	} else {
-		stats["skill_dirs"] = []string{}
+	dirs := r.workerSkillDirs()
+	if dirs == nil {
+		dirs = []string{}
 	}
+	stats["skill_dirs"] = dirs
 	return stats, nil
 }
 

@@ -137,13 +137,14 @@ func TestRealLLMSoulReflection(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 	proposal, err := soul.Reflect(soul.ReflectionOptions{
-		HomeRoot:  home.Root,
-		QueensDir: queensDir,
-		QueenID:   queenID,
-		Config:    cfg,
-		Completer: provider,
-		Context:   ctx,
-		MaxTokens: 8192,
+		HomeRoot:      home.Root,
+		QueensDir:     queensDir,
+		QueenID:       queenID,
+		Config:        cfg,
+		Completer:     provider,
+		ProfileSource: soulProfileSource{},
+		Context:       ctx,
+		MaxTokens:     8192,
 	})
 	if err != nil {
 		t.Fatalf("Reflect: %v", err)

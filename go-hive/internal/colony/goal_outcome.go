@@ -15,6 +15,7 @@ package colony
 //     event publishes the weighted score.
 //
 // Parity: framework/host/colony_runtime.py::ColonyRuntime._build_worker
+// Parity: framework/host/outcome_aggregator.py::OutcomeAggregator.evaluate_goal_progress
 // Parity-exempt: executing SuccessCriterion.metric has no upstream runtime —
 // framework/schemas/goal.py::Goal.is_success is schema-only. See
 // agentloop.EvaluateGoal.

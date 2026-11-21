@@ -1,9 +1,9 @@
 {
- "wave": 25,
- "at": "2026-11-22 01:42",
- "head": "73463139",
- "ci": 2,
+ "wave": 26,
+ "at": "2026-11-22 01:50",
+ "head": "299a363a",
+ "ci": 0,
  "qc": 0,
  "publish": 0,
- "note": "三 lane 合并后（pipeline/memory/tool-surface）"
+ "note": "C10 快照重生成后"
 }

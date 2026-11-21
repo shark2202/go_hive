@@ -1,5 +1,9 @@
 package tracker
 
+// Parity: framework/host/tracker_db.py::ensure_tracker_db
+// Parity: framework/host/tracker_db.py::validate_sql
+// Parity: framework/host/tracker_db.py::execute_sql
+
 import (
 	"database/sql"
 	"encoding/json"

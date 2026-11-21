@@ -3,6 +3,8 @@ package server
 // Parity: framework/server/routes_colony_tools.py::handle_get_tools
 // Parity: framework/server/routes_colony_tools.py::handle_patch_tools
 // Parity: framework/server/routes_colony_tools.py::handle_list_colonies
+// Parity: framework/host/colony_tools_config.py::load_colony_tools_config
+// Parity: framework/host/colony_tools_config.py::update_colony_tools_config
 
 import (
 	"encoding/json"

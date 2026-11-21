@@ -2,6 +2,7 @@ package server
 
 // Parity: framework/server/routes_events.py::handle_global_events
 // Parity: framework/server/routes_events.py::handle_crm_changed
+// Parity: framework/server/sse.py::SSEResponse.send_event
 
 import (
 	"encoding/json"

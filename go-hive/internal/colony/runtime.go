@@ -68,6 +68,15 @@ type RuntimeOptions struct {
 	// (GET /colony/skills). Nil reports "catalog unavailable", matching
 	// upstream's absent skills_manager.
 	SkillsProvider func() ([]*skills.ParsedSkill, bool)
+	// QueenDir is the owning queen's home directory (…/queens/<queen_id>).
+	// When set, workers spawned by this colony see the queen's skill scope
+	// (queen_ui) ahead of the colony's own (colony_ui), with a colony skill
+	// overriding the queen's copy on a name collision — upstream's queen
+	// scope is visible to every colony she owns
+	// (framework/host/colony_runtime.py::_build_default_skills_config;
+	// 07-memory-and-skills.md §4.2). Empty keeps the worker surface
+	// colony-only, which is how the port behaved before this field existed.
+	QueenDir string
 	// ToolProviderMap attributes tool names to providers for the tools read
 	// surface (upstream ColonyRuntime._tool_provider_map).
 	ToolProviderMap map[string]string
@@ -153,8 +162,11 @@ type ColonyRuntime struct {
 	enabledMCPTools []string
 	mcpToolNamesAll map[string]struct{}
 
-	workerLLM       llm.Completer
-	skillsProvider  func() ([]*skills.ParsedSkill, bool)
+	workerLLM      llm.Completer
+	skillsProvider func() ([]*skills.ParsedSkill, bool)
+	// queenDir is the owning queen's home; empty keeps the worker skill
+	// surface colony-only (see RuntimeOptions.QueenDir).
+	queenDir        string
 	toolProviderMap map[string]string
 	// skillsCatalogMu guards the memoised colony catalog prompt in-flight
 	// workers read each iteration; ReloadSkills swaps it (skills_surface.go).
@@ -262,6 +274,7 @@ func NewColonyRuntime(opts RuntimeOptions) *ColonyRuntime {
 	}
 	runtime.workerLLM = opts.WorkerLLM
 	runtime.skillsProvider = opts.SkillsProvider
+	runtime.queenDir = strings.TrimSpace(opts.QueenDir)
 	runtime.overseerTasks = newOverseerTaskSet(storage)
 	if runtime.skillsProvider == nil {
 		// No host passed a provider, but a colony that owns a skills/ folder
@@ -1102,10 +1115,13 @@ func (r *ColonyRuntime) executorFor(worker *Worker) func(agentloop.ToolCallReque
 			return agentloop.ToolResult{Content: content, IsError: isError}, nil
 		}
 		// Skill reads are filesystem reads scoped to the colony's skills/
-		// folder; the worker's own dirs are the only authority (never the
-		// queen's private skill tree).
+		// folder and the owning queen's skills/ folder: upstream's queen
+		// scope is visible to every colony she owns, and the colony's copy
+		// wins on a name collision (scopedSkillRoots searches colony first).
+		// Any other queen's tree stays unreachable.
 		if content, isError, handled := skills.ExecuteAgentTool(req.Name, req.Input, skills.ToolDirs{
 			ColonyDir:  r.storagePath,
+			QueenDir:   r.queenDir,
 			SessionDir: r.storagePath,
 		}); handled {
 			return agentloop.ToolResult{Content: content, IsError: isError}, nil

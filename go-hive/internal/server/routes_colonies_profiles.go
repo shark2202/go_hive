@@ -3,6 +3,9 @@ package server
 // Parity: framework/server/routes_colonies.py::handle_list_worker_profiles
 // Parity: framework/server/routes_colonies.py::handle_upsert_worker_profile
 // Parity: framework/server/routes_colonies.py::handle_delete_worker_profile
+// Parity: framework/host/worker_profiles.py::list_worker_profiles
+// Parity: framework/host/worker_profiles.py::upsert_worker_profile
+// Parity: framework/host/worker_profiles.py::delete_worker_profile
 
 import (
 	"encoding/json"

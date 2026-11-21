@@ -117,6 +117,10 @@ type DailyRunnerOptions struct {
 	// BuildCompleter resolves the model one queen's reflection runs on. A
 	// failure is retried like any other failed attempt.
 	BuildCompleter func(queenID string, cfg *SoulConfig) (llm.Completer, error)
+	// ProfileSource reads each queen's profile for the identity her
+	// reflection runs under; forwarded to Reflect. nil means "no profile":
+	// her id, with no identity block.
+	ProfileSource QueenProfileSource
 	// Log receives the runner's lines; nil means log.Printf.
 	Log func(format string, args ...any)
 	// Now is the clock; nil means time.Now.
@@ -203,15 +207,16 @@ func (r *DailyRunner) RunDue(now time.Time) []string {
 			continue
 		}
 		_, err = Reflect(ReflectionOptions{
-			HomeRoot:  r.options.HomeRoot,
-			QueensDir: r.options.QueensDir,
-			QueenID:   queenID,
-			Config:    cfg,
-			Completer: completer,
-			Now:       moment,
-			Context:   context.Background(),
-			MaxTokens: r.options.MaxTokens,
-			Log:       r.options.Log,
+			HomeRoot:      r.options.HomeRoot,
+			QueensDir:     r.options.QueensDir,
+			QueenID:       queenID,
+			Config:        cfg,
+			Completer:     completer,
+			ProfileSource: r.options.ProfileSource,
+			Now:           moment,
+			Context:       context.Background(),
+			MaxTokens:     r.options.MaxTokens,
+			Log:           r.options.Log,
 		})
 		if err != nil {
 			reflectionRecordFailure(r.options.QueensDir, queenID, moment, err)

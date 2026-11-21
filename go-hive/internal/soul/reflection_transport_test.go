@@ -41,13 +41,14 @@ func TestReflectionThroughTheHTTPProvider(t *testing.T) {
 
 	provider := llm.NewHTTPProvider(llm.ProviderOptions{Model: "gpt-4o-mini", APIKey: "test-key", APIBase: server.URL + "/v1"})
 	proposal, err := Reflect(ReflectionOptions{
-		HomeRoot:  home.root,
-		QueensDir: home.queensDir,
-		QueenID:   reflectionTestQueen,
-		Config:    home.soulConfig(t),
-		Completer: provider,
-		Now:       reflectionTestNow(),
-		Log:       func(string, ...any) {},
+		HomeRoot:      home.root,
+		QueensDir:     home.queensDir,
+		QueenID:       reflectionTestQueen,
+		Config:        home.soulConfig(t),
+		Completer:     provider,
+		ProfileSource: reflectionTestProfileSource{},
+		Now:           reflectionTestNow(),
+		Log:           func(string, ...any) {},
 	})
 	if err != nil {
 		t.Fatalf("reflect: %v", err)

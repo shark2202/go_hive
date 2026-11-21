@@ -36,7 +36,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/aden-hive/hive-go/internal/llm"
-	"github.com/aden-hive/hive-go/internal/queen"
 )
 
 const (
@@ -419,12 +418,30 @@ func reflectionBootstrapMaterial(homeRoot, queenID string, cfg *SoulConfig) []re
 	return out
 }
 
+// QueenProfileSource is the reflection's seam onto a queen's profile: her
+// display name and the identity block her reflection prompt carries. soul
+// must not import internal/queen (the profile store sits in the orchestration
+// layer above this capability one), so the assembly layer injects a source;
+// the production implementation forwards to internal/queen verbatim. A nil
+// source reads as a queen without a profile: her id, with no identity block.
+type QueenProfileSource interface {
+	// LoadQueenProfile reads the queen's profile, or her built-in default
+	// when queens/<id>/profile.yaml does not exist yet.
+	LoadQueenProfile(queensDir, queenID string) (map[string]any, error)
+	// FormatQueenIdentityPrompt renders a profile's identity block;
+	// maxExamples caps the worked-example lines it keeps (nil means all).
+	FormatQueenIdentityPrompt(profile map[string]any, maxExamples *int) string
+}
+
 // reflectionIdentity is her name and rendered identity prompt. A queen without
 // a profile is her id, with no identity block.
 //
 // Parity: framework/agents/queen/soul_reflection.py::_identity
-func reflectionIdentity(queensDir, queenID string) (string, string) {
-	profile, err := queen.LoadQueenProfile(queensDir, queenID)
+func reflectionIdentity(queensDir, queenID string, profiles QueenProfileSource) (string, string) {
+	if profiles == nil {
+		return queenID, ""
+	}
+	profile, err := profiles.LoadQueenProfile(queensDir, queenID)
 	if err != nil {
 		return queenID, ""
 	}
@@ -433,7 +450,7 @@ func reflectionIdentity(queensDir, queenID string) (string, string) {
 		name = text
 	}
 	noExamples := 0
-	return name, queen.FormatQueenIdentityPrompt(profile, &noExamples)
+	return name, profiles.FormatQueenIdentityPrompt(profile, &noExamples)
 }
 
 // reflectionNorm removes every whitespace run, so a quote matches what was
@@ -889,6 +906,10 @@ type ReflectionOptions struct {
 	Config    *SoulConfig
 	// Completer is the model her reflection runs on.
 	Completer llm.Completer
+	// ProfileSource reads her profile for the identity the reflection runs
+	// under; the assembly layer injects the queen-backed implementation.
+	// nil means "no profile": her id, with no identity block.
+	ProfileSource QueenProfileSource
 	// Bootstrap is the first draft: it also reads the configured memories and
 	// may make bootstrap_edits changes.
 	Bootstrap bool
@@ -984,7 +1005,7 @@ func reflectLocked(opts ReflectionOptions) (*Proposal, error) {
 	state := LoadReflectionState(opts.QueensDir, opts.QueenID)
 	cursors := reflectionCursors(state)
 	current := Load(opts.QueensDir, opts.QueenID)
-	name, identity := reflectionIdentity(opts.QueensDir, opts.QueenID)
+	name, identity := reflectionIdentity(opts.QueensDir, opts.QueenID, opts.ProfileSource)
 
 	chats := make([]ReflectionChat, 0)
 	for _, sessionDir := range SessionsToRead(opts.HomeRoot, opts.QueensDir, opts.QueenID, cfg) {

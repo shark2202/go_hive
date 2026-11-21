@@ -1,6 +1,6 @@
 # 接口与契约（生成物，勿手改）
 
-> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` 的 `contracts:` / `disk_formats:`，加上 `internal/server` 路由注册与 `internal/eventbus` 常量生成。commit: `81e2f9356409`
+> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` 的 `contracts:` / `disk_formats:`，加上 `internal/server` 路由注册与 `internal/eventbus` 常量生成。commit: `6624019b734d`
 > 契约是模块之间「靠什么约束交互」的清单：谁提供、谁消费、定义在哪、保证什么、失败怎么表现、变更属于加法还是破坏、由什么机制强制。
 > `providers` / `consumers` 里的 `ext:` 前缀表示外部消费面（前端、运维、MCP server、外部调用方），不是仓库内的包。
 
@@ -456,7 +456,7 @@
 | POST | `/api/colonies/import/init` | `handleInitUpload` | `internal/server/routes_colonies.go:44` |
 | GET | `/api/colonies/import/status/{upload_id}` | `handleUploadStatus` | `internal/server/routes_colonies.go:50` |
 | DELETE | `/api/colonies/import/{upload_id}` | `handleCancelUpload` | `internal/server/routes_colonies.go:56` |
-| GET | `/api/colonies/tools-index` | `handleListColoniesToolsIndex` | `internal/server/routes_colony_tools.go:45` |
+| GET | `/api/colonies/tools-index` | `handleListColoniesToolsIndex` | `internal/server/routes_colony_tools.go:47` |
 | DELETE | `/api/colonies/{colony_id}` | `handleDeleteColony` | `internal/server/routes_colonies.go:62` |
 | GET | `/api/colonies/{colony_id}/active-session` | `handleActiveColonySession` | `internal/server/routes_sessions.go:141` |
 | GET | `/api/colonies/{colony_id}/data/changes` | `handleColonyTableChanges` | `internal/server/routes_colony_workers_data.go:915` |
@@ -473,8 +473,8 @@
 | GET | `/api/colony/{colony_id}/notifications` | `handleGetNotifications` | `internal/server/routes_sentinel.go:104` |
 | PUT | `/api/colony/{colony_id}/notifications` | `handlePutNotifications` | `internal/server/routes_sentinel.go:107` |
 | POST | `/api/colony/{colony_id}/notifications/test` | `handleTestNotification` | `internal/server/routes_sentinel.go:110` |
-| GET | `/api/colony/{colony_id}/tools` | `handleGetColonyTools` | `internal/server/routes_colony_tools.go:48` |
-| PATCH | `/api/colony/{colony_id}/tools` | `handlePatchColonyTools` | `internal/server/routes_colony_tools.go:51` |
+| GET | `/api/colony/{colony_id}/tools` | `handleGetColonyTools` | `internal/server/routes_colony_tools.go:50` |
+| PATCH | `/api/colony/{colony_id}/tools` | `handlePatchColonyTools` | `internal/server/routes_colony_tools.go:53` |
 | GET | `/api/config/external-skills` | `handleGetExternalSkills` | `internal/server/routes_config.go:294` |
 | PUT | `/api/config/external-skills` | `handlePutExternalSkills` | `internal/server/routes_config.go:295` |
 | GET | `/api/config/features` | `handleGetFeatures` | `internal/server/routes_config.go:279` |
@@ -506,7 +506,7 @@
 | POST | `/api/credentials/validate-key` | `routes.handleValidateKey` | `internal/server/routes_credentials.go:77` |
 | DELETE | `/api/credentials/{credential_id}` | `routes.handleDeleteCredential` | `internal/server/routes_credentials.go:85` |
 | GET | `/api/credentials/{credential_id}` | `routes.handleGetCredential` | `internal/server/routes_credentials.go:84` |
-| POST | `/api/crm/changed` | `handleCRMChanged` | `internal/server/routes_events.go:73` |
+| POST | `/api/crm/changed` | `handleCRMChanged` | `internal/server/routes_events.go:74` |
 | POST | `/api/crm/claim` | `handleCRMProxy` | `internal/server/routes_colony_workers_global.go:787` |
 | GET | `/api/crm/grid/schema` | `handleCRMProxy` | `internal/server/routes_colony_workers_global.go:752` |
 | POST | `/api/crm/grid/{entity}` | `handleCRMProxy` | `internal/server/routes_colony_workers_global.go:768` |
@@ -518,7 +518,7 @@
 | POST | `/api/crm/grid/{entity}/{id}/stage` | `handleCRMProxy` | `internal/server/routes_colony_workers_global.go:782` |
 | POST | `/api/crm/release` | `handleCRMProxy` | `internal/server/routes_colony_workers_global.go:790` |
 | GET | `/api/discover` | `handleDiscoverAgents` | `internal/server/routes_agents.go:27` |
-| GET | `/api/events/global` | `handleGlobalEvents` | `internal/server/routes_events.go:70` |
+| GET | `/api/events/global` | `handleGlobalEvents` | `internal/server/routes_events.go:71` |
 | GET | `/api/global/crm/status` | `handleGlobalCRMStatus` | `internal/server/routes_colony_workers_global.go:722` |
 | GET | `/api/global/data/changes` | `handleGlobalChanges` | `internal/server/routes_colony_workers_global.go:728` |
 | GET | `/api/global/data/foreign-keys` | `handleGlobalForeignKeys` | `internal/server/routes_colony_workers_global.go:731` |

@@ -1,5 +1,7 @@
 package skills
 
+// Parity: framework/skills/discovery.py::SkillDiscovery
+
 import (
 	"embed"
 	"encoding/json"

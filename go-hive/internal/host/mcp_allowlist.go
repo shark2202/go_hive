@@ -1,5 +1,7 @@
 package host
 
+// Parity: framework/host/colony_tools_config.py::load_colony_tools_config
+
 // MCP capability boundary for a colony host.
 //
 // The colony tools sidecar (<colony>/tools.json) stores the operator's enabled

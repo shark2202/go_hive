@@ -201,7 +201,7 @@ packages:
     layer: capability
     responsibility: "Queen 的 soul：分区、字符上限、版本历史、提案与回滚。"
     stability: evolving
-    note: "已知反向依赖：反思模块读取内层 profile（internal/queen.LoadQueenProfile / FormatQueenIdentityPrompt）。治理方向是把 profile 读取拆到低层包，暂列 warning 不阻断。"
+    note: "反思的身份读取通过 soul 侧接口 QueenProfileSource（LoadQueenProfile / FormatQueenIdentityPrompt）由装配层 internal/cli 注入 queen 实现；soul 不再 import internal/queen，反向依赖已清零。"
   - package: internal/mcpregistry
     layer: capability
     responsibility: "MCP 服务器注册表 CLI 后端：索引、安装/启用、健康检查与清单渲染。"

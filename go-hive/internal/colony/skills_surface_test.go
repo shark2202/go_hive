@@ -92,6 +92,153 @@ func writeColonySkill(t *testing.T, colonyDir, name, description string) {
 	}
 }
 
+// writeSkillFile materialises one skill under an explicit skills/ root (the
+// colony's or a queen's), with a body the read-tool assertions can tell apart.
+func writeSkillFile(t *testing.T, skillsDir, name, description, skillBody string) {
+	t.Helper()
+	skillDir := filepath.Join(skillsDir, name)
+	if err := os.MkdirAll(skillDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	body := "---\nname: " + name + "\ndescription: " + description + "\n---\n\n" + skillBody + "\n"
+	if err := os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// Parity: core/framework/host/colony_runtime.py::_build_default_skills_config
+// Parity: core/tests/test_skill_overrides.py::TestSkillsManagerOverrides::test_queen_disable_applies_to_colony_ui_skills
+// Parity: core/tests/test_write_skill_tool.py::test_without_a_colony_it_writes_the_queens_own_skill_into_her_live_catalog
+//
+// A worker sees the owning queen's skill scope (queen_ui) ahead of the
+// colony's own scope (colony_ui): both are announced and readable, and a
+// colony skill overrides the queen's copy of the same name — the upstream
+// scan order in _build_default_skills_config (07-memory-and-skills.md §4.2:
+// "queen scope 对她的所有会话与 Colony 可见").
+func TestWorkerSkillSurfaceSeesQueensScopeWithColonyOverride(t *testing.T) {
+	root := t.TempDir()
+	colonyDir := filepath.Join(root, "colonies", "demo-colony")
+	queenDir := filepath.Join(root, "queens", "queen_ava")
+	colonySkillsDir := filepath.Join(colonyDir, "skills")
+	queenSkillsDir := filepath.Join(queenDir, "skills")
+	writeSkillFile(t, colonySkillsDir, "colony-only", "colony skill", "Colony procedure.")
+	writeSkillFile(t, queenSkillsDir, "queen-private", "queen skill", "Queen procedure.")
+	writeSkillFile(t, queenSkillsDir, "shared", "queen copy", "Queen copy.")
+	writeSkillFile(t, colonySkillsDir, "shared", "colony copy", "Colony copy.")
+
+	runtime := NewColonyRuntime(RuntimeOptions{
+		StoragePath: colonyDir,
+		QueenDir:    queenDir,
+		AgentSpec:   agentloop.AgentSpec{ID: "worker"},
+	})
+	worker := runtime.BuildWorker(WorkerBuildOptions{WorkerID: "w1", Task: "do it"})
+	if worker.Context == nil {
+		t.Fatal("worker context is nil")
+	}
+	ctx := worker.Context
+
+	// The view_file allowlist covers both scopes; the colony's folder stays
+	// first so the read tools resolve a collision the same way the catalog does.
+	if len(ctx.SkillDirs) != 2 || ctx.SkillDirs[0] != colonySkillsDir || ctx.SkillDirs[1] != queenSkillsDir {
+		t.Fatalf("SkillDirs = %#v, want [%s %s]", ctx.SkillDirs, colonySkillsDir, queenSkillsDir)
+	}
+
+	// The catalog announces both scopes; the colony copy wins the collision.
+	for _, want := range []string{"<name>queen-private</name>", "<name>colony-only</name>", "<name>shared</name>"} {
+		if !strings.Contains(ctx.SkillsCatalogPrompt, want) {
+			t.Fatalf("catalog missing %s: %q", want, ctx.SkillsCatalogPrompt)
+		}
+	}
+	colonyShared := filepath.Join(colonySkillsDir, "shared", "SKILL.md")
+	queenShared := filepath.Join(queenSkillsDir, "shared", "SKILL.md")
+	if !strings.Contains(ctx.SkillsCatalogPrompt, colonyShared) {
+		t.Fatalf("catalog did not resolve 'shared' to the colony copy (%s): %q", colonyShared, ctx.SkillsCatalogPrompt)
+	}
+	if strings.Contains(ctx.SkillsCatalogPrompt, queenShared) {
+		t.Fatalf("catalog kept the queen copy of 'shared' (%s): %q", queenShared, ctx.SkillsCatalogPrompt)
+	}
+
+	// The read tools reach a queen-only skill and return the colony copy for
+	// the colliding name (scopedSkillRoots searches colony first, then queen).
+	executor := runtime.executorFor(worker)
+	read := func(name string) string {
+		t.Helper()
+		result, err := executor(agentloop.ToolCallRequest{
+			Name:  skills.SkillViewToolName,
+			Input: map[string]any{"skill_name": name},
+		})
+		if err != nil {
+			t.Fatalf("skill_view %s: %v", name, err)
+		}
+		if result.IsError {
+			t.Fatalf("skill_view %s errored: %s", name, result.Content)
+		}
+		return result.Content
+	}
+	if content := read("queen-private"); !strings.Contains(content, "Queen procedure.") {
+		t.Fatalf("skill_view queen-private = %q, want the queen's procedure", content)
+	}
+	if content := read("shared"); !strings.Contains(content, "Colony copy.") || strings.Contains(content, "Queen copy.") {
+		t.Fatalf("skill_view shared = %q, want the colony copy", content)
+	}
+
+	// The colony read surface lists the same visible set, with provenance.
+	catalog, ok := runtime.Skills()
+	if !ok {
+		t.Fatal("colony Skills() reported no catalog")
+	}
+	byName := map[string]*skills.ParsedSkill{}
+	for _, skill := range catalog {
+		byName[skill.Name] = skill
+	}
+	if _, ok := byName["queen-private"]; !ok {
+		t.Fatalf("catalog = %#v, want queen-private", catalog)
+	}
+	if shared, ok := byName["shared"]; !ok || shared.SourceScope != "colony_ui" {
+		t.Fatalf("shared = %#v, want the colony_ui copy", byName["shared"])
+	}
+
+	// Reload rebuilds the same two-scope catalog and reports both roots.
+	stats, err := runtime.ReloadSkills()
+	if err != nil {
+		t.Fatalf("reload: %v", err)
+	}
+	dirs, _ := stats["skill_dirs"].([]string)
+	if len(dirs) != 2 || dirs[0] != colonySkillsDir || dirs[1] != queenSkillsDir {
+		t.Fatalf("reload skill_dirs = %#v, want [%s %s]", dirs, colonySkillsDir, queenSkillsDir)
+	}
+}
+
+// Parity: core/framework/host/colony_runtime.py::_build_default_skills_config
+// Parity: core/tests/test_session_unified_colony_runtime.py::test_start_unified_colony_runtime_creates_real_colony
+//
+// A colony that has not materialised its own skills/ folder still surfaces the
+// owning queen's scope to its workers (upstream's SkillsManager scans framework
+// + user + queen_ui + colony_ui regardless of which directories exist).
+func TestWorkerSkillSurfaceSeesQueenSkillsWithoutAColonySkillsFolder(t *testing.T) {
+	root := t.TempDir()
+	colonyDir := filepath.Join(root, "colonies", "fresh-colony")
+	queenDir := filepath.Join(root, "queens", "queen_ava")
+	writeSkillFile(t, filepath.Join(queenDir, "skills"), "queen-private", "queen skill", "Queen procedure.")
+
+	runtime := NewColonyRuntime(RuntimeOptions{
+		StoragePath: colonyDir,
+		QueenDir:    queenDir,
+		AgentSpec:   agentloop.AgentSpec{ID: "worker"},
+	})
+	worker := runtime.BuildWorker(WorkerBuildOptions{WorkerID: "w1", Task: "do it"})
+	if worker.Context == nil {
+		t.Fatal("worker context is nil")
+	}
+	if !strings.Contains(worker.Context.SkillsCatalogPrompt, "<name>queen-private</name>") {
+		t.Fatalf("catalog = %q, want the queen's skill", worker.Context.SkillsCatalogPrompt)
+	}
+	wantDir := filepath.Join(queenDir, "skills")
+	if len(worker.Context.SkillDirs) != 1 || worker.Context.SkillDirs[0] != wantDir {
+		t.Fatalf("SkillDirs = %#v, want [%s]", worker.Context.SkillDirs, wantDir)
+	}
+}
+
 // Parity: framework/host/colony_runtime.py::ColonyRuntime.reload_skills (a
 // running worker picks the rebuilt catalog up on its next iteration via
 // dynamic_skills_catalog_provider).

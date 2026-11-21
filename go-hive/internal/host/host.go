@@ -52,6 +52,11 @@ type Config struct {
 	WorkerLLM llm.Completer
 	// SkillsProvider supplies the colony skill catalog for the read routes.
 	SkillsProvider func() ([]*skills.ParsedSkill, bool)
+	// QueenDir is the owning queen's home (…/queens/<id>); when set, the
+	// colony's workers see her skill scope (queen_ui) alongside the colony's
+	// own (colony_ui), with the colony overriding the queen on collisions.
+	// Empty keeps the worker surface colony-only.
+	QueenDir string
 	// ToolProviderMap attributes tool names to providers for the tools route.
 	ToolProviderMap map[string]string
 }
@@ -106,6 +111,7 @@ func New(cfg Config) (*Host, error) {
 		MaxConcurrentWorkers: cfg.MaxConcurrentWorkers,
 		WorkerLLM:            cfg.WorkerLLM,
 		SkillsProvider:       cfg.SkillsProvider,
+		QueenDir:             cfg.QueenDir,
 		ToolProviderMap:      cfg.ToolProviderMap,
 	})
 	if enabled, present := readColonyToolsAllowlist(cfg.StoragePath); present {

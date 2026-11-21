@@ -9,7 +9,7 @@
 
 > 正文里的路径相对 `go_hive/`；命令行示例假定在仓库根执行，所以带 `go_hive/` 前缀。
 >
-> 最近同步：2026-11-21 —— **67 包 / 8 层 / 178 条内部依赖 / 220 条 HTTP 路由 / 77 种事件 / 34 条契约**；`make arch-check` 已并入 `make ci`，文档漂移会阻断 CI。
+> 最近同步：2026-11-22 —— **73 包 / 8 层 / 196 条内部依赖 / 220 条 HTTP 路由 / 77 种事件 / 34 条契约**；`make arch-check` 已并入 `make ci`，文档漂移会阻断 CI。
 
 ```text
 architecture/model.yaml ──┐
@@ -243,7 +243,7 @@ flowchart TB
 - **层是严格有序的**：`entry(0) / harness(0) → assembly(1) → transport(2) → orchestration(3) → runtime(4) → capability(5) → foundation(6)`。`harness` 是测试与评测装置（e2e 假上游、契约对照工具），不随发布物交付；与 `entry` 同为 depth 0，只被测试和内部评测入口引用。生成器会检查每条 import 边，从深层指向浅层就写进 `warnings`。
 - **同层依赖是允许的**（例如 `colony → tracker`）：它们是一组协作的编排组件，不是分层违规。
 - **入度高的包是改动放大器**：`internal/hivehome`（15 个包依赖）、`internal/eventbus`、`internal/schemas`、`internal/agentloop` 改一次要考虑的面很大。具体数字在 `MODULES.md`。
-- **当前分层检查结果**：178 条 import 边，**1 条反向依赖**（`internal/soul` → `internal/queen`：反思模块读取 profile 身份提示；治理方向是拆出低层 profile 包，现列入 warning 不阻断）；**1 个包没有内部导入方**（`internal/orchestrator`，未接线）。`internal/quality`、`internal/envcontract` 与 e2e 命令按 `expected_orphan` 约定不计入。
+- **当前分层检查结果**：196 条 import 边，**0 条反向依赖**；**1 个包没有内部导入方**（`internal/orchestrator`，未接线）。`internal/quality`、`internal/envcontract` 与 e2e 命令按 `expected_orphan` 约定不计入。
 
 层定义、每包职责、依赖/被依赖计数与入口标记，全部在 [`MODULES.md`](./MODULES.md)。
 
@@ -611,7 +611,7 @@ python3 go_hive/scripts/gen_arch.py --check || {
 ## 已知限制
 
 - `internal/orchestrator` 没有任何内部导入方，属于未接线代码；生成器以 `no_importer` 列为 info，不阻断。e2e 命令与部分测试网关按 `expected_orphan` 约定不报。
-- 存在 1 条已知反向依赖：`internal/soul`（capability）导入 `internal/queen`（orchestration）读取 profile 身份提示；修复方向是拆出低层 profile 包，当前作为 warning 记录。
+- 反向依赖已清零：`internal/soul` 不再导入 `internal/queen`。反思的身份读取经由 soul 侧接口 `soul.QueenProfileSource`（`LoadQueenProfile` / `FormatQueenIdentityPrompt`），由装配层 `internal/cli/loader_soul_profile_source.go` 注入 queen 实现；`soul.Reflect` 的调用方（手写 reflect 适配器与每日 runner）都在同一装配点接线。
 - 12 条能力里已有真实模型端到端证据的包括 `queen-triage`、`tools-credentials`、`memory-sediment`、`worker-dispatch` 与部分 `triggers-sentinel`（`go-hive/e2e/` 与 `docs/e2e-assets/`）；其余为单元/集成测试级，标为 `tested` 而不是 `live`。
 - 依赖图只表达编译期 import，不表达运行时的 goroutine、事件订阅或 HTTP 调用；那部分看序列图与 `capability-tech-crosswalk.md` 的入口列，接口边界看 `contracts.md`。
 - 契约层的强约束只到 Go 编译器与测试为止：事件 `data`、HTTP 请求体、前端 TS 类型、磁盘 JSON 都没有 schema 校验，详见 4.3 节的缺口清单。

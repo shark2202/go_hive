@@ -44,15 +44,16 @@ func newSoulReflectFor(home hivehome.Home, model string) func(string, *soulstore
 		ctx, cancel := context.WithTimeout(context.Background(), soulReflectTimeout)
 		defer cancel()
 		_, err = soulstore.Reflect(soulstore.ReflectionOptions{
-			HomeRoot:  home.Root,
-			QueensDir: home.QueensDir(),
-			QueenID:   queenID,
-			Config:    cfg,
-			Completer: completer,
-			Bootstrap: bootstrap,
-			Context:   ctx,
-			MaxTokens: soulDailyMaxTokens(home),
-			Log:       nil,
+			HomeRoot:      home.Root,
+			QueensDir:     home.QueensDir(),
+			QueenID:       queenID,
+			Config:        cfg,
+			Completer:     completer,
+			ProfileSource: soulProfileSource{},
+			Bootstrap:     bootstrap,
+			Context:       ctx,
+			MaxTokens:     soulDailyMaxTokens(home),
+			Log:           nil,
 		})
 		return err
 	}
