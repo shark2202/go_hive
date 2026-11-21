@@ -277,7 +277,7 @@ flowchart TB
 | `make race` | `go test -race`（单独目标，不在 `ci` 里） | 并发数据竞争 | 非并发逻辑 |
 | parity 注解 + `parity-targets` | 每个 `Test` 必须带 `// Parity:` 或 `// Parity-exempt:`，引用的 Python 测试必须真实存在 | 上游行为有对应测试；port 没漏测试 | 行为等价性本身——注解只证明“有对应”，不证明“等价” |
 | `wiring-check` | 静态扫描关键装配调用点（memory 注入、事件日志、会话工具安装） | 防止“编译通过但没接线”的静默退化 | 未列入 `WIRING` 的接线 |
-| `make compat-check`（C1–C11） | 冻结契约自洽 + 升级兼容（新旧构建 × 3 夹具 × 读写/回滚/幂等/CLI 面）；C11 校验 CLI 外观 | env/config、storage、API 形状与值、工具定义、CLI 面 | 真实第三方服务、未安装的 OS 平台 |
+| `make compat-check`（C1–C12） | 冻结契约自洽 + 升级兼容（新旧构建 × 3 夹具 × 读写/回滚/幂等/CLI 面）；C11 校验 CLI 外观 | env/config、storage、API 形状与值、工具定义、CLI 面 | 真实第三方服务、未安装的 OS 平台 |
 | `make cli-surface-check` | 递归采集两侧 `--help`（子命令树 / flag / 取值 / 默认值 / 文案）并与 `contracts/cli-surface.json` 对拍 | CLI 对外面（`hive` / `hive-browser` / `hive-cred`） | 行为语义；help 的 80 列折行仍是已知文案差异 |
 | `make arch-check`（`gen_arch.py --check`） | 7 个生成物逐字节比较；路由表与事件表随代码更新 | 文档/图/契约清单与 `model.yaml` + 代码不漂移 | 契约文本的语义正确性；README 手写段；前端类型 |
 | `python3 -m py_compile scripts/gen_arch.py` | 生成器自身语法 | 生成器可执行 | 生成逻辑正确性 |

@@ -33,7 +33,7 @@ PY_ROOT   ?= ../../core
 OFFLINE    = CGO_ENABLED=0 GOPROXY=off GOSUMDB=off GOFLAGS=-mod=mod
 PLATFORMS  = darwin/amd64 darwin/arm64 linux/amd64 linux/arm64 windows/amd64 windows/arm64
 
-.PHONY: all test test-v vet fmt-check build embed-ui cross parity parity-targets specs-check tool-contract-check tool-contract-report tool-surface-check browser-tool-check tool-output-check cli-surface-check compat-check compat-cli-selftest upgrade-compat-check vulncheck install-verify arch-check ci clean help
+.PHONY: all test test-v vet fmt-check build embed-ui cross parity parity-targets specs-check tool-contract-check tool-contract-report tool-surface-check browser-tool-check tool-output-check cli-surface-check compat-check compat-cli-selftest module-inventory-check module-inventory-selftest upgrade-compat-check vulncheck install-verify arch-check ci clean help
 
 all: ci
 
@@ -54,6 +54,8 @@ help:
 	@echo "  make cli-surface-check    CLI 对外面契约重采 + 对拍（递归 --help + 退出码探针）"
 	@echo "  make compat-check         冻结契约自洽门禁（env/config/storage/DB schema/API 路由/工具面/CLI 外观）"
 	@echo "  make compat-cli-selftest  C11 自检：合成漂移（删 flag / 改 usage 行）必须判定 FAIL"
+	@echo "  make module-inventory-check     模块清单门禁（C12）：core/framework 未登记 .py 即失败"
+	@echo "  make module-inventory-selftest  模块清单自检：注入未登记文件/删登记项/孤岛冒充 ported 必须判定 FAIL"
 	@echo "  make upgrade-compat-check 升级兼容门禁（PREV_SLOT=<上一交付二进制目录> [NEW_SLOT=...]）"
 	@echo "  make vulncheck          依赖漏洞门禁（govulncheck；离线降级明确 UNVERIFIED，退出码 3）"
 	@echo "  make install-verify     安装/升级端到端复验（SLOT_DIR=<slot 目录> [OLD_DIR=...]）"
@@ -208,6 +210,19 @@ compat-check:
 # 门禁必须判定 FAIL；基线副本不得误报。纯 stdlib、离线，不做任何构建。
 compat-cli-selftest:
 	@python3 ../scripts/check_compat_contracts.py --self-test
+
+# 模块清单门禁（C12，已并入 compat-check）：core/framework 下每个 .py 必须在
+# contracts/module-inventory.json 有登记；ported 声明会在每次检查时复验
+# 「Go 包从 main 可达 + 符号被其它非测试 Go 文件引用」，同名死函数不算移植。
+# 清单由 ../gen_module_inventory.py 重建，人工边界写在 CURATED 表里。
+module-inventory-check:
+	@python3 ../../scripts/check_module_inventory.py --check
+
+# C12 自检：在真实树里注入未登记 .py、复制清单删条目/改非法状态/断 Go 锚点/
+# 把孤岛 Go 文件（internal/orchestrator/validator.go，无生产调用方）冒充 ported/
+# 把 python 锚点指到文档行，六类漂移必须全部判定 FAIL；探针在 finally 里清理。
+module-inventory-selftest:
+	@python3 ../../scripts/check_module_inventory.py --self-test
 
 # 升级兼容门禁：PREV_SLOT 放上一交付的二进制目录（解压的发布包或
 # dist/slots/<slot>），NEW_SLOT 放候选二进制目录（省略则现场构建）。

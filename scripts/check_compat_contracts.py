@@ -30,6 +30,14 @@ lives in the freeze lanes; this gate is the cheap, standing CI check that the
       FAIL. Uses local ``go build`` + ``git archive`` (offline) and the Python
       interpreter that runs the reference CLI; SKIP — never a silent pass —
       when the old build or the Python side cannot be produced.
+  C12 module inventory: ``scripts/check_module_inventory.py --check`` — every
+      ``core/framework/**/*.py`` must carry a registry entry in
+      ``contracts/module-inventory.json`` with a status, a Go counterpart (or
+      null), a resolvable source anchor and an evidence path. ``ported`` claims
+      are re-proved here: the Go counterpart's package must be reachable from a
+      ``package main`` and one of its symbols must be referenced by another
+      non-test Go file, so a same-named-but-uncalled function cannot pass as a
+      port. Self-test: ``make module-inventory-selftest``.
 
 Nothing here touches the network or the project virtualenv. A check that
 cannot run is SKIP with a stated reason — never a silent pass; the summary
@@ -809,6 +817,26 @@ def cli_surface_self_test(root: Path) -> int:
     return 0
 
 
+def check_module_inventory(root: Path) -> None:
+    """C12: every core/framework .py file carries an inventory entry."""
+    cid = "C12"
+    title = "模块清单：core/framework 每个 .py 都有归属登记（未登记即失败）"
+    script = root / "scripts/check_module_inventory.py"
+    if not script.exists():
+        record(cid, title, "FAIL", "scripts/check_module_inventory.py 缺失")
+        return
+    rc, out = run_script([str(script), "--check", "--root", str(root)], cwd=root)
+    summary = next((line for line in reversed(out.splitlines()) if line.startswith("module-inventory:")), "")
+    if rc != 0:
+        failed = [line for line in out.splitlines() if line.startswith("[FAIL]")]
+        detail = "；".join(failed[:4]) if failed else out.splitlines()[-1] if out else "无输出"
+        record(cid, title, "FAIL", f"{len(failed)} 项未过: {detail[:300]}")
+    elif not summary:
+        record(cid, title, "FAIL", "check_module_inventory.py 未输出统计行（输出格式漂移）")
+    else:
+        record(cid, title, "PASS", summary.replace("module-inventory: ", ""))
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--root", default=str(REPO))
@@ -831,6 +859,7 @@ def main(argv: list[str] | None = None) -> int:
     check_api_corpus(root)
     check_tool_face_extras(root)
     check_cli_surface(root)
+    check_module_inventory(root)
 
     for row in results:
         print(f"[{row['status']}] {row['id']} {row['title']} — {row['detail']}")

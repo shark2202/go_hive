@@ -25,7 +25,7 @@
 | CLI | `contracts/cli-surface.json`（递归子命令树 / flag / 默认值 / 无副作用退出码探针） | `cli_surface_contract.py --check`（全量重采，发布时跑；不进 `ci`）；**C11** 逐 slot 外观门禁（进 `ci`） | 删除子命令/flag、改默认值、退出码语义或 usage 行 = 破坏性；新增子命令/flag = 兼容（需重采契约） |
 | 交付形态 | 四二进制同级（`hive`、`hive-cred`、`hive-browser`、`browserbridge`）+ `SHA256SUMS` + `install.sh` | `release.sh`、`install.sh`、`verify_release_archive.sh` | 归档布局、文件名、SHA256 校验与 `install.sh` 原地升级语义不变 |
 
-**判据来源**：上表的“当前值”由 `make compat-check`（C1–C11）在每次 `make ci` 中
+**判据来源**：上表的“当前值”由 `make compat-check`（C1–C12）在每次 `make ci` 中
 核对；任何一项变化都必须同步更新对应冻结产物，并在发布说明里写明兼容影响。
 
 ---
@@ -132,7 +132,7 @@ M9 已有 DB 逻辑零变化、M10 幂等、M11 旧 CLI 退出码 0 + 零写入�
 
 ### 6.2 契约自洽门禁（`make compat-check`）
 
-`check_compat_contracts.py` 的 C1–C11 见 §1 表；纯 stdlib、离线、不依赖项目
+`check_compat_contracts.py` 的 C1–C12 见 §1 表；纯 stdlib、离线、不依赖项目
 venv；`make ci` 已引用。`freeze_* --check` 的逐字节重生成不进 `ci`：冻结产物
 记录读点行号，代码移动即 STALE（当前 main 上 env/config 清单即因行号漂移而
 STALE，语义面无变化）；语义漂移由 C1–C3 捕获。
