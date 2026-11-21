@@ -412,7 +412,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/colony/runtime.go",
-            "line": 30,
+            "line": 31,
             "symbol": null,
             "parse": "int",
             "helper": "colonyEnvInt",
@@ -454,7 +454,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/colony/runtime.go",
-            "line": 29,
+            "line": 30,
             "symbol": null,
             "parse": "int",
             "helper": "colonyEnvInt",
@@ -503,7 +503,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/colony/runtime.go",
-            "line": 28,
+            "line": 29,
             "symbol": null,
             "parse": "bool",
             "helper": "colonyEnvBool",
@@ -2536,10 +2536,10 @@
           }
         ],
         "dev_reads": [],
-        "test_reads": 47,
+        "test_reads": 58,
         "writes": [],
         "mentions": 211,
-        "comments": 92
+        "comments": 93
       },
       "notes": "fallback ~/.hive on both; Go converts to an absolute path."
     },
@@ -3867,7 +3867,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/queenmail/mcp_stdio.go",
-            "line": 162,
+            "line": 266,
             "symbol": "callQueenMailTool",
             "parse": "helper",
             "helper": "getenv",
@@ -3907,7 +3907,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/queenmail/mcp_stdio.go",
-            "line": 161,
+            "line": 265,
             "symbol": "callQueenMailTool",
             "parse": "helper",
             "helper": "getenv",
@@ -3947,7 +3947,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/queenmail/mcp_stdio.go",
-            "line": 160,
+            "line": 264,
             "symbol": "callQueenMailTool",
             "parse": "helper",
             "helper": "getenv",
@@ -4584,7 +4584,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/colony/runtime.go",
-            "line": 588,
+            "line": 626,
             "symbol": "splitWorkerEventsEnabled",
             "parse": "string",
             "snippet": "switch strings.ToLower(strings.TrimSpace(os.Getenv(\"HIVE_SPLIT_WORKER_EVENTS\"))) {",

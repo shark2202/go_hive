@@ -164,31 +164,25 @@ func RunWorkerToolDef() llm.ToolDef {
 	}
 }
 
-const runWorkerDescription = "Fan out a batch of tasks to parallel workers and RETURN IMMEDIATELY. " +
-	"Workers run in the background; each one reports back to you as a [WORKER_REPORT] user " +
-	"turn when it finishes, so you stay unblocked and can chat with the user, kick off more " +
-	"work, or do anything else in the meantime.\n\n" +
-	"BATCH SIMILAR UNITS — 5-10 PER WORKER. Every worker pays a fixed orientation tax before " +
-	"its first useful action: fresh context, system prompt, skill reads. One-small-unit-per-" +
-	"worker multiplies that tax by N for nothing. Give each worker a slice of 5-10 similar " +
-	"units and a timeout that covers the whole slice.\n\n" +
-	"Per-task strings must be self-contained for the *differences*: include row keys, IDs, " +
-	"URLs, anything unique to that worker's slice. Workers cannot ask the user follow-up " +
-	"questions and cannot see your chat history.\n\n" +
-	"NON-OVERLAPPING SLICES. Workers run concurrently, cannot coordinate, and cannot see each " +
-	"other. Partition the work cleanly — each row/file/record should be owned by exactly one " +
-	"worker.\n\n" +
-	"The tool returns a JSON object with status='started' and the list of worker_ids you just " +
-	"spawned. Each worker's completion arrives later as a [WORKER_REPORT] message containing " +
-	"worker_id, status (success|partial|failed|timeout|stopped), summary, data, error, " +
-	"duration. Read those messages as they arrive and respond to the user naturally.\n\n" +
-	"TIMEOUT — 'timeout' is a SOFT deadline (default 600s). When it expires, every still-" +
-	"active worker that hasn't reported gets a [SOFT TIMEOUT] message telling it to call " +
-	"report_to_parent now. The hard cutoff (when stragglers are force-stopped) is derived " +
-	"from 'timeout' automatically and is not agent-tunable.\n\n" +
-	"Don't poll: do NOT poll worker status just to fill silence. Wait for [WORKER_REPORT]. " +
-	"Don't fabricate: never predict, summarise, or guess worker results before the report " +
-	"arrives."
+const runWorkerDescription = "Lower-level fan-out — PREFER run_playbook for row-shaped work. For N units of the same job over a tracker table, run_playbook converges the table deterministically (one worker per undone unit — usually a CHUNK of 5-10 rows — with retry / dead-letter / resume) instead of making you re-coordinate each report. Reach for run_worker only for one-off heterogeneous tasks that don't fit a table, or when each report genuinely needs your judgment.\n" +
+	"\n" +
+	"BATCH SIMILAR UNITS — 5-10 PER WORKER. Every worker pays a fixed orientation tax before its first useful action: fresh context, system prompt, skill reads — roughly 2-3k tokens. One-small-unit-per-worker multiplies that tax by N for nothing (measured live: a 68-worker one-lead-each batch spent ~200-300k tokens on orientation alone). Give each worker a slice of 5-10 similar units and a timeout that covers the whole slice; reserve one-unit workers for units that are individually large. Tell the worker to process its slice as consecutive tool calls, recording each unit as it goes — it does not need a turn per unit, so the default turn budget fits a slice.\n" +
+	"\n" +
+	"Fan out a batch of tasks to parallel workers and RETURN IMMEDIATELY. Workers run in the background; each one reports back to you as a [WORKER_REPORT] user turn when it finishes, so you stay unblocked and can chat with the user, kick off more work, or do anything else in the meantime.\n" +
+	"\n" +
+	"FACTOR SHARED CONTEXT INTO A SKILL FIRST. Each worker is a fresh process with no memory of your conversation, but that does NOT mean you should duplicate the same protocol prose across N task strings. If 90% of every task string is the same — schema, output format, quality bar, tools to use — stop and call ``write_skill`` once with that common ground. Workers spawned afterwards see the new skill in their ``<available_skills>`` catalog and activate it on demand. Reference the skill BY NAME in the task string (e.g. 'Follow the <skill-name> protocol to extract rows X, Y, Z') so each worker reads it once and the task strings only carry the per-worker DIFFERENCES (which 5 companies, which row IDs, which date range). Don't spend N× tokens saying the same thing.\n" +
+	"\n" +
+	"Per-task strings still need to be self-contained for the *differences*: include row keys, IDs, URLs, anything unique to that worker's slice. Workers cannot ask the user follow-up questions and cannot see your chat history.\n" +
+	"\n" +
+	"NON-OVERLAPPING SLICES. Workers run concurrently, cannot coordinate, and cannot see each other. Two tasks that touch the same tracker rows, files, or records will double-write or collide. Partition the work cleanly — each row/file/record should be owned by exactly one worker.\n" +
+	"\n" +
+	"Browser tasks: each worker gets its OWN Chrome tab group, isolated from the queen's tabs and from every other worker, but within the SAME Chrome profile — so workers share cookies and logged-in sessions with the queen (a site the queen is logged into is also authenticated for workers). Each browser worker should start  with `hive-browser open`/`hive-browser navigate`; auth carries over from the shared profile. Live per-worker tab activity is visible to the queen via get_worker_status (focus='full' → 'worker_browsers').\n" +
+	"\n" +
+	"Each worker runs in isolation with its own AgentLoop and reports back via the report_to_parent tool. The tool returns a JSON object with status='started' and the list of worker_ids you just spawned. Each worker's completion arrives later as a [WORKER_REPORT] message containing worker_id, status (success|partial|failed|timeout|stopped), summary, data, error, duration. Read those messages as they arrive and respond to the user naturally.\n" +
+	"\n" +
+	"TIMEOUT — 'timeout' is a SOFT deadline (default 600s). When it expires, every still-active worker that hasn't reported gets a [SOFT TIMEOUT] message telling it to call report_to_parent now. The hard cutoff (when stragglers are force-stopped) is derived from 'timeout' automatically and is not agent-tunable. Explicit reports filed during the warning window ARE preserved.\n" +
+	"\n" +
+	"HETEROGENEOUS BATCHES — if some workers need different iteration / timeout budgets than others, run two batches rather than mixing. The interface intentionally exposes only batch-level knobs."
 
 // RunWorker executes one run_worker call. It returns the JSON tool payload and
 // whether that payload is a tool error, matching the catalogue's

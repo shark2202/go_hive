@@ -1041,6 +1041,15 @@ CONFIG_KEYS: list[dict] = [
         "status": "go_only",
         "notes": "go_only: confirmed no upstream counterpart. Accepts both the list and map shapes; a same-named registry entry is replaced by the file entry and `enabled: false` removes it from the load set.",
     },
+
+    # ----- trigger pipeline (config-driven middleware) ---------------------
+    {
+        "path": "pipeline.stages", "type": "list[{type, order?, config?}]", "default": "[]", "env": None,
+        "py": [{"file": "core/framework/host/colony_runtime.py", "contains": "stages_config = config.get(\"pipeline\", {}).get(\"stages\", [])"}],
+        "go": [{"file": "go_hive/go-hive/internal/colony/trigger.go", "contains": "rawStages, present := section[\"stages\"]"}],
+        "status": "aligned",
+        "notes": "Declarative trigger middleware (upstream framework/pipeline). Stages run in ascending order on every ColonyRuntime.trigger before a worker spawns; a reject short-circuits as PipelineRejectedError and spawns nothing; a missing/empty list is the no-op default (PipelineRunner([])). Go builds the same runner in internal/pipeline from the same type/order/config spec, reads it in NewColonyRuntime, and fails startup on an unknown type (upstream's KeyError). The seven built-in stage semantics and the Go-side applied-output subset are documented in docs/pipeline.md.",
+    },
 ]
 
 # ---------------------------------------------------------------------------

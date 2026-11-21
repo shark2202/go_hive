@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/aden-hive/hive-go/internal/hivehome"
+	"github.com/aden-hive/hive-go/internal/llm"
 )
 
 // searchTestHome builds a queen home with two sessions: one holding the
@@ -212,5 +213,52 @@ func TestSessionCatalogueAdvertisesHistorySearch(t *testing.T) {
 	}
 	if _, ok := names[SearchMessagesToolName]; !ok {
 		t.Fatal("search_messages missing from the session catalogue")
+	}
+}
+
+// Parity: tools/src/memory_tools/tool.py::search_messages
+// Parity: tools/src/memory_tools/timeline.py::search_timeline
+func TestHistorySearchDefinitionsMatchPythonContract(t *testing.T) {
+	path := filepath.Join("..", "..", "..", "contracts", "tool-definitions.json")
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Skipf("contract manifest not present (%v) — this check needs the committed artifact", err)
+	}
+	type contractTool struct {
+		Name        string         `json:"name"`
+		Description string         `json:"description"`
+		InputSchema map[string]any `json:"input_schema"`
+	}
+	var manifest struct {
+		Tools []contractTool `json:"tools"`
+	}
+	if err := json.Unmarshal(raw, &manifest); err != nil {
+		t.Fatalf("contract manifest unreadable: %v", err)
+	}
+	references := map[string]contractTool{}
+	for _, tool := range manifest.Tools {
+		references[tool.Name] = tool
+	}
+
+	for _, def := range []llm.ToolDef{searchMessagesToolDef(), searchTimelineToolDef()} {
+		reference, ok := references[def.Name]
+		if !ok {
+			t.Fatalf("%s missing from contracts/tool-definitions.json", def.Name)
+		}
+		if def.Description != reference.Description {
+			t.Fatalf("%s: description is not the Python contract (got %d bytes, want %d bytes)",
+				def.Name, len(def.Description), len(reference.Description))
+		}
+		got, err := json.Marshal(def.Parameters)
+		if err != nil {
+			t.Fatalf("%s: marshal Go schema: %v", def.Name, err)
+		}
+		want, err := json.Marshal(reference.InputSchema)
+		if err != nil {
+			t.Fatalf("%s: marshal Python schema: %v", def.Name, err)
+		}
+		if string(got) != string(want) {
+			t.Fatalf("%s: input schema is not the Python contract\n got: %s\nwant: %s", def.Name, got, want)
+		}
 	}
 }

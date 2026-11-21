@@ -1,9 +1,9 @@
 {
- "wave": 23,
- "at": "2026-11-22 01:15",
- "head": "bc5fd5d6",
- "ci": 2,
+ "wave": 24,
+ "at": "2026-11-22 01:27",
+ "head": "d5dfc8e9",
+ "ci": 0,
  "qc": 0,
  "publish": 0,
- "note": "queenmail-mcp 合并后"
+ "note": "colony 事件竞态修复后"
 }

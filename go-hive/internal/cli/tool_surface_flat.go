@@ -68,6 +68,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 	"sync"
 
@@ -175,14 +176,30 @@ var flatSurfaceStandaloneTools = map[string]string{
 }
 
 // flatSurfaceColonyPhaseGated mirrors the server's colony-phase gate
-// (server.ChatRuntime.toolsForTurn / colonyBoundQueenTool): these four tools
-// reach the model only once a colony runtime is bound, matching upstream's
+// (server.ChatRuntime.toolsForTurn / colonyBoundQueenTool): these tools reach
+// the model only once a colony runtime is bound, matching upstream's
 // colony-phase tool list. Kept here for the surface tests and the docs.
+// get_worker_health_summary is the fifth gated name but is not part of the
+// frozen 39 (upstream registers it only when a colony is bound, so the
+// default-session capture never saw it): see flatSurfaceColonyPhaseOnly.
 var flatSurfaceColonyPhaseGated = []string{
 	"get_worker_status",
 	"inject_message",
 	"run_worker",
 	"stop_worker",
+	"get_worker_health_summary",
+}
+
+// flatSurfaceColonyPhaseOnly lists live definitions this build advertises in
+// addition to the frozen default set, but only on the colony-bound surface.
+// Upstream's worker_monitoring_tools.py registers get_worker_health_summary
+// from queen_orchestrator only `if session.colony_id`, so it is absent from
+// the 54-tool default-session reference and from the frozen 39-name default
+// projection; the live definition below carries the Python Tool(...) text
+// verbatim. The server gate (colonyBoundQueenTool) hides it while no colony
+// is bound, so it never reaches a default request.
+var flatSurfaceColonyPhaseOnly = map[string]string{
+	"get_worker_health_summary": "Python registers it only while a colony is bound (queen_orchestrator.py:937); live definition is the Python Tool(...) text verbatim",
 }
 
 // flatSurfaceLifecycleOnly reports whether the frozen entry comes from the
@@ -424,7 +441,7 @@ func (c *sessionToolCatalogue) flatModelDefs() []llm.ToolDef {
 		}
 		live[def.Name] = def
 	}
-	out := make([]llm.ToolDef, 0, len(manifest.Tools))
+	out := make([]llm.ToolDef, 0, len(manifest.Tools)+len(flatSurfaceColonyPhaseOnly))
 	for _, entry := range manifest.Tools {
 		if def, ok := live[entry.Name]; ok {
 			if _, keepLive := keep[entry.Name]; keepLive {
@@ -438,7 +455,25 @@ func (c *sessionToolCatalogue) flatModelDefs() []llm.ToolDef {
 			out = append(out, flatSurfaceToolDef(entry))
 		}
 	}
+	// Colony-phase-only extensions: not in the frozen default set, advertised
+	// only while a colony is bound (the server gate drops them otherwise).
+	for _, name := range sortedColonyPhaseOnlyNames() {
+		if def, ok := live[name]; ok {
+			out = append(out, def)
+		}
+	}
 	return out
+}
+
+// sortedColonyPhaseOnlyNames returns the colony-phase-only names in stable
+// (bytewise) order so the advertised tail is deterministic.
+func sortedColonyPhaseOnlyNames() []string {
+	names := make([]string, 0, len(flatSurfaceColonyPhaseOnly))
+	for name := range flatSurfaceColonyPhaseOnly {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
 }
 
 // flatSurfacePlaybookActions maps the flat playbook-control names onto the

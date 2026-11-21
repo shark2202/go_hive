@@ -1,5 +1,5 @@
 // go_hive 分层依赖图（生成物，勿手改）
-// 源：architecture/model.yaml + go list -json ./... · commit 0654903779c3
+// 源：architecture/model.yaml + go list -json ./... · commit 81e2f9356409
 // 箭头 A -> B 读作 A imports B。
 digraph go_hive {
   graph [rankdir=LR, fontname="Helvetica", nodesep=0.28, ranksep=0.9, splines=true];
@@ -79,6 +79,7 @@ digraph go_hive {
     "internal/mcpregistry" [fillcolor="white", color="#7e22ce"];
     "internal/mcpregistry/nativecli" [fillcolor="white", color="#7e22ce"];
     "internal/memory" [fillcolor="white", color="#7e22ce"];
+    "internal/pipeline" [fillcolor="white", color="#7e22ce"];
     "internal/senders" [fillcolor="white", color="#7e22ce"];
     "internal/skills" [fillcolor="white", color="#7e22ce"];
     "internal/soul" [fillcolor="white", color="#7e22ce"];
@@ -183,6 +184,7 @@ digraph go_hive {
   "internal/colony" -> "internal/hiveconf";
   "internal/colony" -> "internal/hivehome";
   "internal/colony" -> "internal/llm";
+  "internal/colony" -> "internal/pipeline";
   "internal/colony" -> "internal/playbook";
   "internal/colony" -> "internal/schemas";
   "internal/colony" -> "internal/skills";
@@ -219,6 +221,13 @@ digraph go_hive {
   "internal/memory" -> "internal/atomicfs";
   "internal/memory" -> "internal/hivehome";
   "internal/memory" -> "internal/llm";
+  "internal/pipeline" -> "internal/credentials";
+  "internal/pipeline" -> "internal/hiveconf";
+  "internal/pipeline" -> "internal/hivehome";
+  "internal/pipeline" -> "internal/llm";
+  "internal/pipeline" -> "internal/mcpregistry";
+  "internal/pipeline" -> "internal/skills";
+  "internal/pipeline" -> "internal/tools";
   "internal/playbook" -> "internal/pyenv";
   "internal/queenmail" -> "internal/hivehome";
   "internal/queenmail" -> "internal/queen";

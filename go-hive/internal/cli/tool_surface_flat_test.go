@@ -74,10 +74,11 @@ func loadContractDefaultTools(t *testing.T) map[string]contractDefaultEntry {
 	}
 	var doc struct {
 		Tools []struct {
-			Name        string         `json:"name"`
-			Description string         `json:"description"`
-			InputSchema map[string]any `json:"input_schema"`
-			Layers      []string       `json:"layers"`
+			Name        string                    `json:"name"`
+			Description string                    `json:"description"`
+			InputSchema map[string]any            `json:"input_schema"`
+			Layers      []string                  `json:"layers"`
+			LayerDetail map[string]map[string]any `json:"layer_detail"`
 		} `json:"tools"`
 	}
 	if err := json.Unmarshal(raw, &doc); err != nil {
@@ -85,6 +86,14 @@ func loadContractDefaultTools(t *testing.T) map[string]contractDefaultEntry {
 	}
 	out := map[string]contractDefaultEntry{}
 	for _, tool := range doc.Tools {
+		// A feature-gated llm_request tool (search_timeline behind
+		// memory_timeline) is only advertised when its gate is on; the default
+		// surface pinned here is the gate-off surface.
+		if detail, ok := tool.LayerDetail["llm_request"]; ok {
+			if _, gated := detail["feature_gate"]; gated {
+				continue
+			}
+		}
 		defaultLayer := false
 		for _, layer := range tool.Layers {
 			if layer == "llm_request" || layer == "lifecycle" || layer == "synthetic" {
@@ -142,17 +151,27 @@ func TestFlatSurfaceDefaultMatchesPythonContract(t *testing.T) {
 	catalogue := queenFlatCatalogue(t)
 	got := defNames(catalogue.ModelDefs())
 
-	want := make([]string, 0, len(contract))
+	want := make([]string, 0, len(contract)+len(flatSurfaceColonyPhaseOnly))
 	for name := range contract {
 		want = append(want, name)
 	}
+	// Colony-phase-only extensions are not in the frozen default set (the
+	// Python capture session had no colony); they still ride the flat surface
+	// so a colony-bound turn advertises them, and the server gate hides them
+	// otherwise.
+	for name := range flatSurfaceColonyPhaseOnly {
+		want = append(want, name)
+	}
 	sort.Strings(want)
-	if strings.Join(got, ",") != strings.Join(want, ",") {
+	gotSorted := append([]string(nil), got...)
+	sort.Strings(gotSorted)
+	if strings.Join(gotSorted, ",") != strings.Join(want, ",") {
 		t.Fatalf("default flat surface mismatch:\n got %d: %v\nwant %d: %v",
 			len(got), got, len(want), want)
 	}
-	if len(got) != 39 {
-		t.Fatalf("default flat surface has %d tools, want 39 (24 llm_request + 16 lifecycle + 1 synthetic, deduped)", len(got))
+	if len(got) != 39+len(flatSurfaceColonyPhaseOnly) {
+		t.Fatalf("default flat surface has %d tools, want %d (24 llm_request + 16 lifecycle + 1 synthetic, deduped, + %d colony-phase-only)",
+			len(got), 39+len(flatSurfaceColonyPhaseOnly), len(flatSurfaceColonyPhaseOnly))
 	}
 
 	present := map[string]struct{}{}
@@ -172,7 +191,7 @@ func TestFlatSurfaceDefaultMatchesPythonContract(t *testing.T) {
 		}
 	}
 	// Colony-phase gate: the first request of a plain chat session carries the
-	// default set minus the four colony-runtime tools (upstream semantics).
+	// default set minus the colony-runtime tools (upstream semantics).
 	advertised := len(got)
 	for _, name := range flatSurfaceColonyPhaseGated {
 		if _, ok := present[name]; !ok {
@@ -180,9 +199,9 @@ func TestFlatSurfaceDefaultMatchesPythonContract(t *testing.T) {
 		}
 		advertised--
 	}
-	if advertised != 39-len(flatSurfaceColonyPhaseGated) {
+	if advertised != 39+len(flatSurfaceColonyPhaseOnly)-len(flatSurfaceColonyPhaseGated) {
 		t.Fatalf("expected %d advertised tools before a colony binds, computed %d",
-			39-len(flatSurfaceColonyPhaseGated), advertised)
+			39+len(flatSurfaceColonyPhaseOnly)-len(flatSurfaceColonyPhaseGated), advertised)
 	}
 	t.Logf("default flat surface: catalogue %d, first request (no colony) %d, grouped pool %d",
 		len(got), advertised, len(catalogue.Defs()))
@@ -206,9 +225,20 @@ func TestFlatSurfaceSchemasMatchFrozenContract(t *testing.T) {
 	parityManifest := toolContractParityManifestData()
 
 	verbatim, keptP1, keptLifecycle := 0, []string{}, []string{}
+	keptColonyOnly := []string{}
 	for _, def := range catalogue.ModelDefs() {
 		entry, ok := contract[def.Name]
 		if !ok {
+			// Colony-phase-only extensions are not in the frozen default set;
+			// their live definition must be the Python Tool(...) text (the
+			// server gate keeps them off unbound sessions).
+			if _, colonyOnly := flatSurfaceColonyPhaseOnly[def.Name]; colonyOnly {
+				if liveDef, ok := live[def.Name]; !ok || liveDef.Description != def.Description || !flatJSONEqual(liveDef.Parameters, def.Parameters) {
+					t.Fatalf("colony-phase-only tool %q drifted from its live definition", def.Name)
+				}
+				keptColonyOnly = append(keptColonyOnly, def.Name)
+				continue
+			}
 			t.Fatalf("advertised tool %q is not in the frozen default set", def.Name)
 		}
 		if def.Description == entry.Description && flatJSONEqual(def.Parameters, entry.InputSchema) {
@@ -249,12 +279,13 @@ func TestFlatSurfaceSchemasMatchFrozenContract(t *testing.T) {
 	}
 	sort.Strings(keptP1)
 	sort.Strings(keptLifecycle)
-	if verbatim+len(keptP1)+len(keptLifecycle) != 39 {
-		t.Fatalf("schema accounting: verbatim %d + keepP1 %d + keepLifecycle %d != 39",
-			verbatim, len(keptP1), len(keptLifecycle))
+	sort.Strings(keptColonyOnly)
+	if verbatim+len(keptP1)+len(keptLifecycle)+len(keptColonyOnly) != 39+len(flatSurfaceColonyPhaseOnly) {
+		t.Fatalf("schema accounting: verbatim %d + keepP1 %d + keepLifecycle %d + colonyOnly %d != %d",
+			verbatim, len(keptP1), len(keptLifecycle), len(keptColonyOnly), 39+len(flatSurfaceColonyPhaseOnly))
 	}
-	t.Logf("schema parity: verbatim %d/39, P1-kept %v, lifecycle-kept %v",
-		verbatim, keptP1, keptLifecycle)
+	t.Logf("schema parity: verbatim %d/%d, P1-kept %v, lifecycle-kept %v, colony-phase-only %v",
+		verbatim, 39+len(flatSurfaceColonyPhaseOnly), keptP1, keptLifecycle, keptColonyOnly)
 
 	// The runtime's ask_user synthetic must match the frozen contract too:
 	// chatToolsWithAskUser keeps the already-advertised definition.
@@ -288,7 +319,7 @@ func TestFlatSurfaceGroupedSwitch(t *testing.T) {
 
 	t.Setenv(ToolSurfaceEnvVar, "definitely-not-grouped")
 	flat := defNames(catalogue.ModelDefs())
-	if len(flat) != 39 {
+	if len(flat) != 39+len(flatSurfaceColonyPhaseOnly) {
 		t.Fatalf("unknown switch value fell back to %d tools instead of the flat default", len(flat))
 	}
 	if flatContainsName(flat, "airtable") {
@@ -297,8 +328,8 @@ func TestFlatSurfaceGroupedSwitch(t *testing.T) {
 
 	// No switch at all (the default) keeps the flat surface.
 	t.Setenv(ToolSurfaceEnvVar, "")
-	if names := defNames(catalogue.ModelDefs()); len(names) != 39 {
-		t.Fatalf("default surface has %d tools, want 39", len(names))
+	if names := defNames(catalogue.ModelDefs()); len(names) != 39+len(flatSurfaceColonyPhaseOnly) {
+		t.Fatalf("default surface has %d tools, want %d", len(names), 39+len(flatSurfaceColonyPhaseOnly))
 	}
 }
 

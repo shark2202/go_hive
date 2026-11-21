@@ -24,9 +24,10 @@ func enableQueenSessionTools(tools *sessionToolCatalogue, manager *hiveserver.Se
 	return onTurnStart
 }
 
-// enableQueenLifecycleTools puts the ten lifecycle tools on a queen session's
-// catalogue. Called only for queen chat sessions (created, resumed, or the
-// preloaded colony session) — never for a worker's declared-tool catalogue.
+// enableQueenLifecycleTools puts the ten lifecycle tools plus the
+// worker-monitoring tool on a queen session's catalogue. Called only for queen
+// chat sessions (created, resumed, or the preloaded colony session) — never
+// for a worker's declared-tool catalogue.
 //
 // These defs are appended after newSessionToolCatalogue already applied the
 // same-name model-visible contract overlay, so the appended batch is passed
@@ -35,13 +36,20 @@ func enableQueenSessionTools(tools *sessionToolCatalogue, manager *hiveserver.Se
 // / run_playbook) against the Python source definitions; without this call the
 // manifest would govern every catalogue owner except the lifecycle table
 // (docs/tool-contract-diff.md §13).
+//
+// get_worker_health_summary comes from worker_monitoring_tools.py upstream
+// (registered only while a colony is bound); the catalogue carries it so a
+// colony-bound turn advertises it, and server.colonyBoundQueenTool hides it
+// while no colony runtime is attached.
 func enableQueenLifecycleTools(tools *sessionToolCatalogue, session *hiveserver.Session, home hivehome.Home) {
 	if tools == nil || session == nil || tools.queenLifecycle != nil {
 		return
 	}
 	binding := hiveserver.NewQueenLifecycleBinding(session, home)
-	defs := make([]llm.ToolDef, 0, len(hiveserver.QueenLifecycleToolDefs()))
-	for _, def := range hiveserver.QueenLifecycleToolDefs() {
+	healthSummary := hiveserver.QueenWorkerHealthSummaryToolDef()
+	lifecycle := append(hiveserver.QueenLifecycleToolDefs(), healthSummary)
+	defs := make([]llm.ToolDef, 0, len(lifecycle))
+	for _, def := range lifecycle {
 		if _, taken := tools.builtinNames[def.Name]; taken {
 			continue
 		}

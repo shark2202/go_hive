@@ -231,6 +231,10 @@ packages:
     layer: capability
     responsibility: "全局 configuration.json 的类型严格读取（与 Python 参考同规则），供装配与编排层取配置。"
     stability: evolving
+  - package: internal/pipeline
+    layer: capability
+    responsibility: "配置驱动的 trigger 中间件：Stage 接口、按 order 执行/reject 短路/transform 的 Runner、stage 注册表与 7 个内置 stage（llm_provider/credential_resolver/mcp_registry/skill_registry/input_validation/rate_limit/cost_guard）。"
+    stability: evolving
   - package: internal/mcpregistry/nativecli
     layer: capability
     responsibility: "mcp2cli 3.8.0 的 Go 子集实现：MCP 服务器注册表 native CLI 后端。"

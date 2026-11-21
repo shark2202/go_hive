@@ -12,7 +12,10 @@ reads:
     synthetic, write_skill in llm_request and lifecycle)
 
 ``mcp_catalog`` is the Tool Library / deferred layer and is NOT part of the
-default model request, so its entries are excluded.
+default model request, so its entries are excluded. A feature-gated
+``llm_request`` entry (``layer_detail.llm_request.feature_gate``, e.g.
+``search_timeline`` behind ``memory_timeline``) is also excluded: the default
+surface is the gate-off shape.
 
 Nothing is rewritten: every name/description/input_schema is copied verbatim
 from ``contracts/tool-definitions.json`` (the Python side of the freeze).
@@ -44,6 +47,12 @@ def build() -> dict:
     tools = []
     layers: dict[str, list[str]] = {name: [] for name in DEFAULT_LAYERS}
     for tool in doc["tools"]:
+        # Feature-gated llm_request tools (search_timeline behind the
+        # memory_timeline flag) are advertised only when their gate is on; the
+        # default surface is the gate-off shape, so they stay out.
+        gate = (tool.get("layer_detail") or {}).get("llm_request") or {}
+        if gate.get("feature_gate"):
+            continue
         present = [layer for layer in DEFAULT_LAYERS if layer in tool.get("layers", [])]
         if not present:
             continue

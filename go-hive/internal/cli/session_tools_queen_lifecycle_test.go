@@ -80,3 +80,42 @@ func TestWorkerCatalogueExcludesQueenLifecycleTools(t *testing.T) {
 		}
 	}
 }
+
+// TestQueenSessionCatalogueAdvertisesWorkerHealthSummary covers the
+// worker-monitoring registration surface: a queen catalogue carries the
+// get_worker_health_summary definition (from worker_monitoring_tools.py
+// upstream), it executes through the lifecycle binding, and a worker
+// catalogue never sees it.
+//
+// Parity: core/framework/tools/worker_monitoring_tools.py::register_worker_monitoring_tools
+func TestQueenSessionCatalogueAdvertisesWorkerHealthSummary(t *testing.T) {
+	root := t.TempDir()
+	home := hivehome.Home{Root: t.TempDir()}
+	catalogue := newSessionToolCatalogue(root, builtin.New(root), home)
+	if lifecycleCatalogueNames(t, catalogue)[hiveserver.QueenWorkerHealthSummaryToolName] {
+		t.Fatal("get_worker_health_summary advertised before the queen lifecycle table was enabled")
+	}
+	session := hiveserver.NewSession("session_cli", eventbus.NewEventBus())
+	session.WorkerPath = root
+	enableQueenLifecycleTools(catalogue, session, home)
+	if !lifecycleCatalogueNames(t, catalogue)[hiveserver.QueenWorkerHealthSummaryToolName] {
+		t.Fatal("get_worker_health_summary missing from a queen session's catalogue")
+	}
+
+	// Execution reaches the binding: an empty storage root answers with the
+	// upstream error envelope, not an unknown-tool fallthrough.
+	content, isError, err := catalogue.Execute(context.Background(), hiveserver.QueenWorkerHealthSummaryToolName, nil)
+	if err != nil || isError {
+		t.Fatalf("get_worker_health_summary: err=%v isError=%v content=%s", err, isError, content)
+	}
+	if !strings.Contains(content, "No sessions found — worker has not started yet") {
+		t.Fatalf("empty-storage payload = %s", content)
+	}
+
+	// The worker catalogue never advertises it (queen-only lifecycle surface).
+	_, _, _ = colonyWorkerToolSurface(t.TempDir(), builtin.New(""), home)
+	workerCatalogue := newSessionToolCatalogue(t.TempDir(), builtin.New(""), home)
+	if lifecycleCatalogueNames(t, workerCatalogue)[hiveserver.QueenWorkerHealthSummaryToolName] {
+		t.Fatal("worker catalogue must not advertise get_worker_health_summary")
+	}
+}

@@ -1,6 +1,6 @@
 # 模块清单（生成物，勿手改）
 
-> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` + `go list` 生成。commit: `0654903779c3`
+> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` + `go list` 生成。commit: `81e2f9356409`
 > 修改分层或职责请改 `architecture/model.yaml`，不要编辑本文件。
 
 ## 分层统计
@@ -13,10 +13,10 @@
 | 传输层（`transport`） | 3 | HTTP + SSE 边界：路由、会话查找、请求校验、事件镜像；不含 agent 决策。 |
 | 编排层（`orchestration`） | 14 | Queen / Colony / Worker 的生命周期与协调：派发、报告、计划、账本、触发器、看护。 |
 | 执行原语层（`runtime`） | 3 | 唯一的执行原语 AgentLoop：一次 turn 内的模型调用、工具批处理、压缩、预算与停泊。 |
-| 能力层（`capability`） | 19 | 可被循环调用的能力：工具、集成、LLM 传输、记忆、技能、soul、凭据、出站消息。 |
+| 能力层（`capability`） | 20 | 可被循环调用的能力：工具、集成、LLM 传输、记忆、技能、soul、凭据、出站消息。 |
 | 基础层（`foundation`） | 16 | 无业务语义的底座：事件总线、文件存储、schema、原子写、目录布局、限速、质量门禁。 |
 
-共 72 个包、189 条包间 import 边。
+共 73 个包、197 条包间 import 边。
 
 ## 模块表
 
@@ -44,7 +44,7 @@
 | `internal/server/uiembed` | transport | embed_ui 构建标签下的前端静态资源；未带标签时返回空，让服务端回退到磁盘目录。 | 0 | 1 |  |
 | `internal/agents` | orchestration | Agent 规格与发现：读取 agents 目录、worker 元数据与能力描述。 | 2 | 3 |  |
 | `internal/claudecode` | orchestration | Claude Code queen 运行时：会话记录与收件箱、claude -p 回合、转录读取与进程树管理。 | 3 | 1 |  |
-| `internal/colony` | orchestration | Colony 运行时：worker 生命周期与并发闸门、run_worker 批量派发、report_to_parent 回报、playbook 驱动、目标验收与改进信号。 | 12 | 4 |  |
+| `internal/colony` | orchestration | Colony 运行时：worker 生命周期与并发闸门、run_worker 批量派发、report_to_parent 回报、playbook 驱动、目标验收与改进信号。 | 13 | 4 |  |
 | `internal/host` | orchestration | Host 组合根：把 colony 运行时、事件总线与 run 注册表装成可 Start/Spawn 的宿主，供传输层调用。 | 7 | 1 |  |
 | `internal/longmemeval` | orchestration | LongMemEval 基准运行器：数据集读取、题目选择、会话播种、判分与结果汇总（内部评测工具）。 | 1 | 2 |  |
 | `internal/playbook` | orchestration | Playbook 定义与带并发上限的 lane 执行器。 | 1 | 2 |  |
@@ -61,18 +61,19 @@
 | `internal/orchestrator` | runtime | Python 图编排时代遗留的 DataBuffer 原语（权限、幻觉内容校验）。 | 0 | 0 |  |
 | `internal/attachments` | capability | 会话附件存取（上传、下载、类型与大小校验）。 | 0 | 2 |  |
 | `internal/charts` | capability | chart_render 的纯 Go 渲染实现（SVG 生成 + 可选 PNG 栅格化）。 | 2 | 1 |  |
-| `internal/credentials` | capability | 凭证规格与加密存储、OAuth 状态与表单校验。 | 2 | 4 |  |
+| `internal/credentials` | capability | 凭证规格与加密存储、OAuth 状态与表单校验。 | 2 | 5 |  |
 | `internal/globaldb` | capability | 全局数据表（CRM / global data）的 SQLite 访问。 | 0 | 1 |  |
-| `internal/hiveconf` | capability | 全局 configuration.json 的类型严格读取（与 Python 参考同规则），供装配与编排层取配置。 | 2 | 2 |  |
-| `internal/llm` | capability | LLM 传输：provider 选择、Anthropic/OpenAI 协议、流式事件、模型目录与出站限速门。 | 3 | 15 |  |
+| `internal/hiveconf` | capability | 全局 configuration.json 的类型严格读取（与 Python 参考同规则），供装配与编排层取配置。 | 2 | 3 |  |
+| `internal/llm` | capability | LLM 传输：provider 选择、Anthropic/OpenAI 协议、流式事件、模型目录与出站限速门。 | 3 | 16 |  |
 | `internal/maintenance` | capability | Janitor：孤儿会话、缓存、工件与事件日志的清理规则与报告。 | 2 | 2 |  |
-| `internal/mcpregistry` | capability | MCP 服务器注册表 CLI 后端：索引、安装/启用、健康检查与清单渲染。 | 6 | 2 |  |
+| `internal/mcpregistry` | capability | MCP 服务器注册表 CLI 后端：索引、安装/启用、健康检查与清单渲染。 | 6 | 3 |  |
 | `internal/mcpregistry/nativecli` | capability | mcp2cli 3.8.0 的 Go 子集实现：MCP 服务器注册表 native CLI 后端。 | 2 | 2 |  |
 | `internal/memory` | capability | Markdown 记忆文件：召回、写入、按天时间线与反思沉淀。 | 3 | 3 |  |
+| `internal/pipeline` | capability | 配置驱动的 trigger 中间件：Stage 接口、按 order 执行/reject 短路/transform 的 Runner、stage 注册表与 7 个内置 stage（llm_provider/credential_resolver/mcp_registry/skill_registry/input_validation/rate_limit/cost_guard）。 | 7 | 1 |  |
 | `internal/senders` | capability | 出站消息发送：正文渲染、抑制列表、每发件人锁与发送日志。 | 2 | 2 |  |
-| `internal/skills` | capability | 技能发现/安装/校验，以及 agent 侧的技能读取工具。 | 3 | 5 |  |
+| `internal/skills` | capability | 技能发现/安装/校验，以及 agent 侧的技能读取工具。 | 3 | 6 |  |
 | `internal/soul` | capability | Queen 的 soul：分区、字符上限、版本历史、提案与回滚。 | 2 | 2 |  |
-| `internal/tools` | capability | 工具注册表：eager/searchable 分层、MCP 服务器加载与代理执行、结果规范化与溢出落盘。 | 2 | 11 |  |
+| `internal/tools` | capability | 工具注册表：eager/searchable 分层、MCP 服务器加载与代理执行、结果规范化与溢出落盘。 | 2 | 12 |  |
 | `internal/tools/builtin` | capability | 内置工具实现：read_file / write_file / terminal_exec 等，刻意不依赖 server 与 agentloop。 | 3 | 1 |  |
 | `internal/tools/integrationkit` | capability | 集成工具的共享原语：传输、凭据与参数 schema 复用件，供 internal/tools/integrations 各模块使用。 | 1 | 2 |  |
 | `internal/tools/integrations` | capability | 集成工具集（装配根）：生成目录、领域实现与 InstallBatch* 入口；领域实现按 internal/tools/integrations/<domain> 子包迁出，子包只依赖 integrationkit。 | 5 | 1 |  |
@@ -83,7 +84,7 @@
 | `internal/envcontract` | foundation | 环境变量 / configuration.json 冻结契约的只读守卫（报告模式）。 | 0 | 0 |  |
 | `internal/eventbus` | foundation | 进程内事件总线：AgentEvent、订阅分发、SSE 事件源与事件日志。 | 0 | 5 |  |
 | `internal/hiveclock` | foundation | 可注入时钟：供基准与测试冻结对外可见时间。 | 0 | 3 |  |
-| `internal/hivehome` | foundation | ~/.hive 目录布局解析与 ensure（queens/colonies/memories/credentials/...）。 | 0 | 20 |  |
+| `internal/hivehome` | foundation | ~/.hive 目录布局解析与 ensure（queens/colonies/memories/credentials/...）。 | 0 | 21 |  |
 | `internal/logging` | foundation | serve 路径共享的进程日志 sink（时间戳前缀、目标选择）。 | 1 | 2 |  |
 | `internal/platform` | foundation | 平台差异：路径、进程与 shell 选择。 | 0 | 1 |  |
 | `internal/pyenv` | foundation | 以 Python 语义解析环境变量覆盖，保证 Go 读取方与参考实现得到同一个值。 | 0 | 6 |  |
@@ -115,4 +116,4 @@
 
 ---
 
-共 72 个包；层的定义与业务能力对照见 `docs/architecture/README.md` 与 `docs/architecture/capability-tech-crosswalk.md`。
+共 73 个包；层的定义与业务能力对照见 `docs/architecture/README.md` 与 `docs/architecture/capability-tech-crosswalk.md`。

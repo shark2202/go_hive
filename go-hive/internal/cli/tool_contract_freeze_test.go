@@ -24,6 +24,7 @@ package cli
 
 import (
 	"encoding/json"
+	"math"
 	"os"
 	"path/filepath"
 	"sort"
@@ -40,11 +41,30 @@ type contractTool struct {
 	Name        string         `json:"name"`
 	Description string         `json:"description"`
 	InputSchema map[string]any `json:"input_schema"`
+	Layers      []string       `json:"layers"`
 	Go          struct {
 		Present     bool           `json:"present"`
 		Description string         `json:"description"`
 		InputSchema map[string]any `json:"input_schema"`
 	} `json:"go"`
+}
+
+// contractLayerOutsideSession reports whether every layer a manifest entry
+// declares lives outside the queen session catalogue. The reflection memory-file
+// tools are handed to the reflection side-agent directly; they never enter the
+// session request surface, so comparing them to it would report a fictional gap
+// (internal/memory pins them against the same manifest instead).
+func contractLayerOutsideSession(layers []string) bool {
+	if len(layers) == 0 {
+		return false
+	}
+	for _, layer := range layers {
+		switch layer {
+		case "llm_request", "mcp_catalog", "lifecycle", "synthetic":
+			return false
+		}
+	}
+	return true
 }
 
 // Parity-exempt: contract freezer, report-only. It compares the frozen Python
@@ -76,6 +96,12 @@ func TestToolContractFreeze(t *testing.T) {
 		t.Fatalf("contract manifest %s is unreadable: %v", path, err)
 	}
 
+	// The memory_timeline feature is off by default, but the contract records
+	// search_timeline as an llm_request-layer definition. Turn the feature on
+	// for this report so the tool is compared on the surface it is advertised
+	// on, instead of being reported as missing from a surface that gates it out.
+	t.Setenv("HIVE_MEMORY_TIMELINE", "1")
+
 	// The live session surface: the builtin/integration catalogue plus the
 	// queen lifecycle table the chat runtime installs for a queen session.
 	root := t.TempDir()
@@ -96,11 +122,16 @@ func TestToolContractFreeze(t *testing.T) {
 
 	// --- A. reference vs live -------------------------------------------------
 	missing := []string{}
+	reflectionLayer := []string{}
 	nameOK, descOK, schemaOK := 0, 0, 0
 	descDiffs, schemaDiffs := []string{}, []string{}
 	frozenNames := map[string]struct{}{}
 	for _, tool := range doc.Tools {
 		frozenNames[tool.Name] = struct{}{}
+		if contractLayerOutsideSession(tool.Layers) {
+			reflectionLayer = append(reflectionLayer, tool.Name)
+			continue
+		}
 		def, ok := live[tool.Name]
 		if !ok {
 			missing = append(missing, tool.Name)
@@ -131,13 +162,46 @@ func TestToolContractFreeze(t *testing.T) {
 
 	t.Logf("A. reference vs live: name %d/%d, description %d/%d, input_schema %d/%d, missing in Go %d, extra in Go %d",
 		nameOK, len(doc.Tools), descOK, len(doc.Tools), schemaOK, len(doc.Tools), len(missing), len(extra))
-	t.Logf("A. note: live here is the registry union (%d = 137 catalogue + 10 lifecycle); the manifest's Go side "+
-		"is the captured REQUEST list (147 - 4 colony-only tools + ask_user = 144), which is why the name count "+
-		"above is higher than the manifest's shared count", len(live))
+	t.Logf("A. note: live here is the registry union of the session catalogue plus the queen lifecycle tools (search_timeline included via " +
+		"HIVE_MEMORY_TIMELINE); the manifest's Go side is the captured REQUEST layer, which is why the name count above differs from the " +
+		"manifest's shared count. Entries whose layers all live outside the session catalogue (the reflection side-agent's memory-file " +
+		"tools) are excluded from this section.")
 	logList(t, "A. missing in Go", missing)
+	logList(t, "A. reflection-layer entries (not a session surface)", reflectionLayer)
 	logList(t, "A. description differs", descDiffs)
 	logList(t, "A. input_schema differs", schemaDiffs)
 	logList(t, "A. Go-only (not in reference)", extra)
+
+	// --- C. unified metric: normalized schema over the live intersection -----
+	// docs/tool-contract-diff.md §16 makes this section the single
+	// authoritative drift metric: reference vs live registry, description
+	// verbatim, schema raw and normalized. Normalization matches §14.1:
+	// strip CONTEXT_PARAMS, pydantic `title` keys, empty `required` ≡ absent,
+	// and numeric equivalence (25.0 ≡ 25).
+	normalizedOK := 0
+	normalizedDiffs := []string{}
+	for _, tool := range doc.Tools {
+		def, ok := live[tool.Name]
+		if !ok {
+			continue
+		}
+		if recheckSchemaJSON(normalizeRecheckSchema(def.Parameters)) == recheckSchemaJSON(normalizeRecheckSchema(tool.InputSchema)) {
+			normalizedOK++
+		} else {
+			normalizedDiffs = append(normalizedDiffs, tool.Name)
+		}
+	}
+	sort.Strings(normalizedDiffs)
+	present := len(doc.Tools) - len(missing)
+	descAmongPresent := 0
+	for _, tool := range doc.Tools {
+		if def, ok := live[tool.Name]; ok && def.Description == tool.Description {
+			descAmongPresent++
+		}
+	}
+	t.Logf("C. unified metric (authoritative): present %d/%d, description %d/%d, schema raw %d/%d, schema normalized %d/%d",
+		present, len(doc.Tools), descAmongPresent, present, schemaOK, present, normalizedOK, present)
+	logList(t, "C. schema differs after normalization", normalizedDiffs)
 
 	// --- B. freeze drift: the manifest's Go snapshot vs live ------------------
 	matched, snapMissing, snapChanged := 0, []string{}, []string{}
@@ -155,7 +219,7 @@ func TestToolContractFreeze(t *testing.T) {
 		}
 	}
 	for _, tool := range doc.Tools {
-		if tool.Go.Present {
+		if tool.Go.Present && !contractLayerOutsideSession(tool.Layers) {
 			check(tool.Name, tool.Go.Description, tool.Go.InputSchema)
 		}
 	}
@@ -210,6 +274,107 @@ func schemaJSON(schema map[string]any) string {
 		return "{}"
 	}
 	encoded, err := json.Marshal(schema)
+	if err != nil {
+		return "!" + err.Error()
+	}
+	return string(encoded)
+}
+
+// recheckContextParams is the framework-injected parameter set §14.1 strips
+// before the normalized schema comparison.
+var recheckContextParams = map[string]struct{}{
+	"agent_id":             {},
+	"colony_id":            {},
+	"data_dir":             {},
+	"principal":            {},
+	"profile":              {},
+	"profile_display_name": {},
+	"session_cwd":          {},
+}
+
+// normalizeRecheckSchema applies the §14.1 normalization to one schema node:
+// drop pydantic `title` keys, drop CONTEXT_PARAMS from properties/required,
+// treat an empty required list as absent, and compare integral numbers as
+// integers (25.0 ≡ 25).
+func normalizeRecheckSchema(value any) any {
+	switch typed := value.(type) {
+	case map[string]any:
+		out := make(map[string]any, len(typed))
+		for key, item := range typed {
+			if key == "title" {
+				continue
+			}
+			out[key] = normalizeRecheckSchema(item)
+		}
+		if props, ok := out["properties"].(map[string]any); ok {
+			for name := range recheckContextParams {
+				delete(props, name)
+			}
+		}
+		switch required := out["required"].(type) {
+		case []any:
+			kept := make([]any, 0, len(required))
+			for _, item := range required {
+				if name, isString := item.(string); isString {
+					if _, context := recheckContextParams[name]; context {
+						continue
+					}
+				}
+				kept = append(kept, item)
+			}
+			if len(kept) == 0 {
+				delete(out, "required")
+			} else {
+				out["required"] = kept
+			}
+		case []string:
+			kept := make([]string, 0, len(required))
+			for _, item := range required {
+				if _, context := recheckContextParams[item]; context {
+					continue
+				}
+				kept = append(kept, item)
+			}
+			if len(kept) == 0 {
+				delete(out, "required")
+			} else {
+				out["required"] = kept
+			}
+		}
+		return out
+	case []any:
+		out := make([]any, len(typed))
+		for index, item := range typed {
+			out[index] = normalizeRecheckSchema(item)
+		}
+		return out
+	case float64:
+		if !math.IsNaN(typed) && !math.IsInf(typed, 0) && typed == math.Trunc(typed) {
+			return int64(typed)
+		}
+		return typed
+	case json.Number:
+		// The parity overlay decodes the contract manifest with UseNumber(),
+		// so live defaults arrive as json.Number: 25.0 must compare equal to
+		// the reference's float64 25.
+		if value, err := typed.Int64(); err == nil {
+			return value
+		}
+		if value, err := typed.Float64(); err == nil {
+			if value == math.Trunc(value) {
+				return int64(value)
+			}
+			return value
+		}
+		return typed.String()
+	default:
+		return value
+	}
+}
+
+// recheckSchemaJSON canonicalizes a normalized schema for equality.
+func recheckSchemaJSON(normalized any) string {
+	encoded, err := json.Marshal(normalized)
 	if err != nil {
 		return "!" + err.Error()
 	}

@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "module": "github.com/aden-hive/hive-go",
-  "generated_at_commit": "0654903779c3",
+  "generated_at_commit": "81e2f9356409",
   "generated_from": "architecture/model.yaml + go list -json ./... + internal/server mux.HandleFunc + internal/eventbus event_type.go",
   "stats": {
-    "packages": 72,
-    "package_edges": 189,
+    "packages": 73,
+    "package_edges": 197,
     "capabilities": 12,
     "capability_edges": 85,
     "layers": 8,
@@ -122,6 +122,7 @@
         "internal/mcpregistry",
         "internal/mcpregistry/nativecli",
         "internal/memory",
+        "internal/pipeline",
         "internal/senders",
         "internal/skills",
         "internal/soul",
@@ -132,7 +133,7 @@
         "internal/tools/integrations/excel",
         "internal/visionfallback"
       ],
-      "package_count": 19
+      "package_count": 20
     },
     {
       "id": "foundation",
@@ -434,7 +435,7 @@
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 12,
+      "direct_dependencies": 13,
       "dependents": 4
     },
     {
@@ -639,7 +640,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 2,
-      "dependents": 4
+      "dependents": 5
     },
     {
       "id": "pkg:internal/globaldb",
@@ -663,7 +664,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 2,
-      "dependents": 2
+      "dependents": 3
     },
     {
       "id": "pkg:internal/llm",
@@ -675,7 +676,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 3,
-      "dependents": 15
+      "dependents": 16
     },
     {
       "id": "pkg:internal/maintenance",
@@ -699,7 +700,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 6,
-      "dependents": 2
+      "dependents": 3
     },
     {
       "id": "pkg:internal/mcpregistry/nativecli",
@@ -726,6 +727,18 @@
       "dependents": 3
     },
     {
+      "id": "pkg:internal/pipeline",
+      "kind": "technical",
+      "package": "internal/pipeline",
+      "layer": "capability",
+      "responsibility": "配置驱动的 trigger 中间件：Stage 接口、按 order 执行/reject 短路/transform 的 Runner、stage 注册表与 7 个内置 stage（llm_provider/credential_resolver/mcp_registry/skill_registry/input_validation/rate_limit/cost_guard）。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 7,
+      "dependents": 1
+    },
+    {
       "id": "pkg:internal/senders",
       "kind": "technical",
       "package": "internal/senders",
@@ -747,7 +760,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 3,
-      "dependents": 5
+      "dependents": 6
     },
     {
       "id": "pkg:internal/soul",
@@ -771,7 +784,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 2,
-      "dependents": 11
+      "dependents": 12
     },
     {
       "id": "pkg:internal/tools/builtin",
@@ -903,7 +916,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 0,
-      "dependents": 20
+      "dependents": 21
     },
     {
       "id": "pkg:internal/logging",
@@ -1837,6 +1850,11 @@
     },
     {
       "from": "pkg:internal/colony",
+      "to": "pkg:internal/pipeline",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/colony",
       "to": "pkg:internal/playbook",
       "kind": "depends"
     },
@@ -2013,6 +2031,41 @@
     {
       "from": "pkg:internal/memory",
       "to": "pkg:internal/llm",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/pipeline",
+      "to": "pkg:internal/credentials",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/pipeline",
+      "to": "pkg:internal/hiveconf",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/pipeline",
+      "to": "pkg:internal/hivehome",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/pipeline",
+      "to": "pkg:internal/llm",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/pipeline",
+      "to": "pkg:internal/mcpregistry",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/pipeline",
+      "to": "pkg:internal/skills",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/pipeline",
+      "to": "pkg:internal/tools",
       "kind": "depends"
     },
     {

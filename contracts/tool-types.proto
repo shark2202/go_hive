@@ -158,6 +158,12 @@ message CsvWriteRowsItem {
   map<string, JsonValue> fields = 1; // map entry
 }
 
+// delete_memory_file — python:reflection_tools
+message DeleteMemoryFileInput {
+  string filename = 1; // The filename to delete.
+  optional string scope = 2; // Memory scope: 'global' or 'queen'. Defaults to 'global'.
+}
+
 // edit_file — python:mcp_catalog:files-tools
 message EditFileInput {
   optional string mode = 1; // default "replace" — Edit mode. 'replace' (default) for single-file find-and-replace. 'patch' for multi-file st
@@ -210,6 +216,11 @@ message ListBrowserProfilesInput {
   // no declared input schema: the tool takes free-form input
 }
 
+// list_memory_files — python:reflection_tools
+message ListMemoryFilesInput {
+  optional string scope = 1; // Optional scope to inspect: 'global' or 'queen'.
+}
+
 // list_playbook_runs — python:lifecycle
 message ListPlaybookRunsInput {
   // no declared input schema: the tool takes free-form input
@@ -243,6 +254,12 @@ message ReadFileInput {
   optional int64 offset = 3; // default 1 — Starting line number, 1-indexed. Default 1.
   string path = 4; // File path to read. Relative paths anchor to the agent's home; absolute paths used verbatim
   optional string session_cwd = 5;
+}
+
+// read_memory_file — python:reflection_tools
+message ReadMemoryFileInput {
+  string filename = 1; // The filename (e.g. 'user-prefers-dark-mode.md').
+  optional string scope = 2; // Memory scope: 'global' or 'queen'. Defaults to 'global'.
 }
 
 // remove_trigger — python:lifecycle
@@ -291,6 +308,15 @@ message SearchMessagesInput {
   optional string since = 8; // ISO date or datetime. Only sessions started on or after this point are searched. Use to sc
   optional int64 turn_char_cap = 9; // default 4000 — Total character budget per returned turn window. Default 4000.
   optional string until = 10; // ISO date or datetime. Only sessions started before this point are searched (exclusive).
+}
+
+// search_timeline — python:llm_request
+message SearchTimelineInput {
+  optional Kind kind = 1; // default "all" — 'event' (happened), 'fact' (a state or preference as of a date), 'plan' (intended), or 'al
+  optional int64 max_results = 2; // default 60 — Cap on returned items. Default 60.
+  string pattern = 3; // Regex matched case-insensitively against each item's text and its alias phrasings, e.g. 'w
+  optional string since = 4; // ISO date. Only items that happened (or held) on or after this date.
+  optional string until = 5; // ISO date. Only items that happened (or held) before this date (exclusive).
 }
 
 // search_tools — python:llm_request
@@ -493,6 +519,13 @@ message WriteFileInput {
   string path = 2; // File path to write. Relative paths anchor to the agent's home; absolute paths used verbati
 }
 
+// write_memory_file — python:reflection_tools
+message WriteMemoryFileInput {
+  string content = 1; // Full file content including frontmatter.
+  string filename = 2; // Filename ending in .md (e.g. 'user-prefers-dark-mode.md').
+  optional string scope = 3; // Memory scope: 'global' or 'queen'. Defaults to 'global'.
+}
+
 // write_skill — python:llm_request
 message WriteSkillInput {
   optional Scope scope = 1; // Who sees the skill: 'queen' (you, and your colonies), 'colony' (this colony's workers), or
@@ -537,6 +570,14 @@ enum Role {
   ROLE_ASSISTANT = 2;
   ROLE_TOOL = 3;
   ROLE_ALL = 4;
+}
+
+enum Kind {
+  KIND_UNSPECIFIED = 0;
+  KIND_EVENT = 1;
+  KIND_FACT = 2;
+  KIND_PLAN = 3;
+  KIND_ALL = 4;
 }
 
 enum Channel {

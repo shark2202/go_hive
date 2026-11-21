@@ -21,7 +21,8 @@ Queen 生命周期工具。Go 侧此前只有 `run_worker`（`internal/colony`�
 | `internal/agentloop/escalate.go` | legacy `worker` 流的 `escalate` 执行（发事件、停车等女王、收线重发）+ `escalateDoomLoop`（parallel worker 的自动升级生产者） |
 | `internal/colony/worker_escalation.go` | 事件生产：`ESCALATION_REQUESTED` 的 colony 戳 + `request_id` |
 | `internal/server/queen_lifecycle_triggers.go` | `set_trigger`、`list_triggers`、`remove_trigger` |
-| `internal/cli/session_tools_queen_lifecycle.go` | `enableQueenLifecycleTools`：把 10 个定义挂到会话 catalogue |
+| `internal/server/queen_worker_monitoring.go` | `get_worker_health_summary`（`worker_monitoring_tools.py`；定义/返回逐字，读 colony 的 worker run 记录） |
+| `internal/cli/session_tools_queen_lifecycle.go` | `enableQueenLifecycleTools`：把 10 个定义 + `get_worker_health_summary` 挂到会话 catalogue |
 | `internal/cli/loader.go` / `loader_preloaded_session.go` | 仅在 queen 聊天会话上启用（与 `enableQueenMailTools` 并列） |
 | `internal/server/session.go` | `PendingEscalations` 到达顺序（`pendingOrder`）、`WorkerHandoffRuntime`（订阅所属总线） |
 
@@ -103,6 +104,7 @@ worker 连续重复同一工具调用 ×3（DoomLoopDetector，默认阈值 3）
 | `list_triggers` | – | `{triggers:[{id, trigger_type, trigger_config, description, task, enabled}]}` |
 | `update_worker_profile` | **`colony_id`**、**`profile_name`**、`integrations?`、`task?`、`skill_name?`、`concurrency_hint?`、`prompt_override?`、`tool_filter?`、`browser_profile?` | `{ok:true, colony_id, profile_name, worker_profiles:[…]}` |
 | `list_browser_profiles` | – | 桥可达：`{ok:true, profiles:[{label,is_default,starred,version,protocol_version}], hint?}`；不可达：`{ok:false, error:"browser bridge not reachable", hint, profiles:[]}` |
+| `get_worker_health_summary` | `session_id?`、`last_n_steps?`（默认 40） | JSON：`{worker_agent_id, worker_graph_id, session_id, session_status, total_steps, recent_verdicts, steps_since_last_accept, last_step_time_iso, stall_minutes, evidence_snippet}`（字段与顺序逐字；`session_id` 省略或 `auto` → 优先 queen 自己的 session id，否则取最近 active 的 worker session） |
 
 ## 4. 错误语义（对齐上游文案）
 
@@ -135,7 +137,8 @@ worker 连续重复同一工具调用 ×3（DoomLoopDetector，默认阈值 3）
 | `internal/agentloop/escalate_test.go` | legacy `worker` 流的 escalate 停车/唤醒与回复入会话、queen/judge/overseer 拒绝、`worker:<id>` 分发拒绝（不产生事件、不停车）、无 sink 拒绝、收线重发 |
 | `internal/colony/worker_escalation_test.go` | worker 工具面不含 `escalate`（含 `report_to_parent`；overseer 两者都不含）、事件带 colony 戳与 `request_id`、doom-loop 升级一次 → 注入回复 → worker 继续并 report、无重复调用时不产生事件 |
 | `internal/server/queen_lifecycle_actions_test.go` | trigger CRUD（timer 激活/持久化/列出/移除 + 全部分支错误 + webhook 激活与取消订阅清理）、`update_worker_profile`（新增、局部更新保字段、空值清除、3 条错误）、`list_browser_profiles`（不可达 / 有 profile / 空 profile）、chat runtime 门控、取消上下文下 stop 仍生效 |
-| `internal/cli/session_tools_queen_lifecycle_test.go` | catalogue 注册（启用前不可见、启用后 10 个全在）、经 catalogue 执行、worker catalogue 不含 10 个工具 |
+| `internal/server/queen_worker_monitoring_test.go` | `get_worker_health_summary` 定义逐字（description/parameters vs Python 源码文本）、colony 门控、colony 布局读取（workers/&lt;id&gt; state.json + transcript 的 steps/evidence/timing）、upstream 布局读取（sessions/&lt;id&gt;/logs/tool_logs.jsonl 的 verdicts/stall/截断 + `last_n_steps` 窗口）、自动发现（queen 自身 session id 优先；否则最近 active）、空存储与无 colony 的 error envelope |
+| `internal/cli/session_tools_queen_lifecycle_test.go` | catalogue 注册（启用前不可见、启用后 10 个全在 + `get_worker_health_summary`）、经 catalogue 执行、worker catalogue 不含这 11 个工具 |
 | `e2e/worker_escalation_e2e_test.go`（`-tags e2e`） | 真实 `hive serve` + 真实 colony：worker 重复工具调用触发 doom-loop 升级 → queen `list_worker_questions` → `reply_to_worker` → worker 继续并 report；恰好 1 条 `[WORKER_ESCALATION]`；证据落盘 `docs/e2e-assets/worker-escalation-e2e/` |
 
 Parity 注解：生产文件指向 `framework/tools/queen_lifecycle_tools.py::<symbol>`；测试指向
@@ -176,3 +179,34 @@ Parity 注解：生产文件指向 `framework/tools/queen_lifecycle_tools.py::<s
    运行时内，没有会话级工具状态，故本次不向其暴露这 10 个工具（不多给，也不给无法执行的工具）。
 8. **collector 差异**：上游 `stop_worker` 会用 `_suppress_report_inject_for` 抑制重复
    `[WORKER_REPORT]`；Go 会话的 worker 报告订阅没有该重复注入路径，故未移植该抑制集合。
+
+## 7. worker monitoring：`get_worker_health_summary`
+
+上游 `core/framework/tools/worker_monitoring_tools.py::register_worker_monitoring_tools` 只在
+`session.colony_id` 存在时（`queen_orchestrator.py:937`）把该工具注册进 queen registry，并在
+`routes_execution.py:81` 的 `_QUEEN_LIFECYCLE_EXTRAS` 里保证 fork 出来的 worker 不继承。
+Go 侧由 `internal/server/queen_worker_monitoring.go` 提供：
+
+- **契约**：name / description / parameters 与 Python `Tool(...)` 逐字；返回是 Python
+  `json.dumps` 的同一对象（字段名与顺序：`worker_agent_id`、`worker_graph_id`、`session_id`、
+  `session_status`、`total_steps`、`recent_verdicts`、`steps_since_last_accept`、
+  `last_step_time_iso`、`stall_minutes`、`evidence_snippet`）。
+- **注册面**：`enableQueenLifecycleTools` 把定义挂上 queen 会话 catalogue；
+  `colonyBoundQueenTool` 在未绑定 colony 时隐藏（等价 upstream 的 `if session.colony_id`）；
+  `colonyWorkerToolSurface` 从不调用 lifecycle 注册，worker catalogue 结构性拿不到。
+- **数据源映射**（环境差异，非契约）：上游读 `session.worker_path` 下的
+  `sessions/<session_id>/{state.json,logs/tool_logs.jsonl}`；Go colony 把每个 worker 的 run
+  记录放在 `<colony>/workers/<worker_id>/{state.json,conversations/parts/*.json}`（`runs/`
+  是同一记录的索引副本）。工具优先解析 `tool_logs.jsonl`（存在时与原语义完全一致：verdicts、
+  steps 行数、mtime 的 stall 秒表、最后一条 `llm_text` 截 500）；否则按 transcript 的
+  assistant 轮次统计 `total_steps`、取最后一条 assistant 文本作 evidence、用最新 part 的
+  mtime 作 `last_step_time_iso`（该布局没有 judge verdict 日志，`recent_verdicts` 为空、
+  `steps_since_last_accept` 为 0，不伪造）。
+- **自动发现**：`session_id` 省略或 `auto` 时，优先 queen 自己的 session id（若该目录存在），
+  否则在 `workers/`＋`sessions/` 里按「active（in_progress/running/queued）优先、其后按
+  state.json mtime 降序」取第一条；一个都没有时返回 upstream 同款
+  `{"error": "No sessions found — worker has not started yet"}`；无 colony 存储时返回
+  `{"error": "No colony running."}`（工具在会话面本就被隐藏，直接调用才可能触达）。
+- **测试**：`internal/server/queen_worker_monitoring_test.go`（定义、两种布局、自动发现、
+  空存储/无 colony）、`internal/cli/session_tools_queen_lifecycle_test.go`（catalogue 注册
+  与执行、worker 面不含）。契约口径见 `tool-contract-diff.md` §17.4。

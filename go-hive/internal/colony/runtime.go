@@ -15,6 +15,7 @@ import (
 	"github.com/aden-hive/hive-go/internal/agentloop"
 	"github.com/aden-hive/hive-go/internal/eventbus"
 	"github.com/aden-hive/hive-go/internal/llm"
+	"github.com/aden-hive/hive-go/internal/pipeline"
 	"github.com/aden-hive/hive-go/internal/schemas"
 	"github.com/aden-hive/hive-go/internal/skills"
 	"github.com/aden-hive/hive-go/internal/tools"
@@ -74,6 +75,11 @@ type RuntimeOptions struct {
 	// one (fork flow, tests) pass it here; otherwise the runtime derives it
 	// from StoragePath when that path is a materialised colony directory.
 	Binding *tracker.Binding
+	// PipelineStages injects the trigger pipeline, upstream's
+	// `ColonyRuntime(pipeline_stages=[...])` argument. When empty the
+	// runtime loads `pipeline.stages` from configuration.json (empty is the
+	// no-op default).
+	PipelineStages []pipeline.Stage
 }
 
 type SpawnOptions struct {
@@ -201,6 +207,23 @@ type ColonyRuntime struct {
 
 	// improvementSeq keeps signal ids unique within the process.
 	improvementSeq atomic.Int64
+
+	// triggerPipeline is the configuration-driven trigger middleware. Nil and
+	// empty both mean "no stages": Trigger goes straight to the spawn.
+	// pipelineErr records a configuration error (unknown stage type) that
+	// fails startup loudly; pipelineInitialized guards the one-time
+	// InitializeAll.
+	triggerPipeline     *pipeline.Runner
+	pipelineErr         error
+	pipelineInitMu      sync.Mutex
+	pipelineInitialized bool
+
+	// Idempotency cache for Trigger (TTL 300 s, 10000 keys max, insertion
+	// eviction), guarded by triggerIdemMu.
+	triggerIdemMu    sync.Mutex
+	idempotencyKeys  map[string]string
+	idempotencyTimes map[string]time.Time
+	idempotencyOrder []string
 }
 
 func NewColonyRuntime(opts RuntimeOptions) *ColonyRuntime {
@@ -256,6 +279,14 @@ func NewColonyRuntime(opts RuntimeOptions) *ColonyRuntime {
 		for name, provider := range opts.ToolProviderMap {
 			runtime.toolProviderMap[name] = provider
 		}
+	}
+	// Trigger pipeline: injected stages win, otherwise configuration.json's
+	// pipeline.stages is read now (upstream builds it in __init__ too). A
+	// configuration error is kept and re-surfaces from Start/Trigger.
+	if len(opts.PipelineStages) > 0 {
+		runtime.triggerPipeline = pipeline.NewRunner(opts.PipelineStages)
+	} else {
+		runtime.triggerPipeline, runtime.pipelineErr = loadPipelineFromConfig()
 	}
 	return runtime
 }
@@ -546,6 +577,13 @@ func (r *ColonyRuntime) Start(ctx context.Context) error {
 	r.started = true
 	r.running = true
 	r.mu.Unlock()
+	// The trigger pipeline initializes once at startup: a configuration error
+	// (unknown stage type) fails here, loudly, and a stage's Initialize
+	// failure aborts startup instead of being swallowed. The default empty
+	// pipeline is a no-op.
+	if err := r.initializePipeline(); err != nil {
+		return err
+	}
 	// HIVE_SPLIT_WORKER_EVENTS moves a parallel worker's per-turn chatter out
 	// of the queen's event log and into <worker storage>/events.jsonl. Off by
 	// default (the dashboard must render worker bubbles from META alone before

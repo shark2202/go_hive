@@ -79,7 +79,10 @@ func NewQueenLifecycleBinding(session *Session, home hivehome.Home) *QueenLifecy
 }
 
 // QueenLifecycleToolNames lists the tool names this table executes, in the
-// registration order upstream uses for the session-bound subset.
+// registration order upstream uses for the session-bound subset. The
+// worker-monitoring tool upstream registers separately while a colony is bound
+// (worker_monitoring_tools.py) is not part of this list — it has no Tool
+// Library row — but the binding still executes it.
 func QueenLifecycleToolNames() []string {
 	return []string{
 		QueenStopWorkerToolName,
@@ -97,6 +100,9 @@ func QueenLifecycleToolNames() []string {
 
 // Has reports whether name belongs to this table.
 func (b *QueenLifecycleBinding) Has(name string) bool {
+	if name == QueenWorkerHealthSummaryToolName {
+		return true
+	}
 	for _, candidate := range QueenLifecycleToolNames() {
 		if candidate == name {
 			return true
@@ -132,6 +138,8 @@ func (b *QueenLifecycleBinding) Execute(ctx context.Context, name string, input 
 		return b.listTriggers(), false
 	case QueenRemoveTriggerToolName:
 		return b.removeTrigger(input)
+	case QueenWorkerHealthSummaryToolName:
+		return b.getWorkerHealthSummary(input), false
 	}
 	return queenLifecycleJSON(map[string]any{"error": "Unknown queen lifecycle tool: " + name}), true
 }
@@ -188,7 +196,7 @@ func queenWorkerControlToolDefs() []llm.ToolDef {
 		},
 		{
 			Name: QueenGetWorkerStatusToolName,
-			Description: "Check on the colony's workers. Returns a brief prose summary by default. " +
+			Description: "Check on the loaded graph. Returns a brief prose summary by default. " +
 				"Use 'focus' to drill into specifics:\n" +
 				"- activity: current node, transitions, latest LLM output\n" +
 				"- memory: worker's accumulated buffer state\n" +
@@ -196,8 +204,8 @@ func queenWorkerControlToolDefs() []llm.ToolDef {
 				"- issues: retries, stalls, constraint violations\n" +
 				"- progress: goal criteria, token consumption\n" +
 				"- full: everything as JSON\n" +
-				"For a PLAYBOOK (run_playbook), use get_playbook_status(run_id=...) instead — " +
-				"it reports the convergence run's progress by run_id.",
+				"For a PLAYBOOK (run_playbook), use get_playbook_status(run_id=...) " +
+				"instead — it reports the convergence run's progress by run_id.",
 			Parameters: map[string]any{
 				"type": "object",
 				"properties": map[string]any{
@@ -216,15 +224,15 @@ func queenWorkerControlToolDefs() []llm.ToolDef {
 		},
 		{
 			Name: QueenInjectMessageToolName,
-			Description: "Send a message to the colony's live workers. The message is injected " +
-				"into each active worker's conversation as a user turn. Use this to relay user " +
-				"instructions or concerns. At least one worker must be running.",
+			Description: "Send a message to the running graph. The message is injected " +
+				"into the graph's active node conversation. Use this to relay user " +
+				"instructions or concerns. The graph must be running.",
 			Parameters: map[string]any{
 				"type": "object",
 				"properties": map[string]any{
 					"content": map[string]any{
 						"type":        "string",
-						"description": "Message content to send to the workers",
+						"description": "Message content to send to the graph",
 					},
 				},
 				"required": []any{"content"},
@@ -376,12 +384,14 @@ func queenProfileToolDefs() []llm.ToolDef {
 // surface: while no colony runtime is bound, the def is not advertised (a
 // direct call still returns the tool's own actionable no-colony error). This
 // mirrors the upstream phase split, where these tools exist only in the
-// COLONY list.
+// COLONY list; the worker-monitoring tool is registered upstream only when a
+// colony is bound (`if session.colony_id` in queen_orchestrator.py).
 //
 // Parity: framework/agents/queen/nodes/__init__.py::_QUEEN_COLONY_TOOLS
 func colonyBoundQueenTool(name string) bool {
 	switch name {
-	case QueenGetWorkerStatusToolName, QueenInjectMessageToolName, QueenStopWorkerToolName:
+	case QueenGetWorkerStatusToolName, QueenInjectMessageToolName, QueenStopWorkerToolName,
+		QueenWorkerHealthSummaryToolName:
 		return true
 	}
 	return false

@@ -906,7 +906,7 @@ ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin
 <tr><td><code>list_queens</code> / <code>message_queen</code></td><td>queen_mail_tools</td><td><span class="pill warn">已实现，默认关闭</span></td><td>仅 queen 聊天会话；真实双 queen 端到端已跑通（depth 1→4）</td></tr>
 <tr><td>Claude Code queen</td><td>claude_code_queens.py</td><td><span class="pill ok">已实现运行器</span></td><td>真实 <code>claude -p</code> 回合/会话/超时/并发/回复闭环/MCP 注入已跑通；只读 dashboard 列表/transcript 路由已实现（<code>routes_queens_claude_code.go</code> + 测试），真实模型主动调 <code>message_queen</code> 未联调</td></tr>
 <tr><td><code>get_worker_status</code></td><td>queen_lifecycle_tools</td><td><span class="pill ok">已实现</span></td><td>summary/activity/memory/tools/issues/progress/full；memory focus 无 shared buffer</td></tr>
-<tr><td><code>get_worker_health_summary</code></td><td>worker_monitoring_tools</td><td><span class="pill fail">未实现</span></td><td>Python queen 会话注册（<code>queen_orchestrator.py:937</code>）；Go 侧缺失，C12 清单已登记，backlog <code>worker-health-summary</code></td></tr>
+<tr><td><code>get_worker_health_summary</code></td><td>worker_monitoring_tools</td><td><span class="pill ok">已实现</span></td><td><code>internal/server/queen_worker_monitoring.go</code>：定义（description/parameters）与 Python <code>Tool(...)</code> 逐字，返回 JSON 字段与顺序逐字（worker_agent_id / worker_graph_id / session_id / session_status / total_steps / recent_verdicts / steps_since_last_accept / last_step_time_iso / stall_minutes / evidence_snippet）；queen 会话注册、colony 相位门控（<code>colonyBoundQueenTool</code>）、worker catalogue 不继承（对应 <code>_QUEEN_LIFECYCLE_EXTRAS</code>）；数据源读 Go colony 的 <code>workers/&lt;id&gt;/</code>（state.json + transcript；tool_logs.jsonl 存在时优先）</td></tr>
 <tr><td><code>inject_message</code></td><td>queen_lifecycle_tools</td><td><span class="pill ok">已实现</span></td><td>注入全部活动 worker；colony 无单一 graph</td></tr>
 <tr><td><code>reply_to_worker</code></td><td>queen_lifecycle_tools</td><td><span class="pill ok">已实现</span></td><td>Session escalation 收件箱，按到达顺序回复出队</td></tr>
 <tr><td><code>list_worker_questions</code></td><td>queen_lifecycle_tools</td><td><span class="pill ok">已实现</span></td><td>worker 提问闭环已通</td></tr>
@@ -916,7 +916,7 @@ ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin
 <tr><td><code>list_browser_profiles</code></td><td>queen_lifecycle_tools</td><td><span class="pill warn">已实现（有桥才有数据）</span></td><td>探测本地桥 14830/9230；无桥返回空列表，不伪造</td></tr>
 <tr><td>动态 MCP 工具</td><td>mcp_registry</td><td><span class="pill ok">已实现</span></td><td>命名空间 <code>mcp__&lt;server&gt;__&lt;tool&gt;</code>；真实 MCP server 数量随安装变化</td></tr>
 </tbody></table></div>
-<div class="callout info"><b>Queen lifecycle 已补齐：</b>上游该模块 12 个工具（含 <code>run_worker</code>/<code>write_skill</code>）在 Go 均已实现；本轮补的 10 个只向 colony 运行期 queen 会话暴露，worker/overseer 面未扩大。残差见 <code>docs/queen-lifecycle-tools.md</code>。</div>
+<div class="callout info"><b>Queen lifecycle 已补齐：</b>上游该模块 12 个工具（含 <code>run_worker</code>/<code>write_skill</code>）在 Go 均已实现；这 10 个（另加 <code>worker_monitoring_tools.py</code> 的 <code>get_worker_health_summary</code>）只向 colony 运行期 queen 会话暴露，worker/overseer 面未扩大。残差见 <code>docs/queen-lifecycle-tools.md</code>。</div>
 </section>
 
 <section id="gaps"><h2><span class="num">05</span>缺口与验收边界</h2>

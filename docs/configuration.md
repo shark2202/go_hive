@@ -1,6 +1,6 @@
 # 配置参考
 
-> HTML 版（逐键 134 键、状态与读取点，自动生成防漂移）：[`configuration.html`](configuration.html)（`python3 scripts/gen_configuration_html.py --check`）
+> HTML 版（逐键 135 键、状态与读取点，自动生成防漂移）：[`configuration.html`](configuration.html)（`python3 scripts/gen_configuration_html.py --check`）
 
 > 适用版本：`hive 1.0.26-go.1`
 > 本文只写当前 Go 代码实际读取的配置项。标「代码路径」的条目由实现直接确认、但文档验证时没有单独实跑；标「实测」的条目跑过真实二进制。

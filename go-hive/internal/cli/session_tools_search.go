@@ -57,65 +57,62 @@ func memoryTimelineAvailable(home hivehome.Home) bool {
 // Parity: tools/src/memory_tools/tool.py::search_messages
 func searchMessagesToolDef() llm.ToolDef {
 	return llm.ToolDef{
-		Name: SearchMessagesToolName,
-		Description: "Recall what was said in any past session — yours and the user's. Your active context " +
-			"only holds the current session, so reach for this whenever the user says \"remember…\", " +
-			"\"last time\", \"what did we decide\", or refers to a prior conversation, decision, fact, " +
-			"file or link you no longer have in front of you.\n\n" +
-			"Searchable content: the user's typed text, your own prose replies, and tool result bodies " +
-			"(including large results that spilled to disk). Tool names and arguments are not searchable.\n\n" +
-			"Pattern is a Rust-style regex (RE2 subset): plain text matches plain text, and inline flags " +
-			"work (\"(?i)stock\"). Lookaround and backreferences are rejected.\n\n" +
-			"Returns {matches: [{session, session_started_at, turn: [{role, content, is_hit?}]}], " +
-			"total_matches}. Invalid input returns {error, message} instead of raising.",
+		Name:        SearchMessagesToolName,
+		Description: "Recall what was said in any past session — yours and the user's.\n\nThis is your long-term memory. Your active context only holds\nthe current session (and even that gets compacted as it grows).\nEverything the user told you, every answer you gave, every\ntool result you saw across every previous session lives in\nthis index. Reach for this tool whenever you can't see\nsomething in your active context but suspect it happened.\n\nCALL THIS when the user says any of:\n    • \"remember…\" / \"do you remember…\"\n    • \"last time\" / \"before\" / \"earlier\" / \"previously\"\n    • \"what did I ask about…\" / \"what did we decide…\"\n    • \"the X I mentioned\" / \"that thing we worked on\"\n    • any reference to a prior conversation, decision,\n      ticker, name, link, file, or fact you don't currently\n      have in front of you\n\nSearchable content (the only things this matches):\n    • user text the user typed\n    • your own prose responses\n    • tool result bodies (including full bodies of large\n      tool results that spilled to disk)\n\nPattern is a Rust-style regex (RE2 subset). For a name or\nticker, plain text is enough: ``\"AAPL\"``, ``\"(?i)stock\"``,\n``\"deadline\"``. See per-argument descriptions for inline\nflags and other options.\n\nReturns: dict with ``matches[]`` and ``total_matches``. Each\nmatch has ``session``, ``session_started_at`` and ``turn[]``\nof ``{role, content, is_hit?}`` entries. On invalid input or\nan unbound scope, returns ``{\"error\": \"...\", ...}`` instead\nof raising.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"pattern": map[string]any{
-					"type": "string",
-					"description": "Rust-style regex (RE2 subset). Plain text matches plain text — pass a " +
-						"name or keyword as-is ('AAPL', 'deadline'). Inline flags: '(?i)' case-insensitive, " +
-						"'(?m)' line anchors, '(?s)' dot matches newlines.",
+					"description": "Rust-style regex (RE2 subset). Plain text matches plain text — for a name, ticker, or keyword you can pass it as-is (e.g. 'AAPL', 'deadline'). Use inline flags for case-insensitive match ('(?i)stock'), line-bound ^/$ ('(?m)'), or '.' matching newlines ('(?s)'). Lookaround and backreferences are not supported.",
+					"type":        "string",
 				},
 				"session": map[string]any{
-					"type": "string",
-					"description": "Optional. Restrict to one session id (e.g. " +
-						"'session_20260501_145636_72fa023d'). Omit to search all of your past sessions.",
+					"anyOf":       []any{map[string]any{"type": "string"}, map[string]any{"type": "null"}},
+					"default":     nil,
+					"description": "Optional. Restrict to one session id (e.g. 'session_20260501_145636_72fa023d'). Use to drill into a specific past conversation; omit to search across all sessions.",
 				},
 				"role": map[string]any{
-					"type":        "string",
+					"default":     "all",
+					"description": "Filter by who said it: 'user' (the user's typed messages), 'assistant' (your own prose), 'tool' (tool result bodies), or 'all' (default).",
 					"enum":        []string{"user", "assistant", "tool", "all"},
-					"description": "Who said it: 'user' (typed messages), 'assistant' (your prose), 'tool' (tool result bodies), or 'all' (default).",
+					"type":        "string",
 				},
 				"match_source": map[string]any{
-					"type":        "string",
+					"default":     "all",
+					"description": "'events' searches in-chat message text. 'data' searches the spilled bodies of large tool results. 'all' (default) searches both in parallel.",
 					"enum":        []string{"events", "data", "all"},
-					"description": "'events' searches in-chat text, 'data' searches spilled tool-result bodies, 'all' (default) searches both.",
+					"type":        "string",
 				},
 				"since": map[string]any{
-					"type":        "string",
-					"description": "ISO date or datetime. Only sessions started on or after this point are searched.",
+					"anyOf":       []any{map[string]any{"type": "string"}, map[string]any{"type": "null"}},
+					"default":     nil,
+					"description": "ISO date or datetime. Only sessions started on or after this point are searched. Use to scope to recent memory.",
 				},
 				"until": map[string]any{
-					"type":        "string",
+					"anyOf":       []any{map[string]any{"type": "string"}, map[string]any{"type": "null"}},
+					"default":     nil,
 					"description": "ISO date or datetime. Only sessions started before this point are searched (exclusive).",
 				},
 				"max_matches": map[string]any{
+					"default":     20,
+					"description": "Cap on returned hits. Default 20. Bump up if you suspect more relevant past context exists.",
 					"type":        "integer",
-					"description": "Maximum matches to return (default 20). total_matches still reports every hit.",
 				},
 				"context": map[string]any{
-					"type":        "string",
+					"default":     "turn",
+					"description": "How much context to return per hit. 'turn' (default) returns the full conversational turn around the match — best for understanding what was happening. 'narrow' returns only the matched message. 'none' returns coordinates only.",
 					"enum":        []string{"none", "narrow", "turn"},
-					"description": "How much surrounding conversation each match carries: 'none', 'narrow' (the hit only), or 'turn' (default: the exchange around it).",
+					"type":        "string",
 				},
 				"turn_char_cap": map[string]any{
+					"default":     4000,
+					"description": "Total character budget per returned turn window. Default 4000.",
 					"type":        "integer",
-					"description": "Character budget for one match's turn window (default 4000).",
 				},
 				"per_message_char_cap": map[string]any{
+					"default":     800,
+					"description": "Character budget per individual message inside a turn — long messages get middle-truncated. Default 800.",
 					"type":        "integer",
-					"description": "Character budget for each message inside a turn window (default 800).",
 				},
 			},
 			"required": []string{"pattern"},
@@ -126,36 +123,35 @@ func searchMessagesToolDef() llm.ToolDef {
 // Parity: tools/src/memory_tools/timeline.py::search_timeline
 func searchTimelineToolDef() llm.ToolDef {
 	return llm.ToolDef{
-		Name: SearchTimelineToolName,
-		Description: "Search the dated timeline of events, facts and plans the user has mentioned across past " +
-			"conversations. Each item is one occurrence, dated to when it happened or held (relative dates " +
-			"like \"last week\" are already resolved), with said_on for when the user mentioned it and the " +
-			"session to open with search_messages for full context. Results are oldest first.\n\n" +
-			"Use it for when / how many / how much / what changed / what is current questions. Use " +
-			"search_messages for exact wording or anything the user did not state as a fact.",
+		Name:        SearchTimelineToolName,
+		Description: "Search the dated timeline of events, facts and plans the user has mentioned across past conversations.\n\nEach item is one occurrence, dated to when it happened or held (relative dates like \"last week\" are\nalready resolved), with \"said_on\" for when the user mentioned it and the session/turn to open with\nsearch_messages for the full context. Results are oldest first.\n\nUse it for when / how many / how much / what changed / what is current questions: count distinct\nitems in the asked window by their \"when\", take the latest fact for current state, and compare dates for\nbefore/after. Use search_messages for exact wording or anything the user didn't state as a fact.",
 		Parameters: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
 				"pattern": map[string]any{
+					"description": "Regex matched case-insensitively against each item's text and its alias phrasings, e.g. 'wedding', 'bak(e|ing)|cake|bread', 'museum'. Use '.' to list everything in a date range.",
 					"type":        "string",
-					"description": "Regex over the timeline text (same RE2 subset as search_messages).",
 				},
 				"since": map[string]any{
-					"type":        "string",
-					"description": "ISO date or datetime. Only items that happened on or after this point are returned.",
+					"anyOf":       []any{map[string]any{"type": "string"}, map[string]any{"type": "null"}},
+					"default":     nil,
+					"description": "ISO date. Only items that happened (or held) on or after this date.",
 				},
 				"until": map[string]any{
-					"type":        "string",
-					"description": "ISO date or datetime. Only items that happened before this point are returned (exclusive).",
+					"anyOf":       []any{map[string]any{"type": "string"}, map[string]any{"type": "null"}},
+					"default":     nil,
+					"description": "ISO date. Only items that happened (or held) before this date (exclusive).",
 				},
 				"kind": map[string]any{
-					"type":        "string",
+					"default":     "all",
+					"description": "'event' (happened), 'fact' (a state or preference as of a date), 'plan' (intended), or 'all' (default).",
 					"enum":        []string{"event", "fact", "plan", "all"},
-					"description": "Kind of occurrence: 'event', 'fact', 'plan', or 'all' (default).",
+					"type":        "string",
 				},
 				"max_results": map[string]any{
+					"default":     60,
+					"description": "Cap on returned items. Default 60.",
 					"type":        "integer",
-					"description": "Maximum items to return (default 60, capped at 300).",
 				},
 			},
 			"required": []string{"pattern"},

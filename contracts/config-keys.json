@@ -15,10 +15,10 @@
   "method": "curated per-key table (go_hive/scripts/env_config_contract_data.py) whose reader anchors are resolved and validated against the checked-out source; line numbers are recomputed, a missing anchor is a hard failure. Types/defaults/invalid-value rules were read from both implementations.",
   "scope_note": "Covers configuration.json keys read by either runtime. Per-colony notifications.json (sentinel_enabled/channel/target/allowlist/thread) and agent/worker sidecars are separate files and out of scope. The Go-only `mcp` block is included and marked go_only.",
   "summary": {
-    "keys": 134,
-    "sections": 20,
+    "keys": 135,
+    "sections": 21,
     "status_counts": {
-      "aligned": 125,
+      "aligned": 126,
       "go_only": 4,
       "go_partial": 4,
       "unread": 1
@@ -881,6 +881,33 @@
           ],
           "status": "aligned",
           "notes": "name must match [a-z0-9_-]+; blank api_base skipped; trailing / trimmed. magpie is built in."
+        }
+      ]
+    },
+    {
+      "name": "pipeline",
+      "keys": [
+        {
+          "path": "pipeline.stages",
+          "type": "list[{type, order?, config?}]",
+          "default": "[]",
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/host/colony_runtime.py",
+              "line": 687,
+              "snippet": "stages_config = config.get(\"pipeline\", {}).get(\"stages\", [])"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/colony/trigger.go",
+              "line": 119,
+              "snippet": "rawStages, present := section[\"stages\"]"
+            }
+          ],
+          "status": "aligned",
+          "notes": "Declarative trigger middleware (upstream framework/pipeline). Stages run in ascending order on every ColonyRuntime.trigger before a worker spawns; a reject short-circuits as PipelineRejectedError and spawns nothing; a missing/empty list is the no-op default (PipelineRunner([])). Go builds the same runner in internal/pipeline from the same type/order/config spec, reads it in NewColonyRuntime, and fails startup on an unknown type (upstream's KeyError). The seven built-in stage semantics and the Go-side applied-output subset are documented in docs/pipeline.md."
         }
       ]
     },
@@ -3136,7 +3163,7 @@
             },
             {
               "file": "go_hive/go-hive/internal/colony/runtime.go",
-              "line": 64,
+              "line": 65,
               "snippet": "// worker_llm separately)."
             },
             {

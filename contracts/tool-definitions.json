@@ -2,10 +2,10 @@
  "schema_version": "1.0",
  "kind": "hive-tool-definition-contract",
  "recheck": {
-  "current_round": 6,
+  "current_round": 8,
   "registry": "go_hive/docs/tool-contract-recheck.json",
-  "report": "go_hive/docs/tool-contract-diff.md §15",
-  "note": "This manifest is the round-1 frozen reference capture (single commit); the `go` blocks below are the round-1 target snapshot and are intentionally not rewritten, with one surgical exception: chart_render's block was refreshed in round 6 (chart-envelope-parity) because the raw Go ToolDef was aligned to the same Python text the live catalogue already applied, so the snapshot no longer described either side. Everything else stays round-1. Round 6 (§15) is the current state for chart_render."
+  "report": "go_hive/docs/tool-contract-diff.md §16-§17",
+  "note": "Current tool-consistency metric = live recheck (`go test ./internal/cli -run TestToolContractFreeze`), not this round-1 snapshot. The manifest keeps the round-1 reference capture and the round-1 target snapshot as provenance (surgical exceptions: chart_render's block was refreshed in round 6; round 7 (§16, memory-defs-align) refreshed search_messages' block and added five entries the round-1 capture could not see — search_timeline (the memory_timeline flag was off during the capture) and the four reflection memory-file tools). Round 8 (§17, tool-surface-fixes) unified the metric in docs/tool-contract-diff.md §17: reference 54 tools, 47 present in the live registry, description 47/47 verbatim, input_schema raw 25/47, normalized 33/47; statistics.live_recheck below is the machine-readable copy of that metric."
  },
  "generated_at_utc": "2026-11-20T15:35:11Z",
  "reference": {
@@ -20,7 +20,7 @@
    "mcp_catalog": 26,
    "lifecycle": 16,
    "synthetic": 1,
-   "union": 54
+   "union": 59
   }
  },
  "target": {
@@ -32,7 +32,7 @@
    "mcp_catalog": 0,
    "lifecycle": 0,
    "synthetic": 1,
-   "union": 144
+   "union": 149
   }
  },
  "contract": {
@@ -42,10 +42,11 @@
   "sources": [
    "python:llm_request",
    "python:mcp_catalog:<server>",
+   "python:reflection_tools",
    "python:lifecycle",
    "python:synthetic"
   ],
-  "layers_note": "llm_request = what the model receives on a default queen turn; mcp_catalog = Tool Library catalog (deferred tools included); lifecycle/synthetic = non-MCP tools"
+  "layers_note": "llm_request = what the model receives on a default queen turn; mcp_catalog = Tool Library catalog (deferred tools included); reflection_tools = the reflection side-agent's tool block (never in the queen request surface); lifecycle/synthetic = non-MCP tools"
  },
  "proto_mapping": {
   "spec": "contracts/tool-types.proto",
@@ -78,27 +79,28 @@
   }
  },
  "statistics": {
-  "python_tools": 54,
-  "go_tools": 144,
-  "shared": 41,
+  "python_tools": 59,
+  "go_tools": 149,
+  "shared": 46,
   "python_only": 13,
   "go_only": 103,
-  "description_identical": 15,
-  "description_different": 26,
-  "schema_identical": 10,
-  "schema_different": 31,
-  "python_params": 156,
-  "go_params": 167,
+  "description_identical": 21,
+  "description_different": 25,
+  "schema_identical": 16,
+  "schema_different": 30,
+  "python_params": 169,
+  "go_params": 180,
   "python_only_params": 14,
   "go_only_params": 25,
   "type_mismatches": 7,
-  "optionality_mismatches": 9,
+  "optionality_mismatches": 6,
   "required_mismatches": 6,
   "python_layers": {
    "llm_request+synthetic": 1,
    "llm_request+mcp_catalog": 11,
-   "llm_request": 11,
+   "llm_request": 12,
    "mcp_catalog": 15,
+   "reflection": 4,
    "lifecycle": 15,
    "lifecycle+llm_request": 1
   },
@@ -110,7 +112,63 @@
   "python_lifecycle": 16,
   "go_lifecycle": 0,
   "python_synthetic": 1,
-  "go_synthetic": 1
+  "go_synthetic": 1,
+  "live_recheck": {
+   "computed_by": "go test ./internal/cli -run TestToolContractFreeze (section C)",
+   "reference_tools": 54,
+   "live_present": 47,
+   "live_missing": [
+    "ask_user",
+    "collect_result",
+    "credentials",
+    "csv_sql",
+    "search_tools",
+    "sentinel_setup",
+    "suggest_colony"
+   ],
+   "description_verbatim": 47,
+   "input_schema_raw_verbatim": 25,
+   "input_schema_normalized_verbatim": 33,
+   "normalization": "strip CONTEXT_PARAMS + pydantic title; empty required == absent; numeric equivalence (25.0 == 25)",
+   "normalized_residual": [
+    "browser_setup",
+    "get_playbook_status",
+    "get_worker_status",
+    "inject_message",
+    "list_playbook_runs",
+    "remove_trigger",
+    "reply_to_worker",
+    "run_playbook",
+    "run_worker",
+    "set_trigger",
+    "stop_playbook",
+    "stop_worker",
+    "task_create",
+    "update_worker_profile"
+   ],
+   "normalized_residual_reasons": {
+    "lifecycle_layer_no_schema": [
+     "get_playbook_status",
+     "get_worker_status",
+     "inject_message",
+     "list_playbook_runs",
+     "remove_trigger",
+     "reply_to_worker",
+     "run_playbook",
+     "run_worker",
+     "set_trigger",
+     "stop_playbook",
+     "stop_worker",
+     "update_worker_profile"
+    ],
+    "go_additional_properties": [
+     "browser_setup"
+    ],
+    "session_scoped_pivot_overlay": [
+     "task_create"
+    ]
+   }
+  }
  },
  "tools": [
   {
@@ -1146,6 +1204,88 @@
    }
   },
   {
+   "name": "delete_memory_file",
+   "description": "Delete a memory file by filename.  Use during long reflection to prune stale or redundant memories.",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "filename": {
+      "type": "string",
+      "description": "The filename to delete."
+     },
+     "scope": {
+      "type": "string",
+      "description": "Memory scope: 'global' or 'queen'. Defaults to 'global'."
+     }
+    },
+    "required": [
+     "filename"
+    ],
+    "additionalProperties": false
+   },
+   "source": "python:reflection_tools",
+   "layers": [
+    "reflection"
+   ],
+   "layer_detail": {
+    "reflection": {}
+   },
+   "proto": {
+    "message": "DeleteMemoryFileInput",
+    "params": {
+     "filename": "string",
+     "scope": "optional string"
+    },
+    "required": [
+     "filename"
+    ],
+    "flags": {}
+   },
+   "go": {
+    "present": true,
+    "layer": "reflection",
+    "description_identical": true,
+    "input_schema_identical": true,
+    "description": "Delete a memory file by filename.  Use during long reflection to prune stale or redundant memories.",
+    "input_schema": {
+     "additionalProperties": false,
+     "properties": {
+      "filename": {
+       "description": "The filename to delete.",
+       "type": "string"
+      },
+      "scope": {
+       "description": "Memory scope: 'global' or 'queen'. Defaults to 'global'.",
+       "type": "string"
+      }
+     },
+     "required": [
+      "filename"
+     ],
+     "type": "object"
+    },
+    "param_diff": {
+     "python_only": [],
+     "go_only": [],
+     "type_mismatches": [],
+     "optionality_mismatches": [],
+     "required_python": [
+      "filename"
+     ],
+     "required_go": [
+      "filename"
+     ]
+    }
+   },
+   "parity": {
+    "name": true,
+    "description": true,
+    "input_schema": true,
+    "present_in_go": true
+   },
+   "added_round": 7
+  },
+  {
    "name": "edit_file",
    "description": "Edit files: one string in one file (replace mode), or many edits across many files (patch mode). Use this instead of `sed`, `awk`, or shell redirects. Returns a unified diff. If old_string doesn't match in replace mode, re-read the file with read_file or use search_files to locate the exact text — don't retry blindly.",
    "input_schema": {
@@ -1732,6 +1872,67 @@
    }
   },
   {
+   "name": "list_memory_files",
+   "description": "List memory files with their type, name, and description. When scope is omitted, returns all scopes grouped by scope.",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "scope": {
+      "type": "string",
+      "description": "Optional scope to inspect: 'global' or 'queen'."
+     }
+    },
+    "additionalProperties": false
+   },
+   "source": "python:reflection_tools",
+   "layers": [
+    "reflection"
+   ],
+   "layer_detail": {
+    "reflection": {}
+   },
+   "proto": {
+    "message": "ListMemoryFilesInput",
+    "params": {
+     "scope": "optional string"
+    },
+    "required": [],
+    "flags": {}
+   },
+   "go": {
+    "present": true,
+    "layer": "reflection",
+    "description_identical": true,
+    "input_schema_identical": true,
+    "description": "List memory files with their type, name, and description. When scope is omitted, returns all scopes grouped by scope.",
+    "input_schema": {
+     "additionalProperties": false,
+     "properties": {
+      "scope": {
+       "description": "Optional scope to inspect: 'global' or 'queen'.",
+       "type": "string"
+      }
+     },
+     "type": "object"
+    },
+    "param_diff": {
+     "python_only": [],
+     "go_only": [],
+     "type_mismatches": [],
+     "optionality_mismatches": [],
+     "required_python": [],
+     "required_go": []
+    }
+   },
+   "parity": {
+    "name": true,
+    "description": true,
+    "input_schema": true,
+    "present_in_go": true
+   },
+   "added_round": 7
+  },
+  {
    "name": "list_playbook_runs",
    "description": "Read the playbook run-log for this colony (from colony.db, the colony bookkeeping store — separate from the domain tracker). Returns recent runs most-recent-first: run_id, name, status, dispatched, dead_lettered, result, and the log narration. Pass `run_id` to fetch one run (e.g. the id run_playbook returned), or `limit` for the most recent N.",
    "input_schema": {
@@ -2181,6 +2382,88 @@
     "input_schema": false,
     "present_in_go": true
    }
+  },
+  {
+   "name": "read_memory_file",
+   "description": "Read the full content of a memory file by filename from a scope.",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "filename": {
+      "type": "string",
+      "description": "The filename (e.g. 'user-prefers-dark-mode.md')."
+     },
+     "scope": {
+      "type": "string",
+      "description": "Memory scope: 'global' or 'queen'. Defaults to 'global'."
+     }
+    },
+    "required": [
+     "filename"
+    ],
+    "additionalProperties": false
+   },
+   "source": "python:reflection_tools",
+   "layers": [
+    "reflection"
+   ],
+   "layer_detail": {
+    "reflection": {}
+   },
+   "proto": {
+    "message": "ReadMemoryFileInput",
+    "params": {
+     "filename": "string",
+     "scope": "optional string"
+    },
+    "required": [
+     "filename"
+    ],
+    "flags": {}
+   },
+   "go": {
+    "present": true,
+    "layer": "reflection",
+    "description_identical": true,
+    "input_schema_identical": true,
+    "description": "Read the full content of a memory file by filename from a scope.",
+    "input_schema": {
+     "additionalProperties": false,
+     "properties": {
+      "filename": {
+       "description": "The filename (e.g. 'user-prefers-dark-mode.md').",
+       "type": "string"
+      },
+      "scope": {
+       "description": "Memory scope: 'global' or 'queen'. Defaults to 'global'.",
+       "type": "string"
+      }
+     },
+     "required": [
+      "filename"
+     ],
+     "type": "object"
+    },
+    "param_diff": {
+     "python_only": [],
+     "go_only": [],
+     "type_mismatches": [],
+     "optionality_mismatches": [],
+     "required_python": [
+      "filename"
+     ],
+     "required_go": [
+      "filename"
+     ]
+    }
+   },
+   "parity": {
+    "name": true,
+    "description": true,
+    "input_schema": true,
+    "present_in_go": true
+   },
+   "added_round": 7
   },
   {
    "name": "remove_trigger",
@@ -2771,13 +3054,14 @@
    "go": {
     "present": true,
     "layer": "llm_request",
-    "description_identical": false,
-    "input_schema_identical": false,
-    "description": "Recall what was said in any past session — yours and the user's. Your active context only holds the current session, so reach for this whenever the user says \"remember…\", \"last time\", \"what did we decide\", or refers to a prior conversation, decision, fact, file or link you no longer have in front of you.\n\nSearchable content: the user's typed text, your own prose replies, and tool result bodies (including large results that spilled to disk). Tool names and arguments are not searchable.\n\nPattern is a Rust-style regex (RE2 subset): plain text matches plain text, and inline flags work (\"(?i)stock\"). Lookaround and backreferences are rejected.\n\nReturns {matches: [{session, session_started_at, turn: [{role, content, is_hit?}]}], total_matches}. Invalid input returns {error, message} instead of raising.",
+    "description_identical": true,
+    "input_schema_identical": true,
+    "description": "Recall what was said in any past session — yours and the user's.\n\nThis is your long-term memory. Your active context only holds\nthe current session (and even that gets compacted as it grows).\nEverything the user told you, every answer you gave, every\ntool result you saw across every previous session lives in\nthis index. Reach for this tool whenever you can't see\nsomething in your active context but suspect it happened.\n\nCALL THIS when the user says any of:\n    • \"remember…\" / \"do you remember…\"\n    • \"last time\" / \"before\" / \"earlier\" / \"previously\"\n    • \"what did I ask about…\" / \"what did we decide…\"\n    • \"the X I mentioned\" / \"that thing we worked on\"\n    • any reference to a prior conversation, decision,\n      ticker, name, link, file, or fact you don't currently\n      have in front of you\n\nSearchable content (the only things this matches):\n    • user text the user typed\n    • your own prose responses\n    • tool result bodies (including full bodies of large\n      tool results that spilled to disk)\n\nPattern is a Rust-style regex (RE2 subset). For a name or\nticker, plain text is enough: ``\"AAPL\"``, ``\"(?i)stock\"``,\n``\"deadline\"``. See per-argument descriptions for inline\nflags and other options.\n\nReturns: dict with ``matches[]`` and ``total_matches``. Each\nmatch has ``session``, ``session_started_at`` and ``turn[]``\nof ``{role, content, is_hit?}`` entries. On invalid input or\nan unbound scope, returns ``{\"error\": \"...\", ...}`` instead\nof raising.",
     "input_schema": {
      "properties": {
       "context": {
-       "description": "How much surrounding conversation each match carries: 'none', 'narrow' (the hit only), or 'turn' (default: the exchange around it).",
+       "default": "turn",
+       "description": "How much context to return per hit. 'turn' (default) returns the full conversational turn around the match — best for understanding what was happening. 'narrow' returns only the matched message. 'none' returns coordinates only.",
        "enum": [
         "none",
         "narrow",
@@ -2786,7 +3070,8 @@
        "type": "string"
       },
       "match_source": {
-       "description": "'events' searches in-chat text, 'data' searches spilled tool-result bodies, 'all' (default) searches both.",
+       "default": "all",
+       "description": "'events' searches in-chat message text. 'data' searches the spilled bodies of large tool results. 'all' (default) searches both in parallel.",
        "enum": [
         "events",
         "data",
@@ -2795,19 +3080,22 @@
        "type": "string"
       },
       "max_matches": {
-       "description": "Maximum matches to return (default 20). total_matches still reports every hit.",
+       "default": 20,
+       "description": "Cap on returned hits. Default 20. Bump up if you suspect more relevant past context exists.",
        "type": "integer"
       },
       "pattern": {
-       "description": "Rust-style regex (RE2 subset). Plain text matches plain text — pass a name or keyword as-is ('AAPL', 'deadline'). Inline flags: '(?i)' case-insensitive, '(?m)' line anchors, '(?s)' dot matches newlines.",
+       "description": "Rust-style regex (RE2 subset). Plain text matches plain text — for a name, ticker, or keyword you can pass it as-is (e.g. 'AAPL', 'deadline'). Use inline flags for case-insensitive match ('(?i)stock'), line-bound ^/$ ('(?m)'), or '.' matching newlines ('(?s)'). Lookaround and backreferences are not supported.",
        "type": "string"
       },
       "per_message_char_cap": {
-       "description": "Character budget for each message inside a turn window (default 800).",
+       "default": 800,
+       "description": "Character budget per individual message inside a turn — long messages get middle-truncated. Default 800.",
        "type": "integer"
       },
       "role": {
-       "description": "Who said it: 'user' (typed messages), 'assistant' (your prose), 'tool' (tool result bodies), or 'all' (default).",
+       "default": "all",
+       "description": "Filter by who said it: 'user' (the user's typed messages), 'assistant' (your own prose), 'tool' (tool result bodies), or 'all' (default).",
        "enum": [
         "user",
         "assistant",
@@ -2817,20 +3105,45 @@
        "type": "string"
       },
       "session": {
-       "description": "Optional. Restrict to one session id (e.g. 'session_20260501_145636_72fa023d'). Omit to search all of your past sessions.",
-       "type": "string"
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "default": null,
+       "description": "Optional. Restrict to one session id (e.g. 'session_20260501_145636_72fa023d'). Use to drill into a specific past conversation; omit to search across all sessions."
       },
       "since": {
-       "description": "ISO date or datetime. Only sessions started on or after this point are searched.",
-       "type": "string"
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "default": null,
+       "description": "ISO date or datetime. Only sessions started on or after this point are searched. Use to scope to recent memory."
       },
       "turn_char_cap": {
-       "description": "Character budget for one match's turn window (default 4000).",
+       "default": 4000,
+       "description": "Total character budget per returned turn window. Default 4000.",
        "type": "integer"
       },
       "until": {
-       "description": "ISO date or datetime. Only sessions started before this point are searched (exclusive).",
-       "type": "string"
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "default": null,
+       "description": "ISO date or datetime. Only sessions started before this point are searched (exclusive)."
       }
      },
      "required": [
@@ -2842,23 +3155,178 @@
      "python_only": [],
      "go_only": [],
      "type_mismatches": [],
-     "optionality_mismatches": [
-      {
-       "param": "session",
-       "python_nullable": true,
-       "go_nullable": false
-      },
-      {
-       "param": "since",
-       "python_nullable": true,
-       "go_nullable": false
-      },
-      {
-       "param": "until",
-       "python_nullable": true,
-       "go_nullable": false
-      }
+     "optionality_mismatches": [],
+     "required_python": [
+      "pattern"
      ],
+     "required_go": [
+      "pattern"
+     ]
+    },
+    "refreshed_round": 7
+   },
+   "parity": {
+    "name": true,
+    "description": true,
+    "input_schema": true,
+    "present_in_go": true
+   }
+  },
+  {
+   "name": "search_timeline",
+   "description": "Search the dated timeline of events, facts and plans the user has mentioned across past conversations.\n\nEach item is one occurrence, dated to when it happened or held (relative dates like \"last week\" are\nalready resolved), with \"said_on\" for when the user mentioned it and the session/turn to open with\nsearch_messages for the full context. Results are oldest first.\n\nUse it for when / how many / how much / what changed / what is current questions: count distinct\nitems in the asked window by their \"when\", take the latest fact for current state, and compare dates for\nbefore/after. Use search_messages for exact wording or anything the user didn't state as a fact.",
+   "input_schema": {
+    "properties": {
+     "pattern": {
+      "description": "Regex matched case-insensitively against each item's text and its alias phrasings, e.g. 'wedding', 'bak(e|ing)|cake|bread', 'museum'. Use '.' to list everything in a date range.",
+      "type": "string"
+     },
+     "since": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "ISO date. Only items that happened (or held) on or after this date."
+     },
+     "until": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "ISO date. Only items that happened (or held) before this date (exclusive)."
+     },
+     "kind": {
+      "default": "all",
+      "description": "'event' (happened), 'fact' (a state or preference as of a date), 'plan' (intended), or 'all' (default).",
+      "enum": [
+       "event",
+       "fact",
+       "plan",
+       "all"
+      ],
+      "type": "string"
+     },
+     "max_results": {
+      "default": 60,
+      "description": "Cap on returned items. Default 60.",
+      "type": "integer"
+     }
+    },
+    "required": [
+     "pattern"
+    ],
+    "type": "object"
+   },
+   "source": "python:llm_request",
+   "layers": [
+    "llm_request"
+   ],
+   "layer_detail": {
+    "llm_request": {
+     "feature_gate": "memory_timeline"
+    }
+   },
+   "proto": {
+    "message": "SearchTimelineInput",
+    "params": {
+     "kind": "optional Kind",
+     "max_results": "optional int64",
+     "pattern": "string",
+     "since": "optional string",
+     "until": "optional string"
+    },
+    "required": [
+     "pattern"
+    ],
+    "flags": {
+     "kind": [
+      "default-vs-missing"
+     ],
+     "max_results": [
+      "default-vs-missing",
+      "int64-narrowing"
+     ],
+     "since": [
+      "default-vs-missing"
+     ],
+     "until": [
+      "default-vs-missing"
+     ]
+    }
+   },
+   "go": {
+    "present": true,
+    "layer": "llm_request",
+    "description_identical": true,
+    "input_schema_identical": true,
+    "description": "Search the dated timeline of events, facts and plans the user has mentioned across past conversations.\n\nEach item is one occurrence, dated to when it happened or held (relative dates like \"last week\" are\nalready resolved), with \"said_on\" for when the user mentioned it and the session/turn to open with\nsearch_messages for the full context. Results are oldest first.\n\nUse it for when / how many / how much / what changed / what is current questions: count distinct\nitems in the asked window by their \"when\", take the latest fact for current state, and compare dates for\nbefore/after. Use search_messages for exact wording or anything the user didn't state as a fact.",
+    "input_schema": {
+     "properties": {
+      "kind": {
+       "default": "all",
+       "description": "'event' (happened), 'fact' (a state or preference as of a date), 'plan' (intended), or 'all' (default).",
+       "enum": [
+        "event",
+        "fact",
+        "plan",
+        "all"
+       ],
+       "type": "string"
+      },
+      "max_results": {
+       "default": 60,
+       "description": "Cap on returned items. Default 60.",
+       "type": "integer"
+      },
+      "pattern": {
+       "description": "Regex matched case-insensitively against each item's text and its alias phrasings, e.g. 'wedding', 'bak(e|ing)|cake|bread', 'museum'. Use '.' to list everything in a date range.",
+       "type": "string"
+      },
+      "since": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "default": null,
+       "description": "ISO date. Only items that happened (or held) on or after this date."
+      },
+      "until": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "default": null,
+       "description": "ISO date. Only items that happened (or held) before this date (exclusive)."
+      }
+     },
+     "required": [
+      "pattern"
+     ],
+     "type": "object"
+    },
+    "param_diff": {
+     "python_only": [],
+     "go_only": [],
+     "type_mismatches": [],
+     "optionality_mismatches": [],
      "required_python": [
       "pattern"
      ],
@@ -2869,10 +3337,11 @@
    },
    "parity": {
     "name": true,
-    "description": false,
-    "input_schema": false,
+    "description": true,
+    "input_schema": true,
     "present_in_go": true
-   }
+   },
+   "added_round": 7
   },
   {
    "name": "search_tools",
@@ -5600,6 +6069,102 @@
     "input_schema": false,
     "present_in_go": true
    }
+  },
+  {
+   "name": "write_memory_file",
+   "description": "Create or overwrite a memory file.  Content should include YAML frontmatter (name, description, type) followed by the memory body.  Max file size: 4096 bytes.  Max files: 200.",
+   "input_schema": {
+    "type": "object",
+    "properties": {
+     "filename": {
+      "type": "string",
+      "description": "Filename ending in .md (e.g. 'user-prefers-dark-mode.md')."
+     },
+     "scope": {
+      "type": "string",
+      "description": "Memory scope: 'global' or 'queen'. Defaults to 'global'."
+     },
+     "content": {
+      "type": "string",
+      "description": "Full file content including frontmatter."
+     }
+    },
+    "required": [
+     "filename",
+     "content"
+    ],
+    "additionalProperties": false
+   },
+   "source": "python:reflection_tools",
+   "layers": [
+    "reflection"
+   ],
+   "layer_detail": {
+    "reflection": {}
+   },
+   "proto": {
+    "message": "WriteMemoryFileInput",
+    "params": {
+     "content": "string",
+     "filename": "string",
+     "scope": "optional string"
+    },
+    "required": [
+     "content",
+     "filename"
+    ],
+    "flags": {}
+   },
+   "go": {
+    "present": true,
+    "layer": "reflection",
+    "description_identical": true,
+    "input_schema_identical": true,
+    "description": "Create or overwrite a memory file.  Content should include YAML frontmatter (name, description, type) followed by the memory body.  Max file size: 4096 bytes.  Max files: 200.",
+    "input_schema": {
+     "additionalProperties": false,
+     "properties": {
+      "content": {
+       "description": "Full file content including frontmatter.",
+       "type": "string"
+      },
+      "filename": {
+       "description": "Filename ending in .md (e.g. 'user-prefers-dark-mode.md').",
+       "type": "string"
+      },
+      "scope": {
+       "description": "Memory scope: 'global' or 'queen'. Defaults to 'global'.",
+       "type": "string"
+      }
+     },
+     "required": [
+      "filename",
+      "content"
+     ],
+     "type": "object"
+    },
+    "param_diff": {
+     "python_only": [],
+     "go_only": [],
+     "type_mismatches": [],
+     "optionality_mismatches": [],
+     "required_python": [
+      "content",
+      "filename"
+     ],
+     "required_go": [
+      "content",
+      "filename"
+     ]
+    }
+   },
+   "parity": {
+    "name": true,
+    "description": true,
+    "input_schema": true,
+    "present_in_go": true
+   },
+   "added_round": 7
   },
   {
    "name": "write_skill",

@@ -940,7 +940,7 @@
   ]
  },
  "divergence_note": "capture ran on branch tool-contract-recheck @ c8cca067; the python reference checkout (/Users/mac/hive, main) was at 889bbfde during the capture and advanced to 98b3a0ab afterwards (env/config contract + qc commits). None of those touch the tool surface: core/ is still a756b1e5, tools/src still 68b6c230f20e, and the captured Python tools[] is byte-identical to the frozen baseline.",
- "current_round": 6,
+ "current_round": 8,
  "rounds": [
   {
    "round": 1,
@@ -2396,6 +2396,162 @@
      ]
     }
    }
+  },
+  {
+   "round": 7,
+   "label": "round 7 @ memory-defs-align（2026-11-22，memory 工具定义逐字 + 契约补录 + reflection 原子写）",
+   "generated_at_utc": "2026-11-22T01:10:00Z",
+   "scope": "Align the memory tool surface to the Python text: search_messages / search_timeline descriptions and parameter schemas byte-identical to the upstream harness builder output; add search_timeline and the four reflection memory-file tools to the contract (5 new entries; reference 54→59, target 144→149); make reflection memory-file writes atomic (temp+fsync+rename) to remove the queen-memory flake root cause.",
+   "baseline": "986628d5",
+   "recheck": {
+    "method": "frozen-contract extension from real Python harness builder output / reflection tool literals (no new capture)",
+    "command": "go test ./internal/cli -run 'TestHistorySearchDefinitionsMatchPythonContract|TestToolContractFreeze' -v",
+    "statistics": {
+     "reference_tools": 59,
+     "go_tools": 149,
+     "shared": 46,
+     "description_identical": 21,
+     "description_different": 25,
+     "schema_identical": 16,
+     "schema_different": 30,
+     "python_params": 169,
+     "go_params": 180,
+     "optionality_mismatches": 6,
+     "type_mismatches": 7,
+     "required_mismatches": 6
+    }
+   },
+   "regressions": [],
+   "evidence": [
+    "docs/tool-contract-diff.md §16",
+    "contracts/tool-definitions.json (refreshed_round/add round 7)",
+    "internal/memory/reflection_atomic_test.go"
+   ]
+  },
+  {
+   "round": 8,
+   "label": "round 8 @ tool-surface-fixes（口径统一：live recheck 为唯一权威指标；desc 44/47→47/47；新增 get_worker_health_summary）",
+   "generated_at_utc": "2026-11-21T17:13:47Z",
+   "scope": "Unify the tool-consistency metric: the live recheck (`go test ./internal/cli -run TestToolContractFreeze`, reference vs the current Go registry union) is authoritative; the round-1 frozen snapshot stays provenance. Align the three remaining non-verbatim descriptions to the Python text (get_worker_status / inject_message / run_worker — the round-4 'Go-rewritten' exception is retired). Add get_worker_health_summary from framework/tools/worker_monitoring_tools.py (definition/returns verbatim; registered on the queen session surface, colony-phase gated, absent from worker catalogues). No capture was re-run: the numbers below are computed live by the test.",
+   "baseline": {
+    "round": 6,
+    "note": "Round 6 closed chart_render's value-level envelope and refreshed that one manifest block. The live recheck at that point: present 47/54, description 44/47, schema raw 25/47, normalized 33/47 (the 3 description diffs were the colony-phase trio)."
+   },
+   "recheck": {
+    "method": "live registry union, no dual-runtime capture; description byte equality + schema raw/normalized equality",
+    "command": "go test ./internal/cli -run TestToolContractFreeze -v",
+    "python": {
+     "role": "reference",
+     "version": "1.0.14",
+     "commit": "4e737cbc63523ba5eeda84820c09f28ebd43a670",
+     "core_commit": "a756b1e51765bc75b0a40e362859452a0a54081b",
+     "tools_commit": "68b6c23095aef8bc9a0dcbc05aeb16e61b1ba8db",
+     "method": "frozen contracts/tool-definitions.json reference blocks (round-1 capture, unchanged)"
+    },
+    "go": {
+     "role": "target",
+     "worktree": "/Users/mac/hive/.wt/tool-surface-fixes",
+     "branch": "tool-surface-fixes",
+     "base": "986628d5",
+     "method": "newSessionToolCatalogue registry union + server.QueenLifecycleToolDefs"
+    },
+    "statistics": {
+     "reference_tools": 54,
+     "live_present": 47,
+     "live_missing": [
+      "ask_user",
+      "collect_result",
+      "credentials",
+      "csv_sql",
+      "search_tools",
+      "sentinel_setup",
+      "suggest_colony"
+     ],
+     "description_verbatim": 47,
+     "input_schema_raw_verbatim": 25,
+     "input_schema_normalized_verbatim": 33,
+     "normalized_residual": [
+      "browser_setup",
+      "get_playbook_status",
+      "get_worker_status",
+      "inject_message",
+      "list_playbook_runs",
+      "remove_trigger",
+      "reply_to_worker",
+      "run_playbook",
+      "run_worker",
+      "set_trigger",
+      "stop_playbook",
+      "stop_worker",
+      "task_create",
+      "update_worker_profile"
+     ],
+     "normalized_residual_reasons": {
+      "lifecycle_layer_no_schema": [
+       "get_playbook_status",
+       "get_worker_status",
+       "inject_message",
+       "list_playbook_runs",
+       "remove_trigger",
+       "reply_to_worker",
+       "run_playbook",
+       "run_worker",
+       "set_trigger",
+       "stop_playbook",
+       "stop_worker",
+       "update_worker_profile"
+      ],
+      "go_additional_properties": [
+       "browser_setup"
+      ],
+      "session_scoped_pivot_overlay": [
+       "task_create"
+      ]
+     }
+    },
+    "description_fixes": {
+     "get_worker_status": {
+      "python": "core/framework/tools/queen_lifecycle_tools.py::_status_tool",
+      "now_verbatim": true
+     },
+     "inject_message": {
+      "python": "core/framework/tools/queen_lifecycle_tools.py::_inject_tool",
+      "now_verbatim": true
+     },
+     "run_worker": {
+      "python": "core/framework/tools/queen_lifecycle_tools.py::_run_parallel_tool",
+      "chars": 4191,
+      "bytes": 4218,
+      "sha256": "71e99e30a84c21f3a3edcca84f98fa161c28d6ea6072a195c0584999ac1227d1"
+     }
+    },
+    "tool_additions": {
+     "get_worker_health_summary": {
+      "python": "core/framework/tools/worker_monitoring_tools.py",
+      "registration": "queen_orchestrator.py:937 only when session.colony_id; routes_execution.py:81 _QUEEN_LIFECYCLE_EXTRAS strips it from forked workers",
+      "go": "internal/server/queen_worker_monitoring.go; enableQueenLifecycleTools (queen catalogue) + colonyBoundQueenTool gate; worker catalogues never enable it",
+      "contract": "description/parameters verbatim; JSON return keys and order verbatim; data source adapted to the Go colony layout (workers/<id>/state.json + conversations/parts, tool_logs.jsonl when present)",
+      "tests": [
+       "TestQueenWorkerHealthSummaryDefinitionMatchesPythonSource",
+       "TestQueenWorkerHealthSummaryReadsWorkerRunRecord",
+       "TestQueenWorkerHealthSummaryReadsToolLogsLayout",
+       "TestQueenWorkerHealthSummaryAutoDiscovery",
+       "TestQueenWorkerHealthSummaryNoSessions",
+       "TestQueenSessionCatalogueAdvertisesWorkerHealthSummary"
+      ]
+     }
+    },
+    "metric_unification": {
+     "authoritative": "live recheck (section C of TestToolContractFreeze)",
+     "frozen_snapshot": "round-1 capture, historical only (docs/tool-contract-diff.md §3.2 / §16.1)"
+    }
+   },
+   "regressions": [],
+   "evidence": [
+    "docs/tool-contract-diff.md §17",
+    "go test ./internal/cli -run TestToolContractFreeze -v (section C line)",
+    "go test ./internal/server -run TestQueenWorkerHealthSummary -v"
+   ]
   }
  ]
 }

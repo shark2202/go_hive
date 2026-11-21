@@ -13,6 +13,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/aden-hive/hive-go/internal/atomicfs"
 	"github.com/aden-hive/hive-go/internal/hivehome"
 	"github.com/aden-hive/hive-go/internal/llm"
 )
@@ -297,10 +298,12 @@ func ExecuteTool(name string, args map[string]any, dirs []ScopeDir, queenID stri
 				return fmt.Sprintf("ERROR: File cap reached in %s (%d). Delete a file first.", scope, MaxFiles)
 			}
 		}
-		if mkErr := os.MkdirAll(scopeDir, 0o755); mkErr != nil {
-			return "ERROR: " + mkErr.Error()
-		}
-		if writeErr := os.WriteFile(path, []byte(content), 0o644); writeErr != nil {
+		// Write atomically (same-directory temp + fsync + rename): a reader
+		// polling the memory directory — the turn loop, the recall builder, a
+		// watcher — must never see a truncated or half-written file. os.WriteFile
+		// truncates in place, which is the race that made the queen-memory
+		// reflection test flake: the file appeared empty between open and write.
+		if writeErr := atomicfs.WriteFile(path, []byte(content), 0o644); writeErr != nil {
 			return "ERROR: " + writeErr.Error()
 		}
 		return fmt.Sprintf("Wrote %s:%s (%d chars).", scope, filename, utf8.RuneCountInString(content))
