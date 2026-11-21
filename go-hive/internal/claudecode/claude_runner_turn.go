@@ -156,11 +156,19 @@ func (r *Runner) executeClaude(args []string, prompt, cwd string, env []string, 
 		}
 		return claudeTurnRun{code: code, stdout: stdout.String(), stderr: stderr.String()}
 	case <-timer.C:
-		// The turn ran out of time: kill the whole tree, wait for it, and
-		// report the timeout rather than the kill's exit code.
+		// The turn ran out of time: kill the whole tree and tell the writer
+		// promptly. Do NOT block on Wait here: after SIGKILL its I/O copy
+		// goroutines can linger up to WaitDelay (5s) when a descendant briefly
+		// holds the pipe, which would delay the timeout reply (wave-38 flake).
+		// Partial stdout/stderr are intentionally not read -- the copy
+		// goroutines may still be writing (data race), and upstream discards
+		// them on timeout too.
 		killProcessTree(command)
-		<-done
-		return claudeTurnRun{timedOut: true, stdout: stdout.String(), stderr: stderr.String()}
+		select {
+		case <-done:
+		case <-time.After(1 * time.Second):
+		}
+		return claudeTurnRun{timedOut: true}
 	}
 }
 
