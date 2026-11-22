@@ -103,7 +103,34 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 <li><b>不假设有回复通道</b>：调用方只拿到 202；结果写回会话/需要时由 queen 调外部 API。</li>
 </ul>
 
-<h2><span class="num">08</span>部署与安全（重要）</h2>
+<h2><span class="num">08</span>流水线模式：每次触发 = 一次独立调研（不同目标）</h2>
+<p>概念先对齐：<b>colony 不是 DAG 流水线</b>，它是常驻团队；“流水线”由三种原语实现——<code>run_worker</code>（每个目标一个独立 worker，最常用）、<code>run_playbook</code>（阶段化流水线）、goal/marshal（目标驱动）。推荐组合：<b>一个 webhook 触发器 + payload 携带调研目标 + task 模板派 worker</b>。</p>
+<ol>
+<li><b>建触发器</b>（对话让 queen 调 <code>set_trigger</code>），task 模板示例：</li>
+</ol>
+<pre>收到调研请求：topic=payload.topic，目标=payload.goal，request_id=payload.request_id。
+用 run_worker 派 1 个独立调研 worker：
+- worker task：「调研主题：{payload.topic}。目标：{payload.goal}。产出：结论+证据链接+落盘 reports/{payload.topic}-{payload.request_id}.md；完成后 report_to_parent。」
+- data 传完整 payload。
+先按 request_id 去重（已处理过则不重复派发）；worker 报告回来后只汇总要点，不在本会话重复长调研。</pre>
+<ol start="2">
+<li><b>发送（每次不同目标）</b>：</li>
+</ol>
+<pre>curl -X POST http://127.0.0.1:8090/hooks/research \
+  -d '{"topic":"固态电池","goal":"量产时间表与主要玩家","request_id":"r-001"}'
+curl -X POST http://127.0.0.1:8090/hooks/research \
+  -d '{"topic":"RISC-V 服务器","goal":"主流厂商与生态成熟度","request_id":"r-002"}'</pre>
+<ol start="3">
+<li><b>每次触发发生什么</b>：queen 轮 → <code>run_worker</code>（立即返回，不阻塞）→ 独立 worker（独立上下文/会话）调研 → <code>[WORKER_REPORT]</code> 回到 queen → 汇总/落盘。每次调研互不污染；多个触发可并行（worker 层并行）。</li>
+</ol>
+<table><tr><th>需求</th><th>做法</th></tr>
+<tr><td>调研类型固定几类</td><td>每类一个 path（<code>/hooks/research/market</code> 等）+ 各自 task 模板（注意：同一 path 只能挂一个 trigger）</td></tr>
+<tr><td>一次触发含多个目标</td><td>payload 给列表，task 要求 <code>run_worker</code> 一次性派 N 个（<code>tasks=[…]</code>），或改走 <code>run_playbook</code></td></tr>
+<tr><td>要阶段化流水线</td><td>webhook → queen → <code>run_playbook</code>（.play.json 定义阶段/队列，args=payload；Python .play.py 需外部解释器）</td></tr>
+<tr><td>完全隔离（每目标一个 colony）</td><td><b>触发器不支持自动建 colony</b>；需外部控制面创建/复制模板 colony——登记为限制</td></tr>
+<tr><td>严格 1:1 轮次</td><td>连续触发现有批合并（合并为一条消息、多块）；task 里写「对每个 trigger block 各派一个 worker」即可保持逐一处理</td></tr></table>
+<p class="sub">注意：queen 轮次串行入队；并发在 worker；<code>run_worker</code> 的 timeout 是软限（默认 600s）；事件不重放——发送方失败需重发；高频场景请在 task 里做 request_id 去重或外层限流。</p>
+<h2><span class="num">09</span>部署与安全（重要）</h2>
 <ul>
 <li>服务只监听 <code>127.0.0.1</code>：同机进程可直接 POST；GitHub 云端等外部服务需经 <b>self-hosted runner</b> 或隧道/反代（Cloudflare Tunnel、nginx）。</li>
 <li><b>内置 HMAC 鉴权未接线</b>（<code>secret</code> 代码存在但 set_trigger 不设置）→ <b>不要直接裸露到公网</b>；在反代层加认证/来源限制，或加签名校验。</li>
@@ -111,17 +138,17 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 <li>事件不落盘、不重放、无重试：调用方失败需自己重发。</li>
 </ul>
 
-<h2><span class="num">09</span>排障速查</h2>
+<h2><span class="num">10</span>排障速查</h2>
 <table><tr><th>现象</th><th>原因</th><th>处理</th></tr>
 <tr><td>connection refused</td><td>会话未激活任何 webhook / serve 未运行 / 端口不是 8090</td><td>查列表 enabled；确认 port；重新激活</td></tr>
 <tr><td>404 {"error":"Not found"}</td><td>path 不匹配（大小写/拼写；精确匹配无通配）</td><td>核对 trigger_config.path</td></tr>
 <tr><td>405 Method Not Allowed</td><td>method 不在 methods</td><td>加 methods 或改用允许的方法</td></tr>
-<tr><td>413</td><td>body 超 10 MiB</td><td>减小 payload 或改走拉取式</td></tr>
+<tr><td>400</td><td>body ≥1 MiB（与上游一致，同文案 <code>Failed to read request body</code>）</td><td>减小 payload 或改走拉取式</td></tr>
 <tr><td>401 Invalid signature</td><td>仅当 route.secret 已配置（触发流程不会）</td><td>正常流程不会出现；出现说明自定义了 secret</td></tr>
 <tr><td>202 但 queen 没反应</td><td>会话未加载 colony / queen 节点不可用 / 已停用（订阅已取消）/ inject 失败</td><td>查 session colony、重新激活、看 serve 日志 <code>Webhook trigger '&lt;id&gt;' injection failed</code></td></tr>
 <tr><td>重复执行</td><td>无去重，发送方重试</td><td>task 侧按事件 id 判重</td></tr></table>
 
-<h2><span class="num">10</span>边界（完整清单见契约页 §09）</h2>
+<h2><span class="num">11</span>边界（完整清单见契约页 §09）</h2>
 <ul>
 <li>无毫秒、无“延迟队列/一次性 after-N”（timer 仅 cron/interval）；webhook 是事件入口不是定时器。</li>
 <li>多触发器注入形态与上游不同（上游合并一条，Go 每事件一轮）；非 object JSON body 的 payload 保留差异已修复（2026-11-23）。</li>

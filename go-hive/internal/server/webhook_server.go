@@ -10,7 +10,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"io"
 	"net"
 	"net/http"
@@ -21,6 +20,15 @@ import (
 
 	"github.com/shark2202/go_hive/go-hive/internal/eventbus"
 )
+
+// webhookBodyLimitBytes mirrors aiohttp's default web.Application
+// client_max_size (1 MiB), which upstream never overrides. Its request.read()
+// raises HTTPRequestEntityTooLarge as soon as the accumulated body reaches the
+// limit (>=), and _handle_request's `except Exception` turns that into
+// 400 {"error": "Failed to read request body"} — there is no 413 on this path.
+// Measured against real aiohttp 3.13.5: 1 MiB-1 -> 202, 1 MiB -> 400,
+// 1 MiB+1 -> 400. Evidence: docs/e2e-assets/webhook-semantics/.
+const webhookBodyLimitBytes int64 = 1 << 20
 
 type webhookRoute struct {
 	sourceID string
@@ -145,13 +153,12 @@ func (s *webhookServer) handleRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	body, err := readLimitedBody(r, maxWebhookBodyBytes)
+	body, err := readWebhookBody(r, webhookBodyLimitBytes)
 	if err != nil {
-		status := http.StatusBadRequest
-		if errors.Is(err, errBodyTooLarge) {
-			status = http.StatusRequestEntityTooLarge
-		}
-		writeJSON(w, status, map[string]any{"error": "Failed to read request body"})
+		// Parity: upstream catches the aiohttp HTTPRequestEntityTooLarge raised
+		// by request.read() with a bare `except Exception` and answers 400 with
+		// this exact message — oversized bodies never surface as 413.
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "Failed to read request body"})
 		return
 	}
 
@@ -197,6 +204,24 @@ func parseWebhookBody(body []byte) any {
 	return decoded
 }
 
+// readWebhookBody mirrors upstream `await request.read()`: aiohttp rejects a
+// body as soon as its accumulated size reaches client_max_size (>=), so both
+// "exactly the limit" and "over the limit" are refused. Reading at most limit
+// bytes is sufficient to decide; the caller answers 400 for both.
+func readWebhookBody(r *http.Request, limit int64) ([]byte, error) {
+	if r == nil || r.Body == nil {
+		return nil, nil
+	}
+	data, err := io.ReadAll(io.LimitReader(r.Body, limit))
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(data)) >= limit {
+		return nil, errBodyTooLarge
+	}
+	return data, nil
+}
+
 func verifyWebhookSignature(headerValue, secret string, body []byte) bool {
 	const prefix = "sha256="
 	if !strings.HasPrefix(headerValue, prefix) {
@@ -209,11 +234,17 @@ func verifyWebhookSignature(headerValue, secret string, body []byte) bool {
 	return hmac.Equal([]byte(expected), []byte(computed))
 }
 
+// webhookHeaders mirrors upstream `dict(request.headers)` for duplicate header
+// lines. aiohttp's multi-dict __getitem__ returns the FIRST value of a key, so
+// dict() keeps the first value (measured: X-Test: alpha + X-Test: beta ->
+// "alpha"). net/http canonicalizes header names while aiohttp preserves the
+// wire spelling, and Host is not part of r.Header, so Host is re-added the way
+// aiohttp keeps it.
 func webhookHeaders(r *http.Request) map[string]string {
 	headers := make(map[string]string, len(r.Header)+1)
 	for name, values := range r.Header {
 		if len(values) > 0 {
-			headers[name] = values[len(values)-1]
+			headers[name] = values[0]
 		}
 	}
 	if r.Host != "" {
@@ -222,12 +253,15 @@ func webhookHeaders(r *http.Request) map[string]string {
 	return headers
 }
 
+// webhookQueryParams mirrors upstream `dict(request.query)`: the multi-dict
+// keeps the FIRST value for a repeated parameter (measured: ?a=1&a=2 -> "1"),
+// and an empty value stays "".
 func webhookQueryParams(r *http.Request) map[string]string {
 	query := r.URL.Query()
 	params := make(map[string]string, len(query))
 	for name, values := range query {
 		if len(values) > 0 {
-			params[name] = values[len(values)-1]
+			params[name] = values[0]
 		}
 	}
 	return params

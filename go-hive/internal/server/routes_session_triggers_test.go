@@ -1350,8 +1350,10 @@ func TestWebhookServerResponses(t *testing.T) {
 		t.Fatalf("Host header was not re-added: %#v", headersMap)
 	}
 	query, _ := event.Data["query_params"].(map[string]string)
-	if query["x"] != "2" {
-		t.Fatalf("query_params = %#v, want the last value", query)
+	// Parity: upstream dict(request.query) keeps the FIRST value for a
+	// repeated parameter (measured with real aiohttp, ?x=1&x=2 -> "1").
+	if query["x"] != "1" {
+		t.Fatalf("query_params = %#v, want the first value", query)
 	}
 
 	status, _, _ = request(http.MethodPost, "/hook", "not json", nil)

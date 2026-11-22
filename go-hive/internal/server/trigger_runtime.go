@@ -308,12 +308,13 @@ func RestoreSessionTriggers(session *Session) (int, int) {
 	return loaded, started
 }
 
-// formatTriggerTurn renders a trigger event as the user message the queen
-// reads. Multiple triggers merge into one batch upstream; this runtime queues
-// one turn per event, so the block is the single-trigger shape.
+// formatTriggerBlock renders one trigger event as the block the queen reads:
+// the [TRIGGER: type/id] header, the optional Task line, then the payload as
+// JSON on its own line. It carries no timestamp — the batch header owns the
+// single stamp every block in a drain shares.
 //
 // Parity: framework/agent_loop/internals/cursor_persistence.py::drain_trigger_queue
-func formatTriggerTurn(event agentloop.TriggerEvent, stamp string) string {
+func formatTriggerBlock(event agentloop.TriggerEvent) string {
 	task := stringValue(event.Payload["task"])
 	taskLine := ""
 	if strings.TrimSpace(task) != "" {
@@ -328,9 +329,30 @@ func formatTriggerTurn(event agentloop.TriggerEvent, stamp string) string {
 			payload = strings.TrimSuffix(buffer.String(), "\n")
 		}
 	}
-	return "[" + stamp + "]\n" +
-		fmt.Sprintf("[TRIGGER: %s/%s]", event.TriggerType, event.SourceID) +
-		taskLine + "\n" + payload
+	return fmt.Sprintf("[TRIGGER: %s/%s]", event.TriggerType, event.SourceID) + taskLine + "\n" + payload
+}
+
+// formatTriggerBatch renders every trigger event drained at one wake as the
+// single user message the queen reads: one shared [stamp] header, then the
+// per-event blocks joined by a blank line. Upstream merges the whole queue
+// into one message so the model reasons about all pending triggers atomically.
+//
+// Parity: framework/agent_loop/internals/cursor_persistence.py::drain_trigger_queue
+func formatTriggerBatch(events []agentloop.TriggerEvent, stamp string) string {
+	parts := make([]string, 0, len(events))
+	for _, event := range events {
+		parts = append(parts, formatTriggerBlock(event))
+	}
+	return "[" + stamp + "]\n" + strings.Join(parts, "\n\n")
+}
+
+// formatTriggerTurn renders a single trigger event as the user message the
+// queen reads. One queued trigger is the one-block batch the upstream drain
+// produces, so the text is byte-identical to the pre-batch single-event form.
+//
+// Parity: framework/agent_loop/internals/cursor_persistence.py::drain_trigger_queue
+func formatTriggerTurn(event agentloop.TriggerEvent, stamp string) string {
+	return formatTriggerBatch([]agentloop.TriggerEvent{event}, stamp)
 }
 
 var missedTriggerDecisions = map[string]struct{}{

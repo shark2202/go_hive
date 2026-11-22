@@ -1,0 +1,391 @@
+probe POST /hook body=2 -> status=202 sent=262/262 events=1 send_error=None
+probe POST /hook?a=1&a=2 body=2 -> status=202 sent=94/94 events=1 send_error=None
+probe POST /hook?a=1&a=2&b=3&empty=&a=4 body=2 -> status=202 sent=109/109 events=1 send_error=None
+probe POST /hook body=1048575 -> status=202 sent=1048697/1048697 events=1 send_error=None
+probe POST /hook body=1048576 -> status=400 sent=1048698/1048698 events=0 send_error=None
+probe POST /hook body=1048577 -> status=400 sent=1048699/1048699 events=0 send_error=None
+probe POST /hook body=1572864 -> status=400 sent=1572986/1572986 events=0 send_error=None
+{
+  "measurement": {
+    "what": "WebhookServer (framework/host/webhook_server.py) real aiohttp behaviour",
+    "how": "raw socket HTTP/1.1, Host header first, Connection: close",
+    "aiohttp": "3.13.5",
+    "python": "3.11.16",
+    "server_file": "/Users/mac/hive/.wt/core/framework/host/webhook_server.py",
+    "read_timeout_s": 15.0,
+    "server_port": 51720
+  },
+  "probes": {
+    "A_duplicate_headers": {
+      "request": {
+        "method": "POST",
+        "target": "/hook",
+        "header_lines": [
+          [
+            "Content-Type",
+            "application/json"
+          ],
+          [
+            "X-Test",
+            "alpha"
+          ],
+          [
+            "X-Test",
+            "beta"
+          ],
+          [
+            "X-Mix-Case",
+            "FirstCase"
+          ],
+          [
+            "x-mix-case",
+            "secondcase"
+          ],
+          [
+            "X-Hub-Signature-256",
+            "sha256=aaaa"
+          ],
+          [
+            "X-Hub-Signature-256",
+            "sha256=bbbb"
+          ]
+        ],
+        "body_size": 2
+      },
+      "response": {
+        "status": 202,
+        "status_line": "HTTP/1.1 202 Accepted",
+        "headers": {
+          "content-type": "application/json; charset=utf-8",
+          "content-length": "22",
+          "date": "Sun, 22 Nov 2026 16:33:30 GMT",
+          "server": "Python/3.11 aiohttp/3.13.5",
+          "connection": "close"
+        },
+        "body_text": "{\"status\": \"accepted\"}",
+        "raw_response_bytes": 206,
+        "request_bytes_total": 262,
+        "request_bytes_sent": 262,
+        "request_fully_sent": true,
+        "send_error": null,
+        "server_closed": true
+      },
+      "captured_events": [
+        {
+          "stream_id": "probe",
+          "path": "/hook",
+          "method": "POST",
+          "headers": {
+            "Host": "127.0.0.1:51720",
+            "Content-Type": "application/json",
+            "X-Test": "alpha",
+            "X-Mix-Case": "FirstCase",
+            "x-mix-case": "FirstCase",
+            "X-Hub-Signature-256": "sha256=aaaa",
+            "Content-Length": "2",
+            "Connection": "close"
+          },
+          "query_params": {},
+          "payload_keys": [],
+          "payload_pad_len": null
+        }
+      ]
+    },
+    "B_duplicate_query_pure": {
+      "request": {
+        "method": "POST",
+        "target": "/hook?a=1&a=2",
+        "header_lines": [],
+        "body_size": 2
+      },
+      "response": {
+        "status": 202,
+        "status_line": "HTTP/1.1 202 Accepted",
+        "headers": {
+          "content-type": "application/json; charset=utf-8",
+          "content-length": "22",
+          "date": "Sun, 22 Nov 2026 16:33:30 GMT",
+          "server": "Python/3.11 aiohttp/3.13.5",
+          "connection": "close"
+        },
+        "body_text": "{\"status\": \"accepted\"}",
+        "raw_response_bytes": 206,
+        "request_bytes_total": 94,
+        "request_bytes_sent": 94,
+        "request_fully_sent": true,
+        "send_error": null,
+        "server_closed": true
+      },
+      "captured_events": [
+        {
+          "stream_id": "probe",
+          "path": "/hook",
+          "method": "POST",
+          "headers": {
+            "Host": "127.0.0.1:51720",
+            "Content-Length": "2",
+            "Connection": "close"
+          },
+          "query_params": {
+            "a": "1"
+          },
+          "payload_keys": [],
+          "payload_pad_len": null
+        }
+      ]
+    },
+    "B_duplicate_query_mixed": {
+      "request": {
+        "method": "POST",
+        "target": "/hook?a=1&a=2&b=3&empty=&a=4",
+        "header_lines": [],
+        "body_size": 2
+      },
+      "response": {
+        "status": 202,
+        "status_line": "HTTP/1.1 202 Accepted",
+        "headers": {
+          "content-type": "application/json; charset=utf-8",
+          "content-length": "22",
+          "date": "Sun, 22 Nov 2026 16:33:30 GMT",
+          "server": "Python/3.11 aiohttp/3.13.5",
+          "connection": "close"
+        },
+        "body_text": "{\"status\": \"accepted\"}",
+        "raw_response_bytes": 206,
+        "request_bytes_total": 109,
+        "request_bytes_sent": 109,
+        "request_fully_sent": true,
+        "send_error": null,
+        "server_closed": true
+      },
+      "captured_events": [
+        {
+          "stream_id": "probe",
+          "path": "/hook",
+          "method": "POST",
+          "headers": {
+            "Host": "127.0.0.1:51720",
+            "Content-Length": "2",
+            "Connection": "close"
+          },
+          "query_params": {
+            "a": "1",
+            "b": "3",
+            "empty": ""
+          },
+          "payload_keys": [],
+          "payload_pad_len": null
+        }
+      ]
+    },
+    "C_body_limit": {
+      "sizes_probed": [
+        1048575,
+        1048576,
+        1048577,
+        1572864
+      ],
+      "by_size": {
+        "1048575": {
+          "request": {
+            "method": "POST",
+            "target": "/hook",
+            "header_lines": [
+              [
+                "Content-Type",
+                "application/json"
+              ]
+            ],
+            "body_size": 1048575
+          },
+          "response": {
+            "status": 202,
+            "status_line": "HTTP/1.1 202 Accepted",
+            "headers": {
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "22",
+              "date": "Sun, 22 Nov 2026 16:33:30 GMT",
+              "server": "Python/3.11 aiohttp/3.13.5",
+              "connection": "close"
+            },
+            "body_text": "{\"status\": \"accepted\"}",
+            "raw_response_bytes": 206,
+            "request_bytes_total": 1048697,
+            "request_bytes_sent": 1048697,
+            "request_fully_sent": true,
+            "send_error": null,
+            "server_closed": true
+          },
+          "captured_events": [
+            {
+              "stream_id": "probe",
+              "path": "/hook",
+              "method": "POST",
+              "headers": {
+                "Host": "127.0.0.1:51720",
+                "Content-Type": "application/json",
+                "Content-Length": "1048575",
+                "Connection": "close"
+              },
+              "query_params": {},
+              "payload_keys": [
+                "pad"
+              ],
+              "payload_pad_len": 1048565
+            }
+          ]
+        },
+        "1048576": {
+          "request": {
+            "method": "POST",
+            "target": "/hook",
+            "header_lines": [
+              [
+                "Content-Type",
+                "application/json"
+              ]
+            ],
+            "body_size": 1048576
+          },
+          "response": {
+            "status": 400,
+            "status_line": "HTTP/1.1 400 Bad Request",
+            "headers": {
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "40",
+              "date": "Sun, 22 Nov 2026 16:33:31 GMT",
+              "server": "Python/3.11 aiohttp/3.13.5",
+              "connection": "close"
+            },
+            "body_text": "{\"error\": \"Failed to read request body\"}",
+            "raw_response_bytes": 227,
+            "request_bytes_total": 1048698,
+            "request_bytes_sent": 1048698,
+            "request_fully_sent": true,
+            "send_error": null,
+            "server_closed": true
+          },
+          "captured_events": []
+        },
+        "1048577": {
+          "request": {
+            "method": "POST",
+            "target": "/hook",
+            "header_lines": [
+              [
+                "Content-Type",
+                "application/json"
+              ]
+            ],
+            "body_size": 1048577
+          },
+          "response": {
+            "status": 400,
+            "status_line": "HTTP/1.1 400 Bad Request",
+            "headers": {
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "40",
+              "date": "Sun, 22 Nov 2026 16:33:31 GMT",
+              "server": "Python/3.11 aiohttp/3.13.5",
+              "connection": "close"
+            },
+            "body_text": "{\"error\": \"Failed to read request body\"}",
+            "raw_response_bytes": 227,
+            "request_bytes_total": 1048699,
+            "request_bytes_sent": 1048699,
+            "request_fully_sent": true,
+            "send_error": null,
+            "server_closed": true
+          },
+          "captured_events": []
+        },
+        "1572864": {
+          "request": {
+            "method": "POST",
+            "target": "/hook",
+            "header_lines": [
+              [
+                "Content-Type",
+                "application/json"
+              ]
+            ],
+            "body_size": 1572864
+          },
+          "response": {
+            "status": 400,
+            "status_line": "HTTP/1.1 400 Bad Request",
+            "headers": {
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "40",
+              "date": "Sun, 22 Nov 2026 16:33:31 GMT",
+              "server": "Python/3.11 aiohttp/3.13.5",
+              "connection": "close"
+            },
+            "body_text": "{\"error\": \"Failed to read request body\"}",
+            "raw_response_bytes": 227,
+            "request_bytes_total": 1572986,
+            "request_bytes_sent": 1572986,
+            "request_fully_sent": true,
+            "send_error": null,
+            "server_closed": true
+          },
+          "captured_events": []
+        }
+      }
+    },
+    "aux_multidict_structure": {
+      "by_query_string": {
+        "": {
+          "dict_headers": {
+            "Host": "127.0.0.1:51728",
+            "Content-Type": "application/json",
+            "X-Test": "alpha",
+            "X-Mix-Case": "FirstCase",
+            "x-mix-case": "FirstCase",
+            "X-Hub-Signature-256": "sha256=aaaa",
+            "Content-Length": "2",
+            "Connection": "close"
+          },
+          "getall_xtest": [
+            "alpha",
+            "beta"
+          ],
+          "get_xtest": "alpha",
+          "getall_xmixcase": [
+            "FirstCase",
+            "secondcase"
+          ],
+          "dict_query": {},
+          "getall_a": [],
+          "get_a": null,
+          "raw_query_string": ""
+        },
+        "a=1&a=2&b=3&empty=&a=4": {
+          "dict_headers": {
+            "Host": "127.0.0.1:51728",
+            "Content-Type": "application/json",
+            "Content-Length": "2",
+            "Connection": "close"
+          },
+          "getall_xtest": [],
+          "get_xtest": null,
+          "getall_xmixcase": [],
+          "dict_query": {
+            "a": "1",
+            "b": "3",
+            "empty": ""
+          },
+          "getall_a": [
+            "1",
+            "2",
+            "4"
+          ],
+          "get_a": "1",
+          "raw_query_string": "a=1&a=2&b=3&empty=&a=4"
+        }
+      },
+      "echo_port": 51728
+    }
+  }
+}

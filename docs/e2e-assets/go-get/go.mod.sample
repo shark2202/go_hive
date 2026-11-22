@@ -1,0 +1,9 @@
+module example.com/gogettest2
+
+go 1.26.11
+
+require (
+	github.com/shark2202/go_hive/browserbridge v0.0.0-20261122162740-0d6e037edd37 // indirect
+	github.com/shark2202/go_hive/go-hive v0.0.0-20261122162740-0d6e037edd37 // indirect
+	github.com/shark2202/go_hive/go-hive-cloud v0.0.0-20261122162740-0d6e037edd37 // indirect
+)

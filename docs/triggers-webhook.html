@@ -62,9 +62,9 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 <table><tr><th>HTTP 请求字段</th><th>类型/取值</th><th>约束与语义</th></tr>
 <tr><td>method</td><td>string</td><td>必须 ∈ <code>methods</code>（大写比较）；否则 405</td></tr>
 <tr><td>path</td><td>string</td><td>精确等于 <code>path</code>；否则 404</td></tr>
-<tr><td>headers</td><td>object&lt;string,string&gt;</td><td>任意；<code>Content-Type</code> <b>不校验</b>。同名头 Go 取<b>最后一个</b>并额外加入 <code>Host</code>；上游 aiohttp <code>dict(request.headers)</code> 的重复头语义未逐字验证</td></tr>
-<tr><td>query_params</td><td>object&lt;string,string&gt;</td><td>任意；同名参数 Go 取<b>最后一个</b>；上游未逐字验证</td></tr>
-<tr><td>body</td><td>bytes</td><td>可选。上限：Go <code>maxWebhookBodyBytes = 10 MiB</code>（超限 413）；上游为 aiohttp <code>client_max_size</code> 默认值（1 MiB，未显式配置——待逐字核对）。空 body → <code>{}</code></td></tr>
+<tr><td>headers</td><td>object&lt;string,string&gt;</td><td>任意；<code>Content-Type</code> <b>不校验</b>。同名头取<b>首值</b>（真实 aiohttp 实测 <code>dict(request.headers)</code> 取首值；Go 已对齐 a91ae182），并额外加入 <code>Host</code></td></tr>
+<tr><td>query_params</td><td>object&lt;string,string&gt;</td><td>任意；同名参数取<b>首值</b>（实测对齐 a91ae182）</td></tr>
+<tr><td>body</td><td>bytes</td><td>可选。上限 <b>1 MiB</b>（两侧一致）：≥1 MiB 一律拒绝并回 <b>400</b>（上游 aiohttp 在 <code>read()</code> 抛 HTTPRequestEntityTooLarge 后由 handler 转 400，<b>不存在 413 路径</b>）。空 body → <code>{}</code></td></tr>
 <tr><td>body 解析</td><td>JSON → object；非 JSON → <code>{"raw_body": string}</code></td><td>非法 UTF-8 以 U+FFFD 替换；<b>JSON 但非 object（array/number/string/bool/null）</b>：两侧均原样保留为 payload（Go 侧 2026-11-23 修复，commit 3597215d；微差见 §09）</td></tr></table>
 <pre>curl -X POST http://127.0.0.1:8090/hooks/github \
   -H 'Content-Type: application/json' \
@@ -75,7 +75,7 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 <tr><td><code>202</code></td><td>application/json</td><td><code>{"status": "accepted"}</code></td><td>path/method 匹配且 body 读取成功（事件已发布）</td></tr>
 <tr><td><code>404</code></td><td>application/json</td><td><code>{"error": "Not found"}</code></td><td>path 未注册</td></tr>
 <tr><td><code>405</code></td><td>text/plain</td><td><code>405: Method Not Allowed</code></td><td>method 不在 methods（aiohttp 路由默认文案；Go 逐字镜像）</td></tr>
-<tr><td><code>400</code></td><td>application/json</td><td><code>{"error": "Failed to read request body"}</code></td><td>body 读取失败</td></tr>
+<tr><td><code>400</code></td><td>application/json</td><td><code>{"error": "Failed to read request body"}</code></td><td>body 读取失败<b>或 ≥1 MiB</b>（与上游同文案；上游无 413）</td></tr>
 <tr><td><code>413</code></td><td>application/json</td><td><code>{"error": "Failed to read request body"}</code></td><td>body 超限（与 400 同文案，刻意镜像）</td></tr>
 <tr><td><code>401</code></td><td>application/json</td><td><code>{"error": "Invalid signature"}</code></td><td>仅当 route.secret 已设且 <code>X-Hub-Signature-256</code> 校验失败；<b>触发流程不设置 secret → 不可达</b></td></tr></table>
 <pre>HTTP/1.1 202 Accepted
@@ -116,14 +116,13 @@ Task: 处理新 issue
 <tr><td>注入/文本</td><td><code>agent_loop/internals/cursor_persistence.py:291-323</code></td><td><code>server/trigger_runtime.go:formatTriggerTurn(:316)</code>、<code>chat_runtime.go:671</code></td></tr></table>
 
 <h2><span class="num">08</span>证据与测试</h2>
-<ul><li>Go：<code>cron_seconds_parity_test.go</code>、<code>routes_session_triggers_test.go</code>（<code>TestWebhookServerResponses</code> 覆盖 404/405/400/413/401/202 与 raw_body/非法 UTF-8；<code>TestWebhookTriggerDispatchesMatchingEvent</code>；<code>TestWebhookRouteHitsRegisteredTrigger</code>；<code>TestStartTriggerWebhookWithoutServer</code>）、<code>missed_test.go</code>。</li><li>真机到点注入 + <code>triggers.json</code> 双跑 0 差异（对齐报告）。</li></ul>
+<ul><li>Go：<code>cron_seconds_parity_test.go</code>、<code>routes_session_triggers_test.go</code>（<code>TestWebhookServerResponses</code> 覆盖 404/405/400/401/202（body 上限并入 400） 与 raw_body/非法 UTF-8；<code>TestWebhookTriggerDispatchesMatchingEvent</code>；<code>TestWebhookRouteHitsRegisteredTrigger</code>；<code>TestStartTriggerWebhookWithoutServer</code>）、<code>missed_test.go</code>。</li><li>真机到点注入 + <code>triggers.json</code> 双跑 0 差异（对齐报告）。</li></ul>
 
 <h2><span class="num">09</span>已知差异与限制（登记）</h2>
 <ul>
 <li><b>非 object JSON body（已修复 2026-11-23，3597215d）</b>：两侧均原样保留任意 JSON 类型；剩余微差两条：① 数字统一为 float64（Python 区分 int/float、>2^53 大整数精度不同）；② Python <code>json.loads</code> 接受 <code>NaN/Infinity/-Infinity</code>（非标准），Go 走 <code>raw_body</code> 分支——极端 body 才有差。</li>
-<li><b>批量注入</b>：上游 drain 把多个待触发合并为一条消息；Go 每事件一轮（代码注释已说明的单触发器形态）。</li>
-<li><b>重复头/重复 query</b>：Go 取最后一个；上游 aiohttp 语义未逐字验证。</li>
-<li><b>body 上限</b>：Go 10 MiB；上游 aiohttp 默认 1 MiB（未显式配置，待核对）。</li>
+<li><b>批量注入（已对齐 2026-11-23，1e8ef0a1）</b>：连续 trigger 合并为一条消息（单 stamp、<code>\n\n</code> 连接、FIFO 不越过 client 消息）。</li>
+<li><b>重复头/query 与 body 上限已对齐（a91ae182）</b>；残留登记三条：头名 wire 拼写（上游保留原拼写，Go net/http canonical 化）、JSON 序列化形态（空格/换行）、超限后连接 drain（aiohttp lingering vs Go ≤256KiB）。</li>
 <li><b>消息文本编码</b>：上游 <code>json.dumps(default=str)</code> 默认 ensure_ascii=True（非 ASCII 转 <code>\uXXXX</code>）；Go 输出原始 UTF-8（<code>SetEscapeHTML(false)</code>）→ 同一 payload 的文本形态可能不同（语义等价，未做逐字节断言）。</li>
 <li><b>无鉴权</b>（secret 未接线）、<b>只监听 127.0.0.1</b>、<b>不落盘/不重放/无去重</b>、<b>多会话同 port 争用</b>。</li>
 <li><b>无毫秒、无“延迟队列/一次性 after-N”类型</b>（timer 仅 cron/interval；延迟需 interval 近似或外部承担）。</li>

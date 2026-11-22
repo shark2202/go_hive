@@ -188,10 +188,12 @@ type chatTurnRequest struct {
 	// reminderWake is a message-less turn that only drains reminders the hub
 	// parked (idle nudge). It never answers a pending ask_user question.
 	reminderWake bool
-	// trigger is the framework TriggerEvent that woke this turn. Its payload
-	// frames the user message; the event itself is never counted as client
-	// input.
-	trigger *agentloop.TriggerEvent
+	// triggers are the framework TriggerEvents that woke this turn. A trigger
+	// turn carries no message: the events render into one batched user
+	// message (upstream's drain_trigger_queue merges every queued trigger so
+	// the model reasons about them atomically), and never count as client
+	// input. A non-trigger turn leaves the slice empty.
+	triggers []agentloop.TriggerEvent
 	// fromQueenMail marks a letter or reply another queen sent. It enters as a
 	// client message (so she sees who spoke) but does not start a new chain:
 	// the depth of the letter it answers continues.
@@ -214,7 +216,8 @@ type chatTurnRequest struct {
 }
 
 // ChatRuntime is the per-session queen: one AgentLoop, one conversation, one
-// worker goroutine that drains accepted user messages in arrival order.
+// worker goroutine that drains accepted user messages in arrival order. A run
+// of queued triggers is drained as one batched turn (see coalesceQueuedTurn).
 type ChatRuntime struct {
 	deps ChatRuntimeDeps
 
@@ -678,7 +681,7 @@ func (r *ChatRuntime) InjectTrigger(event agentloop.TriggerEvent) error {
 	if r.relayTriggerToOverseer(pending) {
 		return nil
 	}
-	if err := r.enqueueTurn(chatTurnRequest{trigger: &pending}); err != nil {
+	if err := r.enqueueTurn(chatTurnRequest{triggers: []agentloop.TriggerEvent{pending}}); err != nil {
 		return err
 	}
 	// The colony's persistent overseer is the second lead for a bound colony;
@@ -819,11 +822,43 @@ func (r *ChatRuntime) run() {
 				return
 			}
 		}
-		message := r.queue[0]
-		r.queue = r.queue[1:]
+		message, rest := coalesceQueuedTurn(r.queue)
+		r.queue = rest
 		r.mu.Unlock()
 		r.runTurn(message)
 	}
+}
+
+// coalesceQueuedTurn removes the queue's leading turn. A leading trigger takes
+// every trigger that follows it contiguously: upstream's drain_trigger_queue
+// reads the whole queue as one batch, so N triggers queued at the same wake
+// become a single user message. A client message ahead of them keeps its own
+// turn — the drain order is the arrival order, so a trigger run never absorbs
+// (or reorders past) a client input.
+//
+// The caller holds r.mu; the returned queue is the remainder.
+//
+// Parity: framework/agent_loop/internals/cursor_persistence.py::drain_trigger_queue
+func coalesceQueuedTurn(queue []chatTurnRequest) (chatTurnRequest, []chatTurnRequest) {
+	if len(queue) == 0 {
+		return chatTurnRequest{}, queue
+	}
+	head := queue[0]
+	if len(head.triggers) == 0 {
+		return head, queue[1:]
+	}
+	end := 1
+	for end < len(queue) && len(queue[end].triggers) > 0 {
+		end++
+	}
+	if end == 1 {
+		return head, queue[1:]
+	}
+	batch := chatTurnRequest{triggers: make([]agentloop.TriggerEvent, 0, end)}
+	for _, request := range queue[:end] {
+		batch.triggers = append(batch.triggers, request.triggers...)
+	}
+	return batch, queue[end:]
 }
 
 // runTurn mirrors the upstream drain: the user message joins the conversation
@@ -888,11 +923,12 @@ func (r *ChatRuntime) runTurn(request chatTurnRequest) {
 	}
 
 	stamp := hiveclock.Now().Format("2006-01-02 15:04 MST")
-	if request.trigger != nil {
-		// A trigger is delivered as upstream's drained trigger batch: the
-		// block carries its own timestamp, so it is inserted verbatim rather
-		// than taking the "[stamp] [External event]" prefix.
-		message = formatTriggerTurn(*request.trigger, stamp)
+	if len(request.triggers) > 0 {
+		// A trigger turn is delivered as upstream's drained trigger batch: one
+		// shared timestamp header over every event queued at this wake, so
+		// the block carries its own stamp and is inserted verbatim rather than
+		// taking the "[stamp] [External event]" prefix.
+		message = formatTriggerBatch(request.triggers, stamp)
 	}
 	r.markTurnStart()
 	defer r.markTurnEnd()
@@ -901,7 +937,7 @@ func (r *ChatRuntime) runTurn(request chatTurnRequest) {
 	// its stash when the wait returns), so clear it before this turn can
 	// record a new question. An external report is not an answer, so it
 	// leaves the parked question in place.
-	if request.clientInput || request.trigger != nil {
+	if request.clientInput || len(request.triggers) > 0 {
 		r.clearPendingQuestions()
 		r.clearPendingCredentialForm()
 	}
@@ -935,7 +971,7 @@ func (r *ChatRuntime) runTurn(request chatTurnRequest) {
 		// — USER_PROMPT_SUBMIT fires before the queued user message is added.
 		// A trigger is drained separately upstream, so it never fires this
 		// point (there is no user prompt to frame).
-		if request.trigger == nil {
+		if len(request.triggers) == 0 {
 			r.fireReminderPoint(agentloop.USER_PROMPT_SUBMIT, message, nil)
 		}
 		// The past-conversations source fires at that same point upstream, so
@@ -943,36 +979,8 @@ func (r *ChatRuntime) runTurn(request chatTurnRequest) {
 		if request.clientInput {
 			r.injectPastConversationRecall(message)
 		}
-		stamped := "[" + stamp + "] " + message
-		switch {
-		case request.trigger != nil:
-			// formatTriggerTurn already stamped the block, matching the
-			// upstream drain which inserts the batch verbatim.
-			stamped = message
-		case !request.clientInput:
-			stamped = "[" + stamp + "] [External event] " + message
-		}
-		committedMessage, err := r.conv.AddUserMessage(stamped, agentloop.UserMessageOptions{
-			IsClientInput: request.clientInput,
-			IsTrigger:     request.trigger != nil,
-			ImageContent:  request.images,
-		})
-		if err != nil {
-			emitter.executionFailed(err, agentloop.ParkReasonUnknown)
-			r.setParkState(agentloop.ParkReasonUnknown, true)
-			r.setLastError(err)
+		if !r.commitTurnUserMessage(message, stamp, request, emitter, executionID) {
 			return
-		}
-		// A real client message announces the exact conversation seq it landed
-		// at, so the UI places the bubble where the conversation has it (the
-		// upstream CLIENT_INPUT_COMMITTED boundary; see emit docstring). An
-		// external report or trigger is not a client input and never emits it.
-		if request.clientInput && emitter != nil {
-			var correlation *string
-			if request.correlationID != "" {
-				correlation = &request.correlationID
-			}
-			r.bus.EmitClientInputCommitted(chatStreamID, chatNodeID, &executionID, committedMessage.Seq, correlation)
 		}
 		// The ticker may have parked a reminder while the session waited for
 		// this message; drain it into the turn before the model reads it.
@@ -1034,6 +1042,46 @@ func (r *ChatRuntime) runTurn(request chatTurnRequest) {
 	}
 	r.timelineAfterTurn()
 	r.setLastError(nil)
+}
+
+// commitTurnUserMessage is runTurn's user-message commit step: it stamps the
+// message for this turn, inserts it into the conversation and, for a real
+// client message, announces the exact seq it landed at. It reports false when
+// the commit failed after publishing the failure (execution_failed frame, park
+// state and last error), so runTurn aborts the turn.
+func (r *ChatRuntime) commitTurnUserMessage(message, stamp string, request chatTurnRequest, emitter *chatTurnEmitter, executionID string) bool {
+	stamped := "[" + stamp + "] " + message
+	switch {
+	case len(request.triggers) > 0:
+		// formatTriggerBatch already stamped the block, matching the
+		// upstream drain which inserts the batch verbatim.
+		stamped = message
+	case !request.clientInput:
+		stamped = "[" + stamp + "] [External event] " + message
+	}
+	committedMessage, err := r.conv.AddUserMessage(stamped, agentloop.UserMessageOptions{
+		IsClientInput: request.clientInput,
+		IsTrigger:     len(request.triggers) > 0,
+		ImageContent:  request.images,
+	})
+	if err != nil {
+		emitter.executionFailed(err, agentloop.ParkReasonUnknown)
+		r.setParkState(agentloop.ParkReasonUnknown, true)
+		r.setLastError(err)
+		return false
+	}
+	// A real client message announces the exact conversation seq it landed
+	// at, so the UI places the bubble where the conversation has it (the
+	// upstream CLIENT_INPUT_COMMITTED boundary; see emit docstring). An
+	// external report or trigger is not a client input and never emits it.
+	if request.clientInput && emitter != nil {
+		var correlation *string
+		if request.correlationID != "" {
+			correlation = &request.correlationID
+		}
+		r.bus.EmitClientInputCommitted(chatStreamID, chatNodeID, &executionID, committedMessage.Seq, correlation)
+	}
+	return true
 }
 
 // StartOpeningTurn runs the upstream queen loop's first iteration for a

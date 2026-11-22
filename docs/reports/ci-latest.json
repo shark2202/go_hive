@@ -1,9 +1,9 @@
 {
- "wave": 75,
- "at": "2026-11-22 23:35",
- "head": "fcb1b221",
- "ci": 0,
+ "wave": 78,
+ "at": "2026-11-23 00:44",
+ "head": "b04f82e1",
+ "ci": 2,
  "qc": 0,
  "publish": 0,
- "note": "chat-images 合入（用户发图 images/display_message 全语义）；parity 5833；refs 6423/0；arch 87 包/234 边；QC 9/9；镜像 5a81337"
+ "note": "size gate 失败：trigger-batch 合并后 (ChatRuntime).runTurn 201>200；lane size-fix 拆分中；其余包全 ok"
 }
