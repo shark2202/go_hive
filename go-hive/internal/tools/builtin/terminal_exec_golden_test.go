@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"os"
-	"runtime"
 	"testing"
 
 	"github.com/aden-hive/hive-go/internal/toolgolden"
@@ -67,11 +66,6 @@ func TestTerminalExecGoldenAgainstCapture(t *testing.T) {
 			t.Fatalf("scenario %s arguments: %v", scenario.ID, err)
 		}
 		t.Run(scenario.ID, func(t *testing.T) {
-			if scenario.ID == "terminal_exec_nonzero" && runtime.GOOS != "darwin" {
-				// The capture was recorded on macOS: `ls` exits 1 there and 2 on
-				// GNU coreutils, and the stderr wording is locale-dependent.
-				t.Skip("capture recorded on darwin; GNU ls exit code and stderr differ")
-			}
 			result, err := tb.Execute(context.Background(), ToolTerminalExec, args)
 			if err != nil {
 				t.Fatalf("terminal_exec %v: %v", args, err)

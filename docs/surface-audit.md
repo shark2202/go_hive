@@ -1,8 +1,8 @@
 # API / 仓库表面审计
 
-- 生成时间：2026-11-22T08:30:29+08:00
-- 根目录：`/home/a/ai-work`
-- 豁免清单：`/home/a/ai-work/go_hive/scripts/surface_audit_allowlist.json`
+- 生成时间：2026-11-22T08:29:06+08:00
+- 根目录：`/Users/mac/hive`
+- 豁免清单：`/Users/mac/hive/go_hive/scripts/surface_audit_allowlist.json`
 - 重新生成：`uv run python go_hive/scripts/surface_audit.py --write-report`
 
 本报告只回答一个问题：**文档/前端/上游声明的入口，在 Go 运行时里是否真的可达。**
@@ -13,84 +13,59 @@
 
 | 项 | 数量 |
 | --- | ---: |
-| 前端路由（去重） | 160 |
+| 前端路由（去重） | 165 |
 | Go 已注册路由 | 220 |
-| Python 上游路由 | 0 |
-| 前端 → Go 缺失 | 0（待修 0） |
-| Python → Go 缺失 | 0（待修 0） |
-| Go 多余（仅提示） | 55 |
+| Python 上游路由 | 212 |
+| 前端 → Go 缺失 | 5（待修 5） |
+| Python → Go 缺失 | 5（待修 5） |
+| Go 多余（仅提示） | 11 |
 | 空目录 | 0 |
 | batch/lane 命名文件（未豁免） | 0 |
 | 悬空 size waiver | 0 |
 
-**结论：通过**
+**结论：存在未豁免缺口**
 
 ## 前端 → Go 缺失
 
-无。
+| 方法 | 路径 | 来源 | 状态 | 归属 / 理由 |
+| --- | --- | --- | --- | --- |
+| GET | `/api/config/memory` | config.ts | 待修 | - |
+| PUT | `/api/config/memory` | config.ts | 待修 | - |
+| GET | `/api/memories/history` | memories.ts | 待修 | - |
+| POST | `/api/memories/restore` | memories.ts | 待修 | - |
+| GET | `/api/memories/retired` | memories.ts | 待修 | - |
 
 ## Python → Go 缺失（按前缀分组）
 
-无。
+### `/api/config` — 2 条（待修 2）
+
+| 方法 | 路径 | 状态 | 归属 / 理由 |
+| --- | --- | --- | --- |
+| GET | `/api/config/memory` | 待修 | - |
+| PUT | `/api/config/memory` | 待修 | - |
+
+### `/api/memories` — 3 条（待修 3）
+
+| 方法 | 路径 | 状态 | 归属 / 理由 |
+| --- | --- | --- | --- |
+| GET | `/api/memories/history` | 待修 | - |
+| POST | `/api/memories/restore` | 待修 | - |
+| GET | `/api/memories/retired` | 待修 | - |
 
 ## Go 多余（仅提示，不阻断）
 
 | 方法 | 路径 | 来源 |
 | --- | --- | --- |
-| GET | `/api/browser/contexts` | routes_browser_panel.go |
-| POST | `/api/browser/contexts/close` | routes_browser_panel.go |
 | GET | `/api/browser/status` | routes_app_extra.go |
 | GET | `/api/browser/status/stream` | routes_app_extra.go |
 | POST | `/api/browser/tab/reveal` | routes_app_extra.go |
-| GET | `/api/browser/tabs` | routes_browser_panel.go |
 | GET | `/api/channels` | routes_credentials_channels.go |
-| POST | `/api/colonies/import` | routes_colonies.go |
-| PUT | `/api/colonies/import/chunk/{param}` | routes_colonies.go |
-| POST | `/api/colonies/import/finalize/{param}` | routes_colonies.go |
-| POST | `/api/colonies/import/init` | routes_colonies.go |
-| GET | `/api/colonies/import/status/{param}` | routes_colonies.go |
-| DELETE | `/api/colonies/import/{param}` | routes_colonies.go |
-| GET | `/api/colonies/{param}/worker_profiles` | routes_colonies.go |
-| POST | `/api/colonies/{param}/worker_profiles` | routes_colonies.go |
-| DELETE | `/api/colonies/{param}/worker_profiles/{param}` | routes_colonies.go |
-| GET | `/api/config/profile/avatar` | routes_config.go |
-| GET | `/api/config/sentinel` | routes_config.go |
-| PUT | `/api/config/sentinel` | routes_config.go |
-| POST | `/api/crm/changed` | routes_events.go |
-| POST | `/api/crm/claim` | routes_colony_workers_global.go |
-| GET | `/api/crm/grid/schema` | routes_colony_workers_global.go |
-| POST | `/api/crm/grid/{param}` | routes_colony_workers_global.go |
-| POST | `/api/crm/grid/{param}/group-counts` | routes_colony_workers_global.go |
-| POST | `/api/crm/grid/{param}/query` | routes_colony_workers_global.go |
-| DELETE | `/api/crm/grid/{param}/{param}` | routes_colony_workers_global.go |
-| GET | `/api/crm/grid/{param}/{param}` | routes_colony_workers_global.go |
-| PATCH | `/api/crm/grid/{param}/{param}` | routes_colony_workers_global.go |
-| POST | `/api/crm/grid/{param}/{param}/stage` | routes_colony_workers_global.go |
-| POST | `/api/crm/release` | routes_colony_workers_global.go |
-| GET | `/api/events/global` | routes_events.go |
-| GET | `/api/global/crm/status` | routes_colony_workers_global.go |
 | GET | `/api/health` | app.go |
 | GET | `/api/health/resources` | routes_app_extra.go |
-| GET | `/api/maintenance/janitor/report` | routes_maintenance.go |
-| POST | `/api/maintenance/janitor/run` | routes_maintenance.go |
 | POST | `/api/mcp/reload` | routes_mcp.go |
-| POST | `/api/memories/file` | routes_memories_extra.go |
-| POST | `/api/messages/classify` | routes_messages_extra.go |
-| POST | `/api/messages/classify-colony` | routes_messages_extra.go |
-| PATCH | `/api/prompts/{param}` | routes_prompts_extra.go |
 | POST | `/api/queen-mail/letters` | routes_queens_mail.go |
 | GET | `/api/queen-mail/queens` | routes_queens_mail.go |
-| POST | `/api/queen/initialize-preferences` | routes_queens.go |
-| GET | `/api/queen/{param}/avatar` | routes_queens.go |
-| GET | `/api/runtime-logs` | routes_runtime_logs.go |
-| GET | `/api/sessions/{param}/attachment/{param}` | routes_sessions.go |
-| POST | `/api/sessions/{param}/colony` | routes_sessions.go |
-| POST | `/api/sessions/{param}/colony/resolve_missed` | routes_sessions.go |
-| GET | `/api/sessions/{param}/events` | chat_routes.go |
-| GET | `/api/sessions/{param}/live_tools` | routes_sessions.go |
 | GET | `/api/sessions/{param}/reminders` | routes_reminders.go |
-| GET | `/api/sessions/{param}/snapshot` | routes_sessions.go |
-| GET | `/api/sessions/{param}/workers/{param}/reap-timeline` | routes_workers.go |
 | POST | `/api/skills/reload` | routes_skills.go |
 
 ## 仓库卫生

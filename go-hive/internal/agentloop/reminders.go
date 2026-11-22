@@ -49,6 +49,17 @@ type ReminderAgentContext struct {
 	// no package is installed+enabled, and the turn-context reminder
 	// source self-skips.
 	TurnContextProvider func(string) string
+	// MemoryRecallProvider picks the memory notes for a user message
+	// ("wait" mode, framework.agent_loop.memory_reminders). Nil means the
+	// wait-mode source self-skips.
+	MemoryRecallProvider func(string) string
+	// MemoryIndexProvider lists every memory note's manifest line
+	// ("index" mode). Nil means the index-mode source self-skips.
+	MemoryIndexProvider func() []MemoryNoteScope
+	// MemoryRecallSettingsProvider reads memory_recall at each message, so
+	// a change in Settings reaches running sessions. Nil keeps the
+	// defaults ("index", 10s).
+	MemoryRecallSettingsProvider func() MemoryRecallSettings
 }
 
 // ActiveWorker is one in-flight colony worker as the reminder sources read it.

@@ -326,6 +326,10 @@ func recallReminder(parts []map[string]any) string {
 
 // Parity: core/tests/test_queen_memory.py::test_build_scoped_recall_blocks_includes_global_and_queen
 func TestChatRuntimeInjectsQueenScopedRecallReminder(t *testing.T) {
+	// The recall injection is the upstream "background" mode
+	// (_recall_on_user_input); 1.0.15's default is "index", where the notes
+	// are listed instead (see chat_memory_notes_test.go).
+	t.Setenv("HIVE_MEMORY_RECALL", "background")
 	homeRoot := t.TempDir()
 	writeChatMemoryFile(t, filepath.Join(memory.GlobalMemoryDir(homeRoot), "global-fact.md"), "global memory body")
 	writeChatMemoryFile(t, filepath.Join(memory.QueenMemoryDir(homeRoot, "queen_ava"), "queen-fact.md"), "queen memory body")
@@ -427,6 +431,9 @@ func TestChatRuntimeSkipsRecallWithoutMemory(t *testing.T) {
 
 // Parity: core/tests/test_queen_memory.py::test_build_scoped_recall_blocks_includes_global_and_queen
 func TestChatRuntimeRecallIsScopedToItsQueen(t *testing.T) {
+	// Scoped recall blocks ride the "background" injection; index/wait are
+	// reminder sources with their own tests.
+	t.Setenv("HIVE_MEMORY_RECALL", "background")
 	homeRoot := t.TempDir()
 	writeChatMemoryFile(t, filepath.Join(memory.QueenMemoryDir(homeRoot, "queen_ava"), "ava-secret.md"), "ava only memory")
 	writeChatMemoryFile(t, filepath.Join(memory.QueenMemoryDir(homeRoot, "queen_bee"), "bee-secret.md"), "bee only memory")

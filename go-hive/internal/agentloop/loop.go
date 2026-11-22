@@ -1233,19 +1233,22 @@ func NewReminderAgentContext(agentCtx *AgentContext) *ReminderAgentContext {
 		return &ReminderAgentContext{}
 	}
 	out := &ReminderAgentContext{
-		IsQueenStream:              agentCtx.IsQueenStream(),
-		SearchableToolsProvider:    searchableToolsFrom(agentCtx.SearchableToolsProvider),
-		LoadedToolNamesProvider:    stringSliceProvider(agentCtx.LoadedToolNamesProvider),
-		QueenSkillsCatalogProvider: stringProvider(agentCtx.QueenSkillsCatalogProvider),
-		AvailableTools:             reminderToolsFromDefs(agentCtx.AvailableTools),
-		DynamicToolsProvider:       reminderToolsFromProvider(agentCtx.DynamicToolsProvider),
-		OpenTasksProvider:          agentCtx.OpenTasksProvider,
-		SessionGoalProvider:        agentCtx.SessionGoalProvider,
-		SentinelAutopilotProvider:  agentCtx.SentinelAutopilotProvider,
-		ColonyBindingProvider:      agentCtx.ColonyBindingProvider,
-		ActiveWorkersProvider:      activeWorkersFrom(agentCtx.ActiveWorkersProvider),
-		ColonyStatsProvider:        colonyStatsFrom(agentCtx.ColonyStatsProvider),
-		TurnContextProvider:        turnContextProviderFrom(agentCtx.TurnContextProvider),
+		IsQueenStream:                agentCtx.IsQueenStream(),
+		SearchableToolsProvider:      searchableToolsFrom(agentCtx.SearchableToolsProvider),
+		LoadedToolNamesProvider:      stringSliceProvider(agentCtx.LoadedToolNamesProvider),
+		QueenSkillsCatalogProvider:   stringProvider(agentCtx.QueenSkillsCatalogProvider),
+		AvailableTools:               reminderToolsFromDefs(agentCtx.AvailableTools),
+		DynamicToolsProvider:         reminderToolsFromProvider(agentCtx.DynamicToolsProvider),
+		OpenTasksProvider:            agentCtx.OpenTasksProvider,
+		SessionGoalProvider:          agentCtx.SessionGoalProvider,
+		SentinelAutopilotProvider:    agentCtx.SentinelAutopilotProvider,
+		ColonyBindingProvider:        agentCtx.ColonyBindingProvider,
+		ActiveWorkersProvider:        activeWorkersFrom(agentCtx.ActiveWorkersProvider),
+		ColonyStatsProvider:          colonyStatsFrom(agentCtx.ColonyStatsProvider),
+		TurnContextProvider:          turnContextProviderFrom(agentCtx.TurnContextProvider),
+		MemoryRecallProvider:         agentCtx.MemoryRecallProvider,
+		MemoryIndexProvider:          agentCtx.MemoryIndexProvider,
+		MemoryRecallSettingsProvider: agentCtx.MemoryRecallSettingsProvider,
 	}
 	if agentCtx.SessionID != nil {
 		out.SessionID = *agentCtx.SessionID

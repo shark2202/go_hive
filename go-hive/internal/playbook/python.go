@@ -64,6 +64,13 @@ const (
 	pythonKillGrace = 2 * time.Second
 )
 
+// DefaultStallTimeout is the parent-side silence guard a run gets when
+// PythonOptions.StallTimeout is unset: one full worker dispatch
+// (pythonDefaultTimeout — upstream PlaybookRun(default_timeout=600)) plus
+// pythonStallGrace. This guard watches for a dead bridge; it is not a cap on
+// the run's total time, so a slow-but-live batch keeps resetting it.
+func DefaultStallTimeout() time.Duration { return pythonDefaultTimeout + pythonStallGrace }
+
 // PythonUnavailableError means the environment cannot run Python playbooks:
 // no interpreter on PATH, a bad HIVE_PYTHON, or an interpreter too old to run
 // the bootstrap. Callers should report `unsupported` with this reason rather
@@ -335,7 +342,10 @@ func StartPythonPlaybook(ctx context.Context, script string, opts PythonOptions)
 	if opts.DefaultTimeout != nil && *opts.DefaultTimeout > 0 {
 		defaultTimeout = *opts.DefaultTimeout
 	}
-	stallTimeout := defaultTimeout + pythonStallGrace
+	stallTimeout := DefaultStallTimeout()
+	if defaultTimeout != pythonDefaultTimeout {
+		stallTimeout = defaultTimeout + pythonStallGrace
+	}
 	if opts.StallTimeout != nil && *opts.StallTimeout > 0 {
 		stallTimeout = *opts.StallTimeout
 	}

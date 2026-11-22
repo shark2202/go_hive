@@ -10,11 +10,6 @@ import (
 
 const EnvHome = "HIVE_HOME"
 
-// DefaultDirName is the Hive home directory created under the user's home when
-// HIVE_HOME is unset. It differs from the Python upstream's "~/.hive" so the Go
-// build never writes into the Python installation's data directory.
-const DefaultDirName = ".hive_go"
-
 type Home struct {
 	Root string
 }
@@ -50,7 +45,7 @@ func DefaultRoot() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("user home: %w", err)
 	}
-	return filepath.Join(usr, DefaultDirName), nil
+	return filepath.Join(usr, ".hive"), nil
 }
 
 func Platform() string {

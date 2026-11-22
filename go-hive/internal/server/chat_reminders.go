@@ -20,6 +20,7 @@ import (
 	"github.com/aden-hive/hive-go/internal/agentloop"
 	"github.com/aden-hive/hive-go/internal/hivehome"
 	"github.com/aden-hive/hive-go/internal/llm"
+	"github.com/aden-hive/hive-go/internal/memory"
 	"github.com/aden-hive/hive-go/internal/tasks"
 )
 
@@ -74,6 +75,18 @@ func (r *ChatRuntime) configureReminderProviders() {
 	}
 	r.agentCtx.ActiveWorkersProvider = r.activeWorkers
 	r.agentCtx.ColonyStatsProvider = r.colonyStats
+	// Memory notes push (framework/agent_loop/memory_reminders): "wait" picks
+	// through the same scoped recall the background mode uses, "index" lists
+	// the two note scopes, and the settings provider is read at each message
+	// so a change in configuration.json or HIVE_MEMORY_RECALL reaches running
+	// sessions from their next message.
+	//
+	// Parity: core/framework/server/queen_orchestrator.py::_recall_for_message
+	// Parity: core/framework/server/queen_orchestrator.py::_memory_index
+	// Parity: core/framework/config.py::get_memory_recall_config
+	r.agentCtx.MemoryRecallProvider = r.memoryRecallForMessage
+	r.agentCtx.MemoryIndexProvider = r.memoryIndexScopes
+	r.agentCtx.MemoryRecallSettingsProvider = r.memoryRecallSettings
 	// Turn context (framework/server/turn_context.py + queen_orchestrator.py):
 	// a queen stream gets the started packages' aggregator; a worker stream has
 	// no turn context. No installed+enabled package leaves the provider nil and
@@ -85,6 +98,71 @@ func (r *ChatRuntime) configureReminderProviders() {
 		}
 	}
 	r.setColonyBinding()
+}
+
+// memoryRecallSettings is the memory_recall section read at each message
+// (HIVE_MEMORY_RECALL over the configured mode).
+//
+// Parity: core/framework/config.py::get_memory_recall_config
+func (r *ChatRuntime) memoryRecallSettings() agentloop.MemoryRecallSettings {
+	config := memory.GetMemoryRecallConfig(r.deps.HomeRoot)
+	return agentloop.MemoryRecallSettings{Mode: config.Mode, WaitSeconds: config.WaitSeconds}
+}
+
+// memoryIndexScopes lists her notes, shared and her own ("index" mode).
+//
+// Parity: core/framework/server/queen_orchestrator.py::_memory_index
+func (r *ChatRuntime) memoryIndexScopes() []agentloop.MemoryNoteScope {
+	listing := memory.MemoryIndex([]memory.MemoryIndexScope{
+		{Label: "Shared with every queen", Dir: r.globalMemoryDir},
+		{Label: "Yours alone", Dir: r.queenMemoryDir},
+	})
+	out := make([]agentloop.MemoryNoteScope, 0, len(listing))
+	for _, scope := range listing {
+		entries := make([]agentloop.MemoryNoteEntry, 0, len(scope.Entries))
+		for _, entry := range scope.Entries {
+			entries = append(entries, agentloop.MemoryNoteEntry{Name: entry.Name, Line: entry.Line})
+		}
+		out = append(out, agentloop.MemoryNoteScope{Label: scope.Label, Folder: scope.Folder, Entries: entries})
+	}
+	return out
+}
+
+// memoryRecallForMessage is the model's pick for a message ("wait" mode): the
+// same scoped recall blocks background mode injects, rendered by the source.
+//
+// Parity: core/framework/server/queen_orchestrator.py::_recall_for_message
+func (r *ChatRuntime) memoryRecallForMessage(text string) string {
+	if r == nil || r.globalMemoryDir == "" || text == "" {
+		return ""
+	}
+	return r.recallBlockForQuery(text)
+}
+
+// recallBlockForQuery picks memories for a query and joins the scopes.
+//
+// Parity: framework/agents/queen/recall_selector.py::build_scoped_recall_blocks
+// and framework/tools/queen_lifecycle_tools.py::render_recall_block
+func (r *ChatRuntime) recallBlockForQuery(query string) string {
+	globalBlock, queenBlock := memory.BuildScopedRecallBlocks(
+		r.ctx,
+		query,
+		r.deps.LLM,
+		r.globalMemoryDir,
+		r.queenMemoryDir,
+		r.queenName,
+		3,
+		3,
+		llm.AuxMaxTokens(),
+	)
+	parts := make([]string, 0, 2)
+	if globalBlock != "" {
+		parts = append(parts, globalBlock)
+	}
+	if queenBlock != "" {
+		parts = append(parts, queenBlock)
+	}
+	return strings.Join(parts, "\n\n")
 }
 
 // turnContextRuntime is the hive home's started turn-context packages. A serve
@@ -131,6 +209,11 @@ func (r *ChatRuntime) configureReminders(override *agentloop.IdleNudgeConfig) {
 	// Installed turn-context packages put their text ahead of each user turn;
 	// the source is silent until a session runtime wires a provider.
 	hub.Register(agentloop.NewTurnContextReminderSource())
+	// Memory notes: "index" lists every note's manifest and "wait" shows the
+	// model's pick before she answers (framework.agent_loop.memory_reminders);
+	// each source acts only while its mode is set, read at each message.
+	hub.Register(agentloop.NewMemoryIndexReminderSource())
+	hub.Register(agentloop.NewMemoryRecallReminderSource())
 	hub.Register(r.idleSource)
 	// Stream-stall recovery: the streaming completer's watchdog reports a trip
 	// as a typed error, and the loop consults this source at STREAM_STALLED

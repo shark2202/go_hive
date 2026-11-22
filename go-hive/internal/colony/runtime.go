@@ -22,7 +22,13 @@ import (
 	"github.com/aden-hive/hive-go/internal/tracker"
 )
 
-const DefaultReportWait = 60 * time.Second
+// DefaultReportWait is the fallback wait when a caller passes no timeout.
+// Upstream's ColonyRuntime.wait_for_worker_reports defaults to 600.0 seconds
+// (ten minutes); the port used to stop at 60s, which cut long worker batches
+// short and pushed the queen into an extra model turn to poll again.
+//
+// Parity: framework/host/colony_runtime.py::ColonyRuntime.wait_for_worker_reports
+const DefaultReportWait = 600 * time.Second
 
 // Parity: framework/host/colony_runtime.py (module constants)
 var (

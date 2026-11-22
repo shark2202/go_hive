@@ -20,7 +20,8 @@ import (
 // reflection memory write (core/tests/test_queen_memory.py covers write
 // behaviour, never a torn read; upstream writes with Path.write_text too), so
 // this is the Go write-path regression for the empty-file race that made
-// TestChatRuntimeTurnDoneReflectsIntoQueenMemory flake.
+// TestChatRuntimeTurnDoneReflectsIntoQueenMemory flake. The expected texts
+// carry the memory_log frontmatter stamp the write path adds.
 func TestWriteMemoryFileNeverExposesPartialContent(t *testing.T) {
 	dir := t.TempDir()
 	dirs := []ScopeDir{{Scope: "global", Dir: dir}}
@@ -31,6 +32,23 @@ func TestWriteMemoryFileNeverExposesPartialContent(t *testing.T) {
 	bodyB := base + strings.Repeat("B", 4000-len(base))
 	if got := ExecuteTool("write_memory_file", map[string]any{"filename": "atomic.md", "content": bodyA}, dirs, ""); strings.HasPrefix(got, "ERROR") {
 		t.Fatalf("seed write: %s", got)
+	}
+	stampedA, err := os.ReadFile(target)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := ExecuteTool("write_memory_file", map[string]any{"filename": "atomic.md", "content": bodyB}, dirs, ""); strings.HasPrefix(got, "ERROR") {
+		t.Fatalf("seed write B: %s", got)
+	}
+	stampedB, err := os.ReadFile(target)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(stampedA) == string(stampedB) {
+		t.Fatal("fixture bodies are indistinguishable after stamping")
+	}
+	if got := ExecuteTool("write_memory_file", map[string]any{"filename": "atomic.md", "content": bodyA}, dirs, ""); strings.HasPrefix(got, "ERROR") {
+		t.Fatalf("reset write: %s", got)
 	}
 
 	var stop atomic.Bool
@@ -46,7 +64,7 @@ func TestWriteMemoryFileNeverExposesPartialContent(t *testing.T) {
 					continue
 				}
 				reads.Add(1)
-				if text := string(data); text != bodyA && text != bodyB {
+				if text := string(data); text != string(stampedA) && text != string(stampedB) {
 					invalid.Add(1)
 				}
 			}
@@ -83,6 +101,10 @@ func TestWriteMemoryFileInterruptionKeepsMemoryIntact(t *testing.T) {
 	good := "---\nname: stable\ntype: preference\ndescription: stable memory\n---\nkept"
 	if got := ExecuteTool("write_memory_file", map[string]any{"filename": "stable.md", "content": good}, dirs, ""); strings.HasPrefix(got, "ERROR") {
 		t.Fatalf("seed write: %s", got)
+	}
+	stampedGood, err := os.ReadFile(filepath.Join(dir, "stable.md"))
+	if err != nil {
+		t.Fatalf("seed read: %v", err)
 	}
 
 	// A directory sitting at the target path forces the final rename to fail:
@@ -123,7 +145,7 @@ func TestWriteMemoryFileInterruptionKeepsMemoryIntact(t *testing.T) {
 	if len(files) != 1 || files[0].Filename != "stable.md" {
 		t.Fatalf("scan after interrupted write = %+v", files)
 	}
-	if body := ExecuteTool("read_memory_file", map[string]any{"filename": "stable.md", "scope": "global"}, dirs, ""); body != good {
+	if body := ExecuteTool("read_memory_file", map[string]any{"filename": "stable.md", "scope": "global"}, dirs, ""); body != string(stampedGood) {
 		t.Fatalf("stable memory changed: %q", body)
 	}
 }

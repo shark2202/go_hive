@@ -152,6 +152,13 @@ type AgentContext struct {
 	ColonyBindingProvider          func() *ColonyBinding
 	ColonyStatsProvider            any
 
+	// Memory notes push (memory_recall.mode "wait"/"index"): the pick for a
+	// message, the full note listing, and the settings read at each message.
+	// Nil means the matching source self-skips.
+	MemoryRecallProvider         func(string) string
+	MemoryIndexProvider          func() []MemoryNoteScope
+	MemoryRecallSettingsProvider func() MemoryRecallSettings
+
 	CRMSetup bool
 
 	SearchableToolsProvider    any

@@ -278,6 +278,8 @@ func RegisterConfigRoutes(mux *http.ServeMux, deps ConfigRouteDeps) {
 	mux.HandleFunc("PUT /api/config/sentinel", handleUpdateSentinel(deps))
 	mux.HandleFunc("GET /api/config/features", handleGetFeatures(deps))
 	mux.HandleFunc("PUT /api/config/features", handleUpdateFeatures(deps))
+	mux.HandleFunc("GET /api/config/memory", handleGetMemorySettings(deps))
+	mux.HandleFunc("PUT /api/config/memory", handleUpdateMemorySettings(deps))
 	mux.HandleFunc("GET /api/config/llm-sections", handleGetLLMSections(deps))
 	mux.HandleFunc("PUT /api/config/llm-sections", handlePutLLMSection(deps))
 	mux.HandleFunc("GET /api/config/llm", handleGetLLMConfig(deps))

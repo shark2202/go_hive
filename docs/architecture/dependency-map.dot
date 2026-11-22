@@ -1,5 +1,5 @@
 // go_hive 分层依赖图（生成物，勿手改）
-// 源：architecture/model.yaml + go list -json ./... · commit 9be92a87185f
+// 源：architecture/model.yaml + go list -json ./... · commit 45aa262ebd54
 // 箭头 A -> B 读作 A imports B。
 digraph go_hive {
   graph [rankdir=LR, fontname="Helvetica", nodesep=0.28, ranksep=0.9, splines=true];
@@ -202,7 +202,6 @@ digraph go_hive {
   "internal/colony" -> "internal/tracker";
   "internal/credentials" -> "internal/atomicfs";
   "internal/credentials" -> "internal/hivehome";
-  "internal/eventbus" -> "internal/hivehome";
   "internal/hiveconf" -> "internal/hivehome";
   "internal/hiveconf" -> "internal/llm";
   "internal/host" -> "internal/agentloop";
@@ -302,17 +301,14 @@ digraph go_hive {
   "internal/tasks" -> "internal/agentloop";
   "internal/tasks" -> "internal/atomicfs";
   "internal/tasks" -> "internal/eventbus";
-  "internal/tasks" -> "internal/hivehome";
   "internal/tools" -> "internal/hivehome";
   "internal/tools" -> "internal/llm";
   "internal/tools/builtin" -> "internal/atomicfs";
   "internal/tools/builtin" -> "internal/llm";
   "internal/tools/builtin" -> "internal/tools";
-  "internal/tools/integrationkit" -> "internal/hivehome";
   "internal/tools/integrationkit" -> "internal/tools";
   "internal/tools/integrations" -> "internal/attachments";
   "internal/tools/integrations" -> "internal/hiveclock";
-  "internal/tools/integrations" -> "internal/hivehome";
   "internal/tools/integrations" -> "internal/tools";
   "internal/tools/integrations" -> "internal/tools/integrationkit";
   "internal/tools/integrations" -> "internal/tools/integrations/ai";

@@ -1,0 +1,6 @@
+{
+  "note": "Frozen from core/framework/agent_loop/memory_reminders.py: INDEX_HEADER / INDEX_CHANGED_HEADER / RECALL_HEADER. Regenerate with json.dumps() of those three constants after an upstream edit.",
+  "index_header": "Your memory notes: what earlier conversations taught you, one line per note (type, file name, what it holds). When one may bear on the conversation, read it with terminal_exec (cat \"<folder>/<file name>\"): the line is only its description.",
+  "index_changed_header": "Your memory notes changed since they were last listed (same folders):",
+  "recall_header": "Recalled memories relevant to the latest user message (supersedes earlier recall reminders):"
+}

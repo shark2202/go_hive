@@ -18,8 +18,6 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
-
-	"github.com/aden-hive/hive-go/internal/hivehome"
 )
 
 // browserScreenshotScaleHint is the metadata note upstream attaches to every
@@ -41,7 +39,7 @@ func browserCLIArtifactDir(env func(string) string) string {
 		return filepath.Join(home, "tool-artifacts")
 	}
 	if home, err := os.UserHomeDir(); err == nil && home != "" {
-		return filepath.Join(home, hivehome.DefaultDirName, "tool-artifacts")
+		return filepath.Join(home, ".hive", "tool-artifacts")
 	}
 	return ""
 }

@@ -739,11 +739,14 @@ def _read_versions(root: Path) -> tuple[str, str, str]:
 #     common 69→83 and python_only 20→6; the six remaining Python-only names
 #     are the GCU platform difference (no Go reader by design).
 #   * upstream 1.0.15 merge (2026-11-22, origin/main 6703b434): the reference
-#     tree gained HIVE_MEMORY_RECALL (memory_recall mode override), so the
-#     Python surface is 90 names and python_only 7 until the memory-notes
-#     parity lane adds the Go reader.
+#     tree gained HIVE_MEMORY_RECALL (memory_recall override) and
+#     HIVE_PAST_RECALL_TIMEOUT, so the Python surface is 90 names.
+#   * memory-notes lanes (same day): notes-push added the Go reader for
+#     HIVE_MEMORY_RECALL (Go 118→119, common 83→84) and the Settings→Memory
+#     routes read it too, so python_only 7→6.
 AUDIT_BASELINE = {"python": 89, "go": 96, "common": 66, "python_only": 23, "go_only": 30}
-AUDIT_EXPECTED = {"python": 90, "go": 118, "common": 83, "python_only": 7, "go_only": 35}
+AUDIT_EXPECTED = {"python": 90, "go": 119, "common": 84, "python_only": 6, "go_only": 35}
+AUDIT_EXPECTED = {"python": 90, "go": 119, "common": 84, "python_only": 6, "go_only": 35}
 # Names the config-env-align lane gave Go readers to (relative to the baseline).
 LANE_ENV_PORTED = ("HIVE_MAX_ITER", "HIVE_SPLIT_WORKER_EVENTS", "HIVE_PYTHON")
 # Names the env-verbatim-port lane gave Go readers to (relative to the baseline).
@@ -855,6 +858,7 @@ ENV_STATUS_NOTES = {
     "HIVE_EMAIL_SENDERS": "env > configuration.json > false; the resolved value is written back to the process env on both sides.",
     "HIVE_STALL_CHECK": "env > configuration.json > false.",
     "HIVE_MEMORY_TIMELINE": "env > configuration.json > false.",
+    "HIVE_MEMORY_RECALL": "mode name, strip+lower; unknown/empty falls through to configuration.json memory_recall.mode, then index. Read at each message.",
     "HIVE_MCP_CALL_RESULT_TIMEOUT": "seconds; <=0/garbage -> 240s on both sides. configuration.json mcp.timeout_seconds (Go-only key) wins over this env var.",
     "HIVE_DEBUG_EVENTS": "true for 1/true/full and any non-empty except 0/false.",
     "HIVE_BRIDGE_PORT": "per-site defaults mirror upstream (14829 main bridge, 9229 legacy status). py int() raises on garbage; go ignores the bad value per site.",

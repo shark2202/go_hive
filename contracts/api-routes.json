@@ -1,12 +1,12 @@
 {
   "schema": "hive-api-routes/1",
   "description": "Frozen HTTP route tables. The contract reference is the Python hive checkout (reference=python@<commit>); go_hive is the target being aligned (target=go_hive@<commit>). Static extraction; path parameters are compared by shape, original spelling preserved.",
-  "reference_id": "python@265d93d17ab9ad62520ce05b841ecbfc42439ae7",
-  "target_id": "go_hive@265d93d17ab9ad62520ce05b841ecbfc42439ae7",
+  "reference_id": "python@6ce8deccf6249c4e50bae56485f66ab3fc8acda3",
+  "target_id": "go_hive@6ce8deccf6249c4e50bae56485f66ab3fc8acda3",
   "reference": {
     "implementation": "python",
     "version": "1.0.15",
-    "commit": "265d93d17ab9ad62520ce05b841ecbfc42439ae7",
+    "commit": "6ce8deccf6249c4e50bae56485f66ab3fc8acda3",
     "last_core_commit": "265d93d17ab9ad62520ce05b841ecbfc42439ae7",
     "last_tools_commit": "72eb6d7bb9f833ac221ed17ad6c334f5944d89bb",
     "source_root": "core/framework/server"
@@ -14,13 +14,13 @@
   "target": {
     "implementation": "go_hive",
     "version": "1.0.26-go.1",
-    "commit": "265d93d17ab9ad62520ce05b841ecbfc42439ae7",
+    "commit": "6ce8deccf6249c4e50bae56485f66ab3fc8acda3",
     "source_root": "go_hive/go-hive/internal/server"
   },
-  "generated_at": "2026-11-22T08:21:11+08:00",
+  "generated_at": "2026-11-22T08:38:34+08:00",
   "python": {
     "version": "1.0.15",
-    "commit": "265d93d17ab9ad62520ce05b841ecbfc42439ae7",
+    "commit": "6ce8deccf6249c4e50bae56485f66ab3fc8acda3",
     "source_root": "core/framework/server",
     "route_count": 222,
     "routes": [
@@ -382,8 +382,7 @@
         "path_shape": "/api/config/memory",
         "handler": "handle_get_memory_settings",
         "source": "core/framework/server/routes_config.py:1493",
-        "kind": "api",
-        "served_by_alias": ""
+        "kind": "api"
       },
       {
         "method": "PUT",
@@ -391,8 +390,7 @@
         "path_shape": "/api/config/memory",
         "handler": "handle_update_memory_settings",
         "source": "core/framework/server/routes_config.py:1494",
-        "kind": "api",
-        "served_by_alias": ""
+        "kind": "api"
       },
       {
         "method": "GET",
@@ -896,8 +894,7 @@
         "path_shape": "/api/memories/history",
         "handler": "handle_memory_history",
         "source": "core/framework/server/routes_memories.py:333",
-        "kind": "api",
-        "served_by_alias": ""
+        "kind": "api"
       },
       {
         "method": "POST",
@@ -905,8 +902,7 @@
         "path_shape": "/api/memories/restore",
         "handler": "handle_restore_memory",
         "source": "core/framework/server/routes_memories.py:334",
-        "kind": "api",
-        "served_by_alias": ""
+        "kind": "api"
       },
       {
         "method": "GET",
@@ -914,8 +910,7 @@
         "path_shape": "/api/memories/retired",
         "handler": "handle_retired_memories",
         "source": "core/framework/server/routes_memories.py:335",
-        "kind": "api",
-        "served_by_alias": ""
+        "kind": "api"
       },
       {
         "method": "POST",
@@ -1813,9 +1808,9 @@
   },
   "go": {
     "version": "1.0.26-go.1",
-    "commit": "265d93d17ab9ad62520ce05b841ecbfc42439ae7",
+    "commit": "6ce8deccf6249c4e50bae56485f66ab3fc8acda3",
     "source_root": "go_hive/go-hive/internal/server",
-    "route_count": 220,
+    "route_count": 225,
     "routes": [
       {
         "method": "GET",
@@ -2118,7 +2113,7 @@
         "path": "/api/config/external-skills",
         "path_shape": "/api/config/external-skills",
         "handler": "handleGetExternalSkills(deps",
-        "source": "go_hive/go-hive/internal/server/routes_config.go:294",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:296",
         "kind": "api"
       },
       {
@@ -2126,7 +2121,7 @@
         "path": "/api/config/external-skills",
         "path_shape": "/api/config/external-skills",
         "handler": "handlePutExternalSkills(deps",
-        "source": "go_hive/go-hive/internal/server/routes_config.go:295",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:297",
         "kind": "api"
       },
       {
@@ -2150,7 +2145,7 @@
         "path": "/api/config/llm",
         "path_shape": "/api/config/llm",
         "handler": "handleGetLLMConfig(deps",
-        "source": "go_hive/go-hive/internal/server/routes_config.go:283",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:285",
         "kind": "api"
       },
       {
@@ -2158,7 +2153,7 @@
         "path": "/api/config/llm",
         "path_shape": "/api/config/llm",
         "handler": "handleUpdateLLMConfig(deps",
-        "source": "go_hive/go-hive/internal/server/routes_config.go:284",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:286",
         "kind": "api"
       },
       {
@@ -2166,7 +2161,7 @@
         "path": "/api/config/llm-sections",
         "path_shape": "/api/config/llm-sections",
         "handler": "handleGetLLMSections(deps",
-        "source": "go_hive/go-hive/internal/server/routes_config.go:281",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:283",
         "kind": "api"
       },
       {
@@ -2174,6 +2169,22 @@
         "path": "/api/config/llm-sections",
         "path_shape": "/api/config/llm-sections",
         "handler": "handlePutLLMSection(deps",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:284",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/config/memory",
+        "path_shape": "/api/config/memory",
+        "handler": "handleGetMemorySettings(deps",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:281",
+        "kind": "api"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/config/memory",
+        "path_shape": "/api/config/memory",
+        "handler": "handleUpdateMemorySettings(deps",
         "source": "go_hive/go-hive/internal/server/routes_config.go:282",
         "kind": "api"
       },
@@ -2190,7 +2201,7 @@
         "path": "/api/config/profile",
         "path_shape": "/api/config/profile",
         "handler": "handleGetProfile(deps",
-        "source": "go_hive/go-hive/internal/server/routes_config.go:290",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:292",
         "kind": "api"
       },
       {
@@ -2198,7 +2209,7 @@
         "path": "/api/config/profile",
         "path_shape": "/api/config/profile",
         "handler": "handleUpdateProfile(deps",
-        "source": "go_hive/go-hive/internal/server/routes_config.go:291",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:293",
         "kind": "api"
       },
       {
@@ -2206,7 +2217,7 @@
         "path": "/api/config/profile/avatar",
         "path_shape": "/api/config/profile/avatar",
         "handler": "handleGetAvatar(deps",
-        "source": "go_hive/go-hive/internal/server/routes_config.go:293",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:295",
         "kind": "api"
       },
       {
@@ -2214,7 +2225,7 @@
         "path": "/api/config/profile/avatar",
         "path_shape": "/api/config/profile/avatar",
         "handler": "handleUploadAvatar(deps",
-        "source": "go_hive/go-hive/internal/server/routes_config.go:292",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:294",
         "kind": "api"
       },
       {
@@ -2222,7 +2233,7 @@
         "path": "/api/config/provider-library",
         "path_shape": "/api/config/provider-library",
         "handler": "handleGetProviderLibrary(deps",
-        "source": "go_hive/go-hive/internal/server/routes_config.go:285",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:287",
         "kind": "api"
       },
       {
@@ -2230,7 +2241,7 @@
         "path": "/api/config/provider-library",
         "path_shape": "/api/config/provider-library",
         "handler": "handlePutProviderLibrary(deps",
-        "source": "go_hive/go-hive/internal/server/routes_config.go:286",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:288",
         "kind": "api"
       },
       {
@@ -2238,7 +2249,7 @@
         "path": "/api/config/provider-library/apply",
         "path_shape": "/api/config/provider-library/apply",
         "handler": "handleApplyProviderLibrary(deps",
-        "source": "go_hive/go-hive/internal/server/routes_config.go:287",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:289",
         "kind": "api"
       },
       {
@@ -2246,7 +2257,7 @@
         "path": "/api/config/rate-limits",
         "path_shape": "/api/config/rate-limits",
         "handler": "handleGetRateLimits(deps",
-        "source": "go_hive/go-hive/internal/server/routes_config.go:288",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:290",
         "kind": "api"
       },
       {
@@ -2254,7 +2265,7 @@
         "path": "/api/config/rate-limits",
         "path_shape": "/api/config/rate-limits",
         "handler": "handleUpdateRateLimits(deps",
-        "source": "go_hive/go-hive/internal/server/routes_config.go:289",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:291",
         "kind": "api"
       },
       {
@@ -2648,7 +2659,7 @@
         "path": "/api/memories",
         "path_shape": "/api/memories",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_memories_extra.go:22",
+        "source": "go_hive/go-hive/internal/server/routes_memories_extra.go:24",
         "kind": "api"
       },
       {
@@ -2656,7 +2667,7 @@
         "path": "/api/memories/file",
         "path_shape": "/api/memories/file",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_memories_extra.go:34",
+        "source": "go_hive/go-hive/internal/server/routes_memories_extra.go:36",
         "kind": "api"
       },
       {
@@ -2664,7 +2675,7 @@
         "path": "/api/memories/file",
         "path_shape": "/api/memories/file",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_memories_extra.go:25",
+        "source": "go_hive/go-hive/internal/server/routes_memories_extra.go:27",
         "kind": "api"
       },
       {
@@ -2672,7 +2683,7 @@
         "path": "/api/memories/file",
         "path_shape": "/api/memories/file",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_memories_extra.go:28",
+        "source": "go_hive/go-hive/internal/server/routes_memories_extra.go:30",
         "kind": "api"
       },
       {
@@ -2680,7 +2691,31 @@
         "path": "/api/memories/file",
         "path_shape": "/api/memories/file",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_memories_extra.go:31",
+        "source": "go_hive/go-hive/internal/server/routes_memories_extra.go:33",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/memories/history",
+        "path_shape": "/api/memories/history",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_memories_extra.go:39",
+        "kind": "api"
+      },
+      {
+        "method": "POST",
+        "path": "/api/memories/restore",
+        "path_shape": "/api/memories/restore",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_memories_extra.go:42",
+        "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/memories/retired",
+        "path_shape": "/api/memories/retired",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_memories_extra.go:45",
         "kind": "api"
       },
       {
@@ -3593,14 +3628,14 @@
   },
   "summary": {
     "reference_routes": 222,
-    "target_routes": 220,
+    "target_routes": 225,
     "python_routes": 222,
-    "go_routes": 220,
-    "missing_in_target": 7,
-    "missing_in_target_effective": 5,
+    "go_routes": 225,
+    "missing_in_target": 2,
+    "missing_in_target_effective": 0,
     "missing_in_target_served_by_alias": 2,
-    "missing_in_go": 7,
-    "missing_in_go_effective": 5,
+    "missing_in_go": 2,
+    "missing_in_go_effective": 0,
     "missing_in_go_served_by_alias": 2,
     "extra_in_target": 5,
     "extra_in_target_api": 5,
@@ -3611,51 +3646,6 @@
     "method_mismatch": 1
   },
   "missing_in_target": [
-    {
-      "method": "GET",
-      "path": "/api/config/memory",
-      "path_shape": "/api/config/memory",
-      "handler": "handle_get_memory_settings",
-      "source": "core/framework/server/routes_config.py:1493",
-      "kind": "api",
-      "served_by_alias": ""
-    },
-    {
-      "method": "PUT",
-      "path": "/api/config/memory",
-      "path_shape": "/api/config/memory",
-      "handler": "handle_update_memory_settings",
-      "source": "core/framework/server/routes_config.py:1494",
-      "kind": "api",
-      "served_by_alias": ""
-    },
-    {
-      "method": "GET",
-      "path": "/api/memories/history",
-      "path_shape": "/api/memories/history",
-      "handler": "handle_memory_history",
-      "source": "core/framework/server/routes_memories.py:333",
-      "kind": "api",
-      "served_by_alias": ""
-    },
-    {
-      "method": "POST",
-      "path": "/api/memories/restore",
-      "path_shape": "/api/memories/restore",
-      "handler": "handle_restore_memory",
-      "source": "core/framework/server/routes_memories.py:334",
-      "kind": "api",
-      "served_by_alias": ""
-    },
-    {
-      "method": "GET",
-      "path": "/api/memories/retired",
-      "path_shape": "/api/memories/retired",
-      "handler": "handle_retired_memories",
-      "source": "core/framework/server/routes_memories.py:335",
-      "kind": "api",
-      "served_by_alias": ""
-    },
     {
       "method": "DELETE",
       "path": "/api/sessions/history/{session_id}",
@@ -3675,53 +3665,7 @@
       "served_by_alias": "DELETE /api/sessions/{first}/{second}"
     }
   ],
-  "missing_in_target_effective": [
-    {
-      "method": "GET",
-      "path": "/api/config/memory",
-      "path_shape": "/api/config/memory",
-      "handler": "handle_get_memory_settings",
-      "source": "core/framework/server/routes_config.py:1493",
-      "kind": "api",
-      "served_by_alias": ""
-    },
-    {
-      "method": "PUT",
-      "path": "/api/config/memory",
-      "path_shape": "/api/config/memory",
-      "handler": "handle_update_memory_settings",
-      "source": "core/framework/server/routes_config.py:1494",
-      "kind": "api",
-      "served_by_alias": ""
-    },
-    {
-      "method": "GET",
-      "path": "/api/memories/history",
-      "path_shape": "/api/memories/history",
-      "handler": "handle_memory_history",
-      "source": "core/framework/server/routes_memories.py:333",
-      "kind": "api",
-      "served_by_alias": ""
-    },
-    {
-      "method": "POST",
-      "path": "/api/memories/restore",
-      "path_shape": "/api/memories/restore",
-      "handler": "handle_restore_memory",
-      "source": "core/framework/server/routes_memories.py:334",
-      "kind": "api",
-      "served_by_alias": ""
-    },
-    {
-      "method": "GET",
-      "path": "/api/memories/retired",
-      "path_shape": "/api/memories/retired",
-      "handler": "handle_retired_memories",
-      "source": "core/framework/server/routes_memories.py:335",
-      "kind": "api",
-      "served_by_alias": ""
-    }
-  ],
+  "missing_in_target_effective": [],
   "missing_in_target_served_by_alias": [
     {
       "method": "DELETE",
@@ -3811,51 +3755,6 @@
     }
   ],
   "missing_in_go": [
-    {
-      "method": "GET",
-      "path": "/api/config/memory",
-      "path_shape": "/api/config/memory",
-      "handler": "handle_get_memory_settings",
-      "source": "core/framework/server/routes_config.py:1493",
-      "kind": "api",
-      "served_by_alias": ""
-    },
-    {
-      "method": "PUT",
-      "path": "/api/config/memory",
-      "path_shape": "/api/config/memory",
-      "handler": "handle_update_memory_settings",
-      "source": "core/framework/server/routes_config.py:1494",
-      "kind": "api",
-      "served_by_alias": ""
-    },
-    {
-      "method": "GET",
-      "path": "/api/memories/history",
-      "path_shape": "/api/memories/history",
-      "handler": "handle_memory_history",
-      "source": "core/framework/server/routes_memories.py:333",
-      "kind": "api",
-      "served_by_alias": ""
-    },
-    {
-      "method": "POST",
-      "path": "/api/memories/restore",
-      "path_shape": "/api/memories/restore",
-      "handler": "handle_restore_memory",
-      "source": "core/framework/server/routes_memories.py:334",
-      "kind": "api",
-      "served_by_alias": ""
-    },
-    {
-      "method": "GET",
-      "path": "/api/memories/retired",
-      "path_shape": "/api/memories/retired",
-      "handler": "handle_retired_memories",
-      "source": "core/framework/server/routes_memories.py:335",
-      "kind": "api",
-      "served_by_alias": ""
-    },
     {
       "method": "DELETE",
       "path": "/api/sessions/history/{session_id}",

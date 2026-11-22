@@ -1119,35 +1119,23 @@ func newChatExecutionID() string {
 
 // injectRecall appends the global + queen-scoped recall blocks to the current
 // turn as a <system-reminder>, after the user message and before the model
-// reads the conversation. Upstream delivers the same block through
-// AgentLoop.inject_event(wake=False), which the drain writes as a non-client
-// "[stamp] [External event] ..." user message — not into the system prompt, so
-// the cached history prefix stays byte-stable.
+// reads the conversation. It is the upstream "background" mode
+// (_recall_on_user_input); "wait" and "index" are reminder sources, so this
+// method is silent while either is set. Upstream delivers the same block
+// through AgentLoop.inject_event(wake=False), which the drain writes as a
+// non-client "[stamp] [External event] ..." user message — not into the system
+// prompt, so the cached history prefix stays byte-stable.
 //
+// Parity: core/framework/server/queen_orchestrator.py::_recall_on_user_input
 // Parity: core/framework/server/queen_orchestrator.py::_inject_recall_if_changed
 func (r *ChatRuntime) injectRecall(query, stamp string) {
 	if r.globalMemoryDir == "" {
 		return
 	}
-	globalBlock, queenBlock := memory.BuildScopedRecallBlocks(
-		r.ctx,
-		query,
-		r.deps.LLM,
-		r.globalMemoryDir,
-		r.queenMemoryDir,
-		r.queenName,
-		3,
-		3,
-		llm.AuxMaxTokens(),
-	)
-	parts := make([]string, 0, 2)
-	if globalBlock != "" {
-		parts = append(parts, globalBlock)
+	if r.memoryRecallSettings().Mode != memory.MemoryRecallBackground {
+		return
 	}
-	if queenBlock != "" {
-		parts = append(parts, queenBlock)
-	}
-	block := strings.Join(parts, "\n\n")
+	block := r.recallBlockForQuery(query)
 	if block == "" || block == r.lastRecall {
 		return
 	}

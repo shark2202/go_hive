@@ -3,12 +3,14 @@ package server
 // Parity: framework/server/routes_memories.py
 
 import (
+	"encoding/json"
 	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/aden-hive/hive-go/internal/hivehome"
 	"github.com/aden-hive/hive-go/internal/memory"
@@ -33,6 +35,15 @@ func RegisterMemoryRoutes(mux *http.ServeMux, deps MemoryRouteDeps) {
 	})
 	mux.HandleFunc("DELETE /api/memories/file", func(w http.ResponseWriter, r *http.Request) {
 		handleDeleteMemory(w, r, deps)
+	})
+	mux.HandleFunc("GET /api/memories/history", func(w http.ResponseWriter, r *http.Request) {
+		handleMemoryHistory(w, r, deps)
+	})
+	mux.HandleFunc("POST /api/memories/restore", func(w http.ResponseWriter, r *http.Request) {
+		handleRestoreMemory(w, r, deps)
+	})
+	mux.HandleFunc("GET /api/memories/retired", func(w http.ResponseWriter, r *http.Request) {
+		handleRetiredMemories(w, r, deps)
 	})
 }
 
@@ -77,6 +88,9 @@ func memoryToDict(file memory.MemoryFile, relPath string) map[string]any {
 		"name":        nil,
 		"type":        nil,
 		"description": nil,
+		"author":      nil,
+		"learned":     nil,
+		"confirmed":   nil,
 		"mtime":       file.MTime,
 	}
 	if file.Name != nil {
@@ -87,6 +101,15 @@ func memoryToDict(file memory.MemoryFile, relPath string) map[string]any {
 	}
 	if file.Description != nil {
 		entry["description"] = *file.Description
+	}
+	if file.Author != nil {
+		entry["author"] = *file.Author
+	}
+	if file.Learned != nil {
+		entry["learned"] = *file.Learned
+	}
+	if file.Confirmed != nil {
+		entry["confirmed"] = *file.Confirmed
 	}
 	scope, scopeName := memoryScopeForRel(strings.Split(relPath, "/"))
 	entry["scope"] = scope
@@ -256,17 +279,23 @@ func handleCreateMemory(w http.ResponseWriter, r *http.Request, deps MemoryRoute
 		return
 	}
 
-	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": "Could not create memory"})
-		return
-	}
-	if err := os.WriteFile(target, []byte(content), 0o644); err != nil {
+	// A seed from onboarding: nobody's, so her reflection can build on it.
+	stamped, err := memory.Write(filepath.Dir(target), filepath.Base(target), content, memory.WriteOptions{
+		Author:     memory.AuthorOwner,
+		Reason:     "seeded",
+		KeepAuthor: true,
+	})
+	if err != nil {
+		if memory.IsTooLarge(err) {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
+			return
+		}
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": "Could not create memory"})
 		return
 	}
 
 	payload := memoryToDict(memory.MemoryFileFromPath(target), rel)
-	payload["content"] = content
+	payload["content"] = stamped
 	payload["created"] = true
 	writeJSON(w, http.StatusOK, payload)
 }
@@ -299,16 +328,21 @@ func handleUpdateMemory(w http.ResponseWriter, r *http.Request, deps MemoryRoute
 		})
 		return
 	}
-	if !strings.HasSuffix(content, "\n") {
-		content += "\n"
-	}
-	if err := os.WriteFile(target, []byte(content), 0o644); err != nil {
+	stamped, err := memory.Write(filepath.Dir(target), filepath.Base(target), content, memory.WriteOptions{
+		Author: memory.AuthorOwner,
+		Reason: "edited on the Memory page",
+	})
+	if err != nil {
+		if memory.IsTooLarge(err) {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
+			return
+		}
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": "Could not write memory"})
 		return
 	}
 
 	payload := memoryToDict(memory.MemoryFileFromPath(target), rel)
-	payload["content"] = content
+	payload["content"] = stamped
 	writeJSON(w, http.StatusOK, payload)
 }
 
@@ -324,9 +358,117 @@ func handleDeleteMemory(w http.ResponseWriter, r *http.Request, deps MemoryRoute
 		writeJSON(w, http.StatusNotFound, map[string]any{"error": "Memory not found"})
 		return
 	}
-	if err := os.Remove(target); err != nil {
+	if err := memory.Retire(filepath.Dir(target), filepath.Base(target), memory.AuthorOwner, "deleted on the Memory page", time.Time{}); err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": "Could not delete memory"})
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"deleted": rel})
+}
+
+// handleMemoryHistory ports routes_memories.py::handle_memory_history:
+// GET /api/memories/history?path=… — every change to one memory file, oldest
+// first, each with its n in that folder's log.
+func handleMemoryHistory(w http.ResponseWriter, r *http.Request, deps MemoryRouteDeps) {
+	rel := memoryQueryPath(r)
+	target, ok := resolveSafeMemoryPath(deps.memoriesDir(), rel)
+	if !ok {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "Invalid path"})
+		return
+	}
+	name := filepath.Base(target)
+	writeJSON(w, http.StatusOK, map[string]any{
+		"path":    rel,
+		"changes": memory.History(filepath.Dir(target), &name),
+	})
+}
+
+// handleRestoreMemory ports routes_memories.py::handle_restore_memory:
+// POST /api/memories/restore?path=… — body {"n": <change>}: the file as that
+// change left it.
+func handleRestoreMemory(w http.ResponseWriter, r *http.Request, deps MemoryRouteDeps) {
+	rel := memoryQueryPath(r)
+	target, ok := resolveSafeMemoryPath(deps.memoriesDir(), rel)
+	if !ok {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "Invalid path"})
+		return
+	}
+	decoded, ok := readJSONBody(w, r)
+	if !ok {
+		return
+	}
+	var raw any
+	if mapping, isMap := decoded.(map[string]any); isMap {
+		raw = mapping["n"]
+	}
+	// Python: isinstance(n, int) and not isinstance(n, bool) — a JSON number
+	// with no fraction, and never `true`/`false` or a numeric string.
+	number, valid := 0, false
+	if value, isNumber := raw.(json.Number); isNumber {
+		if parsed, err := strconv.ParseInt(value.String(), 10, 64); err == nil {
+			number, valid = int(parsed), true
+		}
+	}
+	if !valid {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "n must be the number of a change in the file's history"})
+		return
+	}
+	content, err := memory.Restore(filepath.Dir(target), filepath.Base(target), number, time.Time{})
+	if err != nil {
+		if memory.IsNoChange(err) {
+			writeJSON(w, http.StatusNotFound, map[string]any{"error": err.Error()})
+			return
+		}
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": internalServerError})
+		return
+	}
+	payload := memoryToDict(memory.MemoryFileFromPath(target), rel)
+	payload["content"] = content
+	writeJSON(w, http.StatusOK, payload)
+}
+
+// handleRetiredMemories ports routes_memories.py::handle_retired_memories:
+// GET /api/memories/retired — files retired and not restored, across scopes,
+// with who retired them and why.
+func handleRetiredMemories(w http.ResponseWriter, r *http.Request, deps MemoryRouteDeps) {
+	entries := []map[string]any{}
+	base := deps.memoriesDir()
+	if info, err := os.Stat(base); err != nil || !info.IsDir() {
+		writeJSON(w, http.StatusOK, map[string]any{"retired": entries})
+		return
+	}
+	resolvedBase, err := filepath.EvalSymlinks(base)
+	if err != nil {
+		resolvedBase = base
+	}
+	_ = filepath.WalkDir(resolvedBase, func(path string, entry os.DirEntry, walkErr error) error {
+		if walkErr != nil || entry.IsDir() || entry.Name() != memory.LogFile {
+			return nil
+		}
+		logDir := filepath.Dir(path)
+		dirRel, relErr := filepath.Rel(resolvedBase, logDir)
+		if relErr != nil {
+			return nil
+		}
+		for _, retired := range memory.Retired(logDir) {
+			relPath := filepath.ToSlash(filepath.Join(dirRel, retired.File))
+			scope, scopeName := memoryScopeForRel(strings.Split(relPath, "/"))
+			entries = append(entries, map[string]any{
+				"path":       relPath,
+				"filename":   retired.File,
+				"n":          retired.N,
+				"at":         retired.At,
+				"author":     retired.Author,
+				"reason":     retired.Reason,
+				"scope":      scope,
+				"scope_name": scopeName,
+			})
+		}
+		return nil
+	})
+	sort.SliceStable(entries, func(i, j int) bool {
+		left, _ := entries[i]["at"].(string)
+		right, _ := entries[j]["at"].(string)
+		return left > right
+	})
+	writeJSON(w, http.StatusOK, map[string]any{"retired": entries})
 }

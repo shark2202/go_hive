@@ -766,3 +766,103 @@ func TestWriteReflectionError(t *testing.T) {
 	}
 	WriteReflectionError("ignored", "", os.ErrClosed)
 }
+
+// Parity: tests/test_queen_memory.py::test_reflection_writes_are_hers_and_logged
+func TestReflectionWritesAreHersAndLogged(t *testing.T) {
+	dir := t.TempDir()
+	dirs := []ScopeDir{{Scope: "global", Dir: dir}}
+	note := "---\nname: tea\ntype: preference\ndescription: what Ava drinks\n---\nAva drinks oolong."
+
+	result := ExecuteTool("write_memory_file", map[string]any{"filename": "tea.md", "content": note}, dirs, "")
+
+	if !strings.HasPrefix(result, "Wrote global:tea.md") {
+		t.Fatalf("result = %q", result)
+	}
+	data, _ := os.ReadFile(filepath.Join(dir, "tea.md"))
+	if author := AuthorOf(string(data)); author != "reflection" {
+		t.Fatalf("author = %q", author)
+	}
+	name := "tea.md"
+	ops := []string{}
+	for _, entry := range History(dir, &name) {
+		ops = append(ops, entry.Op)
+	}
+	if strings.Join(ops, ",") != "write" {
+		t.Fatalf("ops = %v", ops)
+	}
+}
+
+// Parity: tests/test_queen_memory.py::test_reflection_cannot_overwrite_or_delete_what_the_owner_wrote
+func TestReflectionCannotOverwriteOrDeleteWhatTheOwnerWrote(t *testing.T) {
+	dir := t.TempDir()
+	dirs := []ScopeDir{{Scope: "global", Dir: dir}}
+	note := "---\nname: tea\ntype: preference\ndescription: what Ava drinks\n---\nAva drinks oolong."
+	mine, err := Write(dir, "tea.md", note, WriteOptions{Author: "owner"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wrote := ExecuteTool("write_memory_file", map[string]any{"filename": "tea.md", "content": strings.Replace(note, "oolong", "coffee", 1)}, dirs, "")
+	deleted := ExecuteTool("delete_memory_file", map[string]any{"filename": "tea.md"}, dirs, "")
+
+	if !strings.HasPrefix(wrote, "ERROR: tea.md was written by the owner") {
+		t.Fatalf("write = %q", wrote)
+	}
+	if !strings.HasPrefix(deleted, "ERROR: tea.md was written by the owner") {
+		t.Fatalf("delete = %q", deleted)
+	}
+	data, _ := os.ReadFile(filepath.Join(dir, "tea.md"))
+	if string(data) != mine {
+		t.Fatalf("owner file changed: %q", data)
+	}
+}
+
+// Parity: tests/test_queen_memory.py::test_a_file_reflection_deletes_stays_in_the_log_with_her_reason
+func TestAFileReflectionDeletesStaysInTheLogWithHerReason(t *testing.T) {
+	dir := t.TempDir()
+	dirs := []ScopeDir{{Scope: "global", Dir: dir}}
+	note := "---\nname: tea\ntype: preference\ndescription: what Ava drinks\n---\nAva drinks oolong."
+	written, err := Write(dir, "tea.md", note, WriteOptions{Author: "reflection"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	result := ExecuteTool("delete_memory_file", map[string]any{"filename": "tea.md", "reason": "merged into drinks.md"}, dirs, "")
+
+	if result != "Deleted global:tea.md." {
+		t.Fatalf("result = %q", result)
+	}
+	gone := Retired(dir)
+	if len(gone) != 1 || gone[0].Reason != "merged into drinks.md" || gone[0].Before == nil || *gone[0].Before != written {
+		t.Fatalf("retired = %#v", gone)
+	}
+}
+
+// Parity: tests/test_queen_memory.py::test_housekeeping_does_not_confirm_what_it_rewrites
+func TestHousekeepingDoesNotConfirmWhatItRewrites(t *testing.T) {
+	memDir := t.TempDir()
+	note := "---\nname: tea\ntype: preference\ndescription: what Ava drinks\n---\nAva drinks oolong."
+	if _, err := Write(memDir, "tea.md", note, WriteOptions{Author: "reflection", Now: time.Date(2026, 3, 2, 0, 0, 0, 0, time.Local)}); err != nil {
+		t.Fatal(err)
+	}
+	fake := &fakeCompleter{responses: []llm.Completion{
+		callsCompletion(toolCall("tc_1", "write_memory_file", map[string]any{
+			"filename": "tea.md",
+			"content":  note + " Tidied.",
+		})),
+		textCompletion("Done."),
+	}}
+
+	RunLongReflection(context.Background(), fake, memDir, "global")
+
+	data, err := os.ReadFile(filepath.Join(memDir, "tea.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), "Tidied.") {
+		t.Fatalf("rewrite missing: %q", data)
+	}
+	if day, ok := ConfirmedOn(string(data)); !ok || day != "2026-03-02" {
+		t.Fatalf("confirmed = %q (%v), want 2026-03-02", day, ok)
+	}
+}

@@ -307,7 +307,7 @@ packages:
     stability: stable
   - package: internal/hivehome
     layer: foundation
-    responsibility: "~/.hive_go 目录布局解析与 ensure（HIVE_HOME 可覆盖；queens/colonies/memories/credentials/...）。"
+    responsibility: "~/.hive 目录布局解析与 ensure（queens/colonies/memories/credentials/...）。"
     stability: stable
   - package: internal/platform
     layer: foundation

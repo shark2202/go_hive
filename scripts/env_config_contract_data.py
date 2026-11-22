@@ -553,6 +553,23 @@ CONFIG_KEYS: list[dict] = [
         "status": "aligned", "notes": "other strings keep \"main\".",
     },
 
+    # ----- memory_recall (1.0.15 notes-in-time lane) ----------------------
+    {
+        "path": "memory_recall.mode", "type": "\"index\" | \"wait\" | \"background\"", "default": "index", "env": "HIVE_MEMORY_RECALL",
+        "py": [{"file": "core/framework/config.py", "contains": "mode = get_memory_recall_env_mode() or raw.get(\"mode\")"},
+               {"file": "core/framework/config.py", "contains": "mode=mode if mode in MEMORY_RECALL_MODES else default.mode,"}],
+        "go": [{"file": "go_hive/go-hive/internal/memory/recall_config.go", "contains": "} else if configured, ok := section[\"mode\"].(string); ok {"},
+               {"file": "go_hive/go-hive/internal/memory/recall_config.go", "contains": "if !validMode {"}],
+        "status": "aligned",
+        "notes": "HIVE_MEMORY_RECALL (strip+lower, name must be a known mode) > configuration.json > default(index); an invalid value on either layer keeps index. Read at each message so Settings/ env changes reach running sessions.",
+    },
+    {
+        "path": "memory_recall.wait_seconds", "type": "number > 0", "default": 10.0, "env": None,
+        "py": [{"file": "core/framework/config.py", "contains": "is_seconds = isinstance(wait, int | float) and not isinstance(wait, bool) and wait > 0"}],
+        "go": [{"file": "go_hive/go-hive/internal/memory/recall_config.go", "contains": "if seconds, ok := recallSeconds(section[\"wait_seconds\"]); ok && seconds > 0 {"}],
+        "status": "aligned", "notes": "bool/string/<=0 rejected (falls back to 10.0); ints and floats accepted on both sides.",
+    },
+
     # ----- queen_mail -----------------------------------------------------
     {
         "path": "queen_mail.enabled", "type": "bool", "default": False, "env": None,

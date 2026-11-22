@@ -3,7 +3,7 @@
  "allowed": [
   {
    "path": "contracts/module-inventory.json",
-   "reason": "integrations-structure-p1 + qmail-split：Registry 从 integrations/integration.go:114 移到 integrationkit/registry.go:127（内核下沉），且 qmail 拆为 queenmail/claudecode 后 15 处 go_counterpart/basis/evidence 路径刷新；仅路径/行号变化，271 条登记、状态与映射语义不变。"
+   "reason": "integrations-structure-p1 + qmail-split：Registry 从 integrations/integration.go:114 移到 integrationkit/registry.go:127（内核下沉），且 qmail 拆为 queenmail/claudecode 后 15 处 go_counterpart/basis/evidence 路径刷新；271 条登记、状态与映射语义不变。2026-11-22 mem-notes-log：memory_log.py 与 recall_selector.py unported→ported（新增 internal/memory/memory_log.go、recall.go 年龄改 confirmed 口径，ported 202→204、unported 54→52），config.py/routes_config.py 的 go_counterparts 增列 config_memory.go，reflection_agent.py 主 counterpart 随 _execute_tool 注解切到 reflection.go（原 chat_runtime.go 仍在列表）；机械重生成，仅归类与路径刷新。"
   },
   {
    "path": "go_hive/contracts/tool-definitions.json",
@@ -27,11 +27,11 @@
   },
   {
    "path": "go_hive/contracts/api-routes.json",
-   "reason": "api-routes 既有导出刷新（fcfadc90，inventory-triage 注解插入致 routes_colony_tools / routes_events 行号刷新，reference/target pin 059f4afe→e702559a 与 generated_at 随之刷新）；217/220 路由集合不变，无路由或响应语义变化。两 lane（int-p2-devops / int-p2-helpers）基线均已含该漂移，合并后单条登记，供 wave15-base 基线复现比较。"
+   "reason": "api-routes 导出刷新：上游 1.0.15「Notes in Time」参考同步（参考 219→222）后，mem-notes-log lane 补齐 5 条有效路由（GET/PUT /api/config/memory；GET /api/memories/history、POST /api/memories/restore、GET /api/memories/retired），go 220→225、missing_in_target_effective 5→0（余 2 条 alias 覆盖），pin 265d93d1→6ce8decc 与行号/generated_at 随之刷新；新增路由为参考对照实现，无已注册路由或响应语义变化。此前 fcfadc90 的 inventory-triage 行号漂移（int-p2-devops / int-p2-helpers 基线）说明保留。"
   },
   {
    "path": "go_hive/contracts/env-vars.json",
-   "reason": "上游 1.0.15「Notes in Time」参考同步（2026-11-22 merge origin/main 6703b434）：Python env 89→90（新增 HIVE_MEMORY_RECALL）、config aligned +1（memory_recall/memory_reflection 读取点）、routes 参考 219→222（memory 路由）；属参考基线推进，非 Go 侧漂移。"
+   "reason": "上游 1.0.15「Notes in Time」参考同步（2026-11-22 merge origin/main 6703b434）：Python env 89→90（新增 HIVE_MEMORY_RECALL）、config aligned +1（memory_recall/memory_reflection 读取点）、routes 参考 219→222（memory 路由）；属参考基线推进，非 Go 侧漂移。mem-notes-log lane 补 Go 读点：HIVE_MEMORY_RECALL 由 python_only→common/aligned（internal/server/config_memory.go），受控 expected 同步 90/119/84/6/35，env audit match=True。"
   },
   {
    "path": "go_hive/contracts/config-keys.json",
@@ -39,7 +39,7 @@
   },
   {
    "path": "go_hive/docs/env-config-contract-diff.md",
-   "reason": "上游 1.0.15「Notes in Time」参考同步（2026-11-22 merge origin/main 6703b434）：Python env 89→90（新增 HIVE_MEMORY_RECALL）、config aligned +1（memory_recall/memory_reflection 读取点）、routes 参考 219→222（memory 路由）；属参考基线推进，非 Go 侧漂移。"
+   "reason": "上游 1.0.15「Notes in Time」参考同步（2026-11-22 merge origin/main 6703b434）：Python env 89→90（新增 HIVE_MEMORY_RECALL）、config aligned +1（memory_recall/memory_reflection 读取点）、routes 参考 219→222（memory 路由）；属参考基线推进，非 Go 侧漂移。mem-notes-log lane：env 计数表随 HIVE_MEMORY_RECALL Go 读点与 expected 刷新（Go 119 / common 84）。"
   }
  ]
 }

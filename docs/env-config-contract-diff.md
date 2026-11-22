@@ -7,8 +7,8 @@
 
 ## 0. 结论摘要
 
-- 环境变量清单以已发布的审计（`go_hive/docs/env-surface-audit.json` @ 622cc236）为基线，本次按同一口径独立复算：Python **90** / Go **118** / 共有 **83**；Python 独有 **7**，Go 独有 **35**。复算与「本车道期望」一致。与发布审计基线（Python 89 / Go 96 / 共有 66 / Python 独有 23 / Go 独有 30）相比，差额来自 16 个名字由 Python 独有转为共有：`HIVE_MAX_ITER`、`HIVE_SPLIT_WORKER_EVENTS` 由本车道新增 Go 读取点，`HIVE_AGENT_NAME`、`HIVE_COMPACTION_DEBUG`、`HIVE_ENABLE_LLM_LOGS`、`HIVE_HISTORY_READ_WORKERS`、`HIVE_NO_FILE_LOG`、`HIVE_PLAYBOOK_FAST_GRACE`、`HIVE_RESOURCE_CRIT_AVAIL_FRAC`、`HIVE_RESOURCE_CRIT_RENDERERS`、`HIVE_RESOURCE_HISTORY`、`HIVE_RESOURCE_INTERVAL_S`、`HIVE_RESOURCE_WARN_AVAIL_FRAC`、`HIVE_RESOURCE_WARN_RENDERERS`、`HIVE_SENTINEL_LOG`、`HIVE_TRACKER_WORKER_TOOL_CALLS` 在审计提交之后、本车道之前已进入 Go 树；Go 独有清单 30→35（`HIVE_PYTHON` 新增、`HIVE_NETWORK_SCANNERS` 移除，另有审计后进入 Go 树的开发/评估变量）。
-- configuration.json：**135** 个键 / **21** 个 section；其中 `aligned` 126，`go_partial` 4，`python_only` 0，`go_only` 4，`unread` 1。
+- 环境变量清单以已发布的审计（`go_hive/docs/env-surface-audit.json` @ 622cc236）为基线，本次按同一口径独立复算：Python **90** / Go **119** / 共有 **84**；Python 独有 **6**，Go 独有 **35**。复算与「本车道期望」一致。与发布审计基线（Python 89 / Go 96 / 共有 66 / Python 独有 23 / Go 独有 30）相比，差额来自 17 个名字由 Python 独有转为共有：`HIVE_MAX_ITER`、`HIVE_SPLIT_WORKER_EVENTS` 由本车道新增 Go 读取点，`HIVE_AGENT_NAME`、`HIVE_COMPACTION_DEBUG`、`HIVE_ENABLE_LLM_LOGS`、`HIVE_HISTORY_READ_WORKERS`、`HIVE_MEMORY_RECALL`、`HIVE_NO_FILE_LOG`、`HIVE_PLAYBOOK_FAST_GRACE`、`HIVE_RESOURCE_CRIT_AVAIL_FRAC`、`HIVE_RESOURCE_CRIT_RENDERERS`、`HIVE_RESOURCE_HISTORY`、`HIVE_RESOURCE_INTERVAL_S`、`HIVE_RESOURCE_WARN_AVAIL_FRAC`、`HIVE_RESOURCE_WARN_RENDERERS`、`HIVE_SENTINEL_LOG`、`HIVE_TRACKER_WORKER_TOOL_CALLS` 在审计提交之后、本车道之前已进入 Go 树；Go 独有清单 30→35（`HIVE_PYTHON` 新增、`HIVE_NETWORK_SCANNERS` 移除，另有审计后进入 Go 树的开发/评估变量）。
+- configuration.json：**137** 个键 / **22** 个 section；其中 `aligned` 128，`go_partial` 4，`python_only` 0，`go_only` 4，`unread` 1。
 - 本车道（config-verbatim）把主槽位 `llm.*` 的消费键接进运行时：会话构建统一走 `MainSlotProvider`（键序 = endpoint → api_keys 池 → literal → claude/codex/kimi/antigravity 订阅 → 凭据库 → `api_key_env_var` → provider env；`MainSlotAPIBase` 复刻订阅端点与 openrouter 默认；`extra_body`/`num_ctx`/订阅请求头随 provider 构建下发），`llm.max_tokens` 预算 queen 回合、`llm.max_context_tokens` 参与 queen 窗口的主槽位回退，`llm.api_keys` 以 `llm.KeyPool` 轮转并在 429 时停键；kimi 订阅运行时接通（`~/.kimi/config.toml` token + `https://api.kimi.com/coding`）。
 - 模型槽位状态收敛：`queen_llm.*`（8）、`worker_llm.*`（10）、`vision_fallback.*`（7）全部转 `aligned`（逐键读取点与热切换矩阵见 §2 与 `docs/configuration.md` §3.8）；`worker_llm.max_tokens` 增加读取点 `WorkerMaxTokens`（与上游 `get_worker_max_tokens` 同为无调用点）；`channels.<name>.enabled` 由 `python_only` 变为 `go_partial`：字段按上游形状读取、写入时保留、GET /api/channels 形状不变，启用时 serve 启动打印「无渠道宿主、不会运行」的告警。
 - 仍未对齐的 4 个残余（结构性理由 + 替代验证见 `contracts/config-support-ledger.json`）：`llm.antigravity_client_id` / `llm.antigravity_client_secret`（只读；唯一上游消费者是未移植的 AntigravityProvider 内的 OAuth 刷新）、`llm.use_antigravity_subscription`（同上：会话构建对该标志显式报错而非静默发无键请求）、`channels.<name>.enabled`（无渠道插件宿主，读到但不生效）。`mcp.*` 4 键为逐项确认过的 Go 扩展（上游 MCP 来自 registry/`.mcp.json`，从不读 configuration.json 的 `mcp` 块）；`created_at` 为安装器写入、两侧运行时都不读（Go 在配置写入时保留，见测试）。
@@ -21,14 +21,14 @@
 | 项 | 本次复算 | 本车道期望 | 发布审计基线 | 判定 |
 |---|---|---|---|---|
 | Python | 90 | 90 | 89 → 90 | ✅ |
-| Go | 118 | 118 | 96 → 118 | ✅ |
-| 共有 | 83 | 83 | 66 → 83 | ✅ |
-| Python 独有 | 7 | 7 | 23 → 7 | ✅ |
+| Go | 119 | 119 | 96 → 119 | ✅ |
+| 共有 | 84 | 84 | 66 → 84 | ✅ |
+| Python 独有 | 6 | 6 | 23 → 6 | ✅ |
 | Go 独有 | 35 | 35 | 30 → 35 | ✅ |
 
 > `env-vars.json` 逐个名字给出两侧的读取点/默认值，并标注 `audit_membership`；只出现在字面量里、没有读取点的名字标为 `literal_only`，避免把 MCP env 字段名或注释当成读取面。
 
-逐名单比对（相对发布审计）：common 不一致（新增 `HIVE_AGENT_NAME`、`HIVE_COMPACTION_DEBUG`、`HIVE_ENABLE_LLM_LOGS`、`HIVE_HISTORY_READ_WORKERS`、`HIVE_MAX_ITER`、`HIVE_NO_FILE_LOG`、`HIVE_PLAYBOOK_FAST_GRACE`、`HIVE_RESOURCE_CRIT_AVAIL_FRAC`、`HIVE_RESOURCE_CRIT_RENDERERS`、`HIVE_RESOURCE_HISTORY`、`HIVE_RESOURCE_INTERVAL_S`、`HIVE_RESOURCE_WARN_AVAIL_FRAC`、`HIVE_RESOURCE_WARN_RENDERERS`、`HIVE_SENTINEL_LOG`、`HIVE_SPLIT_WORKER_EVENTS`、`HIVE_TRACKER_WORKER_TOOL_CALLS`，移除 无）、python_only 不一致（减少 `HIVE_AGENT_NAME`、`HIVE_COMPACTION_DEBUG`、`HIVE_ENABLE_LLM_LOGS`、`HIVE_HISTORY_READ_WORKERS`、`HIVE_MAX_ITER`、`HIVE_NO_FILE_LOG`、`HIVE_PLAYBOOK_FAST_GRACE`、`HIVE_RESOURCE_CRIT_AVAIL_FRAC`、`HIVE_RESOURCE_CRIT_RENDERERS`、`HIVE_RESOURCE_HISTORY`、`HIVE_RESOURCE_INTERVAL_S`、`HIVE_RESOURCE_WARN_AVAIL_FRAC`、`HIVE_RESOURCE_WARN_RENDERERS`、`HIVE_SENTINEL_LOG`、`HIVE_SPLIT_WORKER_EVENTS`、`HIVE_TRACKER_WORKER_TOOL_CALLS`）、go_only 不一致（published 'HIVE_RETENTION_' (trailing underscore) maps to 'HIVE_RETENTION_*'）。
+逐名单比对（相对发布审计）：common 不一致（新增 `HIVE_AGENT_NAME`、`HIVE_COMPACTION_DEBUG`、`HIVE_ENABLE_LLM_LOGS`、`HIVE_HISTORY_READ_WORKERS`、`HIVE_MAX_ITER`、`HIVE_MEMORY_RECALL`、`HIVE_NO_FILE_LOG`、`HIVE_PLAYBOOK_FAST_GRACE`、`HIVE_RESOURCE_CRIT_AVAIL_FRAC`、`HIVE_RESOURCE_CRIT_RENDERERS`、`HIVE_RESOURCE_HISTORY`、`HIVE_RESOURCE_INTERVAL_S`、`HIVE_RESOURCE_WARN_AVAIL_FRAC`、`HIVE_RESOURCE_WARN_RENDERERS`、`HIVE_SENTINEL_LOG`、`HIVE_SPLIT_WORKER_EVENTS`、`HIVE_TRACKER_WORKER_TOOL_CALLS`，移除 无）、python_only 不一致（减少 `HIVE_AGENT_NAME`、`HIVE_COMPACTION_DEBUG`、`HIVE_ENABLE_LLM_LOGS`、`HIVE_HISTORY_READ_WORKERS`、`HIVE_MAX_ITER`、`HIVE_NO_FILE_LOG`、`HIVE_PLAYBOOK_FAST_GRACE`、`HIVE_RESOURCE_CRIT_AVAIL_FRAC`、`HIVE_RESOURCE_CRIT_RENDERERS`、`HIVE_RESOURCE_HISTORY`、`HIVE_RESOURCE_INTERVAL_S`、`HIVE_RESOURCE_WARN_AVAIL_FRAC`、`HIVE_RESOURCE_WARN_RENDERERS`、`HIVE_SENTINEL_LOG`、`HIVE_SPLIT_WORKER_EVENTS`、`HIVE_TRACKER_WORKER_TOOL_CALLS`）、go_only 不一致（published 'HIVE_RETENTION_' (trailing underscore) maps to 'HIVE_RETENTION_*'）。
 
 ### 1.1 Python 独有：对齐建议清单
 
@@ -55,7 +55,7 @@
 
 ## 2. configuration.json 逐键契约
 
-共 135 个键。状态定义见生成器数据文件头：`aligned` 两侧读取且类型/默认/语义一致；`go_partial` Go 有该键（REST/CRUD 或部分路径）但运行时读取点缺失或未接线；`python_only` Go 无读取；`go_only` Python 无对应键；`unread` 两侧都不读。
+共 137 个键。状态定义见生成器数据文件头：`aligned` 两侧读取且类型/默认/语义一致；`go_partial` Go 有该键（REST/CRUD 或部分路径）但运行时读取点缺失或未接线；`python_only` Go 无读取；`go_only` Python 无对应键；`unread` 两侧都不读。
 
 ### 2.0 读取 / 写入 / 生效速查（逐键明细在各小节）
 
@@ -158,7 +158,17 @@
 - `mcp.timeout_seconds`：env > file > 240s default, the general rule: internal/tools.MCPCallResultTimeout resolves HIVE_MCP_CALL_RESULT_TIMEOUT first, then the file value. Was file > env until the config-env-align lane; the reversal is fixed and pinned by TestMCPCallResultTimeoutPrecedence.
 - `mcp.servers`：go_only: confirmed no upstream counterpart. Accepts both the list and map shapes; a same-named registry entry is replaced by the file entry and `enabled: false` removes it from the load set.
 
-### 2.6 `memory_reflection`
+### 2.6 `memory_recall`
+
+| 键 | 类型 | 默认 | env 覆盖 | Python 读取点 | Go 读取点 | 状态 |
+|---|---|---|---|---|---|---|
+| `memory_recall.mode` | "index" \| "wait" \| "background" | index | HIVE_MEMORY_RECALL | `core/framework/config.py:1087` (+1) | `go_hive/go-hive/internal/memory/recall_config.go:81` (+1) | aligned |
+| `memory_recall.wait_seconds` | number > 0 | 10.0 | — | `core/framework/config.py:1089` | `go_hive/go-hive/internal/memory/recall_config.go:95` | aligned |
+
+- `memory_recall.mode`：HIVE_MEMORY_RECALL (strip+lower, name must be a known mode) > configuration.json > default(index); an invalid value on either layer keeps index. Read at each message so Settings/ env changes reach running sessions.
+- `memory_recall.wait_seconds`：bool/string/<=0 rejected (falls back to 10.0); ints and floats accepted on both sides.
+
+### 2.7 `memory_reflection`
 
 | 键 | 类型 | 默认 | env 覆盖 | Python 读取点 | Go 读取点 | 状态 |
 |---|---|---|---|---|---|---|
@@ -170,7 +180,7 @@
 - `memory_reflection.long_every`：same validation as every_turns.
 - `memory_reflection.model`：other strings keep "main".
 
-### 2.7 `model_endpoints`
+### 2.8 `model_endpoints`
 
 | 键 | 类型 | 默认 | env 覆盖 | Python 读取点 | Go 读取点 | 状态 |
 |---|---|---|---|---|---|---|
@@ -178,7 +188,7 @@
 
 - `model_endpoints.<name>.api_base`：name must match [a-z0-9_-]+; blank api_base skipped; trailing / trimmed. magpie is built in.
 
-### 2.8 `pipeline`
+### 2.9 `pipeline`
 
 | 键 | 类型 | 默认 | env 覆盖 | Python 读取点 | Go 读取点 | 状态 |
 |---|---|---|---|---|---|---|
@@ -186,7 +196,7 @@
 
 - `pipeline.stages`：Declarative trigger middleware (upstream framework/pipeline). Stages run in ascending order on every ColonyRuntime.trigger before a worker spawns; a reject short-circuits as PipelineRejectedError and spawns nothing; a missing/empty list is the no-op default (PipelineRunner([])). Go builds the same runner in internal/pipeline from the same type/order/config spec, reads it in NewColonyRuntime, and fails startup on an unknown type (upstream's KeyError). The seven built-in stage semantics and the Go-side applied-output subset are documented in docs/pipeline.md.
 
-### 2.9 `provider_library`
+### 2.10 `provider_library`
 
 | 键 | 类型 | 默认 | env 覆盖 | Python 读取点 | Go 读取点 | 状态 |
 |---|---|---|---|---|---|---|
@@ -194,7 +204,7 @@
 
 - `provider_library.<name>`：named saved slots; applying copies the object into a role slot, no indirection. Non-object entries ignored.
 
-### 2.10 `queen_llm`
+### 2.11 `queen_llm`
 
 | 键 | 类型 | 默认 | env 覆盖 | Python 读取点 | Go 读取点 | 状态 |
 |---|---|---|---|---|---|---|
@@ -216,7 +226,7 @@
 - `queen_llm.<queen_id>.endpoint`：wired at session start and on PUT: queenAwareChatProvider builds her provider from this section (the colony host uses her model for her colony), and a queen_llm write rebuilds the running sessions' transport in place (ProviderSlot → NewHTTPProvider, the constructor the session started on). Hot-swap matrix vs upstream: Python mutates the shared provider and her next model call uses it; Go pins the provider for the turn in flight and the next turn resolves the replacement — a deliberate no-tearing variant, recorded in go_hive/docs/configuration.md §3.8. max_context_tokens budgets her loop; endpoint/api_key_env_var/extra_body resolve through the shared Section* readers.
 - `queen_llm.<queen_id>.extra_body`：wired at session start and on PUT: queenAwareChatProvider builds her provider from this section (the colony host uses her model for her colony), and a queen_llm write rebuilds the running sessions' transport in place (ProviderSlot → NewHTTPProvider, the constructor the session started on). Hot-swap matrix vs upstream: Python mutates the shared provider and her next model call uses it; Go pins the provider for the turn in flight and the next turn resolves the replacement — a deliberate no-tearing variant, recorded in go_hive/docs/configuration.md §3.8. max_context_tokens budgets her loop; endpoint/api_key_env_var/extra_body resolve through the shared Section* readers.
 
-### 2.11 `queen_mail`
+### 2.12 `queen_mail`
 
 | 键 | 类型 | 默认 | env 覆盖 | Python 读取点 | Go 读取点 | 状态 |
 |---|---|---|---|---|---|---|
@@ -264,7 +274,7 @@
 - `queen_mail.claude_code.<id>.system_prompt`：appended after Hive's note.
 - `queen_mail.claude_code.<id>.env`：non-string keys/values dropped.
 
-### 2.12 `queen_tools`
+### 2.13 `queen_tools`
 
 | 键 | 类型 | 默认 | env 覆盖 | Python 读取点 | Go 读取点 | 状态 |
 |---|---|---|---|---|---|---|
@@ -272,7 +282,7 @@
 
 - `queen_tools.always_enabled_categories`：list of strings; non-list/entries ignored; applies to the default tool catalogue.
 
-### 2.13 `retention`
+### 2.14 `retention`
 
 | 键 | 类型 | 默认 | env 覆盖 | Python 读取点 | Go 读取点 | 状态 |
 |---|---|---|---|---|---|---|
@@ -308,7 +318,7 @@
 - `retention.batch_size`：same rule.
 - `retention.junk_min_bytes`：int64 in Go.
 
-### 2.14 `sentinel`
+### 2.15 `sentinel`
 
 | 键 | 类型 | 默认 | env 覆盖 | Python 读取点 | Go 读取点 | 状态 |
 |---|---|---|---|---|---|---|
@@ -320,7 +330,7 @@
 - `sentinel.max_nudges_before_escalate`：int(); values < 1 clamp to 1; invalid -> 5.
 - `sentinel.escalate_when_ui_attached`：Python bool() admits truthy strings; Go uses PyTruthy to match.
 
-### 2.15 `soul`
+### 2.16 `soul`
 
 | 键 | 类型 | 默认 | env 覆盖 | Python 读取点 | Go 读取点 | 状态 |
 |---|---|---|---|---|---|---|
@@ -364,7 +374,7 @@
 - `soul.queens.<id>.session_chars`：invalid -> 12000.
 - `soul.queens.<id>.message_chars`：invalid -> 400.
 
-### 2.16 `top-level`
+### 2.17 `top-level`
 
 | 键 | 类型 | 默认 | env 覆盖 | Python 读取点 | Go 读取点 | 状态 |
 |---|---|---|---|---|---|---|
@@ -388,7 +398,7 @@
 - `external_skills`：non-string entries ignored; paths may be nonexistent and resolve later.
 - `rate_limits`：file values can raise defaults but never past the hard ceiling; env overrides exist on the Python side (HIVE_RATE_...) and are documented in the rate-limiter module.
 
-### 2.17 `turn_context`
+### 2.18 `turn_context`
 
 | 键 | 类型 | 默认 | env 覆盖 | Python 读取点 | Go 读取点 | 状态 |
 |---|---|---|---|---|---|---|
@@ -396,7 +406,7 @@
 
 - `turn_context.<name>.enabled`：section must be an object; a truthy enabled starts the installed entry point. `{"voice": true}` does not enable anything.
 
-### 2.18 `user_profile`
+### 2.19 `user_profile`
 
 | 键 | 类型 | 默认 | env 覆盖 | Python 读取点 | Go 读取点 | 状态 |
 |---|---|---|---|---|---|---|
@@ -412,7 +422,7 @@
 - `user_profile.density`：PUT ignores other values.
 - `user_profile.prompt_library_sort`：only known sort keys survive; absent -> null so the UI cache is not clobbered.
 
-### 2.19 `vision_fallback`
+### 2.20 `vision_fallback`
 
 | 键 | 类型 | 默认 | env 覆盖 | Python 读取点 | Go 读取点 | 状态 |
 |---|---|---|---|---|---|---|
@@ -432,7 +442,7 @@
 - `vision_fallback.max_tokens`：wired: visionCaptionerFor builds a resolver-backed captioner and the slot is re-read on every caption, so a PUT reaches the next tool image without a session rebuild (upstream reads the config per caption_tool_image call); key/base/endpoint resolve through SectionAPIKey/SectionAPIBase and max_tokens falls back to the aux budget. For a text-only main model the agent loop splices the caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks.
 - `vision_fallback.endpoint`：wired: visionCaptionerFor builds a resolver-backed captioner and the slot is re-read on every caption, so a PUT reaches the next tool image without a session rebuild (upstream reads the config per caption_tool_image call); key/base/endpoint resolve through SectionAPIKey/SectionAPIBase and max_tokens falls back to the aux budget. For a text-only main model the agent loop splices the caption (viewport coordinates, crop remapped) into the tool result and drops the image blocks.
 
-### 2.20 `worker_llm`
+### 2.21 `worker_llm`
 
 | 键 | 类型 | 默认 | env 覆盖 | Python 读取点 | Go 读取点 | 状态 |
 |---|---|---|---|---|---|---|
@@ -458,7 +468,7 @@
 - `worker_llm.extra_body`：wired: workerChatProvider builds the colony's dedicated WorkerLLM and the colony's worker contexts run on it (buildContext → workerCompleter); key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/sectionExtraKwargs, max_context_tokens budgets the worker loop, and max_tokens has a reader (WorkerMaxTokens) with no call site on either side — upstream's get_worker_max_tokens has none either. A PUT is new-session effective, matching upstream's _write_role_section (only role=llm hot-swaps running sessions).
 - `worker_llm.num_ctx`：wired: workerChatProvider builds the colony's dedicated WorkerLLM and the colony's worker contexts run on it (buildContext → workerCompleter); key/base/endpoint/extra_body/num_ctx resolve through SectionAPIKey/SectionAPIBase/sectionExtraKwargs, max_context_tokens budgets the worker loop, and max_tokens has a reader (WorkerMaxTokens) with no call site on either side — upstream's get_worker_max_tokens has none either. A PUT is new-session effective, matching upstream's _write_role_section (only role=llm hot-swaps running sessions).
 
-### 2.21 `worker_tools`
+### 2.22 `worker_tools`
 
 | 键 | 类型 | 默认 | env 覆盖 | Python 读取点 | Go 读取点 | 状态 |
 |---|---|---|---|---|---|---|

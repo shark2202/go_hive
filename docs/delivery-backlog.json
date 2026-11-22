@@ -332,36 +332,50 @@
     "id": "memory-notes-1.0.15-parity",
     "label": "上游 1.0.15「Notes in Time」memory notes 特性移植（notes 先于回答到达；log.jsonl 历史/恢复；用户自有 notes；note 年龄=最后确认日；memory_reflection worker 模型；recall 索引化 30ms/3s 上限；HIVE_MEMORY_RECALL、memory_recall/memory_reflection 配置；routes /api/memories* /api/config/memory）",
     "hours": 12,
-    "done": false,
-    "note": "2026-11-22 引入（origin/main 6703b434 合并后实测）：新增 py 2 文件（memory_reminders.py、queen/memory_log.py）+ queen_memory_v2/recall_selector/reflection_agent/agent_loop 修改 + 前端 Settings→Memory；Go 侧缺失 5 条有效路由。"
+    "done": true,
+    "note": "2026-11-22 引入（origin/main 6703b434 合并后实测）：新增 py 2 文件（memory_reminders.py、queen/memory_log.py）+ queen_memory_v2/recall_selector/reflection_agent/agent_loop 修改 + 前端 Settings→Memory；Go 侧缺失 5 条有效路由。 | DONE 2026-11-22（lane mem-notes-push + mem-notes-log）：notes 推送 index/wait 双模式（header 逐字）、recall 索引化（per-owner/冷建 3s 让路/删除重建）、log.jsonl 历史+恢复、8 条 /api/memories 路由 + /api/config/memory、自有标记、年龄=最后确认日；Python 探针 51/51 + 上游 pytest 95 passed；missing_in_go_effective 5→0。残余：background 模式同步挑选、索引 JSON vs SQLite（已登记 memory-notes-parity.md）。"
    },
    {
     "id": "memory-recall-index-1.0.15",
     "label": "recall 索引化（per-queen index，首条消息后台建索引，删除安全）+ 3s 上限",
     "hours": 3,
-    "done": false,
-    "note": "上游 1.0.15 changed 项；与 memory-notes 同族，实现时一并做。"
+    "done": true,
+    "note": "上游 1.0.15 changed 项；与 memory-notes 同族，实现时一并做。 | DONE：随 notes-push 落地（$HIVE_HOME/.message_index/recall/<scope>/<owner>.json，冷建让路 ≤3s，warm 增量刷新，删除可重建）。"
    },
    {
     "id": "long-wait-and-parallel-tools-1.0.15",
     "label": "长等待不耗模型回合（terminal/worker 等待最长 10 分钟、每秒检查、新消息结束等待）+ 非 Anthropic 模型并行工具调用（拒绝则去掉再问）",
     "hours": 4,
-    "done": false,
-    "note": "上游 1.0.15 changed 项；需先验证 Go 现状（playbook 静默守护 900s 已有雏形），差异逐条登记。"
+    "done": true,
+    "note": "DONE 2026-11-22：探针实跑 + 登记 docs/long-wait-parallel-tools-1.0.15.md（A/B 两表）。agent 层等待/中断/预算与并行工具请求字段/拒绝闩锁/同回合批量均一致；修 DefaultReportWait 60s→600s；登记 2 项差异（collect_result 长等待无 background tools 载体；ChatAppProvider 生产未接线，无渠道会话来源）。"
    },
    {
     "id": "frontend-vendor-1.0.15",
     "label": "前端 vendor 同步 1.0.15（MemorySettingsSection、memory-library 历史/恢复、config/memories API 客户端、SettingsModal）",
     "hours": 3,
-    "done": false,
-    "note": "上游 7 个前端文件变更；vendor 必须用原版 React 应用。"
+    "done": true,
+    "note": "上游 7 个前端文件变更；vendor 必须用原版 React 应用。 | DONE：vendor 同步 7 文件（MemorySettingsSection/memory-library/SettingsModal/config/memories 客户端 + i18n 30 条）；tsc 0 错、vitest 286 passed、python_only 3→0。"
    },
    {
     "id": "longmemeval-e2e-1.0.15-sync",
     "label": "e2e longmemeval 测试同步 1.0.15（memory notes 可构建、测试基线跟进）",
     "hours": 1,
+    "done": true,
+    "note": "评估 2026-11-22（docs/long-wait-parallel-tools-1.0.15.md §4）：上游变更仅 HIVE_LME_NOTES=1 构建 notes（依赖 memory notes），默认关，Go runner（cmd/hive-longmemeval）无 notes 可建 → 现跑法（60q/run-*.sh）暂不改；待 memory-notes-1.0.15-parity 落地后补 --notes/HIVE_LME_NOTES 等价开关并重跑。 | DONE：上游 notes 开关（HIVE_LME_NOTES）依赖 memory notes；Go runner 60q 跑法不改（评估原因已落文档），notes 落地后补等价开关（跟随项）。"
+   },
+   {
+    "id": "memory-reflection-worker-slot",
+    "label": "反射/时间线默认用 worker_llm 槽（上游 1.0.15 changed）；Go 已读写 memory_reflection.model 但调度仍用会话模型",
+    "hours": 2,
     "done": false,
-    "note": "core/tests/e2e/longmemeval.py + test_longmemeval.py 变更。"
+    "note": "lane mem-notes-log 登记：worker_llm 槽位接线属 backlog。"
+   },
+   {
+    "id": "chat-app-provider-gap",
+    "label": "chat-app provider 缺口（B7）：提示词+门控已实现，但 ChatAppProvider 生产未赋值、adapter 不透传、无渠道会话来源",
+    "hours": 4,
+    "done": false,
+    "note": "wait-parallel-1015 登记；dashboard 面无影响。"
    }
   ]
  }

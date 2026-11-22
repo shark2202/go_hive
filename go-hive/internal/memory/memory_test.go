@@ -350,20 +350,33 @@ func TestBuildScopedRecallBlocksEmptyScope(t *testing.T) {
 	}
 }
 
-// Parity-exempt: Python's _format_relative_age in recall_selector.py has no
-func TestFormatRelativeAge(t *testing.T) {
-	now := time.Now()
-	recent := now.Add(-47 * time.Hour)
-	if age := FormatRelativeAge(float64(recent.UnixNano())/1e9, now); age != nil {
-		t.Fatalf("47h reported %q", *age)
+// Parity: core/tests/test_queen_memory.py::test_recall_says_how_long_ago_a_memory_was_last_confirmed
+func TestRecallSaysHowLongAgoAMemoryWasLastConfirmed(t *testing.T) {
+	dir := t.TempDir()
+	confirmed := time.Now().AddDate(0, 0, -10)
+	if _, err := Write(dir, "tea.md", "---\nname: tea\ntype: preference\ndescription: what Ava drinks\n---\nAva drinks oolong.", WriteOptions{Author: "reflection", Now: confirmed}); err != nil {
+		t.Fatalf("write: %v", err)
 	}
-	day := now.Add(-49 * time.Hour)
-	if age := FormatRelativeAge(float64(day.UnixNano())/1e9, now); age == nil || *age != "2 days old" {
-		t.Fatalf("49h = %v", age)
+	got := FormatRecallInjection([]string{"tea.md"}, dir, "")
+	if !strings.Contains(got, "### tea.md (last confirmed 10 days ago)") {
+		t.Fatalf("injection = %q", got)
 	}
-	threeDays := now.Add(-73 * time.Hour)
-	if age := FormatRelativeAge(float64(threeDays.UnixNano())/1e9, now); age == nil || *age != "3 days old" {
-		t.Fatalf("73h = %v", age)
+}
+
+// Parity-exempt: upstream's _format_relative_age falls back to the file's
+// mtime for notes written before confirmed days were recorded; this pins that
+// fallback and the two-day quiet period.
+func TestRecallAgeFallsBackToMtimeAndStaysQuietForTwoDays(t *testing.T) {
+	today := time.Now()
+	confirmedContent := "---\nname: tea\n---\nbody"
+	recent, _ := Write(t.TempDir(), "tea.md", confirmedContent, WriteOptions{Author: "reflection", Now: today.AddDate(0, 0, -2)})
+	if age := FormatRelativeAge(recent, float64(today.Unix()), today); age != nil {
+		t.Fatalf("two days reported %q", *age)
+	}
+	mtime := today.AddDate(0, 0, -5)
+	age := FormatRelativeAge("---\nname: tea\n---\nbody", float64(mtime.Unix()), today)
+	if age == nil || *age != "last confirmed 5 days ago" {
+		t.Fatalf("mtime fallback = %v, want last confirmed 5 days ago", age)
 	}
 }
 

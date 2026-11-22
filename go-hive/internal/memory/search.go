@@ -103,7 +103,7 @@ func SearchHomeRoot() string {
 	if err != nil {
 		return ""
 	}
-	return filepath.Join(usr, hivehome.DefaultDirName)
+	return filepath.Join(usr, ".hive")
 }
 
 // SearchScopeRoot is the source root for a scope: <home>/queens or <home>/colonies.

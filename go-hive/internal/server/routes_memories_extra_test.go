@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/aden-hive/hive-go/internal/hivehome"
+	"github.com/aden-hive/hive-go/internal/memory"
 )
 
 func newMemoryTestMux(home hivehome.Home) *http.ServeMux {
@@ -168,7 +169,8 @@ func TestGetMemoryContentAndNotFound(t *testing.T) {
 	}
 }
 
-// Parity-exempt: 上游无 HTTP 用例；钉住创建文档格式、默认 type、content 回显与幂等 created:false。
+// Parity-exempt: 上游无 HTTP 用例；钉住创建文档格式、默认 type、memory_log 盖章（seeded=无 author）、
+// content 回显与幂等 created:false。
 func TestCreateMemoryDocumentAndIdempotency(t *testing.T) {
 	home := hivehome.Home{Root: t.TempDir()}
 	mux := newMemoryTestMux(home)
@@ -181,15 +183,25 @@ func TestCreateMemoryDocumentAndIdempotency(t *testing.T) {
 	if body["created"] != true || body["path"] != "global/new.md" {
 		t.Fatalf("create payload = %#v", body)
 	}
-	wantContent := "---\nname: My Memory\ndescription: Desc\ntype: profile\n---\n\nHello body\n"
-	if body["content"] != wantContent {
-		t.Fatalf("content = %#v, want %#v", body["content"], wantContent)
+	content, _ := body["content"].(string)
+	fields := memory.ParseFrontmatter(content)
+	if fields["name"] != "My Memory" || fields["type"] != "profile" || fields["description"] != "Desc" {
+		t.Fatalf("frontmatter = %#v", fields)
 	}
-	if body["name"] != "My Memory" || body["type"] != "profile" {
+	if _, hasAuthor := fields["author"]; hasAuthor {
+		t.Fatalf("seeded memory claims an author: %#v", fields)
+	}
+	if fields["learned"] != fields["confirmed"] || fields["learned"] == "" {
+		t.Fatalf("seeded memory dates = %#v", fields)
+	}
+	if !strings.HasSuffix(content, "\n\nHello body\n") {
+		t.Fatalf("content = %#v", content)
+	}
+	if body["name"] != "My Memory" || body["type"] != "profile" || body["author"] != nil {
 		t.Fatalf("parsed = %#v", body)
 	}
 	raw, err := os.ReadFile(filepath.Join(home.MemoriesDir(), "global", "new.md"))
-	if err != nil || string(raw) != wantContent {
+	if err != nil || string(raw) != content {
 		t.Fatalf("file = %q err = %v", raw, err)
 	}
 
@@ -198,7 +210,7 @@ func TestCreateMemoryDocumentAndIdempotency(t *testing.T) {
 		t.Fatalf("idempotent = %d %#v", recorder.Code, body)
 	}
 	rawAgain, _ := os.ReadFile(filepath.Join(home.MemoriesDir(), "global", "new.md"))
-	if string(rawAgain) != wantContent {
+	if string(rawAgain) != content {
 		t.Fatalf("existing file was clobbered: %q", rawAgain)
 	}
 }
@@ -251,7 +263,7 @@ func TestCreateMemoryValidationAndType(t *testing.T) {
 	}
 }
 
-// Parity-exempt: 上游无 HTTP 用例；钉住 PUT 覆盖、补尾换行、404、空内容与上限。
+// Parity-exempt: 上游无 HTTP 用例；钉住 PUT 经 memory_log 盖章（author=owner）、404、空内容与上限。
 func TestUpdateMemoryOverwritesContent(t *testing.T) {
 	home := hivehome.Home{Root: t.TempDir()}
 	writeMemoryFixture(t, home, "global/ok.md", "---\nname: Ok\n---\nold\n", time.Now())
@@ -261,11 +273,19 @@ func TestUpdateMemoryOverwritesContent(t *testing.T) {
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("status = %d %#v", recorder.Code, body)
 	}
-	if body["content"] != "new body\n" {
-		t.Fatalf("content = %#v", body["content"])
+	content, _ := body["content"].(string)
+	fields := memory.ParseFrontmatter(content)
+	if fields["author"] != "owner" {
+		t.Fatalf("author = %#v", fields)
+	}
+	if fields["learned"] == "" || fields["confirmed"] == "" {
+		t.Fatalf("dates = %#v", fields)
+	}
+	if !strings.HasSuffix(content, "\n\nnew body\n") {
+		t.Fatalf("content = %#v", content)
 	}
 	raw, _ := os.ReadFile(filepath.Join(home.MemoriesDir(), "global", "ok.md"))
-	if string(raw) != "new body\n" {
+	if string(raw) != content {
 		t.Fatalf("file = %q", raw)
 	}
 

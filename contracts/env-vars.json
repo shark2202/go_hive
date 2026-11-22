@@ -18,16 +18,16 @@
     },
     "expected": {
       "python": 90,
-      "go": 118,
-      "common": 83,
-      "python_only": 7,
+      "go": 119,
+      "common": 84,
+      "python_only": 6,
       "go_only": 35
     },
     "reproduced": {
       "python": 90,
-      "go": 118,
-      "common": 83,
-      "python_only": 7,
+      "go": 119,
+      "common": 84,
+      "python_only": 6,
       "go_only": 35
     },
     "counts_match": true,
@@ -54,6 +54,7 @@
         "HIVE_ENABLE_LLM_LOGS",
         "HIVE_HISTORY_READ_WORKERS",
         "HIVE_MAX_ITER",
+        "HIVE_MEMORY_RECALL",
         "HIVE_NO_FILE_LOG",
         "HIVE_PLAYBOOK_FAST_GRACE",
         "HIVE_RESOURCE_CRIT_AVAIL_FRAC",
@@ -85,27 +86,25 @@
         "HIVE_SPLIT_WORKER_EVENTS",
         "HIVE_TRACKER_WORKER_TOOL_CALLS"
       ],
-      "python_only_added": [
-        "HIVE_MEMORY_RECALL"
-      ],
+      "python_only_added": [],
       "normalization": "published 'HIVE_RETENTION_' (trailing underscore) maps to 'HIVE_RETENTION_*'"
     }
   },
   "summary": {
     "python": 90,
-    "go": 118,
-    "common": 83,
-    "python_only": 7,
+    "go": 119,
+    "common": 84,
+    "python_only": 6,
     "go_only": 35,
     "status_counts": {
-      "aligned": 68,
+      "aligned": 69,
       "go_only": 8,
       "literal_only": 37,
       "parse_differs": 5,
-      "python_only": 7
+      "python_only": 6
     },
     "python_read_sites": 139,
-    "go_read_sites": 104
+    "go_read_sites": 106
   },
   "inventory": {
     "common": [
@@ -146,6 +145,7 @@
       "HIVE_MAX_PLAYBOOK_CONCURRENCY",
       "HIVE_MAX_VERBATIM_CLIENT_MSGS",
       "HIVE_MCP_CALL_RESULT_TIMEOUT",
+      "HIVE_MEMORY_RECALL",
       "HIVE_MEMORY_TIMELINE",
       "HIVE_MICROCOMPACT_KEEP_RECENT",
       "HIVE_NO_FILE_LOG",
@@ -199,8 +199,7 @@
       "HIVE_GCU_MEMTRACE_FRAMES",
       "HIVE_GCU_MEMTRACE_INTERVAL_S",
       "HIVE_GCU_MEMTRACE_TOP",
-      "HIVE_GCU_SCREENSHOT_CONCURRENCY",
-      "HIVE_MEMORY_RECALL"
+      "HIVE_GCU_SCREENSHOT_CONCURRENCY"
     ],
     "go_only": [
       "HIVE_BROWSERBRIDGE_ARGS",
@@ -2541,8 +2540,8 @@
         "dev_reads": [],
         "test_reads": 59,
         "writes": [],
-        "mentions": 238,
-        "comments": 96
+        "mentions": 239,
+        "comments": 97
       },
       "notes": "fallback ~/.hive on both; Go converts to an absolute path."
     },
@@ -3528,9 +3527,9 @@
     },
     {
       "name": "HIVE_MEMORY_RECALL",
-      "audit_membership": "python_only",
-      "status": "python_only",
-      "status_basis": "python has a read site, go has none",
+      "audit_membership": "common",
+      "status": "aligned",
+      "status_basis": "defaults=[''] parse=['string']",
       "python": {
         "prod_reads": [
           {
@@ -3549,13 +3548,37 @@
         "comments": 1
       },
       "go": {
-        "prod_reads": [],
+        "prod_reads": [
+          {
+            "file": "go_hive/go-hive/internal/memory/recall_config.go",
+            "line": 53,
+            "symbol": "MemoryRecallEnvMode",
+            "parse": "string",
+            "snippet": "raw, ok := os.LookupEnv(\"HIVE_MEMORY_RECALL\")",
+            "default": ""
+          },
+          {
+            "file": "go_hive/go-hive/internal/server/config_memory.go",
+            "line": 60,
+            "symbol": "memoryRecallEnvMode",
+            "parse": "string",
+            "snippet": "raw, ok := os.LookupEnv(\"HIVE_MEMORY_RECALL\")",
+            "default": ""
+          }
+        ],
         "dev_reads": [],
-        "test_reads": 0,
-        "writes": [],
-        "mentions": 1,
-        "comments": 0
-      }
+        "test_reads": 14,
+        "writes": [
+          {
+            "file": "go_hive/go-hive/internal/memory/recall_config_test.go",
+            "line": 27,
+            "scope": "test"
+          }
+        ],
+        "mentions": 10,
+        "comments": 5
+      },
+      "notes": "mode name, strip+lower; unknown/empty falls through to configuration.json memory_recall.mode, then index. Read at each message."
     },
     {
       "name": "HIVE_MEMORY_TIMELINE",
@@ -3735,7 +3758,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/memory/past_conversations.go",
-            "line": 21,
+            "line": 20,
             "symbol": null,
             "parse": "float",
             "helper": "envFloat",
@@ -3746,7 +3769,7 @@
         "dev_reads": [],
         "test_reads": 0,
         "writes": [],
-        "mentions": 3,
+        "mentions": 6,
         "comments": 0
       }
     },

@@ -27,8 +27,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/aden-hive/hive-go/internal/hivehome"
 )
 
 // Exit codes — parity with tools/src/gcu/errors.py.
@@ -355,7 +353,7 @@ func (c *browserCLI) statePath() string {
 		return filepath.Join(root, "browser_cli_state.json")
 	}
 	if home, err := os.UserHomeDir(); err == nil && home != "" {
-		return filepath.Join(home, hivehome.DefaultDirName, "browser_cli_state.json")
+		return filepath.Join(home, ".hive", "browser_cli_state.json")
 	}
 	return ""
 }

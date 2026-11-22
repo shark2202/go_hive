@@ -1,6 +1,6 @@
 # 模块清单（生成物，勿手改）
 
-> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` + `go list` 生成。commit: `9be92a87185f`
+> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` + `go list` 生成。commit: `45aa262ebd54`
 > 修改分层或职责请改 `architecture/model.yaml`，不要编辑本文件。
 
 ## 分层统计
@@ -16,7 +16,7 @@
 | 能力层（`capability`） | 29 | 可被循环调用的能力：工具、集成、LLM 传输、记忆、技能、soul、凭据、出站消息。 |
 | 基础层（`foundation`） | 16 | 无业务语义的底座：事件总线、文件存储、schema、原子写、目录布局、限速、质量门禁。 |
 
-共 82 个包、218 条包间 import 边。
+共 82 个包、214 条包间 import 边。
 
 ## 模块表
 
@@ -53,7 +53,7 @@
 | `internal/sentinel` | orchestration | Queen 停泊期的自治监督：nudge / escalate 判定、升级投递、入站回复路由与恢复。 | 6 | 1 |  |
 | `internal/session` | orchestration | 会话记录与磁盘布局：状态、transcript、游标、fork 与冷恢复。 | 3 | 4 |  |
 | `internal/sessionreport` | orchestration | 会话报告打包（report-bundle）：把会话、worker 与证据汇总成一份可交付摘要。 | 0 | 1 |  |
-| `internal/tasks` | orchestration | 任务计划存储：tasks.json 的增删改查、归档与提醒状态。 | 4 | 3 |  |
+| `internal/tasks` | orchestration | 任务计划存储：tasks.json 的增删改查、归档与提醒状态。 | 3 | 3 |  |
 | `internal/tracker` | orchestration | 共享结果账本：SQLite(WAL) tracker.db 的表注册、行写入与查询。 | 0 | 4 |  |
 | `internal/triggers` | orchestration | 触发器定义、cron 解析与 triggers.json 持久化。 | 1 | 1 |  |
 | `internal/agentloop` | runtime | 唯一执行原语：一轮内的 LLM 调用、工具批处理与并发、压缩、预算/宽限、judge、提醒注入与停泊原因。 | 11 | 8 |  |
@@ -75,8 +75,8 @@
 | `internal/soul` | capability | Queen 的 soul：分区、字符上限、版本历史、提案与回滚。 | 1 | 2 |  |
 | `internal/tools` | capability | 工具注册表：eager/searchable 分层、MCP 服务器加载与代理执行、结果规范化与溢出落盘。 | 2 | 12 |  |
 | `internal/tools/builtin` | capability | 内置工具实现：read_file / write_file / terminal_exec 等，刻意不依赖 server 与 agentloop。 | 3 | 1 |  |
-| `internal/tools/integrationkit` | capability | 集成工具的共享原语：传输、凭据与参数 schema 复用件，供 internal/tools/integrations 各模块使用。 | 2 | 11 |  |
-| `internal/tools/integrations` | capability | 集成工具集（装配根）：生成目录、领域实现与 InstallBatch* 入口；领域实现按 internal/tools/integrations/<domain> 子包迁出，子包只依赖 integrationkit。 | 15 | 1 |  |
+| `internal/tools/integrationkit` | capability | 集成工具的共享原语：传输、凭据与参数 schema 复用件，供 internal/tools/integrations 各模块使用。 | 1 | 11 |  |
+| `internal/tools/integrations` | capability | 集成工具集（装配根）：生成目录、领域实现与 InstallBatch* 入口；领域实现按 internal/tools/integrations/<domain> 子包迁出，子包只依赖 integrationkit。 | 14 | 1 |  |
 | `internal/tools/integrations/ai` | capability | AI 平台领域子包：Pinecone / Weights & Biases / Langfuse / Hugging Face / Google Cloud Vision 的目录、39 个 action 实现与共享 helper；只 import integrationkit。 | 1 | 1 |  |
 | `internal/tools/integrations/cloudflare` | capability | Cloudflare 领域子包（第六个领域子包）：zones / DNS / analytics / security / cache / Workers·R2·Pages / 账户管理的目录、54 个 action 实现与共享 helper；只 import integrationkit。 | 1 | 1 |  |
 | `internal/tools/integrations/devops` | capability | DevOps/hosting 领域子包（第二个领域子包）：GitLab / AWS S3 / Vercel / Docker Hub 的目录、31 个 action 实现与共享 helper；只 import integrationkit。 | 1 | 1 |  |
@@ -91,9 +91,9 @@
 | `internal/arghelp` | foundation | argparse HelpFormatter 的 Go 移植：usage 折行、选项列宽、choices 与 section 渲染，供 CLI/MCP 帮助共用。 | 0 | 2 |  |
 | `internal/atomicfs` | foundation | 原子文件写入与目录替换，避免半写状态。 | 0 | 15 |  |
 | `internal/envcontract` | foundation | 环境变量 / configuration.json 冻结契约的只读守卫（报告模式）。 | 0 | 0 |  |
-| `internal/eventbus` | foundation | 进程内事件总线：AgentEvent、订阅分发、SSE 事件源与事件日志。 | 1 | 5 |  |
+| `internal/eventbus` | foundation | 进程内事件总线：AgentEvent、订阅分发、SSE 事件源与事件日志。 | 0 | 5 |  |
 | `internal/hiveclock` | foundation | 可注入时钟：供基准与测试冻结对外可见时间。 | 0 | 3 |  |
-| `internal/hivehome` | foundation | ~/.hive_go 目录布局解析与 ensure（HIVE_HOME 可覆盖；queens/colonies/memories/credentials/...）。 | 0 | 25 |  |
+| `internal/hivehome` | foundation | ~/.hive 目录布局解析与 ensure（queens/colonies/memories/credentials/...）。 | 0 | 21 |  |
 | `internal/logging` | foundation | serve 路径共享的进程日志 sink（时间戳前缀、目标选择）。 | 1 | 2 |  |
 | `internal/platform` | foundation | 平台差异：路径、进程与 shell 选择。 | 0 | 1 |  |
 | `internal/pyenv` | foundation | 以 Python 语义解析环境变量覆盖，保证 Go 读取方与参考实现得到同一个值。 | 0 | 6 |  |

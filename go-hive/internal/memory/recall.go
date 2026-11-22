@@ -123,20 +123,33 @@ func SelectMemories(
 	return combined
 }
 
-func FormatRelativeAge(mtime float64, now time.Time) *string {
-	ageSeconds := float64(now.UnixNano())/1e9 - mtime
-	hours := ageSeconds / 3600
-	if hours <= 48 {
+// FormatRelativeAge says how long ago a memory was last confirmed, once that
+// is more than two days.
+//
+// Counted from its “confirmed“ day (memory_log); a file from before those
+// were recorded counts from when it was last written.
+//
+// Parity: framework/agents/queen/recall_selector.py::_format_relative_age
+func FormatRelativeAge(content string, mtime float64, now time.Time) *string {
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+	confirmed := mtimeDay(mtime)
+	if day, ok := ConfirmedOn(content); ok {
+		if parsed, err := time.Parse("2006-01-02", day); err == nil {
+			confirmed = parsed
+		}
+	}
+	days := int(today.Sub(confirmed).Hours() / 24)
+	if days <= 2 {
 		return nil
 	}
-	days := int(ageSeconds / 86400)
-	var note string
-	if days == 1 {
-		note = "1 day old"
-	} else {
-		note = itoa(days) + " days old"
-	}
+	note := "last confirmed " + itoa(days) + " days ago"
 	return &note
+}
+
+// mtimeDay is the local calendar day a file was last written.
+func mtimeDay(mtime float64) time.Time {
+	moment := time.Unix(int64(mtime), 0)
+	return time.Date(moment.Year(), moment.Month(), moment.Day(), 0, 0, 0, 0, time.UTC)
 }
 
 func FormatRecallInjection(filenames []string, dir string, label string) string {
@@ -160,7 +173,7 @@ func FormatRecallInjection(filenames []string, dir string, label string) string 
 		}
 		content := strings.TrimSpace(string(data))
 		header := "### " + fname
-		if age := FormatRelativeAge(float64(info.ModTime().UnixNano())/1e9, now); age != nil {
+		if age := FormatRelativeAge(content, float64(info.ModTime().UnixNano())/1e9, now); age != nil {
 			header += " (" + *age + ")"
 		}
 		blocks = append(blocks, header+"\n\n"+content)

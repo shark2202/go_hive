@@ -1,0 +1,575 @@
+{
+  "probe": "memory_notes_1015_probe",
+  "source": "core/framework/agent_loop/memory_reminders.py + agents/queen/recall_selector.py + tools/src/memory_tools/{recall,turn_index}.py",
+  "cases": [
+    {
+      "case": "A.config_priority",
+      "subject": "default when nothing is set",
+      "expected": {
+        "mode": "index",
+        "wait_seconds": 10.0
+      },
+      "observed": {
+        "mode": "index",
+        "wait_seconds": 10.0
+      },
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "A.config_priority",
+      "subject": "configuration.json value wins over default",
+      "expected": {
+        "mode": "wait",
+        "wait_seconds": 4.0
+      },
+      "observed": {
+        "mode": "wait",
+        "wait_seconds": 4.0
+      },
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "A.config_priority",
+      "subject": "env overrides configuration.json",
+      "expected": {
+        "mode": "index",
+        "wait_seconds": 4.0
+      },
+      "observed": {
+        "mode": "index",
+        "wait_seconds": 4.0
+      },
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "A.config_priority",
+      "subject": "invalid config falls back to default",
+      "expected": {
+        "mode": "index",
+        "wait_seconds": 10.0
+      },
+      "observed": {
+        "mode": "index",
+        "wait_seconds": 10.0
+      },
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "A.config_priority",
+      "subject": "invalid env falls through to config",
+      "expected": {
+        "mode": "wait",
+        "wait_seconds": 10.0
+      },
+      "observed": {
+        "mode": "wait",
+        "wait_seconds": 10.0
+      },
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "A.config_priority",
+      "subject": "env is stripped and lowercased",
+      "expected": {
+        "mode": "wait",
+        "wait_seconds": 2.5
+      },
+      "observed": {
+        "mode": "wait",
+        "wait_seconds": 2.5
+      },
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "A.config_priority",
+      "subject": "empty env falls through to config",
+      "expected": {
+        "mode": "background",
+        "wait_seconds": 10.0
+      },
+      "observed": {
+        "mode": "background",
+        "wait_seconds": 10.0
+      },
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "A.config_priority",
+      "subject": "non-object section reads as default",
+      "expected": {
+        "mode": "index",
+        "wait_seconds": 10.0
+      },
+      "observed": {
+        "mode": "index",
+        "wait_seconds": 10.0
+      },
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "A.config_priority",
+      "subject": "bool wait_seconds is rejected like upstream",
+      "expected": {
+        "mode": "wait",
+        "wait_seconds": 10.0
+      },
+      "observed": {
+        "mode": "wait",
+        "wait_seconds": 10.0
+      },
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "A.config_priority",
+      "subject": "MEMORY_RECALL_MODES",
+      "expected": [
+        "index",
+        "wait",
+        "background"
+      ],
+      "observed": [
+        "index",
+        "wait",
+        "background"
+      ],
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "B.index_mode",
+      "subject": "session start lists every note in full",
+      "expected": "Your memory notes: what earlier conversations taught you, one line per note (type, file name, what it holds). When one may bear on the conversation, read it with terminal_exec (cat \"<folder>/<file name>\"): the line is only its description.\n\n## Shared with every queen (<tmp>/index-mode/global)\n- [preference] pets.md: Ava's cat\n- [preference] tea.md: What Ava drinks\n\n## Yours alone (<tmp>/index-mode/queen)\n- [preference] garden.md: Ava's balcony garden",
+      "observed": "Your memory notes: what earlier conversations taught you, one line per note (type, file name, what it holds). When one may bear on the conversation, read it with terminal_exec (cat \"<folder>/<file name>\"): the line is only its description.\n\n## Shared with every queen (<tmp>/index-mode/global)\n- [preference] pets.md: Ava's cat\n- [preference] tea.md: What Ava drinks\n\n## Yours alone (<tmp>/index-mode/queen)\n- [preference] garden.md: Ava's balcony garden",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "B.index_mode",
+      "subject": "the listing carries the one-line manifest, not the note body",
+      "expected": "body text absent",
+      "observed": "absent",
+      "pass": true,
+      "note": "INDEX_HEADER tells her to open the note with terminal_exec herself"
+    },
+    {
+      "case": "B.index_mode",
+      "subject": "a model callable is never invoked in index mode",
+      "expected": "pick_calls == []",
+      "observed": [],
+      "pass": true,
+      "note": "no extra model call: the source only reads the index provider"
+    },
+    {
+      "case": "B.index_mode",
+      "subject": "the unchanged listing is not shown again",
+      "expected": null,
+      "observed": null,
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "B.index_mode",
+      "subject": "only what changed is shown next",
+      "expected": "Your memory notes changed since they were last listed (same folders):\n\n## Shared with every queen (<tmp>/index-mode/global)\nNew or updated:\n- [preference] work.md: Where Ava works\n- [preference] tea.md: What Ava drinks, morning and night\nRemoved:\n- pets.md\n\n## Yours alone (<tmp>/index-mode/queen)\nRemoved:\n- garden.md",
+      "observed": "Your memory notes changed since they were last listed (same folders):\n\n## Shared with every queen (<tmp>/index-mode/global)\nNew or updated:\n- [preference] work.md: Where Ava works\n- [preference] tea.md: What Ava drinks, morning and night\nRemoved:\n- pets.md\n\n## Yours alone (<tmp>/index-mode/queen)\nRemoved:\n- garden.md",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "B.index_mode",
+      "subject": "an unchanged changed-listing is not repeated",
+      "expected": null,
+      "observed": null,
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "B.index_mode",
+      "subject": "post-compact lists everything in full again",
+      "expected": "starts with INDEX_HEADER",
+      "observed": "Your memory notes: what earlier conversa",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "B.index_mode",
+      "subject": "no notes -> silent",
+      "expected": null,
+      "observed": null,
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "B.index_mode",
+      "subject": "applies only to a queen stream carrying an index provider",
+      "expected": [
+        true,
+        false,
+        false
+      ],
+      "observed": [
+        true,
+        false,
+        false
+      ],
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "B.index_mode",
+      "subject": "another mode silences it; switching back lists in full",
+      "expected": "None then INDEX_HEADER",
+      "observed": [
+        null,
+        "Your memory notes: w"
+      ],
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "B.index_mode",
+      "subject": "the wait-mode source is silent while index is set (no pick call)",
+      "expected": {
+        "render": null,
+        "pick_calls": []
+      },
+      "observed": {
+        "render": null,
+        "pick_calls": []
+      },
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "B.index_mode",
+      "subject": "index provider call count (informational)",
+      "expected": ">=1",
+      "observed": 7,
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "C.wait_mode",
+      "subject": "the pick is shown before she answers",
+      "expected": "Recalled memories relevant to the latest user message (supersedes earlier recall reminders):\n\n### tea.md\n\nAva drinks pu-erh.",
+      "observed": "Recalled memories relevant to the latest user message (supersedes earlier recall reminders):\n\n### tea.md\n\nAva drinks pu-erh.",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "C.wait_mode",
+      "subject": "the pick saw the user's message",
+      "expected": [
+        "What tea do I like?"
+      ],
+      "observed": [
+        "What tea do I like?",
+        "And for breakfast?",
+        "And for breakfast?"
+      ],
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "C.wait_mode",
+      "subject": "an unchanged pick is not repeated",
+      "expected": null,
+      "observed": null,
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "C.wait_mode",
+      "subject": "post-compact clears the last pick (shows nothing)",
+      "expected": null,
+      "observed": null,
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "C.wait_mode",
+      "subject": "the same pick is shown again after compaction",
+      "expected": "shows pick",
+      "observed": true,
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "C.wait_mode",
+      "subject": "an empty message makes no pick call",
+      "expected": null,
+      "observed": null,
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "C.wait_mode",
+      "subject": "the wait is capped by wait_seconds (0.05)",
+      "expected": {
+        "render": null,
+        "returned_before_1s": true
+      },
+      "observed": {
+        "render": null,
+        "returned_before_1s": true
+      },
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "C.wait_mode",
+      "subject": "a failed pick is swallowed",
+      "expected": null,
+      "observed": null,
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "C.wait_mode",
+      "subject": "an empty pick is silent",
+      "expected": null,
+      "observed": null,
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "C.wait_mode",
+      "subject": "silent under another mode; the pick shows again when wait returns",
+      "expected": [
+        "shown",
+        null,
+        "shown"
+      ],
+      "observed": [
+        true,
+        null,
+        true
+      ],
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "C.wait_mode",
+      "subject": "applies only to a queen stream carrying a pick provider",
+      "expected": [
+        true,
+        false,
+        false
+      ],
+      "observed": [
+        true,
+        false,
+        false
+      ],
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "D.recall_index",
+      "subject": "index file is per-queen",
+      "expected": "<tmp>/recall-index/.message_index/recall/queens/queen_test.sqlite3",
+      "observed": "<tmp>/recall-index/.message_index/recall/queens/queen_test.sqlite3",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "D.recall_index",
+      "subject": "index does not exist before the first query",
+      "expected": false,
+      "observed": false,
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "D.recall_index",
+      "subject": "first query builds the index and answers",
+      "expected": [
+        "session_20230522_211800_aaaa0001"
+      ],
+      "observed": [
+        "session_20230522_211800_aaaa0001"
+      ],
+      "pass": true,
+      "note": "first query builds the index; its wall time is reported on stdout"
+    },
+    {
+      "case": "D.recall_index",
+      "subject": "the index file exists after the first query",
+      "expected": true,
+      "observed": true,
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "D.recall_index",
+      "subject": "a warm query reads the same index and returns the same answer",
+      "expected": [
+        "session_20230522_211800_aaaa0001"
+      ],
+      "observed": [
+        "session_20230522_211800_aaaa0001"
+      ],
+      "pass": true,
+      "note": "warm query reads the index (no rebuild)"
+    },
+    {
+      "case": "D.recall_index",
+      "subject": "the index tracks every session with its events size",
+      "expected": [
+        [
+          "session_20230522_211800_aaaa0001",
+          272
+        ],
+        [
+          "session_20230524_143200_aaaa0002",
+          222
+        ]
+      ],
+      "observed": [
+        [
+          "session_20230522_211800_aaaa0001",
+          272
+        ],
+        [
+          "session_20230524_143200_aaaa0002",
+          222
+        ]
+      ],
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "D.recall_index",
+      "subject": "turns are indexed",
+      "expected": 2,
+      "observed": 2,
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "D.recall_index",
+      "subject": "each owner keeps its own index file",
+      "expected": {
+        "own": true,
+        "distinct": true
+      },
+      "observed": {
+        "own": true,
+        "distinct": true
+      },
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "D.recall_index",
+      "subject": "queen A's recall never sees queen B's sessions",
+      "expected": [
+        "session_20230525_090000_bbbb0001"
+      ],
+      "observed": [
+        "session_20230525_090000_bbbb0001"
+      ],
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "D.recall_index",
+      "subject": "cross-owner leak is impossible",
+      "expected": [],
+      "observed": [],
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "D.recall_index",
+      "subject": "the index can be deleted",
+      "expected": false,
+      "observed": false,
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "D.recall_index",
+      "subject": "a deleted index is rebuilt with the same results",
+      "expected": [
+        "session_20230522_211800_aaaa0001"
+      ],
+      "observed": [
+        "session_20230522_211800_aaaa0001"
+      ],
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "D.recall_index",
+      "subject": "rebuilt index exists again",
+      "expected": true,
+      "observed": true,
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "D.recall_index",
+      "subject": "default turn cap is 3s",
+      "expected": 3.0,
+      "observed": 3.0,
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "D.recall_index",
+      "subject": "a first build past the cap loses only that turn; the thread keeps going",
+      "expected": {
+        "render": null,
+        "done_at_return": false,
+        "done_later": true
+      },
+      "observed": {
+        "render": null,
+        "returned_at_cap": true,
+        "done_at_return": false,
+        "done_later": true
+      },
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "D.recall_index",
+      "subject": "a fast provider's excerpts come through",
+      "expected": "Excerpts...",
+      "observed": "Excerpts...",
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "D.recall_index",
+      "subject": "messages under 8 chars are not recalled",
+      "expected": null,
+      "observed": null,
+      "pass": true,
+      "note": ""
+    },
+    {
+      "case": "D.recall_index",
+      "subject": "HIVE_PAST_RECALL_TIMEOUT overrides the 3s cap",
+      "expected": "0.5",
+      "observed": "0.5",
+      "pass": true,
+      "note": ""
+    }
+  ],
+  "summary": {
+    "total": 51,
+    "passed": 51,
+    "failed": 0
+  }
+}

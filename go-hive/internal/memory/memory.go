@@ -80,6 +80,11 @@ type MemoryFile struct {
 	Name        *string
 	Type        *string
 	Description *string
+	// Provenance (memory_log): who last wrote it, when it was first written
+	// and last confirmed.
+	Author      *string
+	Learned     *string
+	Confirmed   *string
 	HeaderLines []string
 	MTime       float64
 }
@@ -113,12 +118,25 @@ func MemoryFileFromPath(path string) MemoryFile {
 	if raw, ok := fm["type"]; ok {
 		memType = ParseGlobalMemoryCategory(&raw)
 	}
+	var author, learned, confirmed *string
+	if v, ok := fm["author"]; ok {
+		author = &v
+	}
+	if v, ok := fm["learned"]; ok {
+		learned = &v
+	}
+	if v, ok := fm["confirmed"]; ok {
+		confirmed = &v
+	}
 	return MemoryFile{
 		Filename:    filename,
 		Path:        path,
 		Name:        name,
 		Type:        memType,
 		Description: description,
+		Author:      author,
+		Learned:     learned,
+		Confirmed:   confirmed,
 		HeaderLines: lines,
 		MTime:       mtime,
 	}

@@ -15,15 +15,15 @@
   "method": "curated per-key table (go_hive/scripts/env_config_contract_data.py) whose reader anchors are resolved and validated against the checked-out source; line numbers are recomputed, a missing anchor is a hard failure. Types/defaults/invalid-value rules were read from both implementations.",
   "scope_note": "Covers configuration.json keys read by either runtime. Per-colony notifications.json (sentinel_enabled/channel/target/allowlist/thread) and agent/worker sidecars are separate files and out of scope. The Go-only `mcp` block is included and marked go_only.",
   "summary": {
-    "keys": 135,
-    "sections": 21,
+    "keys": 137,
+    "sections": 22,
     "status_counts": {
-      "aligned": 126,
+      "aligned": 128,
       "go_only": 4,
       "go_partial": 4,
       "unread": 1
     },
-    "env_overrides": 27,
+    "env_overrides": 28,
     "boundary_rules": 9
   },
   "sections": [
@@ -783,6 +783,65 @@
           ],
           "status": "go_only",
           "notes": "go_only: confirmed no upstream counterpart. Accepts both the list and map shapes; a same-named registry entry is replaced by the file entry and `enabled: false` removes it from the load set."
+        }
+      ]
+    },
+    {
+      "name": "memory_recall",
+      "keys": [
+        {
+          "path": "memory_recall.mode",
+          "type": "\"index\" | \"wait\" | \"background\"",
+          "default": "index",
+          "env_override": "HIVE_MEMORY_RECALL",
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1087,
+              "snippet": "mode = get_memory_recall_env_mode() or raw.get(\"mode\")"
+            },
+            {
+              "file": "core/framework/config.py",
+              "line": 1091,
+              "snippet": "mode=mode if mode in MEMORY_RECALL_MODES else default.mode,"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/memory/recall_config.go",
+              "line": 81,
+              "snippet": "} else if configured, ok := section[\"mode\"].(string); ok {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/memory/recall_config.go",
+              "line": 91,
+              "snippet": "if !validMode {"
+            }
+          ],
+          "status": "aligned",
+          "notes": "HIVE_MEMORY_RECALL (strip+lower, name must be a known mode) > configuration.json > default(index); an invalid value on either layer keeps index. Read at each message so Settings/ env changes reach running sessions."
+        },
+        {
+          "path": "memory_recall.wait_seconds",
+          "type": "number > 0",
+          "default": 10.0,
+          "env_override": null,
+          "python": [
+            {
+              "file": "core/framework/config.py",
+              "line": 1089,
+              "snippet": "is_seconds = isinstance(wait, int | float) and not isinstance(wait, bool) and wait > 0"
+            }
+          ],
+          "go": [
+            {
+              "file": "go_hive/go-hive/internal/memory/recall_config.go",
+              "line": 95,
+              "snippet": "if seconds, ok := recallSeconds(section[\"wait_seconds\"]); ok && seconds > 0 {"
+            }
+          ],
+          "status": "aligned",
+          "notes": "bool/string/<=0 rejected (falls back to 10.0); ints and floats accepted on both sides."
         }
       ]
     },

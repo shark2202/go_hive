@@ -10,12 +10,11 @@ import (
 )
 
 const (
-	PastRecallTopK               = 6
-	PastRecallMinMessageChars    = 8
-	PastRecallMaxTerms           = 12
-	PastRecallUserChars          = 500
-	PastRecallReplyChars         = 500
-	PastRecallDefaultMaxSessions = 200
+	PastRecallTopK            = 6
+	PastRecallMinMessageChars = 8
+	PastRecallMaxTerms        = 12
+	PastRecallUserChars       = 500
+	PastRecallReplyChars      = 500
 )
 
 var PastRecallTimeout = time.Duration(envFloat("HIVE_PAST_RECALL_TIMEOUT", 3) * float64(time.Second))
@@ -72,7 +71,6 @@ type PastTurn struct {
 type PastRecallOptions struct {
 	ExcludeSession string
 	TopK           int
-	MaxSessions    int
 	Timeout        time.Duration
 }
 
@@ -216,9 +214,11 @@ func pastRecallTurns(sessionDir, sessionID string) []PastTurn {
 }
 
 // RecallPastConversations scores earlier turns against the raw user message
-// with BM25 over the same term space the Python recall uses.
+// with BM25 over the same term space the Python recall uses. It reads the
+// per-owner index (recall_index.go), not every session's events.jsonl.
 //
 // Parity: tools/src/memory_tools/recall.py::recall
+// Parity: tools/src/memory_tools/turn_index.py::refresh
 func RecallPastConversations(homeRoot string, ref ScopeRef, text string, opts PastRecallOptions) []PastTurn {
 	terms := PastRecallQueryTerms(text)
 	if len(terms) == 0 {
@@ -228,48 +228,57 @@ func RecallPastConversations(homeRoot string, ref ScopeRef, text string, opts Pa
 	if topK <= 0 {
 		topK = PastRecallTopK
 	}
-	maxSessions := opts.MaxSessions
-	if maxSessions <= 0 {
-		maxSessions = PastRecallDefaultMaxSessions
-	}
 	timeout := opts.Timeout
 	if timeout <= 0 {
 		timeout = PastRecallTimeout
 	}
 	deadline := time.Now().Add(timeout)
 
-	sessions := SearchListSessions(homeRoot, ref.Scope, ref.Owner, "", nil, nil)
-	if len(sessions) > maxSessions {
-		sessions = sessions[len(sessions)-maxSessions:]
+	index, ok := recallIndexForQuery(homeRoot, ref, opts.ExcludeSession, deadline)
+	if !ok || index == nil || len(index.Turns) == 0 {
+		return nil
 	}
-	docs := []pastRecallDoc{}
-	allTurns := 0
-	timedOut := false
-	for _, session := range sessions {
-		if session == opts.ExcludeSession {
+
+	docs := make([]pastRecallDoc, 0, len(index.Turns))
+	for _, turn := range index.Turns {
+		if turn.Session == opts.ExcludeSession {
+			// The live session is already in context, and leaving it out
+			// before the term statistics keeps BM25's n the same as the
+			// scan-based reference.
 			continue
 		}
-		if !time.Now().Before(deadline) {
-			timedOut = true
-			break
+		counts := pastRecallTurnCounts(turn.User, turn.Reply)
+		length := 0
+		for _, count := range counts {
+			length += count
 		}
-		for _, turn := range pastRecallTurns(SearchSessionDir(homeRoot, ref.Scope, ref.Owner, session), session) {
-			allTurns++
-			counts := pastRecallTurnCounts(turn.User, turn.Reply)
-			length := 0
-			for _, count := range counts {
-				length += count
-			}
-			docs = append(docs, pastRecallDoc{turn: turn, counts: counts, length: length})
-		}
+		docs = append(docs, pastRecallDoc{
+			turn:   PastTurn{Session: turn.Session, Ordinal: turn.Ordinal, User: turn.User, Reply: turn.Reply},
+			counts: counts,
+			length: length,
+		})
 	}
-	if timedOut || allTurns == 0 || len(docs) == 0 {
+	return pastRecallChoose(docs, len(docs), terms, opts.ExcludeSession, topK)
+}
+
+// pastRecallChoose scores the candidate turns and picks the up-to-topK that
+// clear the relevance bar, expanding within a session that already placed a
+// top hit. It is the shared tail of the indexed query and the reference
+// algorithm: only the source of docs differs.
+//
+// Parity: tools/src/memory_tools/recall.py::_score
+// Parity: tools/src/memory_tools/recall.py::_expand_within_sessions
+func pastRecallChoose(docs []pastRecallDoc, allTurns int, terms []string, excludeSession string, topK int) []PastTurn {
+	if allTurns == 0 || len(docs) == 0 {
 		return nil
 	}
 
 	df := make([]int, len(terms))
 	matching := make([]pastRecallDoc, 0, len(docs))
 	for _, doc := range docs {
+		if doc.turn.Session == excludeSession {
+			continue
+		}
 		hit := false
 		for i, term := range terms {
 			if pastRecallFrequency(doc.counts, term) > 0 {

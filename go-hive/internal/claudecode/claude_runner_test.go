@@ -35,7 +35,7 @@ prev=""
 for a in "$@"; do
 	if [ "$prev" = "--mcp-config" ]; then
 		cp "$a" "$RUN/mcp.json" 2>/dev/null
-		(mode=$(stat -c '%a' "$a" 2>/dev/null || stat -f '%Lp' "$a" 2>/dev/null); printf '%s\n' "$mode") > "$RUN/mcp.perm"
+		(stat -f '%Lp' "$a" 2>/dev/null || stat -c '%a' "$a" 2>/dev/null) > "$RUN/mcp.perm"
 	fi
 	prev="$a"
 done

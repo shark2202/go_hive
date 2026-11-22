@@ -13,7 +13,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/aden-hive/hive-go/internal/atomicfs"
 	"github.com/aden-hive/hive-go/internal/hivehome"
 	"github.com/aden-hive/hive-go/internal/llm"
 )
@@ -225,7 +224,25 @@ func dirForScope(dirs []ScopeDir, scope string) string {
 	return ""
 }
 
+// toolOptions carries the reflection-side context Python passes to
+// _execute_tool. The zero value matches the upstream defaults.
+type toolOptions struct {
+	// reorganised is the long reflection's housekeeping: it only reorganises
+	// the files, so a rewrite does not re-confirm what they say
+	// (upstream confirms=False).
+	reorganised bool
+}
+
+// ExecuteTool runs one reflection memory tool. Writes and deletions go
+// through the memory log, as the reflection's, and a file the owner wrote
+// cannot be changed or retired.
+//
+// Parity: framework/agents/queen/reflection_agent.py::_execute_tool
 func ExecuteTool(name string, args map[string]any, dirs []ScopeDir, queenID string) string {
+	return executeTool(name, args, dirs, queenID, toolOptions{})
+}
+
+func executeTool(name string, args map[string]any, dirs []ScopeDir, queenID string, opts toolOptions) string {
 	switch name {
 	case "list_memory_files":
 		if rawScope, has := args["scope"]; has && rawScope != nil {
@@ -298,12 +315,16 @@ func ExecuteTool(name string, args map[string]any, dirs []ScopeDir, queenID stri
 				return fmt.Sprintf("ERROR: File cap reached in %s (%d). Delete a file first.", scope, MaxFiles)
 			}
 		}
-		// Write atomically (same-directory temp + fsync + rename): a reader
+		// Writes go through the memory log: the file gets its author/learned/
+		// confirmed frontmatter, the change keeps its before/after in
+		// log.jsonl, and a file the owner wrote is refused. The log also
+		// writes atomically (same-directory temp + fsync + rename): a reader
 		// polling the memory directory — the turn loop, the recall builder, a
-		// watcher — must never see a truncated or half-written file. os.WriteFile
-		// truncates in place, which is the race that made the queen-memory
-		// reflection test flake: the file appeared empty between open and write.
-		if writeErr := atomicfs.WriteFile(path, []byte(content), 0o644); writeErr != nil {
+		// watcher — must never see a truncated or half-written file.
+		if _, writeErr := Write(scopeDir, filename, content, WriteOptions{
+			Author:      "reflection",
+			Reorganised: opts.reorganised,
+		}); writeErr != nil {
 			return "ERROR: " + writeErr.Error()
 		}
 		return fmt.Sprintf("Wrote %s:%s (%d chars).", scope, filename, utf8.RuneCountInString(content))
@@ -314,15 +335,16 @@ func ExecuteTool(name string, args map[string]any, dirs []ScopeDir, queenID stri
 		if err != nil {
 			return "ERROR: " + err.Error()
 		}
-		path, err := SafeMemoryPath(filename, dirForScope(dirs, scope))
+		scopeDir := dirForScope(dirs, scope)
+		path, err := SafeMemoryPath(filename, scopeDir)
 		if err != nil {
 			return "ERROR: " + err.Error()
 		}
 		if _, statErr := os.Stat(path); statErr != nil {
 			return "ERROR: File not found in " + scope + ": " + filename
 		}
-		if removeErr := os.Remove(path); removeErr != nil {
-			return "ERROR: " + removeErr.Error()
+		if retireErr := Retire(scopeDir, filename, "reflection", stringArg(args, "reason"), time.Time{}); retireErr != nil {
+			return "ERROR: " + retireErr.Error()
 		}
 		return "Deleted " + scope + ":" + filename + "."
 	}
@@ -430,6 +452,9 @@ const ReflectionMaxTurns = 5
 
 var ReflectionTokenBudget = func() int { return 8192 }
 
+// ReflectionLoop runs one reflection conversation loop. Short reflections use
+// it directly; the long housekeeping passes toolOptions{reorganised: true} via
+// reflectionLoopWithOptions.
 func ReflectionLoop(
 	ctx context.Context,
 	completer llm.Completer,
@@ -439,6 +464,20 @@ func ReflectionLoop(
 	maxTurns int,
 	maxTokens int,
 	queenID string,
+) LoopResult {
+	return reflectionLoopWithOptions(ctx, completer, system, userMsg, dirs, maxTurns, maxTokens, queenID, toolOptions{})
+}
+
+func reflectionLoopWithOptions(
+	ctx context.Context,
+	completer llm.Completer,
+	system string,
+	userMsg string,
+	dirs []ScopeDir,
+	maxTurns int,
+	maxTokens int,
+	queenID string,
+	opts toolOptions,
 ) LoopResult {
 	if maxTurns <= 0 {
 		maxTurns = ReflectionMaxTurns
@@ -489,7 +528,7 @@ func ReflectionLoop(
 		}
 
 		for _, pc := range calls {
-			result := ExecuteTool(pc.call.Name, pc.input, dirs, queenID)
+			result := executeTool(pc.call.Name, pc.input, dirs, queenID, opts)
 			if pc.call.Name == "write_memory_file" || pc.call.Name == "delete_memory_file" {
 				filename := stringArg(pc.input, "filename")
 				scope, scopeErr := ResolveMemoryScope(pc.input, dirs)
@@ -796,8 +835,11 @@ func RunLongReflection(ctx context.Context, completer llm.Completer, memoryDir, 
 	}
 	userMsg := fmt.Sprintf("## Current memory manifest (%d files)\n\n%s\n\nTimestamp: %s",
 		len(files), FormatMemoryManifest(files), ReflectionTimestamp())
-	return ReflectionLoop(ctx, completer, BuildUnifiedLongReflectSystem(""), userMsg,
-		[]ScopeDir{{Scope: "global", Dir: memoryDir}}, ReflectionMaxTurns, ReflectionTokenBudget(), "")
+	// Housekeeping: it only reorganises the files, so the rewrites keep the day
+	// each file was last confirmed (upstream confirms=False).
+	return reflectionLoopWithOptions(ctx, completer, BuildUnifiedLongReflectSystem(""), userMsg,
+		[]ScopeDir{{Scope: "global", Dir: memoryDir}}, ReflectionMaxTurns, ReflectionTokenBudget(), "",
+		toolOptions{reorganised: true})
 }
 
 func RunUnifiedLongReflection(
@@ -824,8 +866,8 @@ func RunUnifiedLongReflection(
 	}
 	userMsg := "## Current memory manifest across scopes\n\n" +
 		FormatMultiScopeManifest(dirs, promptQueenID) + "\n\nTimestamp: " + ReflectionTimestamp()
-	return ReflectionLoop(ctx, completer, BuildUnifiedLongReflectSystem(promptQueenID), userMsg,
-		dirs, ReflectionMaxTurns, ReflectionTokenBudget(), promptQueenID)
+	return reflectionLoopWithOptions(ctx, completer, BuildUnifiedLongReflectSystem(promptQueenID), userMsg,
+		dirs, ReflectionMaxTurns, ReflectionTokenBudget(), promptQueenID, toolOptions{reorganised: true})
 }
 
 func RunShutdownReflection(
@@ -870,7 +912,7 @@ type ReflectionConfig struct {
 }
 
 func DefaultReflectionConfig() ReflectionConfig {
-	return ReflectionConfig{EveryTurns: 6, LongEvery: 4, Model: "main"}
+	return ReflectionConfig{EveryTurns: 6, LongEvery: 4, Model: "worker"}
 }
 
 // ReflectionCloseGrace bounds how long a scheduler Close waits for in-flight

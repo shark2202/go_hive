@@ -1,5 +1,5 @@
 %% go_hive 分层依赖图（生成物，勿手改）
-%% 源：architecture/model.yaml + go list -json ./... · commit 9be92a87185f
+%% 源：architecture/model.yaml + go list -json ./... · commit 45aa262ebd54
 %% 只画包级 import 边；箭头 A --> B 读作 A imports B（A 依赖 B）。
 flowchart TB
   subgraph layer_entry["入口层（entry）"]
@@ -191,7 +191,6 @@ flowchart TB
   n_internal_colony --> n_internal_tracker
   n_internal_credentials --> n_internal_atomicfs
   n_internal_credentials --> n_internal_hivehome
-  n_internal_eventbus --> n_internal_hivehome
   n_internal_hiveconf --> n_internal_hivehome
   n_internal_hiveconf --> n_internal_llm
   n_internal_host --> n_internal_agentloop
@@ -291,17 +290,14 @@ flowchart TB
   n_internal_tasks --> n_internal_agentloop
   n_internal_tasks --> n_internal_atomicfs
   n_internal_tasks --> n_internal_eventbus
-  n_internal_tasks --> n_internal_hivehome
   n_internal_tools --> n_internal_hivehome
   n_internal_tools --> n_internal_llm
   n_internal_tools_builtin --> n_internal_atomicfs
   n_internal_tools_builtin --> n_internal_llm
   n_internal_tools_builtin --> n_internal_tools
-  n_internal_tools_integrationkit --> n_internal_hivehome
   n_internal_tools_integrationkit --> n_internal_tools
   n_internal_tools_integrations --> n_internal_attachments
   n_internal_tools_integrations --> n_internal_hiveclock
-  n_internal_tools_integrations --> n_internal_hivehome
   n_internal_tools_integrations --> n_internal_tools
   n_internal_tools_integrations --> n_internal_tools_integrationkit
   n_internal_tools_integrations --> n_internal_tools_integrations_ai
