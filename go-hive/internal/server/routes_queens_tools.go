@@ -376,12 +376,15 @@ func loadQueenToolsConfig(deps QueenToolRouteDeps, queenID string, catalog map[s
 			return nil
 		}
 		if list, ok := queenStringList(raw); ok {
-			// NOTE: upstream also grants tools added to a role category
-			// after the sidecar's saved_on_version (queen_tools_defaults
-			// grant_role_default_additions / infer_category_additions).
-			// That versioned healing table has no Go port yet; a saved
-			// allowlist is returned verbatim here.
-			return list
+			// Heal frozen sidecars: grant tools added to a category after
+			// this allowlist was last saved. Prefer the deterministic
+			// role-default-based grant for known queens; fall back to the
+			// baseline-coverage heuristic for custom queens.
+			savedOnVersion, _ := object["saved_on_version"].(string)
+			if categories := queen.DefaultToolsFor(queenID); len(categories) > 0 {
+				return tools.GrantRoleDefaultAdditions(categories, list, savedOnVersion)
+			}
+			return tools.InferCategoryAdditions(list, savedOnVersion, catalog)
 		}
 		return nil
 	}

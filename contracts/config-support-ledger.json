@@ -357,23 +357,33 @@
     },
     {
       "path": "llm.antigravity_client_id",
-      "status": "partial",
-      "reason": "Reader wired and tested (ANTIGRAVITY_CLIENT_ID, then llm.antigravity_client_id, no public-source fetch) but no request path consumes it: the only upstream consumers are the OAuth refresh flows inside the unported AntigravityProvider (framework/llm/antigravity.py, agent_loader.py::_refresh_antigravity_token), and the port reads the pre-issued access token from antigravity-accounts.json. Alternative verification: the reader's env-then-file precedence is pinned; no REST/CRUD path is claimed as consumption.",
+      "status": "wired",
+      "reason": "Wired: AntigravityProviderFor (internal/server/main_slot.go) passes AntigravityClientID/Secret readers into llm.NewAntigravityProvider; the OAuth refresh in internal/llm/antigravity_credentials.go consumes them (oauth2.googleapis.com token exchange), covered by httptest scenarios. Upstream parity: core/framework/llm/antigravity.py AntigravityProvider OAuth refresh.",
       "anchors": [
         {
           "file": "go_hive/go-hive/internal/server/config_slots.go",
           "contains": "func AntigravityClientID("
+        },
+        {
+          "file": "go_hive/go-hive/internal/server/main_slot.go",
+          "contains": "AntigravityClientID(home)"
+        },
+        {
+          "file": "go_hive/go-hive/internal/llm/antigravity_credentials.go",
+          "contains": "clientID = strings.TrimSpace(p.clientID())"
         }
       ],
       "tests": [
-        "TestAntigravityClientCredentials"
+        "TestAntigravityClientCredentials",
+        "TestAntigravityRefreshWithoutClientIDFails",
+        "TestMainSlotProviderBuildsTheAntigravityProvider"
       ]
     },
     {
       "path": "llm.antigravity_client_secret",
-      "status": "partial",
+      "status": "wired",
       "same_as": "llm.antigravity_client_id",
-      "reason": "Same structural reason as llm.antigravity_client_id: the only consumers are the unported AntigravityProvider's OAuth refresh flows."
+      "reason": "Same wiring as llm.antigravity_client_id: consumed by the Antigravity OAuth refresh; anchors inherited."
     },
     {
       "path": "channels.<name>.enabled",
@@ -416,20 +426,21 @@
     },
     {
       "path": "llm.use_antigravity_subscription",
-      "status": "partial",
-      "reason": "Structural: Python's flag swaps the whole session to AntigravityProvider (Gemini-style cloudcode API plus OAuth refresh) in session_manager.build_llm; that provider is not ported. Go consumes the flag as far as it can — MainSlotKey reads the account file's access token for get_api_key's branch, and MainSlotProvider refuses the session with an explicit error instead of silently sending an OpenAI request with no key. Alternative verification: the refusal and the token read are pinned by tests.",
+      "status": "wired",
+      "reason": "Wired: the flag now swaps the session to the ported Antigravity provider (main_slot.go AntigravityProviderFor; worker slot uses the same flag), matching core/framework/llm/antigravity.py + session_manager.build_llm. Token read + provider build pinned by tests; httptest covers refresh/retry/fallback.",
       "anchors": [
         {
           "file": "go_hive/go-hive/internal/server/main_slot.go",
-          "contains": "ErrAntigravityUnsupported"
+          "contains": "if pyTruthy(section[\"use_antigravity_subscription\"]) {"
         },
         {
           "file": "go_hive/go-hive/internal/server/main_slot.go",
-          "contains": "if pyTruthy(section[\"use_antigravity_subscription\"]) {"
+          "contains": "func AntigravityProviderFor("
         }
       ],
       "tests": [
-        "TestMainSlotProviderRefusesAntigravitySubscription"
+        "TestMainSlotProviderBuildsTheAntigravityProvider",
+        "TestAntigravityRetriesOnceAfterUnauthorized"
       ]
     },
     {

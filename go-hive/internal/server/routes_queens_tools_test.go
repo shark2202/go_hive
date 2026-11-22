@@ -194,6 +194,10 @@ func TestGetToolsExposesCategories(t *testing.T) {
 // Parity: framework/server/tests/test_queen_tools.py::test_patch_persists_and_validates
 func TestPatchQueenToolsPersistsAndValidates(t *testing.T) {
 	home := queenTestHome(t)
+	// Current release makes the GA sidecar heal a no-op, isolating the
+	// persistence/validation contract (the heal is covered in
+	// tools_ga_migration_test.go).
+	t.Setenv("HIVE_APP_VERSION", "0.7.2")
 	queenToolTestProfile(t, home, "queen_technology", "Alexandra", "Head of Technology")
 	catalog := map[string][]map[string]any{
 		"files-tools": {
@@ -380,6 +384,9 @@ func TestDeleteQueenToolsRestoresRoleDefault(t *testing.T) {
 // Parity: framework/server/tests/test_queen_tools.py::test_legacy_profile_field_migrates_to_sidecar
 func TestLegacyProfileFieldMigratesToSidecar(t *testing.T) {
 	home := queenTestHome(t)
+	// Current release makes the GA sidecar heal a no-op: this test isolates
+	// the profile.yaml -> tools.json hoist.
+	t.Setenv("HIVE_APP_VERSION", "0.7.2")
 	queenTestWriteProfile(t, home, "queen_technology", map[string]any{
 		"name":              "Alexandra",
 		"title":             "Head of Technology",
@@ -406,5 +413,62 @@ func TestLegacyProfileFieldMigratesToSidecar(t *testing.T) {
 	_, second := doSessionJSON(t, mux, http.MethodGet, "/api/queen/queen_technology/tools", "")
 	if !reflect.DeepEqual(queenTestStringList(t, second["enabled_mcp_tools"]), []string{"read_file", "write_file"}) {
 		t.Fatalf("second enabled = %#v", second["enabled_mcp_tools"])
+	}
+}
+
+// A saved sidecar for a known queen is healed against the role default: tools
+// added to a category after saved_on_version are granted again.
+//
+// Parity: framework/agents/queen/queen_tools_config.py::load_queen_tools_config
+func TestGetToolsHealsSavedSidecarAdditions(t *testing.T) {
+	home := queenTestHome(t)
+	queenToolTestProfile(t, home, "queen_technology", "Alexandra", "Head of Technology")
+	toolsPath := filepath.Join(home.QueenDir("queen_technology"), "tools.json")
+	seed := []byte(`{"enabled_mcp_tools":["pdf_read"],"saved_on_version":"0.2.18"}`)
+	if err := os.WriteFile(toolsPath, seed, 0o644); err != nil {
+		t.Fatalf("write sidecar: %v", err)
+	}
+	mux := queenToolTestMux(home, nil, nil)
+	recorder, body := doSessionJSON(t, mux, http.MethodGet, "/api/queen/queen_technology/tools", "")
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
+	}
+	if body["is_role_default"] != false {
+		t.Fatalf("is_role_default = %#v, want false (sidecar exists)", body["is_role_default"])
+	}
+	want := append(queenTechnologyGrantAdditions(), "pdf_read")
+	sort.Strings(want)
+	if got := queenToolNames(t, body["enabled_mcp_tools"]); !reflect.DeepEqual(got, want) {
+		t.Fatalf("enabled = %#v, want %#v", got, want)
+	}
+}
+
+// A custom queen (no role default) is healed by the baseline-coverage
+// heuristic: it grants additions only when the saved list covered the whole
+// pre-addition category.
+//
+// Parity: framework/agents/queen/queen_tools_defaults.py::infer_category_additions
+func TestGetToolsHealsCustomQueenByBaseline(t *testing.T) {
+	home := queenTestHome(t)
+	const customID = "queen_custom_heal"
+	queenToolTestProfile(t, home, customID, "Custom", "Custom Role")
+	toolsPath := filepath.Join(home.QueenDir(customID), "tools.json")
+	seed := []byte(`{"enabled_mcp_tools":["pdf_read"]}`)
+	if err := os.WriteFile(toolsPath, seed, 0o644); err != nil {
+		t.Fatalf("write sidecar: %v", err)
+	}
+	catalog := map[string][]map[string]any{
+		"hive_tools": {
+			{"name": "pdf_read", "description": "", "input_schema": map[string]any{}},
+			{"name": "attach_file", "description": "", "input_schema": map[string]any{}},
+		},
+	}
+	mux := queenToolTestMux(home, nil, func(deps *QueenToolRouteDeps) { deps.MCPCatalog = queenToolCatalog(catalog) })
+	recorder, body := doSessionJSON(t, mux, http.MethodGet, "/api/queen/"+customID+"/tools", "")
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
+	}
+	if got := queenToolNames(t, body["enabled_mcp_tools"]); !reflect.DeepEqual(got, []string{"attach_file", "pdf_read"}) {
+		t.Fatalf("enabled = %#v, want attach_file + pdf_read", got)
 	}
 }

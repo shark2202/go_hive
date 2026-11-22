@@ -45,8 +45,8 @@
 
 - `check-agent` / `resync` 凭据端点（P1，lane 修复中）。
 - `attached_credentials.json` 会话固定凭据（P2）。
-- `sentinel_setup` 工具、antigravity provider、GA 工具迁移（P2/P3）。
-- 21 条真未移植模块（清单见 `docs/unported-triage.md`）。
+- antigravity provider、GA 工具迁移（P2/P3）。（`sentinel_setup` 工具已移植，真实投递未验证）
+- 19 条真未移植模块（清单见 `docs/unported-triage.md`）。
 
 ## 5. 试用建议
 

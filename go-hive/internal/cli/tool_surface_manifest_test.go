@@ -104,7 +104,10 @@ func TestSearchableManifestNamesPreferToolsSidecar(t *testing.T) {
 		}
 	}
 
-	write(`{"enabled_mcp_tools": ["chart_render"]}`)
+	// saved_on_version at the latest promotion keeps the GA sidecar heal a
+	// no-op (the heal itself is covered in internal/server), so this case
+	// exercises the saved list verbatim.
+	write(`{"enabled_mcp_tools": ["chart_render"], "saved_on_version": "0.7.2"}`)
 	names, filtered := catalogue.SearchableManifestNames("queen_growth")
 	if !filtered || strings.Join(names, ",") != "chart_render" {
 		t.Fatalf("saved allowlist not honoured: filtered=%v names=%v", filtered, names)

@@ -126,11 +126,12 @@ terminal_output_get terminal_rg update_worker_profile write_skill
 | `run_playbook` / `run_worker` | 既有实现（colony） |
 | 10 个 lifecycle（`get_worker_status`…`update_worker_profile`） | 既有 `QueenLifecycleBinding`（queen 会话启用；4 个 colony 相位工具按上游语义门控） |
 | `search_tools` | agent loop 的 tier 拦截（有 tier 时）；无 tier 时返回 inventory 信封 |
+| `sentinel_setup` | 真实实现（`internal/sentinel/sentinel_tool.go`；help/status/store_token/detect_chat/configure/test），生产接缝 `internal/cli/sentinel_setup_tool.go` |
 | 延迟层 51 个（含 15 lifecycle + 36 目录层） | 加载后走各自既有实现（builtin / task / skills / queen lifecycle / tracker / colony / 集成 registry）；未加载时 loop 拒绝并提示 `select:<name>` |
 | 其余 27 个 | 既有 builtin / task / skills / 集成注册表 |
 
 **未实现**（advertise + 显式 `not_implemented` 信封，不静默）：
-`collect_result`、`credentials`、`sentinel_setup`、`suggest_colony`
+`collect_result`、`credentials`、`suggest_colony`
 （Python 侧有实现，Go 只落了工具定义/局部实现；本车道不代实现）。
 
 ## 5. 计数（本车道后）

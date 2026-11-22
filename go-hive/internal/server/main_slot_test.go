@@ -6,13 +6,14 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/aden-hive/hive-go/internal/llm"
 )
@@ -148,17 +149,18 @@ func TestMainSlotProviderReadsTheSubscriptionTokens(t *testing.T) {
 		"provider": "kimi", "model": "kimi-k2.6", "use_kimi_code_subscription": true,
 	}})
 	provider, err := MainSlotProvider(home, "")
+	httpProvider := asHTTPProvider(t, provider)
 	if err != nil {
 		t.Fatalf("MainSlotProvider(kimi) = %v", err)
 	}
-	if provider.APIKey != "kimi-token" {
-		t.Fatalf("kimi api key = %q, want the config.toml token", provider.APIKey)
+	if httpProvider.APIKey != "kimi-token" {
+		t.Fatalf("kimi api key = %q, want the config.toml token", httpProvider.APIKey)
 	}
-	if provider.APIBase != llm.KimiAPIBase {
-		t.Fatalf("kimi api base = %q, want %q", provider.APIBase, llm.KimiAPIBase)
+	if httpProvider.APIBase != llm.KimiAPIBase {
+		t.Fatalf("kimi api base = %q, want %q", httpProvider.APIBase, llm.KimiAPIBase)
 	}
-	if provider.Model != "kimi/kimi-k2.6" {
-		t.Fatalf("kimi model = %q, want the joined pair", provider.Model)
+	if httpProvider.Model != "kimi/kimi-k2.6" {
+		t.Fatalf("kimi model = %q, want the joined pair", httpProvider.Model)
 	}
 
 	// Codex: token from ~/.codex/auth.json; api_base is the ChatGPT backend.
@@ -174,18 +176,19 @@ func TestMainSlotProviderReadsTheSubscriptionTokens(t *testing.T) {
 		"provider": "openai", "model": "gpt-5.3-codex", "use_codex_subscription": true,
 	}})
 	provider, err = MainSlotProvider(home, "")
+	httpProvider = asHTTPProvider(t, provider)
 	if err != nil {
 		t.Fatalf("MainSlotProvider(codex) = %v", err)
 	}
-	if provider.APIKey != "codex-token" {
-		t.Fatalf("codex api key = %q", provider.APIKey)
+	if httpProvider.APIKey != "codex-token" {
+		t.Fatalf("codex api key = %q", httpProvider.APIKey)
 	}
-	if provider.APIBase != "https://chatgpt.com/backend-api/codex" {
-		t.Fatalf("codex api base = %q", provider.APIBase)
+	if httpProvider.APIBase != "https://chatgpt.com/backend-api/codex" {
+		t.Fatalf("codex api base = %q", httpProvider.APIBase)
 	}
-	headers, _ := provider.ExtraKwargs["extra_headers"].(map[string]any)
+	headers, _ := httpProvider.ExtraKwargs["extra_headers"].(map[string]any)
 	if headers["Authorization"] != "Bearer codex-token" || headers["ChatGPT-Account-Id"] != "acct-1" {
-		t.Fatalf("codex extra headers = %#v", provider.ExtraKwargs)
+		t.Fatalf("codex extra headers = %#v", httpProvider.ExtraKwargs)
 	}
 
 	// Claude Code: token from ~/.claude/.credentials.json, Bearer header.
@@ -201,32 +204,83 @@ func TestMainSlotProviderReadsTheSubscriptionTokens(t *testing.T) {
 		"provider": "anthropic", "model": "claude-opus-4-6", "use_claude_code_subscription": true,
 	}})
 	provider, err = MainSlotProvider(home, "")
+	httpProvider = asHTTPProvider(t, provider)
 	if err != nil {
 		t.Fatalf("MainSlotProvider(claude) = %v", err)
 	}
-	if provider.APIKey != "claude-token" {
-		t.Fatalf("claude api key = %q", provider.APIKey)
+	if httpProvider.APIKey != "claude-token" {
+		t.Fatalf("claude api key = %q", httpProvider.APIKey)
 	}
-	claudeHeaders, _ := provider.ExtraKwargs["extra_headers"].(map[string]any)
+	claudeHeaders, _ := httpProvider.ExtraKwargs["extra_headers"].(map[string]any)
 	if claudeHeaders["authorization"] != "Bearer claude-token" {
-		t.Fatalf("claude extra headers = %#v", provider.ExtraKwargs)
+		t.Fatalf("claude extra headers = %#v", httpProvider.ExtraKwargs)
 	}
 }
 
-// Parity-exempt: the Antigravity provider is not ported; this pins the loud
-// refusal rather than a silent OpenAI request without a key.
-func TestMainSlotProviderRefusesAntigravitySubscription(t *testing.T) {
+// Parity: framework/server/session_manager.py::SessionManager.build_llm — the
+// use_antigravity_subscription flag swaps the whole session transport to
+// AntigravityProvider(model=...). The account file lives under the hive home;
+// with a live access token the provider needs no network to be built.
+func TestMainSlotProviderBuildsTheAntigravityProvider(t *testing.T) {
 	home := newFeatureHome(t)
 	clearMainSlotEnv(t)
 	writeFeatureConfig(t, home, map[string]any{
 		"llm": map[string]any{
 			"provider": "openai", "model": "gemini-3-flash", "use_antigravity_subscription": true,
 		},
-		"antigravity-accounts": "unused",
 	})
-	if _, err := MainSlotProvider(home, ""); err == nil || !strings.Contains(err.Error(), "Antigravity") {
-		t.Fatalf("MainSlotProvider(antigravity) err = %v, want the unsupported error", err)
+	accounts, err := json.Marshal(map[string]any{
+		"schemaVersion": 4,
+		"accounts": []any{map[string]any{
+			"refresh": "refresh-1|project-1",
+			"access":  "ya29.live",
+			"expires": time.Now().Add(time.Hour).UnixMilli(),
+		}},
+	})
+	if err != nil {
+		t.Fatalf("marshal accounts: %v", err)
 	}
+	if err := os.WriteFile(filepath.Join(home.Root, "antigravity-accounts.json"), accounts, 0o600); err != nil {
+		t.Fatalf("write accounts: %v", err)
+	}
+
+	provider, err := MainSlotProvider(home, "")
+	if err != nil {
+		t.Fatalf("MainSlotProvider(antigravity) = %v", err)
+	}
+	antigravity, ok := provider.(*llm.AntigravityProvider)
+	if !ok {
+		t.Fatalf("provider type = %T, want *llm.AntigravityProvider", provider)
+	}
+	if got := antigravity.ModelName(); got != "gemini-3-flash" {
+		t.Fatalf("model = %q, want the session model with the provider prefix stripped", got)
+	}
+	if !antigravity.HasCredentials() {
+		t.Fatalf("HasCredentials = false, want the account file's access token")
+	}
+
+	// A section without the flag keeps the OpenAI-compatible transport.
+	writeFeatureConfig(t, home, map[string]any{"llm": map[string]any{
+		"provider": "openai", "model": "gpt-5", "api_key": "sk-test",
+	}})
+	provider, err = MainSlotProvider(home, "")
+	if err != nil {
+		t.Fatalf("MainSlotProvider(openai) = %v", err)
+	}
+	if _, ok := provider.(*llm.Provider); !ok {
+		t.Fatalf("provider without the flag = %T, want *llm.Provider", provider)
+	}
+}
+
+// asHTTPProvider narrows MainSlotProvider's Completer to the HTTP transport the
+// non-Antigravity branches build.
+func asHTTPProvider(t *testing.T, completer llm.Completer) *llm.Provider {
+	t.Helper()
+	provider, ok := completer.(*llm.Provider)
+	if !ok {
+		t.Fatalf("provider type = %T, want *llm.Provider", completer)
+	}
+	return provider
 }
 
 // Parity: core/tests/test_config.py::TestOpenRouterConfig::test_get_api_base_falls_back_to_openrouter_default
@@ -269,23 +323,25 @@ func TestMainSlotProviderAppliesExtraBodyAndOllamaNumCtx(t *testing.T) {
 		"extra_body": map[string]any{"reasoning_effort": "low"},
 	}})
 	provider, err := MainSlotProvider(home, "")
+	httpProvider := asHTTPProvider(t, provider)
 	if err != nil {
 		t.Fatalf("MainSlotProvider = %v", err)
 	}
-	extra, _ := provider.ExtraKwargs["extra_body"].(map[string]any)
+	extra, _ := httpProvider.ExtraKwargs["extra_body"].(map[string]any)
 	if extra["reasoning_effort"] != "low" {
-		t.Fatalf("extra_body = %#v", provider.ExtraKwargs)
+		t.Fatalf("extra_body = %#v", httpProvider.ExtraKwargs)
 	}
 
 	writeFeatureConfig(t, home, map[string]any{"llm": map[string]any{
 		"provider": "ollama", "model": "llama3", "num_ctx": 32768,
 	}})
 	provider, err = MainSlotProvider(home, "")
+	httpProvider = asHTTPProvider(t, provider)
 	if err != nil {
 		t.Fatalf("MainSlotProvider(ollama) = %v", err)
 	}
-	if provider.ExtraKwargs["num_ctx"] != 32768 {
-		t.Fatalf("num_ctx = %#v", provider.ExtraKwargs)
+	if httpProvider.ExtraKwargs["num_ctx"] != 32768 {
+		t.Fatalf("num_ctx = %#v", httpProvider.ExtraKwargs)
 	}
 }
 
@@ -310,14 +366,15 @@ func TestMainSlotProviderRotatesTheConfiguredKeyPool(t *testing.T) {
 		"api_keys": []any{"key-a", "key-b"},
 	}})
 	provider, err := MainSlotProvider(home, "")
+	httpProvider := asHTTPProvider(t, provider)
 	if err != nil {
 		t.Fatalf("MainSlotProvider = %v", err)
 	}
-	if provider.KeyPool == nil {
+	if httpProvider.KeyPool == nil {
 		t.Fatal("pool not installed for 2+ keys")
 	}
 	for i := 0; i < 2; i++ {
-		if _, err := provider.Complete(context.Background(), []map[string]any{{"role": "user", "content": "hi"}}, llm.CompleteOptions{}); err != nil {
+		if _, err := httpProvider.Complete(context.Background(), []map[string]any{{"role": "user", "content": "hi"}}, llm.CompleteOptions{}); err != nil {
 			t.Fatalf("Complete %d: %v", i, err)
 		}
 	}
@@ -331,10 +388,11 @@ func TestMainSlotProviderRotatesTheConfiguredKeyPool(t *testing.T) {
 		"api_keys": []any{"only-key"},
 	}})
 	provider, err = MainSlotProvider(home, "")
+	httpProvider = asHTTPProvider(t, provider)
 	if err != nil {
 		t.Fatalf("MainSlotProvider(single) = %v", err)
 	}
-	if provider.KeyPool != nil {
+	if httpProvider.KeyPool != nil {
 		t.Fatal("pool installed for a single key")
 	}
 }
@@ -406,14 +464,15 @@ func TestMainSlotProviderReadsTheLiteralKeyIntoTheTransport(t *testing.T) {
 		"provider": "anthropic", "model": "claude-opus-4-6", "api_key": "sk-literal",
 	}})
 	provider, err := MainSlotProvider(home, "")
+	httpProvider := asHTTPProvider(t, provider)
 	if err != nil {
 		t.Fatalf("MainSlotProvider = %v", err)
 	}
-	if provider.APIKey != "sk-literal" {
-		t.Fatalf("api key = %q", provider.APIKey)
+	if httpProvider.APIKey != "sk-literal" {
+		t.Fatalf("api key = %q", httpProvider.APIKey)
 	}
-	if provider.Model != "anthropic/claude-opus-4-6" {
-		t.Fatalf("model = %q", provider.Model)
+	if httpProvider.Model != "anthropic/claude-opus-4-6" {
+		t.Fatalf("model = %q", httpProvider.Model)
 	}
 
 	// PUT /api/config/llm-sections round-trips the section verbatim, and the
@@ -430,14 +489,15 @@ func TestMainSlotProviderReadsTheLiteralKeyIntoTheTransport(t *testing.T) {
 		t.Fatalf("readback = %#v", readback)
 	}
 	provider, err = MainSlotProvider(home, "")
+	httpProvider = asHTTPProvider(t, provider)
 	if err != nil {
 		t.Fatalf("MainSlotProvider(after PUT) = %v", err)
 	}
-	if provider.APIKey != "sk-written" {
-		t.Fatalf("post-PUT api key = %q", provider.APIKey)
+	if httpProvider.APIKey != "sk-written" {
+		t.Fatalf("post-PUT api key = %q", httpProvider.APIKey)
 	}
-	extra, _ := provider.ExtraKwargs["extra_body"].(map[string]any)
+	extra, _ := httpProvider.ExtraKwargs["extra_body"].(map[string]any)
 	if extra["reasoning_effort"] != "high" {
-		t.Fatalf("post-PUT extra_body = %#v", provider.ExtraKwargs)
+		t.Fatalf("post-PUT extra_body = %#v", httpProvider.ExtraKwargs)
 	}
 }

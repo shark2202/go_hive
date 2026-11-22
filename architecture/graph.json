@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "module": "github.com/aden-hive/hive-go",
-  "generated_at_commit": "528bdcd6b649",
+  "generated_at_commit": "389ba7a352a9",
   "generated_from": "architecture/model.yaml + go list -json ./... + internal/server mux.HandleFunc + internal/eventbus event_type.go",
   "stats": {
     "packages": 82,
-    "package_edges": 222,
+    "package_edges": 223,
     "capabilities": 12,
     "capability_edges": 85,
     "layers": 8,
@@ -372,7 +372,7 @@
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 31,
+      "direct_dependencies": 32,
       "dependents": 4
     },
     {
@@ -517,7 +517,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 6,
-      "dependents": 1
+      "dependents": 2
     },
     {
       "id": "pkg:internal/session",
@@ -1898,6 +1898,11 @@
     {
       "from": "pkg:internal/cli",
       "to": "pkg:internal/resources",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli",
+      "to": "pkg:internal/sentinel",
       "kind": "depends"
     },
     {

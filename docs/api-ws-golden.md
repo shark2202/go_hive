@@ -118,8 +118,9 @@ JSON 字节（`Marshal(cost_usd) == "0.0042"`）。
   `internal/server/queen_phase_state.go`（字段与转发方法）。
 - lazy 语义保持：eager 仍由 24 个 always-on 名字决定（扣除 4 个相位门控）；searchable 按可行
   的 per-queen allowlist 过滤（与上游 `_filtered_tools_for_current_phase` 同序）；平铺面的
-  `collect_result` / `credentials` / `sentinel_setup` 无执行器（advertised-without-executor shim）
-  不进相位工具表，`ask_user` 由路由作为 `framework_added` 报告。
+  `collect_result` / `credentials` 仍无执行器（advertised-without-executor shim），
+  `sentinel_setup` 已实装但按上游相位视图（loop 派发追加、不进 phase state）同样不计入相位工具表，
+  `ask_user` 由路由作为 `framework_added` 报告。
 - 回归测试：`internal/server/phase_tool_surface_test.go`（注册路径 → `/live_tools` 逐名对照、
   allowlist 过滤、会话列表相位；无 runtime 时的空面）、
   `internal/cli/loader_phase_tool_surface_test.go`（REST 创建路径 + allowlist 解析）。

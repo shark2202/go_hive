@@ -96,8 +96,8 @@ $HIVE_HOME/queens/default/sessions/<session_id>/conversations/
 | `use_claude_code_subscription` | bool | 用 `~/.claude/.credentials.json` 的 OAuth token，并加 Bearer 头 |
 | `use_codex_subscription` | bool | 用 `~/.codex/auth.json` 的 token，走 ChatGPT backend 并加对应头 |
 | `use_kimi_code_subscription` | bool | 用 `~/.kimi/config.toml` 的 token，base 固定 `https://api.kimi.com/coding` |
-| `use_antigravity_subscription` | bool | **不支持**：上游会整会话切到 AntigravityProvider（未移植）；Go 读取该标志后对会话构建显式报错 |
-| `antigravity_client_id` / `antigravity_client_secret` | string | 只读项（env 优先）；唯一消费者是未移植的 OAuth 刷新 |
+| `use_antigravity_subscription` | bool | 整会话切到 Antigravity provider（Google Cloud Code Assist，Gemini 风格；账号文件/IDE DB 载入 + OAuth refresh，无需 api_base）；`worker_llm` 同标志同样生效 |
+| `antigravity_client_id` / `antigravity_client_secret` | string | OAuth refresh 的客户端凭据（env 优先，其次配置文件）；消费路径见 `internal/llm/antigravity_credentials.go` |
 
 ### 2.3 其他顶层键
 
@@ -123,7 +123,7 @@ $HIVE_HOME/queens/default/sessions/<session_id>/conversations/
 
 `llm`、`worker_llm`、`vision_fallback`、`judge` 与 `queen_llm.<queen_id>` 是模型「槽位」，由设置接口写入。本版本运行时消费：`llm`（默认会话模型）、`judge`（judge 槽）、`queen_llm.<queen_id>`（会话启动按 queen 选模型，写后原地切换）、`worker_llm`（colony worker 专用模型）、`vision_fallback`（文本主模型的图片描述，逐次 caption 解析）。热切换矩阵见 §3.8：主槽 `llm` 与 `queen_llm.<id>` 写入即重建运行中会话的 transport，`vision_fallback` 写入即对下一张工具图片生效，`worker_llm` 与上游一致只对下一个 colony/会话生效；进行中的回合始终用旧 provider 跑完（回合级 pin）。
 
-`llm.antigravity_client_id` / `llm.antigravity_client_secret` 是**只读**项：Go 侧有读取点（`ANTIGRAVITY_CLIENT_ID` / `ANTIGRAVITY_CLIENT_SECRET` 环境变量优先，其次配置文件），但端口的 Antigravity 登录读预发的 access token（`antigravity-accounts.json`），没有 OAuth 刷新流程去消费 client id/secret。`llm.use_kimi_code_subscription` 的运行时分支已接通（token 读 `~/.kimi/config.toml`，base 固定 `https://api.kimi.com/coding`，`kimi/` 前缀走 Anthropic Messages 协议）；`llm.use_antigravity_subscription` 仍只有 REST 面——Python 会整会话切到 `AntigravityProvider`（Gemini cloudcode API + OAuth 刷新），Go 未移植该 provider，会话构建对标志显式报错而不是静默发无键请求。
+`llm.antigravity_client_id` / `llm.antigravity_client_secret` 是 OAuth refresh 的客户端凭据：读取顺序为 `ANTIGRAVITY_CLIENT_ID` / `ANTIGRAVITY_CLIENT_SECRET` 环境变量、其次配置文件；`llm.use_antigravity_subscription` 接通后由 `internal/llm/antigravity_credentials.go` 的 refresh_token 交换消费（上游还回退到公共源抓取，Go 不抓取，未配置时 refresh 报「Could not obtain Antigravity OAuth client ID」）。`llm.use_kimi_code_subscription` 的运行时分支已接通（token 读 `~/.kimi/config.toml`，base 固定 `https://api.kimi.com/coding`，`kimi/` 前缀走 Anthropic Messages 协议）；`llm.use_antigravity_subscription` 同样接通——主槽与 `worker_llm` 命中该标志时整会话切到 `llm.AntigravityProvider`（读 `$HIVE_HOME/antigravity-accounts.json` 或 Antigravity IDE SQLite state DB、过期时用 refresh token 换新、Gemini contents/schema 与 SSE 直连 cloudcode 端点）。无凭据时首个请求报上游同款错误（`No valid Antigravity credentials...`），不会静默发无键请求。
 
 ## 3. 模型与 provider 解析优先级
 
@@ -171,7 +171,7 @@ $HIVE_HOME/queens/default/sessions/<session_id>/conversations/
 | 1 | `llm.endpoint` 指向的命名端点：其凭据库密钥，否则端点占位符（永不落到环境里的共享 key） |
 | 2 | `llm.api_keys` 池的第一个非空项；2 个及以上时在 provider 上启用 `llm.KeyPool` 轮转（429 停键 60s） |
 | 3 | `llm.api_key`（字面 key） |
-| 4 | 订阅 token（按 `use_claude_code_subscription` → `use_codex_subscription` → `use_kimi_code_subscription` → `use_antigravity_subscription` 顺序，逐个尝试，取到即用）：Claude Code 读 `~/.claude/.credentials.json`（macOS 上游还查 Keychain；Go 只读文件、不刷新）、Codex 读 `~/.codex/auth.json`、Kimi 读 `~/.kimi/config.toml`、Antigravity 读 `antigravity-accounts.json` 的预发 access token |
+| 4 | 订阅 token（按 `use_claude_code_subscription` → `use_codex_subscription` → `use_kimi_code_subscription` → `use_antigravity_subscription` 顺序，逐个尝试，取到即用）：Claude Code 读 `~/.claude/.credentials.json`（macOS 上游还查 Keychain；Go 只读文件、不刷新）、Codex 读 `~/.codex/auth.json`、Kimi 读 `~/.kimi/config.toml`、Antigravity 读 `antigravity-accounts.json` 的 access token（provider 路径由 `AntigravityProviderFor` 直接构建，凭据载入与 OAuth refresh 见 `internal/llm/antigravity_credentials.go`） |
 | 5 | 凭据库（`HIVE_CREDENTIAL_KEY` 存在时按 provider 映射） |
 | 6 | `llm.api_key_env_var` 指定的环境变量 |
 | 7 | 该 provider 的默认变量（3.5 表） |

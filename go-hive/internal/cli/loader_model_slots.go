@@ -32,8 +32,13 @@ import (
 
 // newModelSlot wraps a live session transport so a model-slot write can
 // rebuild it in place. The rebuild factory is the same NewHTTPProvider
-// constructor the session started on.
+// constructor the session started on — except for an Antigravity provider,
+// which upstream has no reconfigure() for, so a slot write keeps it (the
+// hot-swap route's hasattr check skips it).
 func newModelSlot(initial llm.Completer) *llm.ProviderSlot {
+	if _, ok := llm.ResolveCompleter(initial).(*llm.AntigravityProvider); ok {
+		return llm.NewProviderSlot(initial, nil)
+	}
 	return llm.NewProviderSlot(initial, llm.HTTPProviderFactory)
 }
 
@@ -61,6 +66,12 @@ func workerChatProvider(home hivehome.Home) (llm.Completer, error) {
 	section := hiveserver.WorkerLLMSection(home)
 	if section == nil {
 		return nil, nil
+	}
+	// The worker section can name the Antigravity subscription; upstream's
+	// build_worker_llm swaps the whole transport for it.
+	// Parity: framework/server/session_manager.py::SessionManager.build_worker_llm
+	if hiveserver.UsesAntigravitySubscription(section) {
+		return newModelSlot(hiveserver.AntigravityProviderFor(home, hiveserver.SectionModel(section))), nil
 	}
 	return newModelSlot(hiveserver.SectionProvider(home, section)), nil
 }

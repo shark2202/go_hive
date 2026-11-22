@@ -1,6 +1,6 @@
 # 接口与契约（生成物，勿手改）
 
-> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` 的 `contracts:` / `disk_formats:`，加上 `internal/server` 路由注册与 `internal/eventbus` 常量生成。commit: `528bdcd6b649`
+> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` 的 `contracts:` / `disk_formats:`，加上 `internal/server` 路由注册与 `internal/eventbus` 常量生成。commit: `389ba7a352a9`
 > 契约是模块之间「靠什么约束交互」的清单：谁提供、谁消费、定义在哪、保证什么、失败怎么表现、变更属于加法还是破坏、由什么机制强制。
 > `providers` / `consumers` 里的 `ext:` 前缀表示外部消费面（前端、运维、MCP server、外部调用方），不是仓库内的包。
 
@@ -598,9 +598,9 @@
 | POST | `/api/queen/{queen_id}/soul/proposals/{proposal_id}/probe` | `routes.handleProbeSoulProposal` | `internal/server/routes_soul_probe.go:42` |
 | POST | `/api/queen/{queen_id}/soul/reflect` | `routes.handleReflectSoul` | `internal/server/routes_credentials_soul.go:46` |
 | POST | `/api/queen/{queen_id}/soul/rollback` | `routes.handleRollbackSoul` | `internal/server/routes_credentials_soul.go:45` |
-| DELETE | `/api/queen/{queen_id}/tools` | `handleQueenDeleteTools` | `internal/server/routes_queens_tools.go:732` |
-| GET | `/api/queen/{queen_id}/tools` | `handleQueenGetTools` | `internal/server/routes_queens_tools.go:726` |
-| PATCH | `/api/queen/{queen_id}/tools` | `handleQueenPatchTools` | `internal/server/routes_queens_tools.go:729` |
+| DELETE | `/api/queen/{queen_id}/tools` | `handleQueenDeleteTools` | `internal/server/routes_queens_tools.go:735` |
+| GET | `/api/queen/{queen_id}/tools` | `handleQueenGetTools` | `internal/server/routes_queens_tools.go:729` |
+| PATCH | `/api/queen/{queen_id}/tools` | `handleQueenPatchTools` | `internal/server/routes_queens_tools.go:732` |
 | GET | `/api/runtime-logs` | `routes.handleRuntimeLogs` | `internal/server/routes_runtime_logs.go:170` |
 | GET | `/api/sentinel/credentials` | `handleSentinelCredentialStatus` | `internal/server/routes_sentinel.go:113` |
 | POST | `/api/sentinel/slack/validate` | `handleSlackValidate` | `internal/server/routes_sentinel.go:122` |

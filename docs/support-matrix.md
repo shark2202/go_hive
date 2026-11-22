@@ -15,6 +15,8 @@
 > **2026-11-21 增量 2（G2）**：新增「老用户无损替换」判定（§1.1）——v1/v2 非空旧 `HIVE_HOME` 双跑数据级无损、凭据 Fernet 双向互读、Go→Python 回滚与 v1.0.25→1.0.26 升级演练均实测通过。1 项行为差异 **P0-G2-1（v1 `exports/` 解析基准：Python=CWD、Go=`$HIVE_HOME`）待用户决策**，本次未改 exports 行为。证据：`../../docs/g2-lossless-migration.md`、`upgrade-and-rollback.md`、本页 §1.1、`g2-lossless-replacement.html`。
 >
 > **2026-11-21 增量 3（G3 非外部项）**：依赖漏洞门禁 + 安装/升级端到端落地并实测。`make vulncheck` 当前 **FAIL**（govulncheck 命中 23 个 Go 标准库 CVE，修复需把 `go 1.26.5` 升到 ≥1.26.11 并重建）；`make install-verify` **17 PASS / 0 FAIL / 1 SKIP**。离线扫描降级退出码 3=UNVERIFIED，不冒充通过。Windows 实机、Actions 实跑、Sentinel 真实投递仍不在本轮。见 `docs/install-verify.md`、`docs/e2e-assets/vulncheck/20261121/`、`docs/e2e-assets/install-verify/`。
+>
+> **2026-11-22 增量 4（sentinel-setup lane）**：`sentinel_setup` 模型工具已移植（上游 `agent_loop/internals/sentinel_tool.py`）——help/status/store_token/detect_chat/configure/test 全部动作，工具描述与 JSON Schema 逐字取冻结契约，执行走 `internal/sentinel/sentinel_tool.go`（凭据写入加密 store + store→env 桥 + `tool_catalog_refreshed` 事件）。单测用注入 HTTP 覆盖校验/getUpdates/发送，**真实 Telegram/Slack 凭据投递未验证**；见 §1 Sentinel 行。
 
 ## 1. 总览
 
@@ -43,7 +45,7 @@
 | tracker 共享账本 | 已实现 | 实测 colony 建库、worker 注入 binding、`tracker_*` 建表/upsert/query |
 | 提醒中枢 | 已实现 | source 注册矩阵与上游 15 个 source 对齐：chat hub（task / colony_parallel / active_workers / tracker_snapshot / colony_worker_snapshot / searchable_tools / skills_catalog / turn_context / memory_index / memory_recall / idle / sentinel / stream_stall）、worker hub（task / worker_tracker_snapshot / idle / stream_stall）、overseer hub（colony_parallel / active_workers / tracker_snapshot / colony_worker_snapshot / stream_stall）。`STREAM_STALLED` 由流看门狗真实触发并重跑同一 turn（真实 ChatRuntime 会话测试）；worker tracker 提醒在真实 SpawnBatch worker 转录中验证；预载 colony 会话按 `metadata.json` 的 `queen_name` 解析 scope。残余与未实现项见 `docs/reminders-coverage.md` §7 |
 | 配置键 `turn_context` / `gcu_viewport_scale` | 已实现 | 实测 + 测试：`turn_context.<name>.enabled` 决定进程内注册的包是否启动并注入 queen 回合提示（queen-only、每包 5s 超时、异常跳过）；`gcu_viewport_scale`（0.1–1.0，默认 0.8）经 `server.GcuViewportScale` 注入 `HIVE_BROWSER_VIEWPORT_SCALE`，桥 `/status.viewport_scale` 实测 0.65 / 0.55（配置文件）/ 0.8（非法值回落）。上游 `get_gcu_viewport_scale` 自扩展化浏览器后无消费点，Go 侧只读并上报，不改截图/抓取几何 |
-| 模型槽位与配置契约（config-env-align + config-put-hotswitch） | 部分→热切换已实测 | **已接通（代码 + 测试 + 真实模型）**：`queen_llm.<id>.*`（会话启动按 queen 选模型，她的 colony 沿用同一 provider）、`worker_llm.*`（colony 专用 worker 模型；worker 现在真正跑在该 provider 上）、`vision_fallback.*`（文本主模型的工具图片描述；真实图片 caption E2E 见 `docs/vision-caption-parity.md`）、`llm.aux_max_tokens`、`loop.max_tool_result_chars`、`worker_tools.always_enabled_categories`、`HIVE_MAX_ITER`、`HIVE_SPLIT_WORKER_EVENTS`，以及 `mcp.timeout_seconds` 优先级修复（env > file）。**热切换（2026-11-21 起，会话级）**：`llm`/`queen_llm.<id>` 写入即用 `llm.ProviderSlot`（`Reconfigure` → 同一 `NewHTTPProvider` 工厂重建）切换运行中会话，回合级 pin 保证进行中的回合用旧 provider 跑完、下一回合用新模型；`vision_fallback` 逐次 caption 重读槽位，写入即对下一张工具图片生效；`worker_llm` 与上游 `_write_role_section` 一致只对下一个 colony/新会话生效（`sessions_swapped: 0`）。实测：`go_hive/scripts/e2e_config_hotswap.py`（真实 `serve` + 两个假 OpenAI 网关：`queen-old`→`queen-new`、`caption-new` 带图、`worker-new`）+ 单测（`-race`）。**只读/不支持**：`llm.antigravity_client_id` / `llm.antigravity_client_secret` 读取点已有但无消费路径（端口走预发 access token，无 OAuth 刷新）；`channels.<name>.enabled` 不支持（Go 无渠道插件宿主）；`worker_llm.max_tokens` 两侧都没有消费点；`HIVE_TRACKER_WORKER_TOOL_CALLS`、`HIVE_HISTORY_READ_WORKERS`、`HIVE_NO_FILE_LOG`、`HIVE_COMPACTION_DEBUG`、`HIVE_PLAYBOOK_FAST_GRACE` 原列「Python 独有」已由 env-verbatim-port 车道接入（读取点/测试见 `contracts/config-support-ledger.json`；剩余 Python 独有仅 6 个 GCU 平台差异名）。残余：Go 的 pin 语义（上游原地 mutate，回合中途也会换模型）与 colony overseer 用 queen 模型的 Go 设计差异。逐键契约与计数见 `docs/env-config-contract-diff.md` |
+| 模型槽位与配置契约（config-env-align + config-put-hotswitch） | 部分→热切换已实测 | **已接通（代码 + 测试 + 真实模型）**：`queen_llm.<id>.*`（会话启动按 queen 选模型，她的 colony 沿用同一 provider）、`worker_llm.*`（colony 专用 worker 模型；worker 现在真正跑在该 provider 上）、`vision_fallback.*`（文本主模型的工具图片描述；真实图片 caption E2E 见 `docs/vision-caption-parity.md`）、`llm.aux_max_tokens`、`loop.max_tool_result_chars`、`worker_tools.always_enabled_categories`、`HIVE_MAX_ITER`、`HIVE_SPLIT_WORKER_EVENTS`，以及 `mcp.timeout_seconds` 优先级修复（env > file）。**热切换（2026-11-21 起，会话级）**：`llm`/`queen_llm.<id>` 写入即用 `llm.ProviderSlot`（`Reconfigure` → 同一 `NewHTTPProvider` 工厂重建）切换运行中会话，回合级 pin 保证进行中的回合用旧 provider 跑完、下一回合用新模型；`vision_fallback` 逐次 caption 重读槽位，写入即对下一张工具图片生效；`worker_llm` 与上游 `_write_role_section` 一致只对下一个 colony/新会话生效（`sessions_swapped: 0`）。实测：`go_hive/scripts/e2e_config_hotswap.py`（真实 `serve` + 两个假 OpenAI 网关：`queen-old`→`queen-new`、`caption-new` 带图、`worker-new`）+ 单测（`-race`）。**Antigravity 订阅（2026-11-22 起）**：`llm.use_antigravity_subscription` 接通（主槽与 `worker_llm`，命中即整会话切到 `llm.AntigravityProvider`：`internal/llm/antigravity.go` + `antigravity_credentials.go` 的 accounts 文件 V1–V4/IDE SQLite 载入、OAuth refresh、Gemini contents/schema 清洗、SSE 解析、端点回退与 401 重试；`llm.antigravity_client_id` / `llm.antigravity_client_secret` 由其 OAuth refresh 消费）。mock-server 级测试覆盖刷新/失败面；**无真实凭据，端到端对 Google cloudcode 网关未验证**。**只读/不支持**：`channels.<name>.enabled` 不支持（Go 无渠道插件宿主）；`worker_llm.max_tokens` 两侧都没有消费点；`HIVE_TRACKER_WORKER_TOOL_CALLS`、`HIVE_HISTORY_READ_WORKERS`、`HIVE_NO_FILE_LOG`、`HIVE_COMPACTION_DEBUG`、`HIVE_PLAYBOOK_FAST_GRACE` 原列「Python 独有」已由 env-verbatim-port 车道接入（读取点/测试见 `contracts/config-support-ledger.json`；剩余 Python 独有仅 6 个 GCU 平台差异名）。残余：Go 的 pin 语义（上游原地 mutate，回合中途也会换模型）与 colony overseer 用 queen 模型的 Go 设计差异。逐键契约与计数见 `docs/env-config-contract-diff.md` |
 | judge（success_criteria） | 已实现 | colony worker 带 criteria 时评估并发布 `judge_verdict`；chat 会话无 criteria 不评估 |
 | stall_check（停滞检查） | 已实现 | judge 槽在 queen 回合以 `turn_done` 结束后判定「宣称要做却停手」，命中则注入一次提醒（与上游一致，不发布事件；`node_stalled` 属 doom-loop）。2026-11-20 真实 `hive serve` + 脚本化 OpenAI 兼容网关 E2E：judge true → 提醒进入下一轮模型请求与会话转录；judge false → 不提醒；开关关闭 → 0 次 judge 调用（`docs/stall-check-e2e.md`，证据 `docs/e2e-assets/stall-check-e2e/`）。threshold 缺省 0.5、数字字符串同 `float()` 语义、非法值不提醒（单测钉住） |
 | 内建工具 `read_file` / `write_file` / `terminal_exec` | 已实现，未在文档中触发 | 单测覆盖；本次假模型未发工具调用 |
@@ -54,7 +56,7 @@
 | Colony 多 worker 编排闭环 | 部分 | 包级测试；未用真实模型跑多 worker 任务 |
 | 13 个默认 queen 档案 | 已实现 | 实测 `hive queen list` |
 | 技能 / 记忆 / Tracker / 触发器 / 事件总线 | 部分 | 技能入口已实测：14 个 HTTP 端点，8788 上 `/api/skills`、queen 技能列表 200，create→body→patch→delete 为 201/200/200/200、删除后 404；记忆/Tracker/触发器仍以库层与单测为主 |
-| Sentinel | 部分 | 8 个包移植、测试通过；未接真实 Telegram/Slack |
+| Sentinel | 部分（真实投递未验证） | 8 个包移植、测试通过；`sentinel_setup` 模型工具已移植（status/store_token/detect_chat/configure/test/help，描述+Schema 逐字冻结契约，执行路由 `internal/cli/sentinel_setup_tool.go` → `internal/sentinel/sentinel_tool.go`），单测用注入 HTTP 覆盖 Slack auth.test / Telegram getMe / getUpdates / 发送，未接真实 Telegram/Slack 凭据 |
 | Queen mail | 部分 | 正常 queen 双端已实测（2026-11-20，real LLM：发送→回复→续链至 depth 4）；Claude Code queen 运行器/MCP/回复闭环已实现并经真实 `claude -p` 验证 |
 | Claude Code queens | 已实现 | 运行器 + 真实 dashboard 列表/transcript；残余：真实模型主动调 `message_queen` 未联调，配置仅在 serve 启动时读取 |
 | Browser 工具 / `hive-browser` | 已实现 | 2026-11-20 实测：真实 Chrome + 仓库内 1.7.4 扩展，`hive serve` 自动拉起并守护 `browserbridge` 子进程；`hive-browser status/open/page text/evaluate/interact/snapshot/screenshot/tab` 真实驱动成功（`go_hive/scripts/e2e_browser_host.sh` 全绿，含 control RPC 14831 断言与裸桥空闲退出断言）；无扩展时 `status`/`setup` 退出 2。见 `docs/browser-host.md`。control RPC / `client_hello(owner_pid)` / 30s 空闲退出 / notify 注入 / 3 条面板代理已对齐 |
@@ -226,6 +228,7 @@ Windows 已知未验证点：
 | --- | --- | --- |
 | 真实厂商模型调用 | 发布任务没有可用的真实 key | 请求形状已验证；鉴权/额度/模型可用性未知 |
 | 863 个集成 action 的真实调用 | 需要大量第三方凭据（backlog 里 74 个模块需凭据） | 只有 `httptest`/假上游证据；真实 API 的字段漂移未覆盖 |
+| `google_analytics` 工具族真实 GA4 调用 | 无 GA4 属主权限的 service account / OAuth token（`GA_ACCESS_TOKEN`/`GOOGLE_APPLICATION_CREDENTIALS`） | 7 个 action 的请求/响应形状由 mock HTTP 钉住（`internal/tools/integrations/google_analytics_test.go`）；真实 Data API v1beta 的字段漂移/配额行为未覆盖 |
 | 真实视觉模型读图/PDF 端到端 | 本机无本地网关（11434/8000/1234/8080/3000 均未监听）；配置的远程网关没有可解析的明文凭据，vision 能力未知 | 块形状与装配由 fake provider、假上游 HTTP、流式路径与会话恢复钉住；真模型对图片内容的理解未验证 |
 | Colony 多 worker 闭环 | 需要真实模型与长任务 | 调度/报告/预算有单测，端到端未跑 |
 | Sentinel 通知 | 需要 Telegram/Slack 凭据 | 引擎单测通过，真实投递未验证 |
@@ -307,6 +310,16 @@ CGO_ENABLED=0 GOPROXY=off GOSUMDB=off GOFLAGS=-mod=mod go test -tags e2e -count=
 | `go test ./internal/credentials/ ./internal/server/ -count=1` | 两包 `ok`；含 check-agent 正常/缺凭据/未知 agent/非法参数、Aden 行、resync 默认 hook、health checker 42 项注册表、AgentConfig 解析严格性 |
 | `bash go_hive/scripts/merge_postcheck.sh` | 四关全过（gofmt / wiring 20 文件 67 项 / C12 verdict=PASS，273=217/27/9/20 / arch `--check`） |
 | 前端真实调用 | `hive serve --port 8788` + 官方前端 CredentialsModal 打开：`POST /api/credentials/check-agent` 200 `{required[...], has_aden_key}`，无 500；证据 `docs/e2e-assets/credentials-check-agent/` |
+
+2026-11-22（lane ga-migration：GA 工具 sidecar 愈合迁移；本工作树实测）：
+
+| 项 | 结果 |
+| --- | --- |
+| `go build ./...` | 退出码 0 |
+| `go test -count=1 ./internal/tools/ ./internal/server/ ./internal/cli/ ./internal/queen/` | 四包全 `ok`（含侧车愈合幂等/角色默认/自定义 queen baseline/colony metadata 用例） |
+| `make parity` / `make parity-targets` | 5,769/5,769 测试带注解；6,299 refs（4,560 test + 1,739 prod），0 missing |
+| `bash go_hive/scripts/merge_postcheck.sh` | 四关全过（gofmt / wiring 21 文件 68 项 / C12 verdict=PASS，273=218/27/9/19 / arch `--check`） |
+| `make tool-surface-check` / `make tool-output-check` | 扁平工具面 39 名与冻结契约一致；工具输出 golden 69 场景自洽 |
 
 ## 7. 复现
 

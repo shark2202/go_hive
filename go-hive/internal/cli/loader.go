@@ -289,6 +289,11 @@ func (r *Runner) defaultServe(args *parsedArgs) int {
 	// or runtime exists. Each step is idempotent and non-fatal.
 	r.runStorageStartupMigrations(home)
 
+	// Grant newly-GA tools to existing queen/colony sidecars before any
+	// session (or preloaded colony) reads its allowlist. Mirrors create_app's
+	// startup pass; idempotent per sidecar via saved_on_version.
+	r.runGAToolMigration(home)
+
 	// The dashboard stores keys in the encrypted credential store while the
 	// ported tools read os.Getenv. Export the store before the app (and any
 	// tool registry) is built so saved credentials are live from the start.
@@ -1078,12 +1083,13 @@ var chatProviderFactory = func(home hivehome.Home, model string) (llm.Completer,
 	return resolveChatProvider(home, model)
 }
 
-// resolveChatProvider builds the HTTP transport for a new session from the
+// resolveChatProvider builds the transport for a new session from the
 // main llm slot. Model, key, base, key pool and extra request fields are the
 // server package's MainSlotProvider, so a session started here authenticates
 // exactly like the one the dashboard builds (literal key, endpoint key, pool,
-// subscriptions, credential store, env var — in Python's order).
-func resolveChatProvider(home hivehome.Home, requestedModel string) (*llm.Provider, error) {
+// subscriptions, credential store, env var — in Python's order, and the
+// Antigravity provider when the subscription flag is set).
+func resolveChatProvider(home hivehome.Home, requestedModel string) (llm.Completer, error) {
 	return hiveserver.MainSlotProvider(home, requestedModel)
 }
 

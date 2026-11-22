@@ -420,22 +420,22 @@
         "id": "unported-sentinel-setup-tool",
         "label": "unported 分诊 P2：移植 sentinel_setup 模型工具（sentinel_tool.py：status/configure/test/detect_chat + Slack/Telegram 校验 + 凭据/令牌存取 + publish refresh），替换 tool_surface_flat.go 的 not_implemented 占位",
         "hours": 8,
-        "done": false,
-        "note": "证据 go_hive/docs/unported-triage.md；现状 tool_surface_flat.go:174 与 :536-541 明示 not_implemented（桌面连接器替代）。internal/sentinel listeners/manager/token 已在 Go，可复用。"
+        "done": true,
+        "note": "证据 go_hive/docs/unported-triage.md；现状 tool_surface_flat.go:174 与 :536-541 明示 not_implemented（桌面连接器替代）。internal/sentinel listeners/manager/token 已在 Go，可复用。 ｜ DONE 2026-11-22 lane sentinel-setup（worktree .wt/sentinel-setup）：internal/sentinel/sentinel_tool.go（工具定义逐字 + HandleSentinelSetup 全动作）+ internal/cli/sentinel_setup_tool.go（生产接缝）；not_implemented 占位删除；go test internal/{sentinel,cli,server} 绿、merge_postcheck 四关过。未验证：真实 Telegram/Slack 凭据投递。"
       },
       {
         "id": "unported-antigravity-provider",
         "label": "unported 分诊 P2：实现 Antigravity（Google Cloud Code Assist）provider，或从订阅列表隐藏该入口（antigravity.py：账号/IDE DB 载入、token refresh、Gemini schema 清洗、SSE 解析）",
         "hours": 12,
-        "done": false,
-        "note": "证据 go_hive/docs/unported-triage.md；现状 server/main_slot.go:39 显式 ErrAntigravityUnsupported（失败响亮），但 llm_config.go:82 订阅列表仍含 antigravity。"
+        "done": true,
+        "note": "证据 go_hive/docs/unported-triage.md；现状 server/main_slot.go:39 显式 ErrAntigravityUnsupported（失败响亮），但 llm_config.go:82 订阅列表仍含 antigravity。 | DONE 2026-11-22 lane antigravity（worktree .wt/antigravity）：internal/llm/antigravity.go + antigravity_credentials.go（accounts 文件 V1–V4/IDE SQLite 载入、OAuth refresh、Gemini contents/schema 清洗、SSE 解析、端点回退与 401 重试），接线 server.MainSlotProvider/AntigravityProviderFor（主槽 + worker_llm 标志均换到该 provider，删除 ErrAntigravityUnsupported）；mock-server 级测试覆盖 refresh/401 重试/端点回退/无凭据/SSE（internal/llm/antigravity_test.go，schema 测试对齐 core/tests/test_antigravity_schema.py）。无真实凭据，端到端对 Google 网关未验证。"
       },
       {
         "id": "unported-ga-tool-migration",
         "label": "unported 分诊 P2：移植 GA 工具 sidecar 愈合迁移（tools_ga_migration.py + queen_tools_defaults 的 _CATEGORY_ADDITIONS/grant_role_default_additions；启动时按 sidecar saved_on_version 追加新 GA 工具）",
         "hours": 4,
-        "done": false,
-        "note": "证据 go_hive/docs/unported-triage.md；routes_queens_tools.go:380-384 自述 \"That versioned healing table has no Go port yet\"。幂等性按 sidecar saved_on_version。"
+        "done": true,
+        "note": "证据 go_hive/docs/unported-triage.md；routes_queens_tools.go:380-384 曾自述 \"That versioned healing table has no Go port yet\"。幂等性按 sidecar saved_on_version。 | DONE 2026-11-22 lane ga-migration（worktree .wt/ga-migration）：_CATEGORY_ADDITIONS/_parse_version/infer_category_additions/grant_role_default_additions 移植（internal/tools/category_additions.go），tools_ga_migration 启动迁移（internal/server/tools_ga_migration.go；create_app 等价位在 internal/cli/loader.go runGAToolMigration，storage 迁移之后、会话装配之前），load_queen_tools_config 侧车读取同步愈合（routes_queens_tools.go）；go test ./internal/{tools,server,cli,queen} 绿、merge_postcheck 四关过、parity/refs 0 missing；C12 218/27/9/19。"
       }
     ]
   }

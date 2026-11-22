@@ -10,7 +10,7 @@
   "target": {
     "name": "go_hive",
     "head": "bd5041862d5df219a029b190141dda3db8c7eeab",
-    "version": "1.0.26-go.1"
+    "version": "1.0.27-go.1"
   },
   "method": "curated per-key table (go_hive/scripts/env_config_contract_data.py) whose reader anchors are resolved and validated against the checked-out source; line numbers are recomputed, a missing anchor is a hard failure. Types/defaults/invalid-value rules were read from both implementations.",
   "scope_note": "Covers configuration.json keys read by either runtime. Per-colony notifications.json (sentinel_enabled/channel/target/allowlist/thread) and agent/worker sidecars are separate files and out of scope. The Go-only `mcp` block is included and marked go_only.",
@@ -18,9 +18,9 @@
     "keys": 137,
     "sections": 22,
     "status_counts": {
-      "aligned": 128,
+      "aligned": 131,
       "go_only": 4,
-      "go_partial": 4,
+      "go_partial": 1,
       "unread": 1
     },
     "env_overrides": 28,
@@ -50,7 +50,7 @@
             },
             {
               "file": "go_hive/go-hive/internal/cli/loader.go",
-              "line": 312,
+              "line": 317,
               "snippet": "for _, name := range hiveserver.UnhostedChannels(home) {"
             }
           ],
@@ -197,7 +197,7 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/main_slot.go",
-              "line": 199,
+              "line": 210,
               "snippet": "func MainSlotModel(home hivehome.Home, requested string) string {"
             }
           ],
@@ -224,7 +224,7 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/main_slot.go",
-              "line": 199,
+              "line": 210,
               "snippet": "func MainSlotModel(home hivehome.Home, requested string) string {"
             }
           ],
@@ -251,7 +251,7 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/main_slot.go",
-              "line": 99,
+              "line": 110,
               "snippet": "if literal, ok := section[\"api_key\"].(string); ok && literal != \"\" {"
             }
           ],
@@ -288,7 +288,7 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/main_slot.go",
-              "line": 50,
+              "line": 61,
               "snippet": "func MainSlotAPIKeys(home hivehome.Home) []string {"
             },
             {
@@ -298,7 +298,7 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/main_slot.go",
-              "line": 268,
+              "line": 281,
               "snippet": "func MainSlotKeyPool(home hivehome.Home) *llm.KeyPool {"
             }
           ],
@@ -325,7 +325,7 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/main_slot.go",
-              "line": 157,
+              "line": 168,
               "snippet": "func MainSlotAPIBase(home hivehome.Home) string {"
             }
           ],
@@ -352,7 +352,7 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/main_slot.go",
-              "line": 129,
+              "line": 140,
               "snippet": "if envName, ok := section[\"api_key_env_var\"].(string); ok && strings.TrimSpace(envName) != \"\" {"
             }
           ],
@@ -384,7 +384,7 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 375,
+              "line": 385,
               "snippet": "func LLMMaxTokens(home hivehome.Home) int {"
             }
           ],
@@ -411,7 +411,7 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 427,
+              "line": 437,
               "snippet": "mainSection := configSection(home, \"llm\")"
             }
           ],
@@ -433,7 +433,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 461,
+              "line": 471,
               "snippet": "func AuxMaxTokens(home hivehome.Home) int {"
             }
           ],
@@ -460,7 +460,7 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/main_slot.go",
-              "line": 87,
+              "line": 98,
               "snippet": "if name, ok := section[\"endpoint\"].(string); ok && strings.TrimSpace(name) != \"\" {"
             }
           ],
@@ -487,7 +487,7 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/main_slot.go",
-              "line": 183,
+              "line": 194,
               "snippet": "func MainSlotExtraKwargs(home hivehome.Home, apiKey string) map[string]any {"
             }
           ],
@@ -514,7 +514,7 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/main_slot.go",
-              "line": 183,
+              "line": 194,
               "snippet": "func MainSlotExtraKwargs(home hivehome.Home, apiKey string) map[string]any {"
             }
           ],
@@ -541,7 +541,7 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/main_slot.go",
-              "line": 103,
+              "line": 114,
               "snippet": "if pyTruthy(section[\"use_claude_code_subscription\"]) {"
             }
           ],
@@ -568,7 +568,7 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/main_slot.go",
-              "line": 108,
+              "line": 119,
               "snippet": "if pyTruthy(section[\"use_codex_subscription\"]) {"
             }
           ],
@@ -595,12 +595,12 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/main_slot.go",
-              "line": 113,
+              "line": 124,
               "snippet": "if pyTruthy(section[\"use_kimi_code_subscription\"]) {"
             },
             {
               "file": "go_hive/go-hive/internal/server/main_slot.go",
-              "line": 163,
+              "line": 174,
               "snippet": "return llm.KimiAPIBase"
             }
           ],
@@ -627,12 +627,17 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/main_slot.go",
-              "line": 118,
+              "line": 129,
               "snippet": "if pyTruthy(section[\"use_antigravity_subscription\"]) {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/main_slot.go",
+              "line": 48,
+              "snippet": "func AntigravityProviderFor(home hivehome.Home, model string) *llm.AntigravityProvider {"
             }
           ],
-          "status": "go_partial",
-          "notes": "partial: Python's flag swaps the whole session to AntigravityProvider (Gemini-style cloudcode API, OAuth refresh) in session_manager.build_llm; that provider is not ported. Go consumes the flag as far as it can — MainSlotKey reads the account file's access token for get_api_key's branch and MainSlotProvider refuses the session with an explicit error instead of silently sending an OpenAI request with no key. Structural reason and alternative verification are recorded in contracts/config-support-ledger.json (TestMainSlotProviderRefusesAntigravitySubscription)."
+          "status": "aligned",
+          "notes": "runtime wired end-to-end: the flag swaps the session to the ported AntigravityProvider (Gemini cloudcode API + OAuth refresh, internal/llm/antigravity.go), matching core/framework/llm/antigravity.py + session_manager.build_llm; MainSlotKey still reads the account token for the get_api_key branch. Pinned by TestMainSlotProviderBuildsTheAntigravityProvider and the httptest refresh/retry/fallback suite."
         },
         {
           "path": "llm.antigravity_client_id",
@@ -649,12 +654,22 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 536,
+              "line": 546,
               "snippet": "func AntigravityClientID(home hivehome.Home) string {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/server/main_slot.go",
+              "line": 52,
+              "snippet": "ClientID:     func() string { return AntigravityClientID(home) },"
+            },
+            {
+              "file": "go_hive/go-hive/internal/llm/antigravity_credentials.go",
+              "line": 335,
+              "snippet": "clientID = strings.TrimSpace(p.clientID())"
             }
           ],
-          "status": "go_partial",
-          "notes": "reader only: ANTIGRAVITY_CLIENT_ID, then llm.antigravity_client_id (no public-source fetch), tested by TestAntigravityClientCredentials. The only upstream consumers are the OAuth refresh flows inside the unported AntigravityProvider (framework/llm/antigravity.py, framework/loader/agent_loader.py::_refresh_antigravity_token); the port reads the pre-issued access token from antigravity-accounts.json and has no refresh to hand a client id to. Alternative verification: the reader's env-then-file precedence is pinned; no REST/CRUD path is claimed as consumption."
+          "status": "aligned",
+          "notes": "wired: ANTIGRAVITY_CLIENT_ID, then llm.antigravity_client_id; consumed by the ported Antigravity OAuth refresh (oauth2.googleapis.com token exchange in internal/llm/antigravity_credentials.go), matching framework/llm/antigravity.py. Reader precedence + refresh pinned by TestAntigravityClientCredentials / TestAntigravityRefreshWithoutClientIDFails."
         },
         {
           "path": "llm.antigravity_client_secret",
@@ -671,12 +686,17 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 543,
+              "line": 553,
               "snippet": "func AntigravityClientSecret(home hivehome.Home) string {"
+            },
+            {
+              "file": "go_hive/go-hive/internal/llm/antigravity_credentials.go",
+              "line": 342,
+              "snippet": "clientSecret = p.clientSecret()"
             }
           ],
-          "status": "go_partial",
-          "notes": "reader only: ANTIGRAVITY_CLIENT_SECRET, then llm.antigravity_client_secret (no public-source fetch), tested by TestAntigravityClientCredentials. Same structural reason as the client id: the only consumers are the unported AntigravityProvider's OAuth refresh flows, so there is no request path to hand a client secret to."
+          "status": "aligned",
+          "notes": "wired: ANTIGRAVITY_CLIENT_SECRET, then llm.antigravity_client_secret; consumed by the Antigravity OAuth refresh client credential exchange (internal/llm/antigravity_credentials.go). Same wiring as the client id; precedence pinned by TestAntigravityClientCredentials."
         }
       ]
     },
@@ -1030,7 +1050,7 @@
             },
             {
               "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
-              "line": 45,
+              "line": 50,
               "snippet": "func queenAwareChatProvider(home hivehome.Home, requestedModel, queenID string) (llm.Completer, error) {"
             }
           ],
@@ -1062,7 +1082,7 @@
             },
             {
               "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
-              "line": 45,
+              "line": 50,
               "snippet": "func queenAwareChatProvider(home hivehome.Home, requestedModel, queenID string) (llm.Completer, error) {"
             }
           ],
@@ -1094,7 +1114,7 @@
             },
             {
               "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
-              "line": 45,
+              "line": 50,
               "snippet": "func queenAwareChatProvider(home hivehome.Home, requestedModel, queenID string) (llm.Completer, error) {"
             }
           ],
@@ -1126,7 +1146,7 @@
             },
             {
               "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
-              "line": 45,
+              "line": 50,
               "snippet": "func queenAwareChatProvider(home hivehome.Home, requestedModel, queenID string) (llm.Completer, error) {"
             }
           ],
@@ -1158,7 +1178,7 @@
             },
             {
               "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
-              "line": 45,
+              "line": 50,
               "snippet": "func queenAwareChatProvider(home hivehome.Home, requestedModel, queenID string) (llm.Completer, error) {"
             }
           ],
@@ -1190,7 +1210,7 @@
             },
             {
               "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
-              "line": 45,
+              "line": 50,
               "snippet": "func queenAwareChatProvider(home hivehome.Home, requestedModel, queenID string) (llm.Completer, error) {"
             }
           ],
@@ -1222,7 +1242,7 @@
             },
             {
               "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
-              "line": 45,
+              "line": 50,
               "snippet": "func queenAwareChatProvider(home hivehome.Home, requestedModel, queenID string) (llm.Completer, error) {"
             }
           ],
@@ -1254,7 +1274,7 @@
             },
             {
               "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
-              "line": 45,
+              "line": 50,
               "snippet": "func queenAwareChatProvider(home hivehome.Home, requestedModel, queenID string) (llm.Completer, error) {"
             }
           ],
@@ -1748,7 +1768,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/server/routes_queens_tools.go",
-              "line": 517,
+              "line": 520,
               "snippet": "if section, ok := HiveConfig(deps.Home)[\"queen_tools\"].(map[string]any); ok {"
             }
           ],
@@ -2988,12 +3008,12 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 340,
+              "line": 350,
               "snippet": "func VisionFallbackSection(home hivehome.Home) map[string]any {"
             },
             {
               "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
-              "line": 81,
+              "line": 92,
               "snippet": "func visionCaptionerFor(home hivehome.Home) *visionfallback.Captioner {"
             }
           ],
@@ -3020,12 +3040,12 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 340,
+              "line": 350,
               "snippet": "func VisionFallbackSection(home hivehome.Home) map[string]any {"
             },
             {
               "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
-              "line": 81,
+              "line": 92,
               "snippet": "func visionCaptionerFor(home hivehome.Home) *visionfallback.Captioner {"
             }
           ],
@@ -3052,12 +3072,12 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 340,
+              "line": 350,
               "snippet": "func VisionFallbackSection(home hivehome.Home) map[string]any {"
             },
             {
               "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
-              "line": 81,
+              "line": 92,
               "snippet": "func visionCaptionerFor(home hivehome.Home) *visionfallback.Captioner {"
             }
           ],
@@ -3084,12 +3104,12 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 340,
+              "line": 350,
               "snippet": "func VisionFallbackSection(home hivehome.Home) map[string]any {"
             },
             {
               "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
-              "line": 81,
+              "line": 92,
               "snippet": "func visionCaptionerFor(home hivehome.Home) *visionfallback.Captioner {"
             }
           ],
@@ -3116,12 +3136,12 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 340,
+              "line": 350,
               "snippet": "func VisionFallbackSection(home hivehome.Home) map[string]any {"
             },
             {
               "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
-              "line": 81,
+              "line": 92,
               "snippet": "func visionCaptionerFor(home hivehome.Home) *visionfallback.Captioner {"
             }
           ],
@@ -3148,12 +3168,12 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 340,
+              "line": 350,
               "snippet": "func VisionFallbackSection(home hivehome.Home) map[string]any {"
             },
             {
               "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
-              "line": 81,
+              "line": 92,
               "snippet": "func visionCaptionerFor(home hivehome.Home) *visionfallback.Captioner {"
             }
           ],
@@ -3180,12 +3200,12 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 340,
+              "line": 350,
               "snippet": "func VisionFallbackSection(home hivehome.Home) map[string]any {"
             },
             {
               "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
-              "line": 81,
+              "line": 92,
               "snippet": "func visionCaptionerFor(home hivehome.Home) *visionfallback.Captioner {"
             }
           ],
@@ -3227,12 +3247,12 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 329,
+              "line": 339,
               "snippet": "func WorkerLLMSection(home hivehome.Home) map[string]any {"
             },
             {
               "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
-              "line": 60,
+              "line": 65,
               "snippet": "func workerChatProvider(home hivehome.Home) (llm.Completer, error) {"
             }
           ],
@@ -3259,12 +3279,12 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 329,
+              "line": 339,
               "snippet": "func WorkerLLMSection(home hivehome.Home) map[string]any {"
             },
             {
               "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
-              "line": 60,
+              "line": 65,
               "snippet": "func workerChatProvider(home hivehome.Home) (llm.Completer, error) {"
             }
           ],
@@ -3291,12 +3311,12 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 329,
+              "line": 339,
               "snippet": "func WorkerLLMSection(home hivehome.Home) map[string]any {"
             },
             {
               "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
-              "line": 60,
+              "line": 65,
               "snippet": "func workerChatProvider(home hivehome.Home) (llm.Completer, error) {"
             }
           ],
@@ -3323,12 +3343,12 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 329,
+              "line": 339,
               "snippet": "func WorkerLLMSection(home hivehome.Home) map[string]any {"
             },
             {
               "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
-              "line": 60,
+              "line": 65,
               "snippet": "func workerChatProvider(home hivehome.Home) (llm.Completer, error) {"
             }
           ],
@@ -3355,12 +3375,12 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 329,
+              "line": 339,
               "snippet": "func WorkerLLMSection(home hivehome.Home) map[string]any {"
             },
             {
               "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
-              "line": 60,
+              "line": 65,
               "snippet": "func workerChatProvider(home hivehome.Home) (llm.Completer, error) {"
             }
           ],
@@ -3387,12 +3407,12 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 329,
+              "line": 339,
               "snippet": "func WorkerLLMSection(home hivehome.Home) map[string]any {"
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 444,
+              "line": 454,
               "snippet": "func WorkerMaxTokens(home hivehome.Home) int {"
             }
           ],
@@ -3419,12 +3439,12 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 329,
+              "line": 339,
               "snippet": "func WorkerLLMSection(home hivehome.Home) map[string]any {"
             },
             {
               "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
-              "line": 60,
+              "line": 65,
               "snippet": "func workerChatProvider(home hivehome.Home) (llm.Completer, error) {"
             }
           ],
@@ -3451,12 +3471,12 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 329,
+              "line": 339,
               "snippet": "func WorkerLLMSection(home hivehome.Home) map[string]any {"
             },
             {
               "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
-              "line": 60,
+              "line": 65,
               "snippet": "func workerChatProvider(home hivehome.Home) (llm.Completer, error) {"
             }
           ],
@@ -3483,12 +3503,12 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 329,
+              "line": 339,
               "snippet": "func WorkerLLMSection(home hivehome.Home) map[string]any {"
             },
             {
               "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
-              "line": 60,
+              "line": 65,
               "snippet": "func workerChatProvider(home hivehome.Home) (llm.Completer, error) {"
             }
           ],
@@ -3515,12 +3535,12 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 329,
+              "line": 339,
               "snippet": "func WorkerLLMSection(home hivehome.Home) map[string]any {"
             },
             {
               "file": "go_hive/go-hive/internal/cli/loader_model_slots.go",
-              "line": 60,
+              "line": 65,
               "snippet": "func workerChatProvider(home hivehome.Home) (llm.Completer, error) {"
             }
           ],
@@ -3547,7 +3567,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 516,
+              "line": 526,
               "snippet": "func WorkerKeepSetFromConfig(home hivehome.Home) func() map[string]struct{} {"
             }
           ],

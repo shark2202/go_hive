@@ -35,7 +35,7 @@
 | 九道 make 门禁 | 全 0 | **全绿**（wave-66，含 govulncheck 0 OSV） |
 | parity | 0 缺注解 | **5,722/5,722** |
 | parity refs | 0 missing | 全解析 |
-| compat-check | 12/12 | **12/12**（C12：273 条 = 217 ported / 27 partial / 9 oos / 20 unported（triage 修正 11 假标 + coercion 接线升级）） |
+| compat-check | 12/12 | **12/12**（C12：273 条 = 218 ported / 27 partial / 9 oos / 19 unported（triage 修正 11 假标 + coercion 接线 + GA sidecar 迁移升级）） |
 | QC | 9/9 | **9/9** |
 | arch | 7 生成物一致 | **82 包 / 219 边 / 8 层 / 1 info** |
 | govulncheck | 0 OSV | **0（go1.26.11，同 scanner/DB 23→0）** |

@@ -122,7 +122,7 @@ Guarded by: `internal/toolgolden` (canonical rules),
 | `skill_view_missing` | 工具集 | skill_view exists only on Go (Python answers "Unknown tool"). Both are is_error JSON envelopes. |
 | `credentials_list` | 未移植 | credentials is a Python-only model tool; Go answers with the explicit not_implemented envelope. |
 | `credentials_usage` | 未移植 | see credentials_list. |
-| `sentinel_setup` | 未移植 | sentinel_setup needs the desktop connector; Go answers with the explicit not_implemented envelope. |
+| `sentinel_setup` | 未移植 → 已移植（记录为抓取时状态） | 抓取时点 Go 无执行器，返回 not_implemented 信封（见 `e2e-assets/tool-output/`，未重抓）。2026-11-22 sentinel-setup lane 已实装（`internal/sentinel/sentinel_tool.go` + `internal/cli/sentinel_setup_tool.go`），help 文案与 Python 记录逐字一致（`SentinelSetupHelpMatchesRecordedPythonPayload` 钉住）。 |
 | `collect_result` | 未移植 | Go has no background tool handles; the envelope points at terminal_job_logs instead. |
 | `suggest_colony` | 未移植 | suggest_colony drives the colony popup; Go answers with the explicit not_implemented envelope. |
 | `unloaded_tool_call` | 工具集 | excel_read does not exist in Python ("Unknown tool ... Did you mean 'csv_read'?"); on Go it is a deferred name and the loop refuses it with the select: prompt. Both are actionable is_error envelopes. |

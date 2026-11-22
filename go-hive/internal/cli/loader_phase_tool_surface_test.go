@@ -6,8 +6,10 @@ package cli
 // every queen session, so GET /api/sessions/{id}/live_tools answers with the
 // real tool surface for sessions made through POST /api/sessions. This pins
 // the Go create path: once the chat runtime is built, the phase state exposes
-// its tier, with the flat-surface shims (advertised without an executor) kept
-// out and the loop's ask_user reported by the route instead.
+// its tier, with the names outside the phase state (ask_user and sentinel_setup
+// are appended at dispatch upstream; collect_result/credentials have no
+// executor here) kept out and the loop's ask_user reported by the route
+// instead.
 //
 // Parity: framework/server/routes_sessions.py::handle_session_live_tools
 // Parity: framework/tools/queen_lifecycle_tools.py::QueenPhaseState.get_current_tools
@@ -61,7 +63,9 @@ func TestCreateSessionWiresPhaseToolSurface(t *testing.T) {
 			t.Fatalf("phase eager tools missing %q: %v", want, eager)
 		}
 	}
-	// The flat surface advertises these shims without executors; the phase
+	// These names live outside the phase state (the loop/catalogue surface
+	// owns them, as upstream: ask_user and sentinel_setup are appended at
+	// dispatch, collect_result/credentials have no executor here); the phase
 	// tool list must not present them as callable.
 	for _, shim := range []string{"ask_user", "collect_result", "credentials", "sentinel_setup"} {
 		if _, present := eager[shim]; present {

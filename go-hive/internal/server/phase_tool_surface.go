@@ -22,10 +22,11 @@ import (
 // phaseStandaloneShims are advertised-but-standalone names with no live tier
 // membership: ask_user is appended by the agent loop at dispatch (and the
 // live-tools handler reports it as framework_added), while
-// collect_result/credentials/sentinel_setup are flat-surface name shims the
-// build advertises without an executor. Upstream's phase state never carries
-// them in independent_tools, so the phase surface excludes them rather than
-// presenting shims as callable tools.
+// collect_result/credentials/sentinel_setup are flat-surface names upstream's
+// phase state never carries. Upstream's phase state does not contain them in
+// independent_tools (sentinel_setup is appended to the loop's tools[] at
+// dispatch, exactly like ask_user), so the phase surface excludes them rather
+// than presenting a different callable set than the reference view.
 var phaseStandaloneShims = map[string]struct{}{
 	"ask_user":       {},
 	"collect_result": {},

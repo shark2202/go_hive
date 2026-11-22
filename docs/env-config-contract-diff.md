@@ -1,17 +1,17 @@
 # 环境变量与 configuration.json 契约差异（Python 基准 → go_hive）
 
 - reference: `python@bd5041862d5df219a029b190141dda3db8c7eeab`（Hive 1.0.15）
-- target: `go_hive@bd5041862d5df219a029b190141dda3db8c7eeab`（1.0.26-go.1）
+- target: `go_hive@bd5041862d5df219a029b190141dda3db8c7eeab`（1.0.27-go.1）
 - 生成器：`go_hive/scripts/freeze_env_config_contract.py`（确定性；`--check` 可重放）
 - 机器可读：`go_hive/contracts/env-vars.json`、`go_hive/contracts/config-keys.json`
 
 ## 0. 结论摘要
 
 - 环境变量清单以已发布的审计（`go_hive/docs/env-surface-audit.json` @ 622cc236）为基线，本次按同一口径独立复算：Python **90** / Go **125** / 共有 **84**；Python 独有 **6**，Go 独有 **41**。复算与「本车道期望」一致。与发布审计基线（Python 89 / Go 96 / 共有 66 / Python 独有 23 / Go 独有 30）相比，差额来自 17 个名字由 Python 独有转为共有：`HIVE_MAX_ITER`、`HIVE_SPLIT_WORKER_EVENTS` 由本车道新增 Go 读取点，`HIVE_AGENT_NAME`、`HIVE_COMPACTION_DEBUG`、`HIVE_ENABLE_LLM_LOGS`、`HIVE_HISTORY_READ_WORKERS`、`HIVE_MEMORY_RECALL`、`HIVE_NO_FILE_LOG`、`HIVE_PLAYBOOK_FAST_GRACE`、`HIVE_RESOURCE_CRIT_AVAIL_FRAC`、`HIVE_RESOURCE_CRIT_RENDERERS`、`HIVE_RESOURCE_HISTORY`、`HIVE_RESOURCE_INTERVAL_S`、`HIVE_RESOURCE_WARN_AVAIL_FRAC`、`HIVE_RESOURCE_WARN_RENDERERS`、`HIVE_SENTINEL_LOG`、`HIVE_TRACKER_WORKER_TOOL_CALLS` 在审计提交之后、本车道之前已进入 Go 树；Go 独有清单 30→41（`HIVE_PYTHON` 新增、`HIVE_NETWORK_SCANNERS` 移除，另有审计后进入 Go 树的开发/评估变量）。
-- configuration.json：**137** 个键 / **22** 个 section；其中 `aligned` 128，`go_partial` 4，`python_only` 0，`go_only` 4，`unread` 1。
+- configuration.json：**137** 个键 / **22** 个 section；其中 `aligned` 131，`go_partial` 1，`python_only` 0，`go_only` 4，`unread` 1。
 - 本车道（config-verbatim）把主槽位 `llm.*` 的消费键接进运行时：会话构建统一走 `MainSlotProvider`（键序 = endpoint → api_keys 池 → literal → claude/codex/kimi/antigravity 订阅 → 凭据库 → `api_key_env_var` → provider env；`MainSlotAPIBase` 复刻订阅端点与 openrouter 默认；`extra_body`/`num_ctx`/订阅请求头随 provider 构建下发），`llm.max_tokens` 预算 queen 回合、`llm.max_context_tokens` 参与 queen 窗口的主槽位回退，`llm.api_keys` 以 `llm.KeyPool` 轮转并在 429 时停键；kimi 订阅运行时接通（`~/.kimi/config.toml` token + `https://api.kimi.com/coding`）。
 - 模型槽位状态收敛：`queen_llm.*`（8）、`worker_llm.*`（10）、`vision_fallback.*`（7）全部转 `aligned`（逐键读取点与热切换矩阵见 §2 与 `docs/configuration.md` §3.8）；`worker_llm.max_tokens` 增加读取点 `WorkerMaxTokens`（与上游 `get_worker_max_tokens` 同为无调用点）；`channels.<name>.enabled` 由 `python_only` 变为 `go_partial`：字段按上游形状读取、写入时保留、GET /api/channels 形状不变，启用时 serve 启动打印「无渠道宿主、不会运行」的告警。
-- 仍未对齐的 4 个残余（结构性理由 + 替代验证见 `contracts/config-support-ledger.json`）：`llm.antigravity_client_id` / `llm.antigravity_client_secret`（只读；唯一上游消费者是未移植的 AntigravityProvider 内的 OAuth 刷新）、`llm.use_antigravity_subscription`（同上：会话构建对该标志显式报错而非静默发无键请求）、`channels.<name>.enabled`（无渠道插件宿主，读到但不生效）。`mcp.*` 4 键为逐项确认过的 Go 扩展（上游 MCP 来自 registry/`.mcp.json`，从不读 configuration.json 的 `mcp` 块）；`created_at` 为安装器写入、两侧运行时都不读（Go 在配置写入时保留，见测试）。
+- 仍未对齐的残余（结构性理由 + 替代验证见 `contracts/config-support-ledger.json`）：`channels.<name>.enabled`（无渠道插件宿主，读到但不生效）；`llm.antigravity_client_id` / `_secret` / `use_antigravity_subscription` 已随 Antigravity provider 移植转 wired（2026-11-22）。`mcp.*` 4 键为逐项确认过的 Go 扩展（上游 MCP 来自 registry/`.mcp.json`，从不读 configuration.json 的 `mcp` 块）；`created_at` 为安装器写入、两侧运行时都不读（Go 在配置写入时保留，见测试）。
 - 环境变量侧，env-verbatim-port 车道已把 `HIVE_TRACKER_WORKER_TOOL_CALLS`、`HIVE_HISTORY_READ_WORKERS`、`HIVE_NO_FILE_LOG`、`HIVE_COMPACTION_DEBUG`、`HIVE_ENABLE_LLM_LOGS`、`HIVE_SENTINEL_LOG`、`HIVE_PLAYBOOK_FAST_GRACE`、`HIVE_AGENT_NAME`（注入）与 6 个 `HIVE_RESOURCE_*` 接进 Go 运行时；剩余 Python 独有仅 GCU memtrace / GCU 截图并发（6 个名字），是显式平台差异，逐项理由与替代证据见 `contracts/config-support-ledger.json`。
 
 ## 1. 环境变量核对（采用既有审计清单，独立复算）
@@ -106,16 +106,16 @@
 | `llm.api_key_env_var` | string | null | name read from the file | `core/framework/config.py:852` | `go_hive/go-hive/internal/server/llm_config.go:458` (+1) | aligned |
 | `llm.max_tokens` | int | 8192 | — | `core/framework/config.py:584` | `go_hive/go-hive/internal/server/llm_config.go:399` (+2) | aligned |
 | `llm.max_context_tokens` | int | 32000 | — | `core/framework/config.py:574` | `go_hive/go-hive/internal/server/llm_config.go:400` (+1) | aligned |
-| `llm.aux_max_tokens` | int | min(8192, max_tokens) | — | `core/framework/config.py:700` | `go_hive/go-hive/internal/server/config_slots.go:461` | aligned |
+| `llm.aux_max_tokens` | int | min(8192, max_tokens) | — | `core/framework/config.py:700` | `go_hive/go-hive/internal/server/config_slots.go:471` | aligned |
 | `llm.endpoint` | string (endpoint name) | null | — | `core/framework/config.py:341` | `go_hive/go-hive/internal/server/llm_config.go:417` (+1) | aligned |
 | `llm.extra_body` | object | null | — | `core/framework/config.py:642` | `go_hive/go-hive/internal/llm/request_shape.go:180` (+1) | aligned |
 | `llm.num_ctx` | int | 16384 | — | `core/framework/config.py:1458` | `go_hive/go-hive/internal/llm/request_shape.go:178` (+1) | aligned |
 | `llm.use_claude_code_subscription` | bool | false | — | `core/framework/config.py:790` | `go_hive/go-hive/internal/llm/request_shape.go:158` (+1) | aligned |
 | `llm.use_codex_subscription` | bool | false | — | `core/framework/config.py:802` | `go_hive/go-hive/internal/llm/request_shape.go:163` (+1) | aligned |
 | `llm.use_kimi_code_subscription` | bool | false | — | `core/framework/config.py:814` | `go_hive/go-hive/internal/server/llm_config.go:80` (+2) | aligned |
-| `llm.use_antigravity_subscription` | bool | false | — | `core/framework/config.py:826` | `go_hive/go-hive/internal/server/llm_config.go:210` (+1) | go_partial |
-| `llm.antigravity_client_id` | string | null | ANTIGRAVITY_CLIENT_ID | `core/framework/config.py:911` | `go_hive/go-hive/internal/server/config_slots.go:536` | go_partial |
-| `llm.antigravity_client_secret` | string | null | ANTIGRAVITY_CLIENT_SECRET | `core/framework/config.py:935` | `go_hive/go-hive/internal/server/config_slots.go:543` | go_partial |
+| `llm.use_antigravity_subscription` | bool | false | — | `core/framework/config.py:826` | `go_hive/go-hive/internal/server/llm_config.go:210` (+2) | aligned |
+| `llm.antigravity_client_id` | string | null | ANTIGRAVITY_CLIENT_ID | `core/framework/config.py:911` | `go_hive/go-hive/internal/server/config_slots.go:546` (+2) | aligned |
+| `llm.antigravity_client_secret` | string | null | ANTIGRAVITY_CLIENT_SECRET | `core/framework/config.py:935` | `go_hive/go-hive/internal/server/config_slots.go:553` (+1) | aligned |
 
 - `llm.provider`：both require provider+model before the slot counts as configured; the session builder joins them as provider/model (get_preferred_model shape), and without a usable pair both fall back to the same hardcoded default pair (anthropic/claude-sonnet-5-5).
 - `llm.model`：openrouter/<id> prefix is stripped on both sides before the provider/model join. The Go session builder (MainSlotProvider → MainSlotModel) joins the pair the same way; a model request override is used as given, as RuntimeConfig(model=...) does.
@@ -132,9 +132,9 @@
 - `llm.use_claude_code_subscription`：adds Bearer auth headers; Go resolves the token from ~/.claude/.credentials.json at session build (upstream also checks the macOS Keychain and refreshes expiry; the port reads the CLI-refreshed file and does not refresh). The config gate and header shape match.
 - `llm.use_codex_subscription`：adds ChatGPT backend headers (Authorization/User-Agent/ChatGPT-Account-Id) on both sides; Go resolves the token from ~/.codex/auth.json and the account id from tokens.account_id (else the JWT claim) at session build.
 - `llm.use_kimi_code_subscription`：runtime wired end-to-end: MainSlotKey resolves the token from ~/.kimi/config.toml and MainSlotAPIBase returns https://api.kimi.com/coding, so a session on this flag authenticates and routes like Python's get_api_key/get_api_base branches (the kimi/ model prefix routes through the Anthropic Messages transport). Pinned by TestMainSlotProviderReadsTheSubscriptionTokens.
-- `llm.use_antigravity_subscription`：partial: Python's flag swaps the whole session to AntigravityProvider (Gemini-style cloudcode API, OAuth refresh) in session_manager.build_llm; that provider is not ported. Go consumes the flag as far as it can — MainSlotKey reads the account file's access token for get_api_key's branch and MainSlotProvider refuses the session with an explicit error instead of silently sending an OpenAI request with no key. Structural reason and alternative verification are recorded in contracts/config-support-ledger.json (TestMainSlotProviderRefusesAntigravitySubscription).
-- `llm.antigravity_client_id`：reader only: ANTIGRAVITY_CLIENT_ID, then llm.antigravity_client_id (no public-source fetch), tested by TestAntigravityClientCredentials. The only upstream consumers are the OAuth refresh flows inside the unported AntigravityProvider (framework/llm/antigravity.py, framework/loader/agent_loader.py::_refresh_antigravity_token); the port reads the pre-issued access token from antigravity-accounts.json and has no refresh to hand a client id to. Alternative verification: the reader's env-then-file precedence is pinned; no REST/CRUD path is claimed as consumption.
-- `llm.antigravity_client_secret`：reader only: ANTIGRAVITY_CLIENT_SECRET, then llm.antigravity_client_secret (no public-source fetch), tested by TestAntigravityClientCredentials. Same structural reason as the client id: the only consumers are the unported AntigravityProvider's OAuth refresh flows, so there is no request path to hand a client secret to.
+- `llm.use_antigravity_subscription`：runtime wired end-to-end: the flag swaps the session to the ported AntigravityProvider (Gemini cloudcode API + OAuth refresh, internal/llm/antigravity.go), matching core/framework/llm/antigravity.py + session_manager.build_llm; MainSlotKey still reads the account token for the get_api_key branch. Pinned by TestMainSlotProviderBuildsTheAntigravityProvider and the httptest refresh/retry/fallback suite.
+- `llm.antigravity_client_id`：wired: ANTIGRAVITY_CLIENT_ID, then llm.antigravity_client_id; consumed by the ported Antigravity OAuth refresh (oauth2.googleapis.com token exchange in internal/llm/antigravity_credentials.go), matching framework/llm/antigravity.py. Reader precedence + refresh pinned by TestAntigravityClientCredentials / TestAntigravityRefreshWithoutClientIDFails.
+- `llm.antigravity_client_secret`：wired: ANTIGRAVITY_CLIENT_SECRET, then llm.antigravity_client_secret; consumed by the Antigravity OAuth refresh client credential exchange (internal/llm/antigravity_credentials.go). Same wiring as the client id; precedence pinned by TestAntigravityClientCredentials.
 
 ### 2.4 `loop`
 
@@ -278,7 +278,7 @@
 
 | 键 | 类型 | 默认 | env 覆盖 | Python 读取点 | Go 读取点 | 状态 |
 |---|---|---|---|---|---|---|
-| `queen_tools.always_enabled_categories` | list[string] | null | — | `core/framework/agents/queen/queen_tools_defaults.py:398` | `go_hive/go-hive/internal/server/routes_queens_tools.go:517` | aligned |
+| `queen_tools.always_enabled_categories` | list[string] | null | — | `core/framework/agents/queen/queen_tools_defaults.py:398` | `go_hive/go-hive/internal/server/routes_queens_tools.go:520` | aligned |
 
 - `queen_tools.always_enabled_categories`：list of strings; non-list/entries ignored; applies to the default tool catalogue.
 
@@ -472,7 +472,7 @@
 
 | 键 | 类型 | 默认 | env 覆盖 | Python 读取点 | Go 读取点 | 状态 |
 |---|---|---|---|---|---|---|
-| `worker_tools.always_enabled_categories` | list[string] | null | — | `core/framework/agents/queen/queen_tools_defaults.py:462` | `go_hive/go-hive/internal/server/config_slots.go:516` | aligned |
+| `worker_tools.always_enabled_categories` | list[string] | null | — | `core/framework/agents/queen/queen_tools_defaults.py:462` | `go_hive/go-hive/internal/server/config_slots.go:526` | aligned |
 
 - `worker_tools.always_enabled_categories`：same list-of-strings rule as queen_tools: a mixed list is not an override. Wired: server.WorkerKeepSetFromConfig expands the categories and hands the colony runtime its WorkerKeepSet; an empty list turns worker tiering off, an absent key keeps the hardcoded default.
 
@@ -503,12 +503,9 @@
 
 ## 4. 差异清单
 
-### go_partial（4）
+### go_partial（1）
 
 - `channels.<name>.enabled` — partial: no plugin host, so the flag cannot start a channel — the Go port has no entry-point discovery or channel lifecycle. Field-level parity instead: Go reads the section with upstream's shape (object, per-channel object, truthy enabled), preserves it on every configuration write, keeps GET /api/channels' upstream response shape (empty with no installed channels), and names enabled channels in a serve-time no-effect warning. Recorded in contracts/config-support-ledger.json.
-- `llm.use_antigravity_subscription` — partial: Python's flag swaps the whole session to AntigravityProvider (Gemini-style cloudcode API, OAuth refresh) in session_manager.build_llm; that provider is not ported. Go consumes the flag as far as it can — MainSlotKey reads the account file's access token for get_api_key's branch and MainSlotProvider refuses the session with an explicit error instead of silently sending an OpenAI request with no key. Structural reason and alternative verification are recorded in contracts/config-support-ledger.json (TestMainSlotProviderRefusesAntigravitySubscription).
-- `llm.antigravity_client_id` — reader only: ANTIGRAVITY_CLIENT_ID, then llm.antigravity_client_id (no public-source fetch), tested by TestAntigravityClientCredentials. The only upstream consumers are the OAuth refresh flows inside the unported AntigravityProvider (framework/llm/antigravity.py, framework/loader/agent_loader.py::_refresh_antigravity_token); the port reads the pre-issued access token from antigravity-accounts.json and has no refresh to hand a client id to. Alternative verification: the reader's env-then-file precedence is pinned; no REST/CRUD path is claimed as consumption.
-- `llm.antigravity_client_secret` — reader only: ANTIGRAVITY_CLIENT_SECRET, then llm.antigravity_client_secret (no public-source fetch), tested by TestAntigravityClientCredentials. Same structural reason as the client id: the only consumers are the unported AntigravityProvider's OAuth refresh flows, so there is no request path to hand a client secret to.
 
 ### go_only（4）
 
@@ -521,7 +518,7 @@
 
 - `created_at` — unread: written by the installers (quickstart.sh/quickstart.ps1), read by neither runtime — a write-once install timestamp, not a runtime knob. Go preserves it on every configuration write; TestConfigWritesPreserveChannelsAndCreatedAt pins that.
 
-非 `aligned` 键合计 **9** 个，已全部列出（上表）。
+非 `aligned` 键合计 **6** 个，已全部列出（上表）。
 
 ## 5. 复现与门禁
 

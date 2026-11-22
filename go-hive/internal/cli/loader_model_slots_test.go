@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/aden-hive/hive-go/internal/hivehome"
 	"github.com/aden-hive/hive-go/internal/llm"
@@ -186,5 +187,62 @@ func TestAWorkerLLMWriteIsPickedUpByTheNextSession(t *testing.T) {
 	}
 	if rebuilt.APIKey != "main-key" {
 		t.Fatalf("worker key = %q, want the main slot fallback", rebuilt.APIKey)
+	}
+}
+
+// TestWorkerChatProviderSwapsToAntigravity pins build_worker_llm's subscription
+// branch: worker_llm.use_antigravity_subscription swaps the transport to the
+// Gemini-style provider, and the slot keeps it across a reconfigure (upstream
+// providers without reconfigure() are skipped by the hot-swap route).
+//
+// Parity: framework/server/session_manager.py::SessionManager.build_worker_llm
+func TestWorkerChatProviderSwapsToAntigravity(t *testing.T) {
+	home := slotTestHome(t, map[string]any{
+		"llm": map[string]any{"provider": "anthropic", "model": "claude-main", "api_key": "main-key"},
+		"worker_llm": map[string]any{
+			"provider": "openai", "model": "gemini-3-flash",
+			"use_antigravity_subscription": true,
+		},
+	})
+	accounts, err := json.Marshal(map[string]any{
+		"schemaVersion": 4,
+		"accounts": []any{map[string]any{
+			"refresh": "refresh-1|project-1",
+			"access":  "ya29.live",
+			"expires": time.Now().Add(time.Hour).UnixMilli(),
+		}},
+	})
+	if err != nil {
+		t.Fatalf("marshal accounts: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(home.Root, "antigravity-accounts.json"), accounts, 0o600); err != nil {
+		t.Fatalf("write accounts: %v", err)
+	}
+
+	provider, err := workerChatProvider(home)
+	if err != nil {
+		t.Fatalf("workerChatProvider: %v", err)
+	}
+	if _, ok := provider.(*llm.ProviderSlot); !ok {
+		t.Fatalf("worker provider type = %T, want *llm.ProviderSlot", provider)
+	}
+	live := llm.ResolveCompleter(provider)
+	antigravity, ok := live.(*llm.AntigravityProvider)
+	if !ok {
+		t.Fatalf("resolved worker provider type = %T, want *llm.AntigravityProvider", live)
+	}
+	if got := antigravity.ModelName(); got != "gemini-3-flash" {
+		t.Fatalf("worker antigravity model = %q", got)
+	}
+	if !antigravity.HasCredentials() {
+		t.Fatalf("worker antigravity provider has no credentials from the account file")
+	}
+
+	// The slot has no rebuild factory for Antigravity, so a model-slot write
+	// keeps the live transport (upstream: hasattr(prov, "reconfigure") is false).
+	slot, _ := provider.(*llm.ProviderSlot)
+	slot.Reconfigure("openai/gpt-5", nil, nil, nil)
+	if llm.ResolveCompleter(slot) != llm.Completer(antigravity) {
+		t.Fatalf("reconfigure replaced the Antigravity transport")
 	}
 }

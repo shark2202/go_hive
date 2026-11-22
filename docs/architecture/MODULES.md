@@ -1,6 +1,6 @@
 # 模块清单（生成物，勿手改）
 
-> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` + `go list` 生成。commit: `528bdcd6b649`
+> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` + `go list` 生成。commit: `389ba7a352a9`
 > 修改分层或职责请改 `architecture/model.yaml`，不要编辑本文件。
 
 ## 分层统计
@@ -16,7 +16,7 @@
 | 能力层（`capability`） | 29 | 可被循环调用的能力：工具、集成、LLM 传输、记忆、技能、soul、凭据、出站消息。 |
 | 基础层（`foundation`） | 16 | 无业务语义的底座：事件总线、文件存储、schema、原子写、目录布局、限速、质量门禁。 |
 
-共 82 个包、222 条包间 import 边。
+共 82 个包、223 条包间 import 边。
 
 ## 模块表
 
@@ -38,7 +38,7 @@
 | `e2e/stallgw` | harness | stream stall e2e 的确定性假上游网关（可注入停滞）。 | 0 | 1 |  |
 | `internal/release` | harness | 发布脚本（release_slot 等）的回归测试。 | 0 | 0 |  |
 | `internal/toolgolden` | harness | 工具结果文本的规范化，用于两侧运行时对照。 | 0 | 0 |  |
-| `internal/cli` | assembly | 装配根：解析命令与配置，构造 home、ToolRegistry、MCP runtime、ChatRuntime、ColonyRuntime，并注册 serve/chat/queen/colony/session/skill/mcp/janitor 子命令。 | 31 | 4 |  |
+| `internal/cli` | assembly | 装配根：解析命令与配置，构造 home、ToolRegistry、MCP runtime、ChatRuntime、ColonyRuntime，并注册 serve/chat/queen/colony/session/skill/mcp/janitor 子命令。 | 32 | 4 |  |
 | `internal/runtimehealth` | transport | 进程与宿主机资源健康快照，供 /api/health/resources 使用。 | 0 | 1 |  |
 | `internal/server` | transport | HTTP/SSE 传输层：路由注册、会话管理、ChatRuntime 的 turn 队列、colony/tracker/sentinel 适配器与事件桥。 | 37 | 2 |  |
 | `internal/server/uiembed` | transport | embed_ui 构建标签下的前端静态资源；未带标签时返回空，让服务端回退到磁盘目录。 | 0 | 1 |  |
@@ -50,7 +50,7 @@
 | `internal/playbook` | orchestration | Playbook 定义与带并发上限的 lane 执行器。 | 1 | 2 |  |
 | `internal/queen` | orchestration | Queen 档案与身份定义（queen_profiles 的 Go 移植）。 | 0 | 3 |  |
 | `internal/queenmail` | orchestration | Queen 之间的信件引擎：信件存储、待投递队列、queens/mail.jsonl 审计日志与 hive MCP stdio 面。 | 3 | 3 |  |
-| `internal/sentinel` | orchestration | Queen 停泊期的自治监督：nudge / escalate 判定、升级投递、入站回复路由与恢复。 | 6 | 1 |  |
+| `internal/sentinel` | orchestration | Queen 停泊期的自治监督：nudge / escalate 判定、升级投递、入站回复路由与恢复。 | 6 | 2 |  |
 | `internal/session` | orchestration | 会话记录与磁盘布局：状态、transcript、游标、fork 与冷恢复。 | 3 | 4 |  |
 | `internal/sessionreport` | orchestration | 会话报告打包（report-bundle）：把会话、worker 与证据汇总成一份可交付摘要。 | 0 | 1 |  |
 | `internal/tasks` | orchestration | 任务计划存储：tasks.json 的增删改查、归档与提醒状态。 | 3 | 4 |  |

@@ -336,8 +336,9 @@ func TestFlatSurfaceGroupedSwitch(t *testing.T) {
 // TestFlatSurfaceExecutionRoutes checks that the flat names execute through
 // the existing implementations: the playbook-control trio maps onto the
 // run_playbook actions (with the actionable no-colony error, not an unknown
-// tool), and the four not-yet-ported names answer with an explicit
-// not_implemented envelope instead of failing silently.
+// tool), and the three not-yet-ported names answer with an explicit
+// not_implemented envelope instead of failing silently. sentinel_setup has its
+// own execution route now — see TestSentinelSetupExecutesThroughFlatSurface.
 //
 // Parity-exempt: routing check over the frozen contract; the actions it maps
 // onto are covered by their own parity tests.
@@ -358,7 +359,7 @@ func TestFlatSurfaceExecutionRoutes(t *testing.T) {
 		}
 	}
 
-	for _, name := range []string{"collect_result", "credentials", "sentinel_setup", "suggest_colony"} {
+	for _, name := range []string{"collect_result", "credentials", "suggest_colony"} {
 		content, isError, err := catalogue.Execute(ctx, name, map[string]any{})
 		if err != nil {
 			t.Fatalf("%s: unexpected error %v", name, err)

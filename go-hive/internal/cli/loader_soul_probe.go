@@ -47,10 +47,13 @@ func newSoulProbeAnswerFor(home hivehome.Home, model string) func(string, *souls
 		return func(system, question string) (string, error) {
 			ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 			defer cancel()
-			completion, err := provider.Complete(ctx, []map[string]any{
-				{"role": "system", "content": system},
-				{"role": "user", "content": question},
-			}, llm.CompleteOptions{})
+			// The system prompt rides CompletionRequest.System so a Gemini-style
+			// transport (a provider swap) sends it as systemInstruction rather
+			// than dropping a system-role message from the contents.
+			completion, err := provider.AComplete(ctx, llm.CompletionRequest{
+				Messages: []llm.ChatMessage{{Role: "user", Content: question}},
+				System:   system,
+			})
 			if err != nil {
 				return "", err
 			}

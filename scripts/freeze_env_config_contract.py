@@ -1187,10 +1187,9 @@ def build_doc(env: dict, cfg: dict) -> str:
         "- 模型槽位状态收敛：`queen_llm.*`（8）、`worker_llm.*`（10）、`vision_fallback.*`（7）全部转 `aligned`（逐键读取点与热切换矩阵见 §2 与 `docs/configuration.md` §3.8）；"
         "`worker_llm.max_tokens` 增加读取点 `WorkerMaxTokens`（与上游 `get_worker_max_tokens` 同为无调用点）；"
         "`channels.<name>.enabled` 由 `python_only` 变为 `go_partial`：字段按上游形状读取、写入时保留、GET /api/channels 形状不变，启用时 serve 启动打印「无渠道宿主、不会运行」的告警。",
-        "- 仍未对齐的 4 个残余（结构性理由 + 替代验证见 `contracts/config-support-ledger.json`）："
-        "`llm.antigravity_client_id` / `llm.antigravity_client_secret`（只读；唯一上游消费者是未移植的 AntigravityProvider 内的 OAuth 刷新）、"
-        "`llm.use_antigravity_subscription`（同上：会话构建对该标志显式报错而非静默发无键请求）、"
-        "`channels.<name>.enabled`（无渠道插件宿主，读到但不生效）。"
+        "- 仍未对齐的残余（结构性理由 + 替代验证见 `contracts/config-support-ledger.json`）："
+        "`channels.<name>.enabled`（无渠道插件宿主，读到但不生效）；"
+        "`llm.antigravity_client_id` / `_secret` / `use_antigravity_subscription` 已随 Antigravity provider 移植转 wired（2026-11-22）。"
         "`mcp.*` 4 键为逐项确认过的 Go 扩展（上游 MCP 来自 registry/`.mcp.json`，从不读 configuration.json 的 `mcp` 块）；"
         "`created_at` 为安装器写入、两侧运行时都不读（Go 在配置写入时保留，见测试）。",
         "- 环境变量侧，env-verbatim-port 车道已把 `HIVE_TRACKER_WORKER_TOOL_CALLS`、`HIVE_HISTORY_READ_WORKERS`、"

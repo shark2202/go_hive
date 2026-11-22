@@ -159,9 +159,12 @@ func flatSurfaceDefaultNames() []string {
 // flatSurfaceStandaloneTools are default-set names this build advertises
 // without a live catalogue definition: ask_user is synthetic (the chat runtime
 // appends it; the loop executes it), search_tools answers with the inventory
-// fallback, and the remaining four are Python-only tools whose Go port has no
-// executor yet — they stay advertised for name parity and answer with an
-// explicit not_implemented envelope.
+// fallback, sentinel_setup executes through the session catalogue's own route
+// (internal/sentinel — it stays out of the live defs so the colony worker pool
+// never sees it, as upstream gives the tool to the queen's loop only), and the
+// remaining three are Python-only tools whose Go port has no executor yet —
+// they stay advertised for name parity and answer with an explicit
+// not_implemented envelope.
 //
 // The playbook-control names used to live here as run_playbook aliases; they
 // are real catalogue definitions now (colony.PlaybookControlToolDefs), so they
@@ -171,7 +174,7 @@ var flatSurfaceStandaloneTools = map[string]string{
 	"collect_result": "not implemented in this build (no background tool handles)",
 	"credentials":    "not implemented as a model tool in this build (use the hive-cred CLI)",
 	"search_tools":   "agent-loop tool tier when present; inventory fallback otherwise",
-	"sentinel_setup": "not implemented as a model tool in this build (desktop connector)",
+	"sentinel_setup": "executed by the session catalogue (internal/sentinel); advertised from the frozen contract",
 	"suggest_colony": "not implemented as a model tool in this build (colony UI)",
 }
 
@@ -509,7 +512,12 @@ func (c *sessionToolCatalogue) executeFlatSurfaceTool(ctx context.Context, name 
 				"no tools are deferred. Grouped integration tools are hidden by default and can be " +
 				"enabled with HIVE_TOOL_SURFACE=grouped.",
 		}), false, true
-	case "collect_result", "credentials", "sentinel_setup", "suggest_colony":
+	case "sentinel_setup":
+		// Queen-facing Sentinel setup (tokens / per-colony config / test /
+		// detect_chat). Executes in-process against the same store, config
+		// and credential store the desktop connector writes.
+		return c.executeSentinelSetup(ctx, input)
+	case "collect_result", "credentials", "suggest_colony":
 		return tools.PythonJSONDumps(map[string]any{
 			"error":   "not_implemented",
 			"tool":    name,
@@ -533,9 +541,6 @@ func flatSurfaceNotImplementedMessage(name string) string {
 		return "credentials is not ported as a model tool in this build. Use the `hive-cred` CLI from " +
 			"terminal_exec instead: `hive-cred browse --json`, `hive-cred inspect <id> --json`, " +
 			"`hive-cred token <id> --account <alias>`."
-	case "sentinel_setup":
-		return "sentinel_setup is not ported as a model tool in this build. Sentinel notifications are " +
-			"configured through the desktop/UI connector for the colony."
 	case "suggest_colony":
 		return "suggest_colony is not ported as a model tool in this build. Create the colony from the " +
 			"UI; this chat keeps working in place."

@@ -664,7 +664,7 @@
           },
           {
             "file": "go_hive/go-hive/internal/server/main_slot.go",
-            "line": 142,
+            "line": 153,
             "symbol": "MainSlotKey",
             "parse": "string",
             "snippet": "return strings.TrimSpace(os.Getenv(\"HIVE_API_KEY\"))",
@@ -727,7 +727,7 @@
           }
         ],
         "dev_reads": [],
-        "test_reads": 0,
+        "test_reads": 5,
         "writes": [],
         "mentions": 2,
         "comments": 0
@@ -1622,9 +1622,9 @@
           }
         ],
         "dev_reads": [],
-        "test_reads": 15,
+        "test_reads": 22,
         "writes": [],
-        "mentions": 37,
+        "mentions": 38,
         "comments": 7
       }
     },
@@ -1725,7 +1725,7 @@
         "dev_reads": [],
         "test_reads": 0,
         "writes": [],
-        "mentions": 2,
+        "mentions": 4,
         "comments": 0
       },
       "notes": "true for 1/true/full and any non-empty except 0/false."
@@ -1923,7 +1923,7 @@
           },
           {
             "file": "go_hive/go-hive/internal/cli/loader.go",
-            "line": 1098,
+            "line": 1108,
             "symbol": "runtimeOwnerPID",
             "parse": "string",
             "snippet": "owner := os.Getenv(\"HIVE_DESKTOP_PARENT_PID\")",
@@ -1935,7 +1935,7 @@
         "writes": [
           {
             "file": "go_hive/go-hive/internal/cli/loader.go",
-            "line": 1101,
+            "line": 1111,
             "scope": "runtime"
           }
         ],
@@ -2544,10 +2544,10 @@
           }
         ],
         "dev_reads": [],
-        "test_reads": 60,
+        "test_reads": 62,
         "writes": [],
-        "mentions": 248,
-        "comments": 98
+        "mentions": 270,
+        "comments": 102
       },
       "notes": "fallback ~/.hive on both; Go converts to an absolute path."
     },
@@ -3842,7 +3842,7 @@
           }
         ],
         "dev_reads": [],
-        "test_reads": 18,
+        "test_reads": 23,
         "writes": [
           {
             "file": "go_hive/go-hive/internal/memory/recall_config_test.go",
@@ -3850,7 +3850,7 @@
             "scope": "test"
           }
         ],
-        "mentions": 10,
+        "mentions": 19,
         "comments": 5
       },
       "notes": "mode name, strip+lower; unknown/empty falls through to configuration.json memory_recall.mode, then index. Read at each message."
@@ -3980,7 +3980,7 @@
         "dev_reads": [],
         "test_reads": 2,
         "writes": [],
-        "mentions": 11,
+        "mentions": 13,
         "comments": 8
       },
       "notes": "py: `if not os.getenv(...)` — any non-empty value (incl. \"0\") turns the $HIVE_HOME/logs/hive-server.log handler off (20MB×3); go: same gate in internal/logging, wired into the serve logger by installRuntimeLogBuffer."
@@ -4044,7 +4044,7 @@
         "dev_reads": [],
         "test_reads": 0,
         "writes": [],
-        "mentions": 6,
+        "mentions": 7,
         "comments": 0
       }
     },

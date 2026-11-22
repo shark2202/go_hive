@@ -321,6 +321,16 @@ func QueenLLMSection(home hivehome.Home, queenID string) map[string]any {
 	return section
 }
 
+// UsesAntigravitySubscription reports the section's Antigravity flag. The
+// builder the section feeds swaps its whole transport to the Gemini-style
+// Cloud Code Assist provider when it is set (upstream build_llm /
+// build_worker_llm).
+//
+// Parity: framework/server/session_manager.py::SessionManager.build_llm
+func UsesAntigravitySubscription(section map[string]any) bool {
+	return pyTruthy(section["use_antigravity_subscription"])
+}
+
 // WorkerLLMSection is the configured worker model section, or nil when the
 // worker shares the main model (upstream's get_preferred_worker_model returns
 // None in that case).

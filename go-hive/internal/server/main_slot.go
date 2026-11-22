@@ -30,17 +30,28 @@ import (
 // section names no usable provider/model pair.
 const DefaultPreferredModel = "anthropic/claude-sonnet-5-5"
 
-// ErrAntigravityUnsupported is returned when the main slot asks for the
-// Antigravity subscription. Python swaps the whole session to
-// framework.llm.antigravity.AntigravityProvider, a Gemini-style cloudcode
-// transport the Go port does not implement; failing loudly keeps the flag from
-// silently running an OpenAI request with no key.
-var ErrAntigravityUnsupported = errors.New(
-	"llm: use_antigravity_subscription needs the Antigravity provider, which this runtime does not implement")
-
 // MainSlotSection is configuration.json's `llm` object, or nil.
 func MainSlotSection(home hivehome.Home) map[string]any {
 	return configSection(home, "llm")
+}
+
+// AntigravityProviderFor builds the Antigravity (Google Cloud Code Assist)
+// transport one model slot runs on: the OAuth account file lives under the hive
+// home and the client credentials come from the same env-then-file readers the
+// REST surface uses.
+//
+// Upstream swaps the whole session to this provider when
+// llm.use_antigravity_subscription is set (session_manager.build_llm); the
+// provider refreshes its access token itself.
+//
+// Parity: core/framework/llm/antigravity.py::AntigravityProvider.__init__
+func AntigravityProviderFor(home hivehome.Home, model string) *llm.AntigravityProvider {
+	return llm.NewAntigravityProvider(llm.AntigravityOptions{
+		Model:        model,
+		AccountsPath: filepath.Join(home.Root, "antigravity-accounts.json"),
+		ClientID:     func() string { return AntigravityClientID(home) },
+		ClientSecret: func() string { return AntigravityClientSecret(home) },
+	})
 }
 
 // MainSlotAPIKeys ports get_api_keys: the configured key pool with empty
@@ -222,11 +233,13 @@ func MainSlotModel(home hivehome.Home, requested string) string {
 // main llm slot: model, key, base, key pool and extra request fields all come
 // from configuration.json, re-read at build time. A local model needs no key;
 // every remote model must resolve one, with the same hint the CLI has always
-// printed when none is configured.
-func MainSlotProvider(home hivehome.Home, requestedModel string) (*llm.Provider, error) {
+// printed when none is configured. The Antigravity subscription swaps the whole
+// transport for its Gemini-style provider, exactly as upstream's
+// SessionManager.build_llm does.
+func MainSlotProvider(home hivehome.Home, requestedModel string) (llm.Completer, error) {
 	section := MainSlotSection(home)
 	if pyTruthy(section["use_antigravity_subscription"]) {
-		return nil, ErrAntigravityUnsupported
+		return AntigravityProviderFor(home, MainSlotModel(home, requestedModel)), nil
 	}
 
 	model := MainSlotModel(home, requestedModel)

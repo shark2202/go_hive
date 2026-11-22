@@ -121,6 +121,27 @@
 - **登记册变化**：`credentials/setup.py` unported → partial（load_agent_nodes 已移植接线）；`credentials/validation.py` 保持 partial（validate/compute/CredentialStatus 已移植，build_setup_session_from_error 未移植）；`credentials/aden/client.py` 保持 unported，basis 注明 resync 已接线。重生后总计 **273 = 217 ported / 27 partial / 9 out_of_scope / 20 unported**（`contracts/module-inventory.json`，C12 PASS；其中 tool_input_coercer 已由 coercer-wire lane 接线升级 ported）。
 - 证据与复算：`go_hive/docs/e2e-assets/credentials-check-agent/README.md`。
 
+## 后续变更（2026-11-22 晚，lane `sentinel-setup`）
+
+- **P2 `unported-sentinel-setup-tool` 已闭环**：`core/framework/agent_loop/internals/sentinel_tool.py` 全量移植——工具定义（描述 + JSON Schema 逐字，`internal/cli/tool_surface_flat.json` 冻结契约不变）在 `internal/sentinel/sentinel_tool.go::SentinelSetupToolDef`，执行入口 `HandleSentinelSetup`（help/status/store_token/detect_chat/configure/test）；生产接缝在 `internal/cli/sentinel_setup_tool.go`（加密凭据保存 → store→env 桥、进程级 manager、`tool_catalog_refreshed` 事件）。`internal/cli/tool_surface_flat.go` 的 `sentinel_setup` not_implemented 占位已删除，flat 面路由到真实执行；worker 可见面不变（工具不进 catalogue defs，与上游 queen-only 一致）。
+- **未验证项**：真实 Telegram/Slack 凭据的校验与投递（单测全部使用注入 HTTP；token 校验以 auth.test/getMe 的响应体为准）；desktop UI 对 `tool_catalog_refreshed` 的刷新链路未起真实前端验证。
+- **登记册变化**：`agent_loop/internals/sentinel_tool.py` unported → ported（basis 指向 `internal/sentinel/sentinel_tool.go` 的 `// Parity:` 锚点 + `internal/cli` 生产调用方；evidence `internal/sentinel/sentinel_tool_test.go`）。重生后 unported 20 → 19。
+- 验证：`go test ./internal/sentinel/ ./internal/cli/ ./internal/server/`；`bash go_hive/scripts/merge_postcheck.sh` 四关。
+
+## 后续变更（2026-11-22 晚，lane `antigravity`）
+
+- **P2 `unported-antigravity-provider` 已闭环**：`core/framework/llm/antigravity.py` 全量移植为 `internal/llm/antigravity.go`（provider：Gemini contents 转换、JSON Schema → OpenAPI 3.0 清洗、非流式/SSE 解析、端点回退、401/403 refresh 重试、错误文案）+ `internal/llm/antigravity_credentials.go`（`$HIVE_HOME/antigravity-accounts.json` V1–V4 schema、Antigravity IDE SQLite state DB 回退、`refresh_token` 交换；client id/secret 复用 `server.AntigravityClientID` / `AntigravityClientSecret`）。接线：`server.MainSlotProvider`（`use_antigravity_subscription` → `AntigravityProviderFor`，删除 `ErrAntigravityUnsupported`）与 `cli.workerChatProvider`（`worker_llm` 同标志）；Antigravity provider 无 `reconfigure`，`newModelSlot` 对其不设重建工厂（与上游 `hasattr(prov, "reconfigure")` 跳过一致）。
+- **测试**：`internal/llm/antigravity_test.go`（mock OAuth+网关：过期 token refresh、401 重试、5xx 端点回退、非重试 4xx 文案、refresh 失败回退旧 token、无凭据文案、SSE 文本/工具调用/thoughtSignature 回传、accounts 文件 V1–V4、IDE DB）+ `internal/llm/antigravity_schema_test.go`（逐条对齐 `core/tests/test_antigravity_schema.py`：union→nullable、递归 properties/items/anyOf、不改输入、纯 null 回退、多类型 union 报错、坏 schema 工具单独剔除）+ server/cli 接线测试。
+- **登记册变化**：`llm/antigravity.py` unported → ported（auto 扫描：`internal/llm/antigravity.go` 由 `internal/server/main_slot.go` 引用）；重生后总计 **273 = 218 ported / 27 partial / 9 out_of_scope / 19 unported**（C12 PASS）。`go_hive/docs/env-config-contract-diff.md` / `contracts/config-keys.json` 仍冻结在旧 `go_partial` 结论（`llm.antigravity_client_id` / `_secret` / `use_antigravity_subscription`），需下一次 `freeze_env_config_contract.py` 重生成车道同步；`contracts/config-support-ledger.json` 对应条目的 `partial` 理由同样待该车道更新。
+- **未验证**：本 lane 无真实 Google OAuth 凭据与 cloudcode 访问，端到端（真实 refresh/真实模型回合）未验证；单测全部走 httptest 假网关。
+
+## 后续变更（2026-11-22 晚，lane `ga-migration`）
+
+- **P2 `unported-ga-tool-migration` 已闭环**：GA（generally-available）工具 sidecar 愈合迁移全量移植——`internal/tools/category_additions.go`（`_CATEGORY_ADDITIONS` 表 + `_parse_version`/`_category_fully_resolvable`/`infer_category_additions`/`grant_role_default_additions`）、`internal/server/tools_ga_migration.go`（`_apply_to_sidecar`/`migrate_queen_sidecars`/`migrate_colony_sidecars`/`run_ga_tool_migration` + `colony_metadata.list_colony_ids`）。启动接线 `internal/cli/loader.go` `runGAToolMigration`（storage 迁移之后、任何会话/preloaded colony 装配之前，对齐 create_app）；`load_queen_tools_config` 侧车读取同步愈合（已知 queen 走角色默认 grant、自定义 queen 走 baseline 启发式），替换 routes_queens_tools.go 原「no Go port yet」注记。幂等性按侧车 `saved_on_version`；写回 payload 与 Python 一致（enabled_mcp_tools/updated_at/saved_on_version）。
+- **登记册变化**：`tools_ga_migration.py` unported → ported（kind=parity，counterpart `internal/server/tools_ga_migration.go`，caller `internal/cli/tools_ga_migration.go`，证据 `tools_ga_migration_test.go`）；`queen_tools_defaults.py`/`colony_metadata.py` 的 go_counterparts 各 +1（distributed）。重生后总计 **273 = 218 ported / 27 partial / 9 out_of_scope / 19 unported**（`contracts/module-inventory.json`，C12 PASS）。
+- 验证：`go test -count=1 ./internal/{tools,server,cli,queen}` 全 `ok`；`make parity`（5,769/5,769）/`make parity-targets`（6,299 refs，0 missing）；`bash go_hive/scripts/merge_postcheck.sh` 四关全过（gofmt / wiring 21 文件 68 项 / C12 verdict=PASS / arch `--check`）；`make tool-surface-check`/`make tool-output-check` 无漂移。
+- 说明：Google Analytics 工具族（7 action）早已由 batch-7 移植（`internal/tools/integrations/google_analytics*.go`，冻结契约 `go_hive/contracts/tool-definitions.json` go_only_tools[35] 逐字一致），本项中「GA」指 generally-available 工具晋升，非 Google Analytics。
+
 ## 复现
 
 ```sh

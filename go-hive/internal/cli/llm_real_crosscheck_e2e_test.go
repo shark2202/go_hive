@@ -112,17 +112,21 @@ func TestLLMRealCrosscheckE2E(t *testing.T) {
 	if err != nil {
 		t.Fatalf("resolve real LLM provider: %v", err)
 	}
-	if provider.ExtraKwargs == nil {
-		provider.ExtraKwargs = map[string]any{}
+	httpProvider, ok := llm.ResolveCompleter(provider).(*llm.Provider)
+	if !ok {
+		t.Fatalf("resolve real LLM provider: %T is not an HTTP provider", provider)
+	}
+	if httpProvider.ExtraKwargs == nil {
+		httpProvider.ExtraKwargs = map[string]any{}
 	}
 	// Same probe parameter on both sides; the agent path never sets one.
-	provider.ExtraKwargs["temperature"] = 0.0
+	httpProvider.ExtraKwargs["temperature"] = 0.0
 
 	result := map[string]any{
 		"side": "go",
 		"provider": map[string]any{
-			"model":    provider.Model,
-			"api_base": provider.APIBase,
+			"model":    httpProvider.Model,
+			"api_base": httpProvider.APIBase,
 		},
 		"tenant": map[string]any{
 			"hive_home": home.Root,
@@ -138,7 +142,7 @@ func TestLLMRealCrosscheckE2E(t *testing.T) {
 		case "chat_minimal":
 			calls := make([]crosscheckCall, 0, reps)
 			for rep := 0; rep < reps; rep++ {
-				call := runCrosscheckStream(t, provider, crosscheckMinimalSystem, crosscheckUserPongPrompt, nil)
+				call := runCrosscheckStream(t, httpProvider, crosscheckMinimalSystem, crosscheckUserPongPrompt, nil)
 				call.Rep = rep
 				calls = append(calls, call)
 			}
@@ -152,7 +156,7 @@ func TestLLMRealCrosscheckE2E(t *testing.T) {
 			if err != nil {
 				t.Fatalf("read frozen system prompt %s: %v", systemPath, err)
 			}
-			call := runCrosscheckStream(t, provider, string(raw), crosscheckUserPongPrompt, nil)
+			call := runCrosscheckStream(t, httpProvider, string(raw), crosscheckUserPongPrompt, nil)
 			sum := sha256.Sum256(raw)
 			scenariosOut[scenario] = map[string]any{
 				"system_source": systemPath,
@@ -161,12 +165,12 @@ func TestLLMRealCrosscheckE2E(t *testing.T) {
 				"reps":          []crosscheckCall{call},
 			}
 		case "tool_time":
-			runCrosscheckToolScenario(t, provider, home, scenariosOut)
+			runCrosscheckToolScenario(t, httpProvider, home, scenariosOut)
 		case "unauthorized":
-			saved := provider.APIKey
-			provider.APIKey = crosscheckBadKey
-			call := runCrosscheckStream(t, provider, crosscheckMinimalSystem, crosscheckUserPongPrompt, nil)
-			provider.APIKey = saved
+			saved := httpProvider.APIKey
+			httpProvider.APIKey = crosscheckBadKey
+			call := runCrosscheckStream(t, httpProvider, crosscheckMinimalSystem, crosscheckUserPongPrompt, nil)
+			httpProvider.APIKey = saved
 			scenariosOut[scenario] = map[string]any{"reps": []crosscheckCall{call}}
 		default:
 			t.Fatalf("unknown scenario %q", scenario)
