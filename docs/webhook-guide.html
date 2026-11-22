@@ -37,8 +37,8 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 
 <h2><span class="num">01</span>先搞清楚：触发器归属于谁？</h2>
 <ul>
-<li><b>归属 = 会话（session）</b>：触发器定义保存在<b>该会话</b>的 worker 目录 <code>triggers.json</code>，不是独立全局对象，也不存在“绑定到某个 colony 的触发器库”。</li>
-<li><b>运行条件 = 该会话已加载 colony</b>：webhook 事件到达时，若 <code>session.colony_id</code> 为空（上游）/ <code>Session.ColonyID == ""</code>（Go）→ <b>事件被静默丢弃</b>；queen 节点不存在同样丢弃。</li>
+<li><b>定义落盘 = colony 根目录</b>：触发器定义保存在<b>所操作 colony</b> 的 agent 导出目录 <code>&lt;colony&gt;/triggers.json</code>（同一 id 只有一条，重复 set 是更新不是追加）；<b>操作入口</b>在当前会话（queen 工具 set_trigger / REST），<b>运行时</b>（HTTP 服务、订阅、timer goroutine）属于会话进程。</li>
+<li><b>运行条件 = 该会话已加载 colony</b>（因此同一 colony 的多个会话不共享运行时；同 port 会冲突）：webhook 事件到达时，若 <code>session.colony_id</code> 为空（上游）/ <code>Session.ColonyID == ""</code>（Go）→ <b>事件被静默丢弃</b>；queen 节点不存在同样丢弃。</li>
 <li><b>注入目标 = 该会话的 queen</b>；若该 colony 有常驻 overseer，同一 trigger 会再转发一份给 overseer（第二负责人），避免 queen 无输入源。</li>
 <li><b>创建入口 = queen 的工具 <code>set_trigger</code></b>（在会话内由 queen 调用）。REST 创建接口与 Dashboard “Create schedule”<b>只支持 timer</b>（上游逐字：<code>Only 'timer' schedules can be created here.</code>）；<b>没有 <code>hive session trigger</code> 这类 CLI 子命令</b>。</li>
 </ul>
@@ -124,7 +124,7 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 <h2><span class="num">10</span>边界（完整清单见契约页 §09）</h2>
 <ul>
 <li>无毫秒、无“延迟队列/一次性 after-N”（timer 仅 cron/interval）；webhook 是事件入口不是定时器。</li>
-<li>多触发器注入形态与上游不同（上游合并一条，Go 每事件一轮）；非 object JSON body 的 payload 保留差异正在修复（lane webhook-payload）。</li>
+<li>多触发器注入形态与上游不同（上游合并一条，Go 每事件一轮）；非 object JSON body 的 payload 保留差异已修复（2026-11-23）。</li>
 <li>secret 未接线、无鉴权、无重放、无去重；只本机监听。</li>
 </ul>
 <footer>手写维护（2026-11-23 v1）。字段级契约/逐字状态码：<code>triggers-webhook.html</code>；工具语义：<code>queen-lifecycle-tools.md</code>。发现与实际行为不符：以代码与实测为准并回改本页。</footer>

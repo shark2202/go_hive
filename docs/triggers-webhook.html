@@ -46,6 +46,7 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 <tr><td><code>last_fired_at</code></td><td>string|null / *string / str|None</td><td>输出</td><td><code>null</code></td><td>最近触发时间，ISO8601 UTC</td></tr>
 <tr><td><code>next_due_at</code></td><td>string|null / *string / str|None</td><td>输出</td><td><code>null</code></td><td>下次到期，ISO8601 UTC（webhook 恒 null）</td></tr></table>
 
+<p class="sub">存储位置：<code>triggers.json</code> 位于所操作 <b>colony 根目录</b>（agent export dir，<code>&lt;colony&gt;/triggers.json</code>），按 <code>id</code> 唯一；会话只是创建/激活入口与运行载体。</p>
 <h2><span class="num">02</span>timer 的 trigger_config</h2>
 <table><tr><th>字段</th><th>类型</th><th>必填</th><th>默认</th><th>含义与边界</th></tr>
 <tr><td><code>cron</code></td><td>string</td><td>与 interval 二选一</td><td>—</td><td>5 字段（分 时 日 月 周；秒=0）或 6 字段 croniter 布局（<b>秒在最后</b>，<code>second_at_beginning=False</code>）。严格子集：names/macros、<code>L/W/#/?</code>、跨夜区间、7 字段年份均拒绝</td></tr>
@@ -64,7 +65,7 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 <tr><td>headers</td><td>object&lt;string,string&gt;</td><td>任意；<code>Content-Type</code> <b>不校验</b>。同名头 Go 取<b>最后一个</b>并额外加入 <code>Host</code>；上游 aiohttp <code>dict(request.headers)</code> 的重复头语义未逐字验证</td></tr>
 <tr><td>query_params</td><td>object&lt;string,string&gt;</td><td>任意；同名参数 Go 取<b>最后一个</b>；上游未逐字验证</td></tr>
 <tr><td>body</td><td>bytes</td><td>可选。上限：Go <code>maxWebhookBodyBytes = 10 MiB</code>（超限 413）；上游为 aiohttp <code>client_max_size</code> 默认值（1 MiB，未显式配置——待逐字核对）。空 body → <code>{}</code></td></tr>
-<tr><td>body 解析</td><td>JSON → object；非 JSON → <code>{"raw_body": string}</code></td><td>非法 UTF-8 以 U+FFFD 替换；<b>JSON 但非 object（array/number/string/bool）</b>：上游原样保留为 payload，Go 返回 nil（<b>已知差异，见 §09</b>）</td></tr></table>
+<tr><td>body 解析</td><td>JSON → object；非 JSON → <code>{"raw_body": string}</code></td><td>非法 UTF-8 以 U+FFFD 替换；<b>JSON 但非 object（array/number/string/bool/null）</b>：两侧均原样保留为 payload（Go 侧 2026-11-23 修复，commit 3597215d；微差见 §09）</td></tr></table>
 <pre>curl -X POST http://127.0.0.1:8090/hooks/github \
   -H 'Content-Type: application/json' \
   -d '{"action":"opened","number":7}'</pre>
@@ -119,7 +120,7 @@ Task: 处理新 issue
 
 <h2><span class="num">09</span>已知差异与限制（登记）</h2>
 <ul>
-<li><b>非 object JSON body</b>：上游 <code>json.loads</code> 原样保留（array/number/...）；Go <code>parseWebhookBody</code> 仅在 object 时返回，否则 <b>nil → payload 缺失</b>。影响：body 为 JSON 数组的 webhook 在 Go 侧丢 payload（<b>待修/登记</b>）。</li>
+<li><b>非 object JSON body（已修复 2026-11-23，3597215d）</b>：两侧均原样保留任意 JSON 类型；剩余微差两条：① 数字统一为 float64（Python 区分 int/float、>2^53 大整数精度不同）；② Python <code>json.loads</code> 接受 <code>NaN/Infinity/-Infinity</code>（非标准），Go 走 <code>raw_body</code> 分支——极端 body 才有差。</li>
 <li><b>批量注入</b>：上游 drain 把多个待触发合并为一条消息；Go 每事件一轮（代码注释已说明的单触发器形态）。</li>
 <li><b>重复头/重复 query</b>：Go 取最后一个；上游 aiohttp 语义未逐字验证。</li>
 <li><b>body 上限</b>：Go 10 MiB；上游 aiohttp 默认 1 MiB（未显式配置，待核对）。</li>

@@ -12,7 +12,7 @@
 | SSE 事件帧 | 剔除 Go 独有每回合信封后 **42/42 逐帧一致** | 一致 |
 | 工具定义（LLM 侧） | desc **47/47** 逐字；schema 归一 33/47（14 条登记形状差） | 一致+登记 |
 | 工具面扁平 | always-on 24 / deferred 72 / unique 39 | 一致 |
-| 触发器（timer/webhook） | 五层字段级契约落盘（`docs/triggers-webhook.html` v2）；响应码 202/404/405/400/413/401 文案逐字 | 一致+登记（3 条，§5） |
+| 触发器（timer/webhook） | 五层字段级契约落盘（`docs/triggers-webhook.html` v2）+ 使用手册 `webhook-guide.html`；响应码逐字；非 object payload **已修**（3597215d） | 一致+登记（§5：2 条形态 + 2 条数字微差） |
 | env 变量 | Python 90 / Go 125 / 共有 84 / Python-only 6（GCU）/ Go-only 41（含 runner 与验证脚本开关） | 一致（口径分类明确） |
 | configuration.json | 137 键 / 22 sections；aligned 128 / go_only 4 / go_partial 4 / unread 1 | 一致+登记 |
 | CLI 外观 | hive 47 路径 / hive-browser 27 / hive-cred 全对齐；4 usage slot 0 漂移 | 一致 |
@@ -61,7 +61,7 @@
 - **长等待/并行工具**：A 表 10 项、B 表 7 项实测；修复 colony worker 等待 60→600s。
 - **新登记（非阻断）**：① cold-resume mid-turn guard（`cold_interrupted` 无生产者）② resume 后快照/SSE 首帧空态。两条由 `resume-guards` lane 收口中。
 - **凭证校验已闭环（lane `cred-check`）**：`POST /api/credentials/check-agent` 由 500 占位改为上游语义全实现（presence + 健康检查两阶段、Aden 平台行、`alternative_group` 任一满足、14 字段响应 + `has_aden_key`）；`POST /api/credentials/resync` 生产 hook 接线为本地默认（Aden 云端 token 拉取仍缺，P2 `credentials/aden/client.py`）。前端 CredentialsModal 真实打开不再报错。证据 `docs/e2e-assets/credentials-check-agent/`、`docs/unported-triage.md` 末节。
-- **触发器（timer/webhook）字段级契约落盘（2026-11-23）**：定义/请求/响应/事件/注入五层字段的类型、必填、默认与语义逐条记录于 `docs/triggers-webhook.html`（v2）；响应码文案逐字镜像（202/404/405/400/413/401）。**新登记差异 3 条**：① body 为 JSON 非 object（array/number 等）时上游原样保留 payload、Go `parseWebhookBody` 返回 nil → payload 缺失（待修 lane）；② 多触发器注入形态：上游 drain 合并一条 vs Go 每事件一轮（代码注释已登记）；③ 重复同名头/query 取末值 & body 上限 Go 10MiB vs 上游 aiohttp 默认 1MiB（未逐字核对）。
+- **触发器（timer/webhook）字段级契约落盘（2026-11-23）**：定义/请求/响应/事件/注入五层字段的类型、必填、默认与语义逐条记录于 `docs/triggers-webhook.html`（v2）；响应码文案逐字镜像（202/404/405/400/413/401）。**登记差异**：① 非 object JSON body payload——**已修**（lane `webhook-payload`，3597215d，任意 JSON 类型原样保留；剩余微差：数字统一 float64、NaN/Infinity 走 raw_body）；② 多触发器注入形态：上游 drain 合并一条 vs Go 每事件一轮（登记）；③ 重复同名头/query 取末值 & body 上限 Go 10MiB vs 上游 aiohttp 默认 1MiB（未逐字核对）。
 
 ## 6. 证据与质量
 

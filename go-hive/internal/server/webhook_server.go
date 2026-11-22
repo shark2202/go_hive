@@ -183,7 +183,10 @@ func (r *webhookRoute) allowsMethod(method string) bool {
 	return false
 }
 
-func parseWebhookBody(body []byte) map[string]any {
+// parseWebhookBody mirrors upstream's `payload = json.loads(body) if body else {}`:
+// every valid JSON type is kept verbatim (including null -> nil); only a decode
+// failure falls back to {"raw_body": ...}.
+func parseWebhookBody(body []byte) any {
 	if len(body) == 0 {
 		return map[string]any{}
 	}
@@ -191,10 +194,7 @@ func parseWebhookBody(body []byte) map[string]any {
 	if err := json.Unmarshal(body, &decoded); err != nil {
 		return map[string]any{"raw_body": strings.ToValidUTF8(string(body), "\uFFFD")}
 	}
-	if object, ok := decoded.(map[string]any); ok {
-		return object
-	}
-	return nil
+	return decoded
 }
 
 func verifyWebhookSignature(headerValue, secret string, body []byte) bool {

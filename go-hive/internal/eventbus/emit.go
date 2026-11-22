@@ -536,7 +536,7 @@ func (b *EventBus) EmitExecutionResumed(streamID, nodeID string, executionID *st
 	b.Publish(event)
 }
 
-func (b *EventBus) EmitWebhookReceived(sourceID, path, method string, headers map[string]string, payload map[string]any, queryParams map[string]string) {
+func (b *EventBus) EmitWebhookReceived(sourceID, path, method string, headers map[string]string, payload any, queryParams map[string]string) {
 	event := NewAgentEvent(EventWebhookReceived, sourceID)
 	event.Data = map[string]any{
 		"path":         path,

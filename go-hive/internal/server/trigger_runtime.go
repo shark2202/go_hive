@@ -612,13 +612,19 @@ func handleTriggerWebhook(
 		return
 	}
 
+	// data.get("payload", {}) defaults only when the key is absent; a JSON
+	// null payload survives as nil (None upstream), never as {}.
+	rawPayload, hasPayload := data["payload"]
+	if !hasPayload {
+		rawPayload = map[string]any{}
+	}
 	triggerEvent := agentloop.NewTriggerEvent("webhook", triggerID)
 	triggerEvent.Payload = map[string]any{
 		"task":         def.Task,
 		"path":         data["path"],
 		"method":       data["method"],
 		"headers":      mapDefault(data["headers"]),
-		"payload":      mapDefault(data["payload"]),
+		"payload":      rawPayload,
 		"query_params": mapDefault(data["query_params"]),
 	}
 	if err := injectTrigger(node, triggerEvent); err != nil {
