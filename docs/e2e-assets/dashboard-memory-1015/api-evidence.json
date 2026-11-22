@@ -1,0 +1,236 @@
+{
+  "generated_at": "2026-11-22T15:12:51+08:00",
+  "base_url": "http://127.0.0.1:18787",
+  "server_binary": {
+    "path": "/Users/mac/hive/.wt/dash-memory/go_hive/go-hive/dist/hive-fixed",
+    "version": "hive 1.0.26-go.1",
+    "built_with": "go_hive/scripts/embed_ui.sh FORCE_FRONTEND_BUILD=1 GO_BUILD_FLAGS=-trimpath (branch dash-memory @ e7cfa14e)",
+    "served_index": "assets/index-Z2alDRTm.js"
+  },
+  "slot_binary": {
+    "path": "/Users/mac/hive/go_hive/dist/slots/20261122-14/hive",
+    "version": "hive 1.0.26-go.1",
+    "served_index": "assets/index-B_gOJ5GX.js",
+    "settings_memory_tab": false,
+    "memory_surface_strings": 0,
+    "note": "embedded dashboard predates commit 912056d1 (2026-11-22 08:36); Settings has no Memory item"
+  },
+  "health": {
+    "agents_loaded": 0,
+    "request_executor": {
+      "max_workers": 32,
+      "active": 0,
+      "queued": 0
+    },
+    "resources": {
+      "avail_mb": null,
+      "renderers": 19,
+      "verdict": "ok"
+    },
+    "sessions": 0,
+    "status": "ok"
+  },
+  "config_memory": {
+    "memory": {
+      "recall_mode": "wait",
+      "recall_mode_env": null,
+      "recall_modes": [
+        "index",
+        "wait",
+        "background"
+      ],
+      "reflection_model": "main",
+      "reflection_models": [
+        "worker",
+        "main"
+      ]
+    }
+  },
+  "configuration_json": {
+    "memory_recall": {
+      "mode": "wait"
+    },
+    "memory_reflection": {
+      "model": "main"
+    }
+  },
+  "memories": {
+    "memories": []
+  },
+  "retired": {
+    "retired": [
+      {
+        "at": "2026-11-22T15:09:48+08:00",
+        "author": "owner",
+        "filename": "dash-memory-1015-e2e.md",
+        "n": 5,
+        "path": "global/dash-memory-1015-e2e.md",
+        "reason": "deleted on the Memory page",
+        "scope": "global",
+        "scope_name": ""
+      }
+    ]
+  },
+  "history": {
+    "changes": [
+      {
+        "n": 0,
+        "at": "2026-11-22T15:06:02+08:00",
+        "op": "write",
+        "file": "dash-memory-1015-e2e.md",
+        "author": "owner",
+        "reason": "seeded",
+        "sources": [],
+        "before": null,
+        "after": "---\nname: Dashboard memory E2E\ndescription: Created by the 1.0.15 memory-surface E2E\ntype: project\nlearned: 2026-11-22\nconfirmed: 2026-11-22\n---\n\nVersion one: the note the E2E created.\n"
+      },
+      {
+        "n": 1,
+        "at": "2026-11-22T15:07:07+08:00",
+        "op": "write",
+        "file": "dash-memory-1015-e2e.md",
+        "author": "owner",
+        "reason": "edited on the Memory page",
+        "sources": [],
+        "before": "---\nname: Dashboard memory E2E\ndescription: Created by the 1.0.15 memory-surface E2E\ntype: project\nlearned: 2026-11-22\nconfirmed: 2026-11-22\n---\n\nVersion one: the note the E2E created.\n",
+        "after": "---\nname: Dashboard memory E2E\ndescription: Created by the 1.0.15 memory-surface E2E\ntype: project\nlearned: 2026-11-22\nconfirmed: 2026-11-22\nauthor: owner\n---\n\nVersion one: the note the E2E created.\n\nVersion two: edited from the Memory page UI.\n"
+      },
+      {
+        "n": 2,
+        "at": "2026-11-22T15:07:17+08:00",
+        "op": "restore",
+        "file": "dash-memory-1015-e2e.md",
+        "author": "owner",
+        "reason": "back to change 0",
+        "sources": [],
+        "before": "---\nname: Dashboard memory E2E\ndescription: Created by the 1.0.15 memory-surface E2E\ntype: project\nlearned: 2026-11-22\nconfirmed: 2026-11-22\nauthor: owner\n---\n\nVersion one: the note the E2E created.\n\nVersion two: edited from the Memory page UI.\n",
+        "after": "---\nname: Dashboard memory E2E\ndescription: Created by the 1.0.15 memory-surface E2E\ntype: project\nlearned: 2026-11-22\nconfirmed: 2026-11-22\n---\n\nVersion one: the note the E2E created.\n"
+      },
+      {
+        "n": 3,
+        "at": "2026-11-22T15:07:28+08:00",
+        "op": "retire",
+        "file": "dash-memory-1015-e2e.md",
+        "author": "owner",
+        "reason": "deleted on the Memory page",
+        "sources": [],
+        "before": "---\nname: Dashboard memory E2E\ndescription: Created by the 1.0.15 memory-surface E2E\ntype: project\nlearned: 2026-11-22\nconfirmed: 2026-11-22\n---\n\nVersion one: the note the E2E created.\n",
+        "after": null
+      },
+      {
+        "n": 4,
+        "at": "2026-11-22T15:09:05+08:00",
+        "op": "restore",
+        "file": "dash-memory-1015-e2e.md",
+        "author": "owner",
+        "reason": "back to change 3",
+        "sources": [],
+        "before": null,
+        "after": "---\nname: Dashboard memory E2E\ndescription: Created by the 1.0.15 memory-surface E2E\ntype: project\nlearned: 2026-11-22\nconfirmed: 2026-11-22\n---\n\nVersion one: the note the E2E created.\n"
+      },
+      {
+        "n": 5,
+        "at": "2026-11-22T15:09:48+08:00",
+        "op": "retire",
+        "file": "dash-memory-1015-e2e.md",
+        "author": "owner",
+        "reason": "deleted on the Memory page",
+        "sources": [],
+        "before": "---\nname: Dashboard memory E2E\ndescription: Created by the 1.0.15 memory-surface E2E\ntype: project\nlearned: 2026-11-22\nconfirmed: 2026-11-22\n---\n\nVersion one: the note the E2E created.\n",
+        "after": null
+      }
+    ],
+    "path": "global/dash-memory-1015-e2e.md"
+  },
+  "memory_log": [
+    {
+      "at": "2026-11-22T15:06:02+08:00",
+      "op": "write",
+      "file": "dash-memory-1015-e2e.md",
+      "author": "owner",
+      "reason": "seeded",
+      "sources": [],
+      "before": null,
+      "after": "---\nname: Dashboard memory E2E\ndescription: Created by the 1.0.15 memory-surface E2E\ntype: project\nlearned: 2026-11-22\nconfirmed: 2026-11-22\n---\n\nVersion one: the note the E2E created.\n"
+    },
+    {
+      "at": "2026-11-22T15:07:07+08:00",
+      "op": "write",
+      "file": "dash-memory-1015-e2e.md",
+      "author": "owner",
+      "reason": "edited on the Memory page",
+      "sources": [],
+      "before": "---\nname: Dashboard memory E2E\ndescription: Created by the 1.0.15 memory-surface E2E\ntype: project\nlearned: 2026-11-22\nconfirmed: 2026-11-22\n---\n\nVersion one: the note the E2E created.\n",
+      "after": "---\nname: Dashboard memory E2E\ndescription: Created by the 1.0.15 memory-surface E2E\ntype: project\nlearned: 2026-11-22\nconfirmed: 2026-11-22\nauthor: owner\n---\n\nVersion one: the note the E2E created.\n\nVersion two: edited from the Memory page UI.\n"
+    },
+    {
+      "at": "2026-11-22T15:07:17+08:00",
+      "op": "restore",
+      "file": "dash-memory-1015-e2e.md",
+      "author": "owner",
+      "reason": "back to change 0",
+      "sources": [],
+      "before": "---\nname: Dashboard memory E2E\ndescription: Created by the 1.0.15 memory-surface E2E\ntype: project\nlearned: 2026-11-22\nconfirmed: 2026-11-22\nauthor: owner\n---\n\nVersion one: the note the E2E created.\n\nVersion two: edited from the Memory page UI.\n",
+      "after": "---\nname: Dashboard memory E2E\ndescription: Created by the 1.0.15 memory-surface E2E\ntype: project\nlearned: 2026-11-22\nconfirmed: 2026-11-22\n---\n\nVersion one: the note the E2E created.\n"
+    },
+    {
+      "at": "2026-11-22T15:07:28+08:00",
+      "op": "retire",
+      "file": "dash-memory-1015-e2e.md",
+      "author": "owner",
+      "reason": "deleted on the Memory page",
+      "sources": [],
+      "before": "---\nname: Dashboard memory E2E\ndescription: Created by the 1.0.15 memory-surface E2E\ntype: project\nlearned: 2026-11-22\nconfirmed: 2026-11-22\n---\n\nVersion one: the note the E2E created.\n",
+      "after": null
+    },
+    {
+      "at": "2026-11-22T15:09:05+08:00",
+      "op": "restore",
+      "file": "dash-memory-1015-e2e.md",
+      "author": "owner",
+      "reason": "back to change 3",
+      "sources": [],
+      "before": null,
+      "after": "---\nname: Dashboard memory E2E\ndescription: Created by the 1.0.15 memory-surface E2E\ntype: project\nlearned: 2026-11-22\nconfirmed: 2026-11-22\n---\n\nVersion one: the note the E2E created.\n"
+    },
+    {
+      "at": "2026-11-22T15:09:48+08:00",
+      "op": "retire",
+      "file": "dash-memory-1015-e2e.md",
+      "author": "owner",
+      "reason": "deleted on the Memory page",
+      "sources": [],
+      "before": "---\nname: Dashboard memory E2E\ndescription: Created by the 1.0.15 memory-surface E2E\ntype: project\nlearned: 2026-11-22\nconfirmed: 2026-11-22\n---\n\nVersion one: the note the E2E created.\n",
+      "after": null
+    }
+  ],
+  "memory_file_present": false,
+  "console_errors": 0,
+  "screenshots": [
+    {
+      "file": "00-slot-20261122-14-missing-memory-tab.png",
+      "bytes": 139647,
+      "sha256": "e3031fde8dd0557fade36f12c43182d928c49592a6c04872c1fc3c715c7f4cf1"
+    },
+    {
+      "file": "01-dashboard-home.png",
+      "bytes": 169403,
+      "sha256": "48509fa7155629cc135668778b6a20e13c7a842e9fad5a5c0b1431a17498de17"
+    },
+    {
+      "file": "02-settings-memory.png",
+      "bytes": 171542,
+      "sha256": "4708022d85a6f3681e4f47bfbfe4c0e98e9fc97f5b45acfd6b886860018236f2"
+    },
+    {
+      "file": "03-memory-note-history.png",
+      "bytes": 83539,
+      "sha256": "a215e008012ec888e363681fe7732bd134d6f0e18e624b279aa51544c52059fc"
+    },
+    {
+      "file": "04-memory-retired.png",
+      "bytes": 63545,
+      "sha256": "b9aa289b06e4bd7e148003483f5fe92e3c21a0a0422187d65c62fae369f136ee"
+    }
+  ]
+}

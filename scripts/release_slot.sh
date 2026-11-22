@@ -11,6 +11,7 @@ set -uo pipefail
 # 仓库根按脚本位置解析：从主检出运行得到 /Users/mac/hive，从工作树运行得到
 # 该工作树——避免在工作树里误用别处的源码/产物。
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GO_ROOT="$REPO/go_hive"
 MODULE="$GO_ROOT/go-hive"
 BRIDGE="$GO_ROOT/browserbridge"
@@ -108,7 +109,11 @@ log="$out/build.log"
 echo "release-slot: $slot_id version=$build_version head=$head"
 {
   date '+%Y-%m-%d %H:%M:%S'
-  ( cd "$MODULE" && go build -tags embed_ui -trimpath -o "$out/hive" ./cmd/hive ) &&
+  # 嵌入的 dashboard 必须来自当前前端源码：先由 embed_ui.sh 强制重建前端并
+  # 重新暂存 uiembed/dist（-trimpath 保持），再编译。裸 go build -tags embed_ui
+  # 会打包上一次手工暂存的旧 dashboard——20261122-14 及更早的 slot 就是这样
+  # 丢失了 Settings → Memory（1.0.15 记忆面）。
+  FORCE_FRONTEND_BUILD=1 GO_BUILD_FLAGS="-trimpath" OUT="$out/hive" bash "$SCRIPT_DIR/embed_ui.sh" &&
   ( cd "$MODULE" && go build -trimpath -o "$out/hive-cred" ./cmd/hive-cred ) &&
   ( cd "$MODULE" && go build -trimpath -o "$out/hive-browser" ./cmd/hive-browser ) &&
   ( cd "$BRIDGE" && go build -trimpath -o "$out/browserbridge" ./cmd/browserbridge )

@@ -1,9 +1,9 @@
 {
- "wave": 57,
- "at": "2026-11-22 12:11",
- "head": "9fb1f138",
+ "wave": 58,
+ "at": "2026-11-22 14:55",
+ "head": "4d823763",
  "ci": 0,
  "qc": 0,
  "publish": 0,
- "note": "env pin 跟进后"
+ "note": "recall-seed + dual-scope 合并后"
 }
