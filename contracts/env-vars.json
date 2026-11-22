@@ -17,10 +17,10 @@
       "go_only": 30
     },
     "expected": {
-      "python": 89,
+      "python": 90,
       "go": 118,
       "common": 83,
-      "python_only": 6,
+      "python_only": 7,
       "go_only": 35
     },
     "reproduced": {
@@ -30,7 +30,7 @@
       "python_only": 7,
       "go_only": 35
     },
-    "counts_match": false,
+    "counts_match": true,
     "published_lists_compared": {
       "file": "go_hive/docs/env-surface-audit.json",
       "commit": "622cc236",
@@ -3553,7 +3553,7 @@
         "dev_reads": [],
         "test_reads": 0,
         "writes": [],
-        "mentions": 0,
+        "mentions": 1,
         "comments": 0
       }
     },

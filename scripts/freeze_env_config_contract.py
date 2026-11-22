@@ -738,8 +738,12 @@ def _read_versions(root: Path) -> tuple[str, str, str]:
 #     injection and the six resource-sampling knobs), so Go 100→118,
 #     common 69→83 and python_only 20→6; the six remaining Python-only names
 #     are the GCU platform difference (no Go reader by design).
+#   * upstream 1.0.15 merge (2026-11-22, origin/main 6703b434): the reference
+#     tree gained HIVE_MEMORY_RECALL (memory_recall mode override), so the
+#     Python surface is 90 names and python_only 7 until the memory-notes
+#     parity lane adds the Go reader.
 AUDIT_BASELINE = {"python": 89, "go": 96, "common": 66, "python_only": 23, "go_only": 30}
-AUDIT_EXPECTED = {"python": 89, "go": 118, "common": 83, "python_only": 6, "go_only": 35}
+AUDIT_EXPECTED = {"python": 90, "go": 118, "common": 83, "python_only": 7, "go_only": 35}
 # Names the config-env-align lane gave Go readers to (relative to the baseline).
 LANE_ENV_PORTED = ("HIVE_MAX_ITER", "HIVE_SPLIT_WORKER_EVENTS", "HIVE_PYTHON")
 # Names the env-verbatim-port lane gave Go readers to (relative to the baseline).
