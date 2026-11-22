@@ -1,7 +1,7 @@
 # i18n coverage — 静态盘点（Go vendored frontend A vs upstream B）
 
-- 生成：`2026-11-23T01:21:05+08:00`
-- HEAD：`62e92f3b10376c5f6a1e5212b932fcfbbbcd77e5`（worktree `/Users/mac/hive/.wt/i18n-coverage`）
+- 生成：`2026-11-23T01:29:18+08:00`
+- HEAD：`26b7775cfedd0621a1af04c11b74f63acd047bdb`（worktree `/Users/mac/hive/.wt/i18n-fill8`）
 - A：`go_hive/go-hive/frontend`；B：`core/frontend`
 - 复现：`uv run --no-project python go_hive/scripts/i18n_coverage.py`
 
@@ -13,14 +13,14 @@
 
 | 指标 | 数值 |
 | --- | ---: |
-| A 字典文件条目（去重前） | 1290 |
-| A 字典唯一键（按 index.tsx spread 顺序合并） | 1238 |
+| A 字典文件条目（去重前） | 1298 |
+| A 字典唯一键（按 index.tsx spread 顺序合并） | 1246 |
 | A 被 `t()` 静态字面量引用的唯一键 | 1140 |
 | A 静态调用点（含重复） | 1482 |
 | A 表达式参数中的显式字面量键（三元等） | 8（4 个调用） |
-| A 明确引用键合计（静态 ∪ 表达式字面量，含字典缺的 8 条） | 1148 |
+| A 明确引用键合计（静态 ∪ 表达式字面量，含字典缺的 0 条） | 1148 |
 | A 动态 `t(expr)` 调用：已解析/未解析 | 29 / 21 |
-| **A 缺失翻译（明确引用但字典无）** | **8** |
+| **A 缺失翻译（明确引用但字典无）** | **0** |
 | A 静态未引用字典条目（= 下列三层之和） | 98 |
 | ├ 仅字典出现（强 dead-key 候选） | 1 |
 | ├ 文本在别处作为字面量出现 | 45 |
@@ -28,27 +28,13 @@
 | A 翻译值 == 英文键 | 15 |
 | A 占位符集合不一致 | 0 |
 | B 字典键 / 被引用键 / 缺失 | 0 / 0 / 0 |
-| A/B 键集合：A 有 B 无 / B 有 A 无 / 值不同 | 1238 / 0 / 0 |
+| A/B 键集合：A 有 B 无 / B 有 A 无 / 值不同 | 1246 / 0 / 0 |
 
 - tokenizer 自检：产品文件 raw `t(` 计数 1539 vs token 识别 1539（0 个文件有差），保证模板插值 `${…}` 内/嵌套调用不被漏计。
 
 ## 2. A 缺失翻译（按文件分组，列表上限 200）
 
-| 文件 | 缺失条数 |
-| --- | ---: |
-| `src/components/QueenSoulSection.tsx` | 6 |
-| `src/components/SentinelConnectorsSection.tsx` | 2 |
-
-| 文件:行 | key |
-| --- | --- |
-| `src/components/QueenSoulSection.tsx:159` | Her changes apply at once |
-| `src/components/QueenSoulSection.tsx:159` | Her changes wait for your approval |
-| `src/components/QueenSoulSection.tsx:203` | Her first draft |
-| `src/components/QueenSoulSection.tsx:203` | Her reflection |
-| `src/components/QueenSoulSection.tsx:271` | Try her with these changes ({count} question) |
-| `src/components/QueenSoulSection.tsx:271` | Try her with these changes ({count} questions) |
-| `src/components/SentinelConnectorsSection.tsx:276` | Connected as {account}. |
-| `src/components/SentinelConnectorsSection.tsx:276` | Connected to {account}. |
+无：所有明确引用的 `t()` 键都能在合并后的 zh 字典中命中。
 
 动态解析候选缺失（低置信，单列）：**43** 条。
 
@@ -100,7 +86,7 @@
 
 ## 3. A 未引用字典条目（dead keys）
 
-静态未引用合计 **98** 条（= 下列三层，互不重叠）。口径：字典 1238 键中，被明确引用命中 1140 个；另有 8 个被引用但字典没有（见 §2）。
+静态未引用合计 **98** 条（= 下列三层，互不重叠）。口径：字典 1246 键中，被明确引用命中 1148 个；另有 0 个被引用但字典没有（见 §2）。
 
 | 层级 | 条数 | 含义 |
 | --- | ---: | --- |
@@ -227,7 +213,7 @@
 | 项 | 条数 |
 | --- | ---: |
 | B 有 A 无 | 0 |
-| A 有 B 无 | 1238 |
+| A 有 B 无 | 1246 |
 | 值不同 | 0 |
 
 B 侧证据：
@@ -239,18 +225,22 @@ B 侧证据：
 
 A 键英文文案在 B 产品源码中的启发式命中（仅 presence，非语义断言）：
 
-- 精确子串命中：1069；占位符通配命中：150；未命中：19（基数：A 字典 1238 键）
+- 精确子串命中：1073；占位符通配命中：150；未命中：23（基数：A 字典 1246 键）
 
 未命中清单（Go 侧新增文案或已改写；启发式，非断言）：
 
 - `Claude Code · {n} chat`
 - `Claude Code · {n} chats`
+- `Connected as {account}.`
+- `Connected to {account}.`
 - `Connected to {team}.`
 - `Copied {count} times`
 - `Finish signing in to {name} in the Aden tab that just opened, then click "I've authorized" to sync.`
 - `Hey there, what can I help you with?`
 - `Scheduler fired`
 - `She has no soul yet. Turn it on in configuration.json under soul.queens.{id}.`
+- `Try her with these changes ({count} question)`
+- `Try her with these changes ({count} questions)`
 - `Uploading {count} files…`
 - `Uploading {count} file…`
 - `Webhook fired`
@@ -270,8 +260,8 @@ A 键英文文案在 B 产品源码中的启发式命中（仅 presence，非语
 
 - 基线：`a1d537df`（2026-11-21T15:53:35+08:00）
 - 基线数字：字典 1209 / 引用 1118 / 动态调用 51 / 未引用 91 / 缺失 0
-- 当前：字典 1238 / 明确引用 1148 / 动态调用 50 / 静态未引用 98 / 缺失 8
-- 与基线白名单：仍在 1209；新增 29；移除 0
+- 当前：字典 1246 / 明确引用 1148 / 动态调用 50 / 静态未引用 98 / 缺失 0
+- 与基线白名单：仍在 1209；新增 37；移除 0
 - 基线未引用键：91；当前仍未引用 85
 - 旧方法回放（`T_CALL_RE` 正则，含测试、跳过 `src/i18n/**`）：引用 1134 键；与当前 tokenizer 口径：仅旧方法 0、仅新方法 6
 

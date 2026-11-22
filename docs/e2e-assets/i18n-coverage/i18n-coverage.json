@@ -1,11 +1,11 @@
 {
   "schema": "i18n-coverage/v1",
   "environment": {
-    "generated_at": "2026-11-23T01:21:05+08:00",
-    "head": "62e92f3b10376c5f6a1e5212b932fcfbbbcd77e5",
-    "worktree": "/Users/mac/hive/.wt/i18n-coverage",
-    "tree_a": "/Users/mac/hive/.wt/i18n-coverage/go_hive/go-hive/frontend",
-    "tree_b": "/Users/mac/hive/.wt/i18n-coverage/core/frontend",
+    "generated_at": "2026-11-23T01:29:18+08:00",
+    "head": "26b7775cfedd0621a1af04c11b74f63acd047bdb",
+    "worktree": "/Users/mac/hive/.wt/i18n-fill8",
+    "tree_a": "/Users/mac/hive/.wt/i18n-fill8/go_hive/go-hive/frontend",
+    "tree_b": "/Users/mac/hive/.wt/i18n-fill8/core/frontend",
     "python": "3.11.16"
   },
   "rules": {
@@ -33,7 +33,7 @@
       "per_file_entries": {
         "chat.ts": 194,
         "pages.ts": 207,
-        "settings.ts": 836,
+        "settings.ts": 844,
         "core.ts": 53
       },
       "merge_order": [
@@ -43,8 +43,8 @@
         "core.ts"
       ],
       "unimported_files": [],
-      "entries_total": 1290,
-      "unique_keys": 1238,
+      "entries_total": 1298,
+      "unique_keys": 1246,
       "duplicate_key_count": 47,
       "duplicates": [
         {
@@ -11478,90 +11478,13 @@
       "call_sites_total": 1536
     },
     "missing": {
-      "count": 8,
+      "count": 0,
       "count_static": 0,
-      "count_expr": 8,
-      "by_file": {
-        "src/components/QueenSoulSection.tsx": {
-          "count": 6,
-          "keys": [
-            "Her changes apply at once",
-            "Her changes wait for your approval",
-            "Her first draft",
-            "Her reflection",
-            "Try her with these changes ({count} question)",
-            "Try her with these changes ({count} questions)"
-          ]
-        },
-        "src/components/SentinelConnectorsSection.tsx": {
-          "count": 2,
-          "keys": [
-            "Connected as {account}.",
-            "Connected to {account}."
-          ]
-        }
-      },
-      "items": [
-        {
-          "key": "Her changes apply at once",
-          "file": "src/components/QueenSoulSection.tsx",
-          "line": 159,
-          "kind": "expr"
-        },
-        {
-          "key": "Her changes wait for your approval",
-          "file": "src/components/QueenSoulSection.tsx",
-          "line": 159,
-          "kind": "expr"
-        },
-        {
-          "key": "Her first draft",
-          "file": "src/components/QueenSoulSection.tsx",
-          "line": 203,
-          "kind": "expr"
-        },
-        {
-          "key": "Her reflection",
-          "file": "src/components/QueenSoulSection.tsx",
-          "line": 203,
-          "kind": "expr"
-        },
-        {
-          "key": "Try her with these changes ({count} question)",
-          "file": "src/components/QueenSoulSection.tsx",
-          "line": 271,
-          "kind": "expr"
-        },
-        {
-          "key": "Try her with these changes ({count} questions)",
-          "file": "src/components/QueenSoulSection.tsx",
-          "line": 271,
-          "kind": "expr"
-        },
-        {
-          "key": "Connected as {account}.",
-          "file": "src/components/SentinelConnectorsSection.tsx",
-          "line": 276,
-          "kind": "expr"
-        },
-        {
-          "key": "Connected to {account}.",
-          "file": "src/components/SentinelConnectorsSection.tsx",
-          "line": 276,
-          "kind": "expr"
-        }
-      ],
+      "count_expr": 0,
+      "by_file": {},
+      "items": [],
       "truncated": false,
-      "keys": [
-        "Connected as {account}.",
-        "Connected to {account}.",
-        "Her changes apply at once",
-        "Her changes wait for your approval",
-        "Her first draft",
-        "Her reflection",
-        "Try her with these changes ({count} question)",
-        "Try her with these changes ({count} questions)"
-      ]
+      "keys": []
     },
     "missing_dynamic_candidates": {
       "count": 43,
@@ -12365,18 +12288,22 @@
     "missing_keys": 0,
     "counterpart_heuristic": {
       "rule": "normalized substring / placeholder-wildcard search of each A dictionary key in B product .ts/.tsx sources",
-      "exact": 1069,
+      "exact": 1073,
       "placeholder": 150,
-      "miss": 19,
+      "miss": 23,
       "misses": [
         "Claude Code · {n} chat",
         "Claude Code · {n} chats",
+        "Connected as {account}.",
+        "Connected to {account}.",
         "Connected to {team}.",
         "Copied {count} times",
         "Finish signing in to {name} in the Aden tab that just opened, then click \"I've authorized\" to sync.",
         "Hey there, what can I help you with?",
         "Scheduler fired",
         "She has no soul yet. Turn it on in configuration.json under soul.queens.{id}.",
+        "Try her with these changes ({count} question)",
+        "Try her with these changes ({count} questions)",
         "Uploading {count} files…",
         "Uploading {count} file…",
         "Webhook fired",
@@ -12393,9 +12320,9 @@
   },
   "diff": {
     "counts": {
-      "a_keys": 1238,
+      "a_keys": 1246,
       "b_keys": 0,
-      "a_only": 1238,
+      "a_only": 1246,
       "b_only": 0,
       "value_changed": 0,
       "common_keys": 0
@@ -12538,14 +12465,20 @@
     "current_vs_prior": {
       "whitelist_keys": 1209,
       "still_present": 1209,
-      "new_since_prior": 29,
+      "new_since_prior": 37,
       "new_since_prior_sample": [
         "A model picks the notes for each message before she answers, adding a couple of seconds to each reply.",
+        "Connected as {account}.",
+        "Connected to {account}.",
         "Couldn't load the memory settings.",
         "Couldn't save the change.",
         "Delete this memory? It can be restored from Removed.",
         "Failed to load history",
         "Failed to restore",
+        "Her changes apply at once",
+        "Her changes wait for your approval",
+        "Her first draft",
+        "Her reflection",
         "How a queen's memory notes reach her, and which model writes them. Running sessions follow from their next message.",
         "How notes reach her",
         "Model that writes notes",
@@ -12563,6 +12496,8 @@
         "She sees each note's name and one-line description, and opens the ones she needs. No extra model calls.",
         "The same pick, made while she answers, so the notes often arrive a message late.",
         "The server's HIVE_MEMORY_RECALL is set to \"{mode}\", which overrides this choice.",
+        "Try her with these changes ({count} question)",
+        "Try her with these changes ({count} questions)",
         "Worker model",
         "confirmed {day}",
         "current",

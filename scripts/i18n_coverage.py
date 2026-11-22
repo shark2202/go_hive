@@ -1518,7 +1518,7 @@ def render_md(report: dict) -> str:
     add(f"| A 被 `t()` 静态字面量引用的唯一键 | {a['counts']['static_distinct']} |")
     add(f"| A 静态调用点（含重复） | {a['counts']['static_sites']} |")
     add(f"| A 表达式参数中的显式字面量键（三元等） | {a['counts']['expr_distinct']}（{a['counts']['expr_calls']} 个调用） |")
-    add(f"| A 明确引用键合计（静态 ∪ 表达式字面量，含字典缺的 8 条） | {a['counts']['definite_distinct']} |")
+    add(f"| A 明确引用键合计（静态 ∪ 表达式字面量，含字典缺的 {a['missing']['count']} 条） | {a['counts']['definite_distinct']} |")
     add(f"| A 动态 `t(expr)` 调用：已解析/未解析 | {a['counts']['dynamic_resolved_calls']} / {a['counts']['dynamic_unresolved_calls']} |")
     add(f"| **A 缺失翻译（明确引用但字典无）** | **{a['missing']['count']}** |")
     add(f"| A 静态未引用字典条目（= 下列三层之和） | {a['dead']['unreferenced_by_definite_count']} |")

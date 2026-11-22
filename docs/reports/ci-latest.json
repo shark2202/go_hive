@@ -1,9 +1,9 @@
 {
- "wave": 79,
- "at": "2026-11-23 00:51",
- "head": "aa82660a",
+ "wave": 80,
+ "at": "2026-11-23 01:25",
+ "head": "26b7775c",
  "ci": 0,
  "qc": 0,
  "publish": 0,
- "note": "size-fix 拆 runTurn 解规模门禁（201→173）；wave-79 首跑 colony playbook flaky 失败、复跑全绿；publish 镜像 677abf6（sync aa82660a）；refs 6442"
+ "note": "colony-bootstrap 修复（建蜂群 404→201）+ journey-e2e 功能门禁上线（红→绿证据）；i18n-coverage 盘点合并；QC 9/9；refs 6450"
 }
