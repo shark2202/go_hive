@@ -1,9 +1,9 @@
 {
- "wave": 71,
- "at": "2026-11-22 21:40",
- "head": "3bea069f",
+ "wave": 72,
+ "at": "2026-11-22 21:55",
+ "head": "cef49cbd",
  "ci": 0,
  "qc": 0,
  "publish": 0,
- "note": "sentinel-setup+antigravity+ga-migration 三 lane 合并后"
+ "note": "browser-final-parity 合并后"
 }

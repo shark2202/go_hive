@@ -34,3 +34,10 @@ Reproduce: `bash go_hive/scripts/e2e_browser_panel.sh` for the bare e2e, or
 the command above for the full report (needs `go` on PATH; everything runs on
 ephemeral ports and temp dirs, the resident bridge on 14829–14831 is never
 touched).
+
+## Decision update (2026-11-22 深夜，用户拍板"选择最优解")
+
+第 1 项（`isHiveGroup`）**最终决策反转为保留 Go 真富化**：上游的恒 false 源于其自身键错
+（`groupId` vs `group_id`），镜像 bug 会让面板富化名存实亡。因此本目录里面板段的
+`MATCH` 结论视为**该轮的历史证据**；当前期望是 **panel 段 MISMATCH by design**
+（登记为有意改进，复查条件=上游修复键后按 parity 复盘）。CLI 段 24 例 `MATCH` 不受影响，仍为现行断言。

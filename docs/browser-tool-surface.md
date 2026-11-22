@@ -128,12 +128,13 @@ CLI help，**没有 tool schema 层**（`docs/browser-bridge-surface-audit.html`
 
 ### 4.2 收口（2026-11-22，修复轮 6）：isHiveGroup 值级 + evaluate/script 校验条件
 
-**面板 `isHiveGroup` 值级。** 上游 `handle_browser_tabs` 从 `list_active_contexts()`
-行里读 `ctx.get("groupId")`，行键却是 `group_id`（`routes_workers.py:341-360` vs
-`lifecycle.py:127-135`）——上游集合恒空，`isHiveGroup` 恒 `false`、`hive_group_count`
-恒 0。Go 路由原按桥 registry 真富化（值级分歧）；现与上游同值。同一 fixture
-（profile `e2e-profile`→group 777，tab 101/102）双跑，`/api/browser/contexts` 与
-`/api/browser/tabs` body 逐字段相等：`docs/fixtures/browser-final-parity/dual-run.txt`。
+**面板 `isHiveGroup` 值级（最终决策：保留真富化，登记为有意改进）。** 上游
+`handle_browser_tabs` 从 `list_active_contexts()` 行里读 `ctx.get("groupId")`，行键却是
+`group_id`（`routes_workers.py:341-360` vs `lifecycle.py:127-135`）——上游集合恒空，
+`isHiveGroup` 恒 `false`、`hive_group_count` 恒 0。Go 路由按桥 registry **真富化**。
+2026-11-22 决策（用户拍板"选择最优解"）：**不镜像上游键错**，保留 Go 真富化并登记为
+有意改进；复查条件：上游修复 `groupId` 键后按 parity 复盘（届时若要求逐字可一行回退）。
+桥 registry 读取失败只会丢富化（false），不影响 tab 列表。
 
 **evaluate/script 退出码 6 的条件。** 对照 `cmd_evaluate` / `cmd_script` 逐类对齐（改前 → 改后）：
 

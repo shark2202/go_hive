@@ -569,9 +569,11 @@ annotation width (quantified in `docs/fixtures/browser-return-contract/`).
 Closed by the transport/lifecycle round (R16–R20, 2026-11-21): the WS-layer
 keepalive, the legacy 9230 status listener, CLI auto-ensure, the `bad_request`
 exit-code classification, and the parent-death default. Closed by the
-final-parity round (2026-11-22): the `isHiveGroup` value level (the panel route
-now emits upstream's always-false / count-0 outcome, not the code's intended
-enrichment) and the evaluate/script exit-6 conditions (Go now mirrors
-`cmd_evaluate` / `cmd_script`). Handler-vs-binary dual-run evidence for both:
+final-parity round (2026-11-22): the evaluate/script exit-6 conditions (Go now
+mirrors `cmd_evaluate` / `cmd_script`; 24-case dual run MATCH) and the
+`isHiveGroup` value level — **final decision: keep Go's real enrichment**
+(registered intentional improvement; upstream is always-false because it reads
+`groupId` from `group_id`-keyed rows; re-evaluate when upstream fixes the key).
+Handler-vs-binary dual-run evidence:
 `docs/fixtures/browser-final-parity/dual-run.txt`
 (`uv run --offline --project core python go_hive/scripts/e2e_browser_final_parity.py`).

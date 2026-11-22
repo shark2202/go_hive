@@ -259,7 +259,7 @@ go b.Start(ctx)</pre>
 <tr><td>真实 Chrome 验证</td><td>—</td><td>已做：Chrome 158.0.8127.37 + 扩展 1.7.4，19 步 E2E PASS；<code>scripts/real_chrome_e2e.sh</code></td><td><span class="pill ok">已验证</span></td></tr>
 <tr><td>主服务接线</td><td>runtime 自动拉起 bridge_host</td><td>已接线：<code>hive serve</code> 自动拉起/回收桥；3 条 <code>/api/browser/*</code> 面板代理 + notify 注入会话</td><td><span class="pill ok">已接线</span></td></tr>
 </tbody></table></div>
-<div class="callout bad"><b>口径：</b>“Go 模块能 build、测试全绿”只证明协议层和 fake extension 用例通过，<b>不等于</b>真实 Chrome 可用，也不等于生产入口可达。逐条状态见 <a href="tool-parity-matrix.html">tool-parity-matrix.html</a> 与 <code>go_hive/browserbridge/PARITY.md</code>（22/22 active 已移植；外观残差已全部收口，<a href="browser-bridge-surface-audit.html">审计页</a>现只剩已量化的图像编码近似——<code>isHiveGroup</code> 值级与 evaluate/script 校验条件已于 2026-11-22 收口）。</div>
+<div class="callout bad"><b>口径：</b>“Go 模块能 build、测试全绿”只证明协议层和 fake extension 用例通过，<b>不等于</b>真实 Chrome 可用，也不等于生产入口可达。逐条状态见 <a href="tool-parity-matrix.html">tool-parity-matrix.html</a> 与 <code>go_hive/browserbridge/PARITY.md</code>（22/22 active 已移植；外观残差已全部收口，<a href="browser-bridge-surface-audit.html">审计页</a>现只剩已量化的图像编码近似——evaluate/script 校验条件已于 2026-11-22 收口；<code>isHiveGroup</code> 值级为"保留真富化"的登记改进）。</div>
 </section>
 
 <section id="repro"><h2><span class="num">08</span>复现与证据</h2>
@@ -274,5 +274,5 @@ go b.Start(ctx)</pre>
 <div class="callout info"><b>相关文档：</b><a href="tool-parity-matrix.html">Hive ↔ go_hive 工具追踪矩阵</a> · <a href="surface-tracking-matrix.html">外观对齐追踪矩阵</a> · <a href="alignment-dimensions.html">对齐维度矩阵</a> · <a href="module-interfaces.html">接口不变量</a> · <code>go_hive/browserbridge/README.md</code> · <code>go_hive/browserbridge/PARITY.md</code> · <code>tools/browser-extension/README.md</code>。</div>
 </section>
 
-<footer>生成：2026-11-20 22:55 CST（2026-11-21 残差轮更新：R09–R14 收口，帧上限/并发锁/status 字段声明改为现状；2026-11-22 修复轮 6：isHiveGroup 值级与 evaluate/script 校验条件收口，dpr&gt;1 注解宽度已修）· 依据：本地源码 + <code>go_hive/browserbridge</code> 实测 build/test + 真实 Chrome 19 步 E2E + <code>PARITY.md</code> + <a href="browser-bridge-surface-audit.html">外观审计页</a>（§04.9 真桥 + 假扩展残差实测）· 版本：扩展 1.7.4 / protocol 6 · 说明：active 工具、面板路由、主服务接线、截图/快照/注解与 CLI 退出码均已实测；剩余为已量化近似（图像编码字节）</footer>
+<footer>生成：2026-11-20 22:55 CST（2026-11-21 残差轮更新：R09–R14 收口，帧上限/并发锁/status 字段声明改为现状；2026-11-22 修复轮 6：evaluate/script 校验条件收口；isHiveGroup 值级保留 Go 真富化（登记改进），dpr&gt;1 注解宽度已修）· 依据：本地源码 + <code>go_hive/browserbridge</code> 实测 build/test + 真实 Chrome 19 步 E2E + <code>PARITY.md</code> + <a href="browser-bridge-surface-audit.html">外观审计页</a>（§04.9 真桥 + 假扩展残差实测）· 版本：扩展 1.7.4 / protocol 6 · 说明：active 工具、面板路由、主服务接线、截图/快照/注解与 CLI 退出码均已实测；剩余为已量化近似（图像编码字节）</footer>
 </div></body></html>

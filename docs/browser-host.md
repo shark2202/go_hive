@@ -102,7 +102,7 @@ defer stopBrowserBridge()
 | 路由 | 桥侧对应 | 行为 |
 | --- | --- | --- |
 | `GET /api/browser/contexts` | `GET /contexts` | 按上游 `handle_browser_contexts` 重塑：`{available,count,contexts:[{profile,group_id,name,tab_count,active_tab_id}]}` |
-| `GET /api/browser/tabs` | `GET /tabs` + `GET /contexts` | 按上游 `handle_browser_tabs` 重塑：`{available,count,live_count,discarded_count,hive_group_count,tabs:[{id,windowId,groupId,isHiveGroup,url,title,discarded,active,audible,pinned}]}`；`isHiveGroup`/`hive_group_count` 与上游同值（上游 `list_active_contexts()` 行键是 `group_id` 而路由读 `groupId`，集合恒空 → 恒 `false`/0；2026-11-22 双跑收口，见 `docs/fixtures/browser-final-parity/`） |
+| `GET /api/browser/tabs` | `GET /tabs` + `GET /contexts` | 按上游 `handle_browser_tabs` 重塑：`{available,count,live_count,discarded_count,hive_group_count,tabs:[{id,windowId,groupId,isHiveGroup,url,title,discarded,active,audible,pinned}]}`；`isHiveGroup`/`hive_group_count` 采用 Go 真富化（2026-11-22 决策：不镜像上游 `groupId`/`group_id` 键错；登记为有意改进，复查条件=上游修复后复盘；该轮双跑证据见 `docs/fixtures/browser-final-parity/`） |
 | `POST /api/browser/contexts/close` | `POST /contexts/close` | 请求体 `{"profile": …}` 或 `{"all": true}` 原样转发，返回 `{"closed":[…]}`；缺 profile 时透传桥的 400 `{"error":"profile (or all=true) is required"}` |
 | 桥不可达 / 桥未连扩展 | — | 三条都回 **200** `{"available":false,"reason":…,<集合>: []}`，与上游「browser tools 不可用」的 200 形状一致（2026-11-21 起，此前是 503 透传） |
 
