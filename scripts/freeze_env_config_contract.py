@@ -744,9 +744,12 @@ def _read_versions(root: Path) -> tuple[str, str, str]:
 #   * memory-notes lanes (same day): notes-push added the Go reader for
 #     HIVE_MEMORY_RECALL (Go 118→119, common 83→84) and the Settings→Memory
 #     routes read it too, so python_only 7→6.
+#   * longmemeval e2e runner + installer-verify (same day): the runner's
+#     HIVE_LME_* knobs and the verification scripts' switches are Go-only
+#     reads (Go 119→125, go_only 35→41); runner/test-harness surface only.
 AUDIT_BASELINE = {"python": 89, "go": 96, "common": 66, "python_only": 23, "go_only": 30}
-AUDIT_EXPECTED = {"python": 90, "go": 119, "common": 84, "python_only": 6, "go_only": 35}
-AUDIT_EXPECTED = {"python": 90, "go": 119, "common": 84, "python_only": 6, "go_only": 35}
+AUDIT_EXPECTED = {"python": 90, "go": 125, "common": 84, "python_only": 6, "go_only": 41}
+AUDIT_EXPECTED = {"python": 90, "go": 125, "common": 84, "python_only": 6, "go_only": 41}
 # Names the config-env-align lane gave Go readers to (relative to the baseline).
 LANE_ENV_PORTED = ("HIVE_MAX_ITER", "HIVE_SPLIT_WORKER_EVENTS", "HIVE_PYTHON")
 # Names the env-verbatim-port lane gave Go readers to (relative to the baseline).

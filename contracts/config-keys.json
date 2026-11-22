@@ -3222,7 +3222,7 @@
             },
             {
               "file": "go_hive/go-hive/internal/colony/runtime.go",
-              "line": 65,
+              "line": 71,
               "snippet": "// worker_llm separately)."
             },
             {

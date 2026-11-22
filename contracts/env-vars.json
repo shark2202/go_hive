@@ -18,17 +18,17 @@
     },
     "expected": {
       "python": 90,
-      "go": 119,
+      "go": 125,
       "common": 84,
       "python_only": 6,
-      "go_only": 35
+      "go_only": 41
     },
     "reproduced": {
       "python": 90,
-      "go": 119,
+      "go": 125,
       "common": 84,
       "python_only": 6,
-      "go_only": 35
+      "go_only": 41
     },
     "counts_match": true,
     "published_lists_compared": {
@@ -92,14 +92,14 @@
   },
   "summary": {
     "python": 90,
-    "go": 119,
+    "go": 125,
     "common": 84,
     "python_only": 6,
-    "go_only": 35,
+    "go_only": 41,
     "status_counts": {
       "aligned": 69,
       "go_only": 8,
-      "literal_only": 37,
+      "literal_only": 43,
       "parse_differs": 5,
       "python_only": 6
     },
@@ -225,6 +225,12 @@
       "HIVE_LME_JUDGE_API_KEY",
       "HIVE_LME_JUDGE_MODEL",
       "HIVE_LME_MODEL",
+      "HIVE_LME_NOTES",
+      "HIVE_LME_NOTES_API_BASE",
+      "HIVE_LME_NOTES_API_KEY",
+      "HIVE_LME_NOTES_CACHE_DIR",
+      "HIVE_LME_NOTES_CONCURRENCY",
+      "HIVE_LME_NOTES_MODEL",
       "HIVE_LME_QUEEN",
       "HIVE_LME_QUESTIONS",
       "HIVE_LME_READER_API_BASE",
@@ -414,7 +420,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/colony/runtime.go",
-            "line": 31,
+            "line": 37,
             "symbol": null,
             "parse": "int",
             "helper": "colonyEnvInt",
@@ -456,7 +462,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/colony/runtime.go",
-            "line": 30,
+            "line": 36,
             "symbol": null,
             "parse": "int",
             "helper": "colonyEnvInt",
@@ -505,7 +511,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/colony/runtime.go",
-            "line": 29,
+            "line": 35,
             "symbol": null,
             "parse": "bool",
             "helper": "colonyEnvBool",
@@ -900,7 +906,7 @@
         "dev_reads": [],
         "test_reads": 0,
         "writes": [],
-        "mentions": 5,
+        "mentions": 6,
         "comments": 0
       }
     },
@@ -983,7 +989,7 @@
         "dev_reads": [],
         "test_reads": 13,
         "writes": [],
-        "mentions": 15,
+        "mentions": 17,
         "comments": 8
       }
     },
@@ -1005,7 +1011,7 @@
         "dev_reads": [],
         "test_reads": 6,
         "writes": [],
-        "mentions": 10,
+        "mentions": 15,
         "comments": 1
       }
     },
@@ -1917,7 +1923,7 @@
           },
           {
             "file": "go_hive/go-hive/internal/cli/loader.go",
-            "line": 1078,
+            "line": 1098,
             "symbol": "runtimeOwnerPID",
             "parse": "string",
             "snippet": "owner := os.Getenv(\"HIVE_DESKTOP_PARENT_PID\")",
@@ -1929,7 +1935,7 @@
         "writes": [
           {
             "file": "go_hive/go-hive/internal/cli/loader.go",
-            "line": 1081,
+            "line": 1101,
             "scope": "runtime"
           }
         ],
@@ -2538,10 +2544,10 @@
           }
         ],
         "dev_reads": [],
-        "test_reads": 59,
+        "test_reads": 60,
         "writes": [],
-        "mentions": 239,
-        "comments": 97
+        "mentions": 248,
+        "comments": 98
       },
       "notes": "fallback ~/.hive on both; Go converts to an absolute path."
     },
@@ -2563,7 +2569,15 @@
         "dev_reads": [
           {
             "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
-            "line": 153,
+            "line": 195,
+            "symbol": "config",
+            "parse": "string",
+            "snippet": "os.Getenv(\"HIVE_LME_API_BASE\"), os.Getenv(\"HIVE_LIVE_API_BASE\"))",
+            "default": ""
+          },
+          {
+            "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
+            "line": 238,
             "symbol": "cmdRun",
             "parse": "string",
             "snippet": "apiBase := fs.String(\"api-base\", firstNonEmpty(os.Getenv(\"HIVE_LME_API_BASE\"), os.Getenv(\"HIVE_LIVE_API_BASE\")), \"queen endpoint\")",
@@ -2594,7 +2608,15 @@
         "dev_reads": [
           {
             "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
-            "line": 169,
+            "line": 200,
+            "symbol": "config",
+            "parse": "string",
+            "snippet": "os.Getenv(\"HIVE_LME_API_KEY\"), os.Getenv(\"HIVE_LIVE_API_KEY\"))",
+            "default": ""
+          },
+          {
+            "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
+            "line": 256,
             "symbol": "cmdRun",
             "parse": "string",
             "snippet": "queenKey := firstNonEmpty(*apiKey, os.Getenv(\"HIVE_LME_API_KEY\"), os.Getenv(\"HIVE_LIVE_API_KEY\"))",
@@ -2625,10 +2647,26 @@
         "dev_reads": [
           {
             "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
-            "line": 152,
+            "line": 190,
+            "symbol": "config",
+            "parse": "string",
+            "snippet": "os.Getenv(\"HIVE_LME_MODEL\"), os.Getenv(\"HIVE_LIVE_MODEL\"))",
+            "default": ""
+          },
+          {
+            "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
+            "line": 237,
             "symbol": "cmdRun",
             "parse": "string",
             "snippet": "model := fs.String(\"model\", firstNonEmpty(os.Getenv(\"HIVE_LME_MODEL\"), os.Getenv(\"HIVE_LIVE_MODEL\")), \"queen model\")",
+            "default": ""
+          },
+          {
+            "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
+            "line": 323,
+            "symbol": "cmdNotes",
+            "parse": "string",
+            "snippet": "model := fs.String(\"model\", firstNonEmpty(os.Getenv(\"HIVE_LME_MODEL\"), os.Getenv(\"HIVE_LIVE_MODEL\")), \"model fallback for --notes-model\")",
             "default": ""
           }
         ],
@@ -2656,7 +2694,7 @@
         "dev_reads": [
           {
             "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
-            "line": 155,
+            "line": 240,
             "symbol": "cmdRun",
             "parse": "float",
             "helper": "envFloatOr",
@@ -2796,7 +2834,15 @@
         "dev_reads": [
           {
             "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
-            "line": 153,
+            "line": 195,
+            "symbol": "config",
+            "parse": "string",
+            "snippet": "os.Getenv(\"HIVE_LME_API_BASE\"), os.Getenv(\"HIVE_LIVE_API_BASE\"))",
+            "default": ""
+          },
+          {
+            "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
+            "line": 238,
             "symbol": "cmdRun",
             "parse": "string",
             "snippet": "apiBase := fs.String(\"api-base\", firstNonEmpty(os.Getenv(\"HIVE_LME_API_BASE\"), os.Getenv(\"HIVE_LIVE_API_BASE\")), \"queen endpoint\")",
@@ -2827,7 +2873,15 @@
         "dev_reads": [
           {
             "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
-            "line": 169,
+            "line": 200,
+            "symbol": "config",
+            "parse": "string",
+            "snippet": "os.Getenv(\"HIVE_LME_API_KEY\"), os.Getenv(\"HIVE_LIVE_API_KEY\"))",
+            "default": ""
+          },
+          {
+            "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
+            "line": 256,
             "symbol": "cmdRun",
             "parse": "string",
             "snippet": "queenKey := firstNonEmpty(*apiKey, os.Getenv(\"HIVE_LME_API_KEY\"), os.Getenv(\"HIVE_LIVE_API_KEY\"))",
@@ -2838,11 +2892,11 @@
         "writes": [
           {
             "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
-            "line": 174,
+            "line": 261,
             "scope": "dev_eval"
           }
         ],
-        "mentions": 2,
+        "mentions": 3,
         "comments": 0
       }
     },
@@ -2886,7 +2940,7 @@
         "dev_reads": [
           {
             "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
-            "line": 105,
+            "line": 126,
             "symbol": "bindDataset",
             "parse": "helper",
             "helper": "envOr",
@@ -2918,7 +2972,7 @@
         "dev_reads": [
           {
             "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
-            "line": 112,
+            "line": 133,
             "symbol": "bindJudge",
             "parse": "helper",
             "helper": "envOr",
@@ -2927,7 +2981,7 @@
           },
           {
             "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
-            "line": 279,
+            "line": 469,
             "symbol": "cmdReference",
             "parse": "string",
             "snippet": "readerBase := fs.String(\"reader-api-base\", firstNonEmpty(os.Getenv(\"HIVE_LME_READER_API_BASE\"), os.Getenv(\"HIVE_LME_JUDGE_API_BASE\"), \"https://api.openai.com/v1\"), \"reader endpoint\")",
@@ -2958,7 +3012,7 @@
         "dev_reads": [
           {
             "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
-            "line": 133,
+            "line": 154,
             "symbol": "judge",
             "parse": "string",
             "snippet": "key := firstNonEmpty(c.judgeKey, os.Getenv(\"HIVE_LME_JUDGE_API_KEY\"), os.Getenv(\"OPENAI_API_KEY\"))",
@@ -2966,7 +3020,7 @@
           },
           {
             "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
-            "line": 305,
+            "line": 495,
             "symbol": "cmdReference",
             "parse": "string",
             "snippet": "key := firstNonEmpty(*readerKey, os.Getenv(\"HIVE_LME_READER_API_KEY\"), os.Getenv(\"HIVE_LME_JUDGE_API_KEY\"), os.Getenv(\"OPENAI_API_KEY\"))",
@@ -2997,7 +3051,7 @@
         "dev_reads": [
           {
             "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
-            "line": 111,
+            "line": 132,
             "symbol": "bindJudge",
             "parse": "helper",
             "helper": "envOr",
@@ -3029,16 +3083,219 @@
         "dev_reads": [
           {
             "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
-            "line": 152,
+            "line": 190,
+            "symbol": "config",
+            "parse": "string",
+            "snippet": "os.Getenv(\"HIVE_LME_MODEL\"), os.Getenv(\"HIVE_LIVE_MODEL\"))",
+            "default": ""
+          },
+          {
+            "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
+            "line": 237,
             "symbol": "cmdRun",
             "parse": "string",
             "snippet": "model := fs.String(\"model\", firstNonEmpty(os.Getenv(\"HIVE_LME_MODEL\"), os.Getenv(\"HIVE_LIVE_MODEL\")), \"queen model\")",
+            "default": ""
+          },
+          {
+            "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
+            "line": 323,
+            "symbol": "cmdNotes",
+            "parse": "string",
+            "snippet": "model := fs.String(\"model\", firstNonEmpty(os.Getenv(\"HIVE_LME_MODEL\"), os.Getenv(\"HIVE_LIVE_MODEL\")), \"model fallback for --notes-model\")",
             "default": ""
           }
         ],
         "test_reads": 0,
         "writes": [],
         "mentions": 1,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_LME_NOTES",
+      "audit_membership": "go_only",
+      "status": "literal_only",
+      "status_basis": "name appears in production literals but no read site was found on either side",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 1,
+        "writes": [],
+        "mentions": 1,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [
+          {
+            "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
+            "line": 176,
+            "symbol": "bindNotes",
+            "parse": "helper",
+            "helper": "envEnabled",
+            "snippet": "fs.BoolVar(&n.enabled, \"notes\", envEnabled(\"HIVE_LME_NOTES\"), \"give each home the memory notes its history would have left (default $HIVE_LME_NOTES)\")"
+          }
+        ],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 2,
+        "comments": 5
+      }
+    },
+    {
+      "name": "HIVE_LME_NOTES_API_BASE",
+      "audit_membership": "go_only",
+      "status": "literal_only",
+      "status_basis": "name appears in production literals but no read site was found on either side",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [
+          {
+            "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
+            "line": 194,
+            "symbol": "config",
+            "parse": "string",
+            "snippet": "base := firstNonEmpty(n.apiBase, os.Getenv(\"HIVE_LME_NOTES_API_BASE\"),",
+            "default": ""
+          }
+        ],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_LME_NOTES_API_KEY",
+      "audit_membership": "go_only",
+      "status": "literal_only",
+      "status_basis": "name appears in production literals but no read site was found on either side",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [
+          {
+            "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
+            "line": 199,
+            "symbol": "config",
+            "parse": "string",
+            "snippet": "key := firstNonEmpty(n.apiKey, os.Getenv(\"HIVE_LME_NOTES_API_KEY\"),",
+            "default": ""
+          }
+        ],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 2,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_LME_NOTES_CACHE_DIR",
+      "audit_membership": "go_only",
+      "status": "literal_only",
+      "status_basis": "name appears in production literals but no read site was found on either side",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [
+          {
+            "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
+            "line": 204,
+            "symbol": "config",
+            "parse": "path",
+            "snippet": "cacheDir := firstNonEmpty(n.cacheDir, os.Getenv(\"HIVE_LME_NOTES_CACHE_DIR\"),",
+            "default": ""
+          }
+        ],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 2,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_LME_NOTES_CONCURRENCY",
+      "audit_membership": "go_only",
+      "status": "literal_only",
+      "status_basis": "name appears in production literals but no read site was found on either side",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [
+          {
+            "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
+            "line": 326,
+            "symbol": "cmdNotes",
+            "parse": "int",
+            "helper": "envIntOr",
+            "default": "8",
+            "snippet": "concurrency := fs.Int(\"concurrency\", envIntOr(\"HIVE_LME_NOTES_CONCURRENCY\", 8), \"parallel questions\")"
+          }
+        ],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      }
+    },
+    {
+      "name": "HIVE_LME_NOTES_MODEL",
+      "audit_membership": "go_only",
+      "status": "literal_only",
+      "status_basis": "name appears in production literals but no read site was found on either side",
+      "python": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 1,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [
+          {
+            "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
+            "line": 189,
+            "symbol": "config",
+            "parse": "string",
+            "snippet": "notesModel := firstNonEmpty(n.model, os.Getenv(\"HIVE_LME_NOTES_MODEL\"), queenModel,",
+            "default": ""
+          }
+        ],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 2,
         "comments": 0
       }
     },
@@ -3060,12 +3317,21 @@
         "dev_reads": [
           {
             "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
-            "line": 151,
+            "line": 236,
             "symbol": "cmdRun",
             "parse": "helper",
             "helper": "envOr",
             "default": "\"queen_technology\"",
             "snippet": "queen := fs.String(\"queen\", envOr(\"HIVE_LME_QUEEN\", \"queen_technology\"), \"queen to ask\")"
+          },
+          {
+            "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
+            "line": 322,
+            "symbol": "cmdNotes",
+            "parse": "helper",
+            "helper": "envOr",
+            "default": "\"queen_technology\"",
+            "snippet": "queen := fs.String(\"queen\", envOr(\"HIVE_LME_QUEEN\", \"queen_technology\"), \"queen whose memory scope the notes fill\")"
           }
         ],
         "test_reads": 0,
@@ -3092,8 +3358,17 @@
         "dev_reads": [
           {
             "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
-            "line": 147,
+            "line": 232,
             "symbol": "cmdRun",
+            "parse": "helper",
+            "helper": "envOr",
+            "default": "\"12\"",
+            "snippet": "questions := fs.String(\"questions\", envOr(\"HIVE_LME_QUESTIONS\", \"12\"), \"all, comma-separated ids, or a count\")"
+          },
+          {
+            "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
+            "line": 321,
+            "symbol": "cmdNotes",
             "parse": "helper",
             "helper": "envOr",
             "default": "\"12\"",
@@ -3124,7 +3399,7 @@
         "dev_reads": [
           {
             "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
-            "line": 279,
+            "line": 469,
             "symbol": "cmdReference",
             "parse": "string",
             "snippet": "readerBase := fs.String(\"reader-api-base\", firstNonEmpty(os.Getenv(\"HIVE_LME_READER_API_BASE\"), os.Getenv(\"HIVE_LME_JUDGE_API_BASE\"), \"https://api.openai.com/v1\"), \"reader endpoint\")",
@@ -3155,7 +3430,7 @@
         "dev_reads": [
           {
             "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
-            "line": 305,
+            "line": 495,
             "symbol": "cmdReference",
             "parse": "string",
             "snippet": "key := firstNonEmpty(*readerKey, os.Getenv(\"HIVE_LME_READER_API_KEY\"), os.Getenv(\"HIVE_LME_JUDGE_API_KEY\"), os.Getenv(\"OPENAI_API_KEY\"))",
@@ -3186,7 +3461,7 @@
         "dev_reads": [
           {
             "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
-            "line": 278,
+            "line": 468,
             "symbol": "cmdReference",
             "parse": "helper",
             "helper": "envOr",
@@ -3218,7 +3493,7 @@
         "dev_reads": [
           {
             "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
-            "line": 148,
+            "line": 233,
             "symbol": "cmdRun",
             "parse": "bool_eq_1",
             "snippet": "resumeDefault := os.Getenv(\"HIVE_LME_RESUME\") == \"1\"",
@@ -3255,7 +3530,7 @@
         "dev_reads": [
           {
             "file": "go_hive/go-hive/cmd/hive-longmemeval/main.go",
-            "line": 150,
+            "line": 235,
             "symbol": "cmdRun",
             "parse": "string",
             "snippet": "runDir := fs.String(\"run-dir\", os.Getenv(\"HIVE_LME_RUN_DIR\"), \"results directory\")",
@@ -3567,7 +3842,7 @@
           }
         ],
         "dev_reads": [],
-        "test_reads": 14,
+        "test_reads": 18,
         "writes": [
           {
             "file": "go_hive/go-hive/internal/memory/recall_config_test.go",
@@ -3854,7 +4129,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/playbook/python.go",
-            "line": 142,
+            "line": 149,
             "symbol": "ResolvePythonInterpreter",
             "parse": "string",
             "snippet": "if override := strings.TrimSpace(os.Getenv(\"HIVE_PYTHON\")); override != \"\" {",
@@ -4641,7 +4916,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/colony/runtime.go",
-            "line": 639,
+            "line": 645,
             "symbol": "splitWorkerEventsEnabled",
             "parse": "string",
             "snippet": "switch strings.ToLower(strings.TrimSpace(os.Getenv(\"HIVE_SPLIT_WORKER_EVENTS\"))) {",

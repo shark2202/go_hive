@@ -1,9 +1,9 @@
 {
- "wave": 55,
- "at": "2026-11-22 12:01",
- "head": "3a8a963c",
+ "wave": 56,
+ "at": "2026-11-22 12:05",
+ "head": "472382e9",
  "ci": 2,
- "qc": 1,
+ "qc": 0,
  "publish": 0,
- "note": "installer-verify/lm-notes/bg-recall 合并后"
+ "note": "parity 注解修复后"
 }
