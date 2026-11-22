@@ -1,9 +1,9 @@
 {
- "wave": 68,
- "at": "2026-11-22 20:20",
- "head": "77594ee4",
+ "wave": 69,
+ "at": "2026-11-22 20:31",
+ "head": "23f6f8c4",
  "ci": 2,
- "qc": 1,
+ "qc": 0,
  "publish": 0,
- "note": "cred-check + coercer 合并后"
+ "note": "cred-check 收尾修复后（size/parity/refs）"
 }

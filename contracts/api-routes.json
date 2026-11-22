@@ -1,12 +1,12 @@
 {
   "schema": "hive-api-routes/1",
   "description": "Frozen HTTP route tables. The contract reference is the Python hive checkout (reference=python@<commit>); go_hive is the target being aligned (target=go_hive@<commit>). Static extraction; path parameters are compared by shape, original spelling preserved.",
-  "reference_id": "python@e5c7603ef2591e939580e344ff9cfdf58852286d",
-  "target_id": "go_hive@e5c7603ef2591e939580e344ff9cfdf58852286d",
+  "reference_id": "python@1b5a4284982093d109ddd77ad93a917fc2e94e62",
+  "target_id": "go_hive@1b5a4284982093d109ddd77ad93a917fc2e94e62",
   "reference": {
     "implementation": "python",
     "version": "1.0.15",
-    "commit": "e5c7603ef2591e939580e344ff9cfdf58852286d",
+    "commit": "1b5a4284982093d109ddd77ad93a917fc2e94e62",
     "last_core_commit": "265d93d17ab9ad62520ce05b841ecbfc42439ae7",
     "last_tools_commit": "72eb6d7bb9f833ac221ed17ad6c334f5944d89bb",
     "source_root": "core/framework/server"
@@ -14,13 +14,13 @@
   "target": {
     "implementation": "go_hive",
     "version": "1.0.26-go.1",
-    "commit": "e5c7603ef2591e939580e344ff9cfdf58852286d",
+    "commit": "1b5a4284982093d109ddd77ad93a917fc2e94e62",
     "source_root": "go_hive/go-hive/internal/server"
   },
-  "generated_at": "2026-11-22T09:57:31+08:00",
+  "generated_at": "2026-11-22T20:31:31+08:00",
   "python": {
     "version": "1.0.15",
-    "commit": "e5c7603ef2591e939580e344ff9cfdf58852286d",
+    "commit": "1b5a4284982093d109ddd77ad93a917fc2e94e62",
     "source_root": "core/framework/server",
     "route_count": 222,
     "routes": [
@@ -1808,7 +1808,7 @@
   },
   "go": {
     "version": "1.0.26-go.1",
-    "commit": "e5c7603ef2591e939580e344ff9cfdf58852286d",
+    "commit": "1b5a4284982093d109ddd77ad93a917fc2e94e62",
     "source_root": "go_hive/go-hive/internal/server",
     "route_count": 225,
     "routes": [
@@ -1825,7 +1825,7 @@
         "path": "/api/agents",
         "path_shape": "/api/agents",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_agents.go:30",
+        "source": "go_hive/go-hive/internal/server/routes_agents.go:35",
         "kind": "api"
       },
       {
@@ -1833,7 +1833,7 @@
         "path": "/api/agents/metadata",
         "path_shape": "/api/agents/metadata",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_agents.go:33",
+        "source": "go_hive/go-hive/internal/server/routes_agents.go:38",
         "kind": "api"
       },
       {
@@ -2289,7 +2289,7 @@
         "path": "/api/credentials",
         "path_shape": "/api/credentials",
         "handler": "routes.handleListCredentials",
-        "source": "go_hive/go-hive/internal/server/routes_credentials.go:78",
+        "source": "go_hive/go-hive/internal/server/routes_credentials.go:89",
         "kind": "api"
       },
       {
@@ -2297,7 +2297,7 @@
         "path": "/api/credentials",
         "path_shape": "/api/credentials",
         "handler": "routes.handleSaveCredential",
-        "source": "go_hive/go-hive/internal/server/routes_credentials.go:79",
+        "source": "go_hive/go-hive/internal/server/routes_credentials.go:90",
         "kind": "api"
       },
       {
@@ -2305,7 +2305,7 @@
         "path": "/api/credentials/check-agent",
         "path_shape": "/api/credentials/check-agent",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_agents.go:36",
+        "source": "go_hive/go-hive/internal/server/routes_agents.go:41",
         "kind": "api"
       },
       {
@@ -2329,7 +2329,7 @@
         "path": "/api/credentials/oauth-status",
         "path_shape": "/api/credentials/oauth-status",
         "handler": "routes.handleOAuthStatus",
-        "source": "go_hive/go-hive/internal/server/routes_credentials.go:75",
+        "source": "go_hive/go-hive/internal/server/routes_credentials.go:86",
         "kind": "api"
       },
       {
@@ -2337,7 +2337,7 @@
         "path": "/api/credentials/resync",
         "path_shape": "/api/credentials/resync",
         "handler": "routes.handleResync",
-        "source": "go_hive/go-hive/internal/server/routes_credentials.go:76",
+        "source": "go_hive/go-hive/internal/server/routes_credentials.go:87",
         "kind": "api"
       },
       {
@@ -2345,7 +2345,7 @@
         "path": "/api/credentials/specs",
         "path_shape": "/api/credentials/specs",
         "handler": "routes.handleListSpecs",
-        "source": "go_hive/go-hive/internal/server/routes_credentials.go:74",
+        "source": "go_hive/go-hive/internal/server/routes_credentials.go:85",
         "kind": "api"
       },
       {
@@ -2353,7 +2353,7 @@
         "path": "/api/credentials/validate-key",
         "path_shape": "/api/credentials/validate-key",
         "handler": "routes.handleValidateKey",
-        "source": "go_hive/go-hive/internal/server/routes_credentials.go:77",
+        "source": "go_hive/go-hive/internal/server/routes_credentials.go:88",
         "kind": "api"
       },
       {
@@ -2361,7 +2361,7 @@
         "path": "/api/credentials/{credential_id}",
         "path_shape": "/api/credentials/{}",
         "handler": "routes.handleDeleteCredential",
-        "source": "go_hive/go-hive/internal/server/routes_credentials.go:85",
+        "source": "go_hive/go-hive/internal/server/routes_credentials.go:96",
         "kind": "api"
       },
       {
@@ -2369,7 +2369,7 @@
         "path": "/api/credentials/{credential_id}",
         "path_shape": "/api/credentials/{}",
         "handler": "routes.handleGetCredential",
-        "source": "go_hive/go-hive/internal/server/routes_credentials.go:84",
+        "source": "go_hive/go-hive/internal/server/routes_credentials.go:95",
         "kind": "api"
       },
       {
@@ -2465,7 +2465,7 @@
         "path": "/api/discover",
         "path_shape": "/api/discover",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_agents.go:27",
+        "source": "go_hive/go-hive/internal/server/routes_agents.go:32",
         "kind": "api"
       },
       {
@@ -3285,7 +3285,7 @@
         "path": "/api/sessions/{session_id}/credential-form",
         "path_shape": "/api/sessions/{}/credential-form",
         "handler": "routes.handleCredentialForm",
-        "source": "go_hive/go-hive/internal/server/routes_credentials.go:83",
+        "source": "go_hive/go-hive/internal/server/routes_credentials.go:94",
         "kind": "api"
       },
       {
