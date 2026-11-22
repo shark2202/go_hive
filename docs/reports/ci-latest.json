@@ -1,9 +1,9 @@
 {
- "wave": 63,
- "at": "2026-11-22 19:09",
- "head": "d9aab9cf",
- "ci": 0,
+ "wave": 64,
+ "at": "2026-11-22 19:31",
+ "head": "15fb5fcb",
+ "ci": 2,
  "qc": 0,
  "publish": 0,
- "note": "resume-guards 合并后"
+ "note": "D1/D3 批准合并后（go1.26.11 工具链）"
 }

@@ -38,7 +38,7 @@ func (s *CheckpointStore) SaveCheckpoint(checkpoint *schemas.Checkpoint) error {
 		return err
 	}
 	path := filepath.Join(s.CheckpointsDir, checkpoint.CheckpointID+".json")
-	if err := atomicfs.WriteJSON(path, checkpoint, 0o644); err != nil {
+	if err := atomicfs.WriteJSON(path, checkpoint, 0o600); err != nil {
 		return err
 	}
 	s.mu.Lock()
@@ -117,7 +117,7 @@ func (s *CheckpointStore) rebuildIndexLocked() (*schemas.CheckpointIndex, error)
 		}
 		index.AddCheckpoint(cp)
 	}
-	if err := atomicfs.WriteJSON(s.IndexPath, index, 0o644); err != nil {
+	if err := atomicfs.WriteJSON(s.IndexPath, index, 0o600); err != nil {
 		return nil, err
 	}
 	return index, nil
@@ -197,7 +197,7 @@ func (s *CheckpointStore) updateIndexAdd(checkpoint *schemas.Checkpoint) error {
 	if err := os.MkdirAll(s.CheckpointsDir, 0o755); err != nil {
 		return err
 	}
-	return atomicfs.WriteJSON(s.IndexPath, index, 0o644)
+	return atomicfs.WriteJSON(s.IndexPath, index, 0o600)
 }
 
 func (s *CheckpointStore) updateIndexRemove(checkpointID string) {
@@ -221,7 +221,7 @@ func (s *CheckpointStore) updateIndexRemove(checkpointID string) {
 			index.LatestCheckpointID = nil
 		}
 	}
-	_ = atomicfs.WriteJSON(s.IndexPath, index, 0o644)
+	_ = atomicfs.WriteJSON(s.IndexPath, index, 0o600)
 }
 
 func readJSONFile(path string, v any) error {

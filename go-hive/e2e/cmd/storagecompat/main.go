@@ -21,12 +21,20 @@
 //	                         credentials
 //	read-credential --dir <d> --key <path> --id <id> [--all]   decrypt one
 //	                         credential (or the whole store) with Fernet
+//	sidecar-write --home <d> rewrite the SC-06 session meta / tasks / colony
+//	                         sidecars through the production writers (title,
+//	                         queen phase, task store, colony scaffold, tools
+//	                         config, trigger store)
+//	sidecar-read --home <d>  read the same sidecars through the production
+//	                         readers (used on both sides of the cross-
+//	                         implementation write-read-rewrite cycle)
 package main
 
 import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -42,9 +50,12 @@ import (
 	"github.com/aden-hive/hive-go/internal/hivehome"
 	"github.com/aden-hive/hive-go/internal/schemas"
 	"github.com/aden-hive/hive-go/internal/senders"
+	"github.com/aden-hive/hive-go/internal/server"
 	"github.com/aden-hive/hive-go/internal/session"
 	"github.com/aden-hive/hive-go/internal/storage"
+	"github.com/aden-hive/hive-go/internal/tasks"
 	"github.com/aden-hive/hive-go/internal/tracker"
+	"github.com/aden-hive/hive-go/internal/triggers"
 )
 
 func out(v any) {
@@ -823,6 +834,242 @@ func cmdReadProbes(args []string) {
 }
 
 // ---------------------------------------------------------------------------
+// sidecar cycle (SC-06): session meta / tasks / colony sidecars
+// ---------------------------------------------------------------------------
+
+const (
+	cycleQueen    = "queen_growth"
+	cycleSession  = "session_sidecar_cycle"
+	cycleColony   = "cycle_colony"
+	cycleGoColony = "cycle_colony_go"
+)
+
+func cycleSessionDir(h hivehome.Home) string {
+	return filepath.Join(h.QueensDir(), cycleQueen, "sessions", cycleSession)
+}
+
+func cycleColonyDir(h hivehome.Home, colony string) string {
+	return filepath.Join(h.ColoniesDir(), colony)
+}
+
+// readJSONMap is the same read the production meta/sidecar readers use
+// (session_titles.go / queen_phase_state.go / adapters_qmail.go): a tolerant
+// JSON-object read that returns nil for missing or malformed files.
+func readJSONMap(path string) map[string]any {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil
+	}
+	value := map[string]any{}
+	if err := json.Unmarshal(data, &value); err != nil {
+		return nil
+	}
+	return value
+}
+
+func cycleMetaView(sessionDir string) map[string]any {
+	var title any
+	if current, ok := server.ReadTitle(sessionDir); ok {
+		title = current
+	}
+	phase := server.ReadSessionPhase(sessionDir)
+	var phaseView any
+	if phase != "" {
+		phaseView = phase
+	}
+	return map[string]any{
+		"title":  title,
+		"phase":  phaseView,
+		"fields": readJSONMap(filepath.Join(sessionDir, "meta.json")),
+	}
+}
+
+func cycleTasksView(h hivehome.Home) map[string]any {
+	store := tasks.NewTaskStore(h.Root)
+	view := map[string]any{"meta": store.GetMeta(cycleSession)}
+	records := []any{}
+	for _, record := range store.ListTasks(cycleSession, true) {
+		records = append(records, record)
+	}
+	view["tasks"] = records
+	return view
+}
+
+func cycleColonyView(h hivehome.Home, colony string) map[string]any {
+	dir := cycleColonyDir(h, colony)
+	enabled := server.LoadColonyToolsConfig(h, colony)
+	var enabledView any
+	if enabled != nil {
+		enabledView = enabled
+	}
+	return map[string]any{
+		"metadata":      readJSONMap(filepath.Join(dir, "metadata.json")),
+		"worker":        readJSONMap(filepath.Join(dir, "worker.json")),
+		"tools":         readJSONMap(filepath.Join(dir, "tools.json")),
+		"tools_enabled": enabledView,
+		"triggers":      triggers.ReadAgentTriggersJSON(dir),
+	}
+}
+
+func cycleView(h hivehome.Home) map[string]any {
+	return map[string]any{
+		"meta":  cycleMetaView(cycleSessionDir(h)),
+		"tasks": cycleTasksView(h),
+		"colonies": map[string]any{
+			cycleColony:   cycleColonyView(h, cycleColony),
+			cycleGoColony: cycleColonyView(h, cycleGoColony),
+		},
+	}
+}
+
+func cycleFileHashes(h hivehome.Home) map[string]any {
+	paths := map[string]string{
+		"session/meta.json":  filepath.Join(cycleSessionDir(h), "meta.json"),
+		"session/tasks.json": filepath.Join(cycleSessionDir(h), "tasks.json"),
+	}
+	for _, colony := range []string{cycleColony, cycleGoColony} {
+		for _, name := range []string{"metadata.json", "worker.json", "tools.json", "triggers.json"} {
+			paths["colonies/"+colony+"/"+name] = filepath.Join(cycleColonyDir(h, colony), name)
+		}
+	}
+	out := map[string]any{}
+	for key, path := range paths {
+		if _, err := os.Stat(path); err != nil {
+			out[key] = nil
+			continue
+		}
+		out[key] = fileSHA16(path)
+	}
+	return out
+}
+
+func cycleTrigger(id, name, task string) map[string]any {
+	return map[string]any{
+		"id":             id,
+		"name":           name,
+		"trigger_type":   "interval",
+		"trigger_config": map[string]any{"minutes": 60},
+		"task":           task,
+		"enabled":        true,
+		"last_fired_at":  nil,
+		"next_due_at":    nil,
+	}
+}
+
+// seedSidecars writes the same base artifacts the Python sidecar-write probe
+// seeds, through the Go production writers. It backs the SC-04 permission
+// comparison (one home written by each implementation) and doubles as the
+// "Go writes a session from scratch" leg of the SC-06 matrix.
+func seedSidecars(h hivehome.Home, sessionDir string) {
+	fail(server.MergeSessionMeta(filepath.Join(sessionDir, "meta.json"), map[string]any{
+		"queen_id":   cycleQueen,
+		"created_at": 1767225600.0,
+		"agent_name": "Growth",
+		"colony_id":  cycleColony,
+		"phase":      server.QueenPhaseIndependent,
+	}))
+	if _, err := server.WriteTitle(sessionDir, "Sidecar cycle (go seed)", "user"); err != nil {
+		fail(err)
+	}
+
+	creator := cycleQueen
+	store := tasks.NewTaskStore(h.Root)
+	if _, err := store.EnsureTaskList(cycleSession, &creator); err != nil {
+		fail(err)
+	}
+	draftActive := "drafting plan"
+	if _, err := store.CreateTask(cycleSession, tasks.CreateTaskSpec{
+		Subject:     "draft plan",
+		Description: "write the plan",
+		ActiveForm:  &draftActive,
+		Metadata:    map[string]any{"phase": "draft"},
+	}); err != nil {
+		fail(err)
+	}
+	owner := cycleQueen
+	if _, err := store.CreateTask(cycleSession, tasks.CreateTaskSpec{
+		Subject: "review plan",
+		Owner:   &owner,
+	}); err != nil {
+		fail(err)
+	}
+
+	fail(server.EnsureMinimalColony(h, cycleColony, cycleQueen))
+	fail(server.UpdateColonyToolsConfig(h, cycleColony, []string{"pdf_read"}))
+	fail(triggers.WriteAgentTriggersJSON(cycleColonyDir(h, cycleColony), []map[string]any{
+		cycleTrigger("trg_go", "go probe", "go cycle task"),
+	}))
+}
+
+func cmdSidecarWrite(args []string) {
+	fs := flag.NewFlagSet("sidecar-write", flag.ExitOnError)
+	home := fs.String("home", "", "HIVE_HOME root")
+	mode := fs.String("mode", "rewrite", "seed (write the base artifacts) or rewrite (cross-implementation rewrite)")
+	_ = fs.Parse(args)
+	h := mustHome(*home)
+
+	sessionDir := cycleSessionDir(h)
+	fail(os.MkdirAll(sessionDir, 0o755))
+	if *mode == "seed" {
+		seedSidecars(h, sessionDir)
+		out(map[string]any{"phase": "go-seed", "view": cycleView(h), "files": cycleFileHashes(h)})
+		return
+	}
+
+	// meta.json: production queen-phase writer (queen_phase_state.go) plus the
+	// production title writer (session_titles.go).
+	phaseState := server.NewQueenPhaseState(server.QueenPhaseColony, cycleQueen, nil, filepath.Join(sessionDir, "meta.json"), nil)
+	fail(phaseState.PersistPhase())
+	if _, err := server.WriteTitle(sessionDir, "Sidecar cycle (go rewritten)", "auto"); err != nil {
+		fail(err)
+	}
+
+	// tasks.json: create a third task and complete the second one through the
+	// same store the task tools use.
+	creator := cycleQueen
+	store := tasks.NewTaskStore(h.Root)
+	if _, err := store.EnsureTaskList(cycleSession, &creator); err != nil {
+		fail(err)
+	}
+	if _, err := store.CreateTask(cycleSession, tasks.CreateTaskSpec{
+		Subject:     "ship plan",
+		Description: "hand the plan over",
+		Metadata:    map[string]any{"phase": "ship"},
+	}); err != nil {
+		fail(err)
+	}
+	completed := tasks.TaskStatusCompleted
+	if _, changed := store.UpdateTask(cycleSession, 2, tasks.UpdateTaskOptions{Status: &completed}); len(changed) == 0 {
+		fail(errors.New("sidecar-write: update task 2 changed nothing"))
+	}
+
+	// Colony sidecars: scaffold a Go-written colony, then rewrite the
+	// Python-written colony's tools.json and append a trigger to its
+	// triggers.json through the production writers.
+	fail(server.EnsureMinimalColony(h, cycleGoColony, cycleQueen))
+	fail(server.UpdateColonyToolsConfig(h, cycleColony, []string{"pdf_read", "excel_read"}))
+	fail(server.UpdateColonyToolsConfig(h, cycleGoColony, []string{"pdf_read", "excel_read"}))
+
+	pyColonyTriggers := triggers.ReadAgentTriggersJSON(cycleColonyDir(h, cycleColony))
+	pyColonyTriggers = append(pyColonyTriggers, cycleTrigger("trg_go", "go probe", "go cycle task"))
+	fail(triggers.WriteAgentTriggersJSON(cycleColonyDir(h, cycleColony), pyColonyTriggers))
+	fail(triggers.WriteAgentTriggersJSON(cycleColonyDir(h, cycleGoColony), []map[string]any{
+		cycleTrigger("trg_go", "go probe", "go cycle task"),
+	}))
+
+	out(map[string]any{"phase": "go-write", "view": cycleView(h), "files": cycleFileHashes(h)})
+}
+
+func cmdSidecarRead(args []string) {
+	fs := flag.NewFlagSet("sidecar-read", flag.ExitOnError)
+	home := fs.String("home", "", "HIVE_HOME root")
+	phase := fs.String("phase", "read", "label recorded in the probe output")
+	_ = fs.Parse(args)
+	h := mustHome(*home)
+	out(map[string]any{"phase": *phase, "view": cycleView(h), "files": cycleFileHashes(h)})
+}
+
+// ---------------------------------------------------------------------------
 // helpers
 // ---------------------------------------------------------------------------
 
@@ -853,6 +1100,10 @@ func main() {
 		cmdReadCredential(os.Args[2:])
 	case "read-probes":
 		cmdReadProbes(os.Args[2:])
+	case "sidecar-write":
+		cmdSidecarWrite(os.Args[2:])
+	case "sidecar-read":
+		cmdSidecarRead(os.Args[2:])
 	default:
 		fmt.Fprintln(os.Stderr, "unknown subcommand:", os.Args[1])
 		os.Exit(2)

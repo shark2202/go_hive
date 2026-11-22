@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "module": "github.com/aden-hive/hive-go",
-  "generated_at_commit": "7b77d047e82e",
+  "generated_at_commit": "c80dd898a798",
   "generated_from": "architecture/model.yaml + go list -json ./... + internal/server mux.HandleFunc + internal/eventbus event_type.go",
   "stats": {
     "packages": 82,
-    "package_edges": 219,
+    "package_edges": 222,
     "capabilities": 12,
     "capability_edges": 85,
     "layers": 8,
@@ -276,7 +276,7 @@
       "stability": "stable",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 10,
+      "direct_dependencies": 13,
       "dependents": 0
     },
     {
@@ -397,7 +397,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 37,
-      "dependents": 1
+      "dependents": 2
     },
     {
       "id": "pkg:internal/server/uiembed",
@@ -553,7 +553,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 3,
-      "dependents": 3
+      "dependents": 4
     },
     {
       "id": "pkg:internal/tracker",
@@ -577,7 +577,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 1,
-      "dependents": 1
+      "dependents": 2
     },
     {
       "id": "pkg:internal/agentloop",
@@ -1682,6 +1682,11 @@
     },
     {
       "from": "pkg:e2e/cmd/storagecompat",
+      "to": "pkg:internal/server",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:e2e/cmd/storagecompat",
       "to": "pkg:internal/session",
       "kind": "depends"
     },
@@ -1692,7 +1697,17 @@
     },
     {
       "from": "pkg:e2e/cmd/storagecompat",
+      "to": "pkg:internal/tasks",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:e2e/cmd/storagecompat",
       "to": "pkg:internal/tracker",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:e2e/cmd/storagecompat",
+      "to": "pkg:internal/triggers",
       "kind": "depends"
     },
     {

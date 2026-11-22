@@ -14,6 +14,11 @@ Subcommands (all take --home; set HIVE_HOME before importing framework):
             colony session lists, per-session history (parts/state/summary/
             tasks), colony discovery, tracker query output, senders, skills,
             memories, credentials. Mirrors `storagecompat read-probes`.
+  sidecar-write  Write the SC-06 session meta / tasks / colony sidecars
+            through the real Python writers (title, channels meta merge,
+            tasks store, colony scaffold, tools config, trigger store).
+  sidecar-read   Read the same sidecars through the real Python readers
+            (used on both sides of the cross-implementation cycle).
   creds-save  Encrypt fake credentials into <home>/credentials (Fernet key
             from <home>/secrets/credential_key, generated if absent).
   creds-load  Decrypt every credential in <home>/credentials and print it.
@@ -216,6 +221,162 @@ def cmd_probes(args) -> int:
 
     creds = _write_credentials(home)
     out({"probes": "written", "session_dir": str(session_dir), "credentials": creds})
+    return 0
+
+
+# ---------------------------------------------------------------------------
+# sidecar cycle (SC-06): session meta / tasks / colony sidecars
+# ---------------------------------------------------------------------------
+
+CYCLE_QUEEN = "queen_growth"
+CYCLE_SESSION = "session_sidecar_cycle"
+CYCLE_COLONY = "cycle_colony"
+CYCLE_GO_COLONY = "cycle_colony_go"
+
+
+def _cycle_session_dir(home: Path) -> Path:
+    return home / "queens" / CYCLE_QUEEN / "sessions" / CYCLE_SESSION
+
+
+def _read_json_or_none(path: Path):
+    if not path.exists():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def _cycle_meta_view(home: Path) -> dict:
+    from framework.server import channels, session_titles
+
+    session_dir = _cycle_session_dir(home)
+    fields = channels._read_meta(session_dir)
+    return {
+        "title": session_titles.read_title(session_dir),
+        "phase": fields.get("phase"),
+        "fields": fields or None,
+    }
+
+
+def _cycle_tasks_view(home: Path) -> dict:
+    from framework.tasks.store import TaskStore
+
+    store = TaskStore(hive_root=home)
+    meta = asyncio.run(store.get_meta(CYCLE_SESSION))
+    records = asyncio.run(store.list_tasks(CYCLE_SESSION, include_internal=True))
+    return {
+        "meta": meta.model_dump() if meta is not None else None,
+        "tasks": [record.model_dump() for record in records],
+    }
+
+
+def _cycle_colony_view(home: Path, colony: str) -> dict:
+    from framework.host import colony_tools_config
+    from framework.tools.queen_lifecycle_tools import _read_agent_triggers_json
+
+    colony_dir = home / "colonies" / colony
+    return {
+        "metadata": _read_json_or_none(colony_dir / "metadata.json"),
+        "worker": _read_json_or_none(colony_dir / "worker.json"),
+        "tools": _read_json_or_none(colony_dir / "tools.json"),
+        "tools_enabled": colony_tools_config.load_colony_tools_config(colony),
+        "triggers": _read_agent_triggers_json(colony_dir),
+    }
+
+
+def _cycle_view(home: Path) -> dict:
+    return {
+        "meta": _cycle_meta_view(home),
+        "tasks": _cycle_tasks_view(home),
+        "colonies": {
+            CYCLE_COLONY: _cycle_colony_view(home, CYCLE_COLONY),
+            CYCLE_GO_COLONY: _cycle_colony_view(home, CYCLE_GO_COLONY),
+        },
+    }
+
+
+def _cycle_file_hashes(home: Path) -> dict:
+    paths = {
+        "session/meta.json": _cycle_session_dir(home) / "meta.json",
+        "session/tasks.json": _cycle_session_dir(home) / "tasks.json",
+    }
+    for colony in (CYCLE_COLONY, CYCLE_GO_COLONY):
+        for name in ("metadata.json", "worker.json", "tools.json", "triggers.json"):
+            paths[f"colonies/{colony}/{name}"] = home / "colonies" / colony / name
+    return {key: (_sha(path) if path.exists() else None) for key, path in paths.items()}
+
+
+def _cycle_trigger(trigger_id: str, name: str, task: str) -> dict:
+    return {
+        "id": trigger_id,
+        "name": name,
+        "trigger_type": "interval",
+        "trigger_config": {"minutes": 60},
+        "task": task,
+        "enabled": True,
+        "last_fired_at": None,
+        "next_due_at": None,
+    }
+
+
+def cmd_sidecar_write(args) -> int:
+    """First half of the SC-06 cycle: write meta/tasks/colony sidecars through
+    the production writers (channels._merge_meta, session_titles.write_title,
+    framework.tasks.store.TaskStore, _ensure_minimal_colony,
+    colony_tools_config, the trigger store)."""
+    home = Path(args.home).resolve()
+    bootstrap(home)
+
+    session_dir = _cycle_session_dir(home)
+    session_dir.mkdir(parents=True, exist_ok=True)
+
+    from framework.server import channels, session_titles
+
+    channels._merge_meta(
+        session_dir,
+        queen_id=CYCLE_QUEEN,
+        created_at=1767225600.0,
+        agent_name="Growth",
+        colony_id=CYCLE_COLONY,
+        phase="independent",
+    )
+    session_titles.write_title(session_dir, "Sidecar cycle (python)", source="user")
+
+    from framework.tasks.store import TaskStore
+
+    store = TaskStore(hive_root=home)
+    asyncio.run(store.ensure_task_list(CYCLE_SESSION, creator_agent_id=CYCLE_QUEEN))
+    asyncio.run(
+        store.create_task(
+            CYCLE_SESSION,
+            subject="draft plan",
+            description="write the plan",
+            active_form="drafting plan",
+            metadata={"phase": "draft"},
+        )
+    )
+    asyncio.run(store.create_task(CYCLE_SESSION, subject="review plan", owner=CYCLE_QUEEN))
+
+    from framework.host import colony_tools_config
+    from framework.server.session_manager import _ensure_minimal_colony
+    from framework.tools.queen_lifecycle_tools import _write_agent_triggers_json
+
+    _ensure_minimal_colony(CYCLE_COLONY, queen_name=CYCLE_QUEEN)
+    colony_tools_config.update_colony_tools_config(CYCLE_COLONY, ["pdf_read"])
+    _write_agent_triggers_json(
+        home / "colonies" / CYCLE_COLONY,
+        [_cycle_trigger("trg_py", "python probe", "python cycle task")],
+    )
+
+    out({"phase": "python-write", "view": _cycle_view(home), "files": _cycle_file_hashes(home)})
+    return 0
+
+
+def cmd_sidecar_read(args) -> int:
+    home = Path(args.home).resolve()
+    bootstrap(home)
+    out({"phase": args.phase, "view": _cycle_view(home), "files": _cycle_file_hashes(home)})
     return 0
 
 
@@ -567,6 +728,15 @@ def main() -> int:
     p = sub.add_parser("read-probes")
     p.add_argument("--home", required=True)
     p.set_defaults(func=cmd_read_probes)
+
+    p = sub.add_parser("sidecar-write")
+    p.add_argument("--home", required=True)
+    p.set_defaults(func=cmd_sidecar_write)
+
+    p = sub.add_parser("sidecar-read")
+    p.add_argument("--home", required=True)
+    p.add_argument("--phase", default="read")
+    p.set_defaults(func=cmd_sidecar_read)
 
     args = parser.parse_args()
     return args.func(args)

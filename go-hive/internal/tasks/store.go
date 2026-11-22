@@ -257,7 +257,8 @@ func (s *TaskStore) writeDoc(sessionID string, doc *TaskListDocument) error {
 		return err
 	}
 	data := bytes.TrimSuffix(buf.Bytes(), []byte("\n"))
-	return atomicfs.WriteFile(path, data, 0o644)
+	// Owner-only like the rest of the session tree (upstream atomic writers).
+	return atomicfs.WriteFile(path, data, 0o600)
 }
 
 func (s *TaskStore) EnsureTaskList(sessionID string, creatorAgentID *string) (*TaskListMeta, error) {

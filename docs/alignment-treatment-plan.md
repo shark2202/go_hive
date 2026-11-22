@@ -50,7 +50,7 @@
 > 来源：`appearance-scope-registry.json`（18 个非 aligned 维度的 next 项）+ 今日进展复核。状态标记：✅今日闭环 / 🔧在修 / ⏳待拍板 / ⬜待做(带估时) / 🌐外部。
 
 **P0**
-- ⬜ cli：`hive mcp` 14 动词补 per-command help（对齐上游 usage/flags，4–8h）；`<verb>` 名以 `-` 开头统一 usage error 2（2–3h）；68 条 flag 级 help 文案分批（低收益，单列）
+- ✅ cli：per-command help + `-` 名 usage error 2 **已于 2026-11-22 上午合并**（`eca1637`/`e543aab4`/`2bb0ec70`/`b8482989`，含 help 版面逐字与 cli_usage.go 拆分）；余 68 条 flag 级 help 文案（低收益，单列）。注：晚间重复派单已止损（lane 误改主树，已 revert）
 - 🔧 disk-contract：SC-04 权限宽严、SC-06 会话 meta/tasks/colony sidecar API 级双跑、文件名单侧清单逐名核实（~4h）；storage_compat 接可选 sweep（2h）
 
 **P1**

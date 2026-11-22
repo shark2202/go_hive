@@ -66,7 +66,9 @@ func (s *SessionStore) WriteState(sessionID string, state *schemas.SessionState)
 	if err := os.MkdirAll(filepath.Dir(statePath), 0o755); err != nil {
 		return err
 	}
-	return atomicfs.WriteJSON(statePath, state, 0o644)
+	// Session artifacts are owner-only (0600), matching the upstream atomic
+	// writers and the rest of the session tree (parts/cursor/meta).
+	return atomicfs.WriteJSON(statePath, state, 0o600)
 }
 
 func (s *SessionStore) ReadState(sessionID string) (*schemas.SessionState, error) {

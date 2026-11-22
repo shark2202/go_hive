@@ -1,6 +1,6 @@
 # 模块清单（生成物，勿手改）
 
-> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` + `go list` 生成。commit: `7b77d047e82e`
+> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` + `go list` 生成。commit: `c80dd898a798`
 > 修改分层或职责请改 `architecture/model.yaml`，不要编辑本文件。
 
 ## 分层统计
@@ -16,7 +16,7 @@
 | 能力层（`capability`） | 29 | 可被循环调用的能力：工具、集成、LLM 传输、记忆、技能、soul、凭据、出站消息。 |
 | 基础层（`foundation`） | 16 | 无业务语义的底座：事件总线、文件存储、schema、原子写、目录布局、限速、质量门禁。 |
 
-共 82 个包、219 条包间 import 边。
+共 82 个包、222 条包间 import 边。
 
 ## 模块表
 
@@ -30,7 +30,7 @@
 | `e2e/cmd/recordproxy` | harness | 录制转发代理命令：把真实上游流量录成 e2e 夹具。 | 1 | 0 |  |
 | `e2e/cmd/runtimelogs` | harness | 三级运行日志双跑的启动命令（e2e）。 | 1 | 0 |  |
 | `e2e/cmd/stallgw` | harness | 确定性假上游命令（stream stall e2e）。 | 1 | 0 |  |
-| `e2e/cmd/storagecompat` | harness | HIVE_HOME 存储兼容 / G2 无损迁移夹具的 Go 侧命令。 | 10 | 0 |  |
+| `e2e/cmd/storagecompat` | harness | HIVE_HOME 存储兼容 / G2 无损迁移夹具的 Go 侧命令。 | 13 | 0 |  |
 | `e2e/escalationgw` | harness | worker 升级 e2e 的确定性假上游网关。 | 0 | 0 |  |
 | `e2e/memgw` | harness | memory e2e 的确定性假上游网关。 | 0 | 1 |  |
 | `e2e/recordproxy` | harness | 录制转发代理：真实上游流量 → 可回放夹具。 | 0 | 1 |  |
@@ -40,7 +40,7 @@
 | `internal/toolgolden` | harness | 工具结果文本的规范化，用于两侧运行时对照。 | 0 | 0 |  |
 | `internal/cli` | assembly | 装配根：解析命令与配置，构造 home、ToolRegistry、MCP runtime、ChatRuntime、ColonyRuntime，并注册 serve/chat/queen/colony/session/skill/mcp/janitor 子命令。 | 31 | 4 |  |
 | `internal/runtimehealth` | transport | 进程与宿主机资源健康快照，供 /api/health/resources 使用。 | 0 | 1 |  |
-| `internal/server` | transport | HTTP/SSE 传输层：路由注册、会话管理、ChatRuntime 的 turn 队列、colony/tracker/sentinel 适配器与事件桥。 | 37 | 1 |  |
+| `internal/server` | transport | HTTP/SSE 传输层：路由注册、会话管理、ChatRuntime 的 turn 队列、colony/tracker/sentinel 适配器与事件桥。 | 37 | 2 |  |
 | `internal/server/uiembed` | transport | embed_ui 构建标签下的前端静态资源；未带标签时返回空，让服务端回退到磁盘目录。 | 0 | 1 |  |
 | `internal/agents` | orchestration | Agent 规格与发现：读取 agents 目录、worker 元数据与能力描述。 | 2 | 3 |  |
 | `internal/claudecode` | orchestration | Claude Code queen 运行时：会话记录与收件箱、claude -p 回合、转录读取与进程树管理。 | 3 | 1 |  |
@@ -53,9 +53,9 @@
 | `internal/sentinel` | orchestration | Queen 停泊期的自治监督：nudge / escalate 判定、升级投递、入站回复路由与恢复。 | 6 | 1 |  |
 | `internal/session` | orchestration | 会话记录与磁盘布局：状态、transcript、游标、fork 与冷恢复。 | 3 | 4 |  |
 | `internal/sessionreport` | orchestration | 会话报告打包（report-bundle）：把会话、worker 与证据汇总成一份可交付摘要。 | 0 | 1 |  |
-| `internal/tasks` | orchestration | 任务计划存储：tasks.json 的增删改查、归档与提醒状态。 | 3 | 3 |  |
+| `internal/tasks` | orchestration | 任务计划存储：tasks.json 的增删改查、归档与提醒状态。 | 3 | 4 |  |
 | `internal/tracker` | orchestration | 共享结果账本：SQLite(WAL) tracker.db 的表注册、行写入与查询。 | 0 | 4 |  |
-| `internal/triggers` | orchestration | 触发器定义、cron 解析与 triggers.json 持久化。 | 1 | 1 |  |
+| `internal/triggers` | orchestration | 触发器定义、cron 解析与 triggers.json 持久化。 | 1 | 2 |  |
 | `internal/agentloop` | runtime | 唯一执行原语：一轮内的 LLM 调用、工具批处理与并发、压缩、预算/宽限、judge、提醒注入与停泊原因。 | 11 | 9 |  |
 | `internal/llmjudge` | runtime | 基于 LLM 的判定器适配：把成功标准与升级判定包装成可注入的 Judge。 | 1 | 2 |  |
 | `internal/orchestrator` | runtime | Python 图编排时代遗留的 DataBuffer 原语（权限、幻觉内容校验）。 | 0 | 0 |  |

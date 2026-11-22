@@ -37,7 +37,7 @@ PLATFORMS  = darwin/amd64 darwin/arm64 linux/amd64 linux/arm64 windows/amd64 win
 # test 门禁必须每次真跑。
 TEST_FLAGS ?= -count=1
 
-.PHONY: all test test-v vet fmt-check build embed-ui cross parity parity-targets specs-check tool-contract-check tool-contract-report tool-surface-check browser-tool-check tool-output-check cli-surface-check compat-check compat-cli-selftest module-inventory-check module-inventory-selftest upgrade-compat-check vulncheck install-verify arch-check refactor-freeze ci clean help
+.PHONY: all test test-v vet fmt-check build embed-ui cross parity parity-targets specs-check tool-contract-check tool-contract-report tool-surface-check browser-tool-check tool-output-check cli-surface-check compat-check compat-cli-selftest module-inventory-check module-inventory-selftest upgrade-compat-check vulncheck install-verify arch-check refactor-freeze storage-sweep ci clean help
 
 all: ci
 
@@ -61,6 +61,7 @@ help:
 	@echo "  make module-inventory-check     模块清单门禁（C12）：core/framework 未登记 .py 即失败"
 	@echo "  make module-inventory-selftest  模块清单自检：注入未登记文件/删登记项/孤岛冒充 ported 必须判定 FAIL"
 	@echo "  make upgrade-compat-check 升级兼容门禁（PREV_SLOT=<上一交付二进制目录> [NEW_SLOT=...]）"
+	@echo "  make storage-sweep    存储契约可选 sweep（STORAGE_SUITE=compat|sc04-06|all；夹具+期望树+权限+sidecar 循环；不进 ci）"
 	@echo "  make vulncheck          依赖漏洞门禁（govulncheck；离线降级明确 UNVERIFIED，退出码 3）"
 	@echo "  make install-verify     安装/升级端到端复验（SLOT_DIR=<slot 目录> [OLD_DIR=...]）"
 	@echo "  make refactor-freeze  结构重构的行为冻结验收（compare wave15-base；不进 ci）"
@@ -239,6 +240,17 @@ upgrade-compat-check:
 	@test -n "$(PREV_SLOT)" || (echo "upgrade-compat-check: set PREV_SLOT=<dir with the previous hive binary>"; exit 2)
 	@bash ../scripts/upgrade_compat_check.sh --old-dir "$(PREV_SLOT)" \
 		$(if $(NEW_SLOT),--new-dir "$(NEW_SLOT)",) --work "$${WORK:-$$(mktemp -d "$${TMPDIR:-/tmp}/upgrade-compat.XXXXXX")}"
+
+# 存储契约可选 sweep：storage_compat_run.sh（旧 home 夹具 + 期望树 + 迁移双跑
+# + 真实 serve 启动）与 storage_sc04_06_run.sh（SC-04 权限位、SC-06
+# meta/tasks/colony sidecar 写-读-再写循环、SC-08 单侧文件名审计）串成入口。
+# 需要 Python 项目环境与真实 serve 启动，因此不进 ci；STORAGE_SUITE 可选
+# compat|sc04-06|all（默认 all）。产物：docs/storage-compat/、
+# docs/e2e-assets/storage-sc04-06/。
+STORAGE_SUITE ?= all
+storage-sweep:
+	@bash ../scripts/storage_sweep.sh --suite "$(STORAGE_SUITE)" \
+		--work "$${WORK:-$$(mktemp -d "$${TMPDIR:-/tmp}/storage-sweep.XXXXXX")}"
 
 # 依赖漏洞门禁（G3）：优先 govulncheck（source/symbol 级）；工具缺失时可用
 # `go install` 装到独立缓存（不改 go.mod）。无法扫描时降级为 stdlib-only 的

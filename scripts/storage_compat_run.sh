@@ -223,9 +223,12 @@ from pathlib import Path
 
 work, out = Path(sys.argv[1]), Path(sys.argv[2])
 
-# Files a started `serve` writes regardless of migration state (MCP registry
-# bootstrap); anything else on top of the reference is a failure.
-ALLOWED_RUNTIME = {"mcp_registry/config.json", "mcp_registry/installed.json"}
+# Files a started `serve` writes regardless of migration state (the process
+# log sink — Python parity: framework/observability/logging.py attaches the
+# same $HIVE_HOME/logs/hive-server.log unless HIVE_NO_FILE_LOG is set — and
+# the MCP registry bootstrap); anything else on top of the reference is a
+# failure.
+ALLOWED_RUNTIME = {"logs/hive-server.log", "mcp_registry/config.json", "mcp_registry/installed.json"}
 EXPECTED_ENSURED = {"v1": 2, "v2": 3}  # colony(s) + the colonies/.migrations pseudo-colony
 
 report = {}

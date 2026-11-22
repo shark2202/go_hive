@@ -1,5 +1,5 @@
 // go_hive 分层依赖图（生成物，勿手改）
-// 源：architecture/model.yaml + go list -json ./... · commit 7b77d047e82e
+// 源：architecture/model.yaml + go list -json ./... · commit c80dd898a798
 // 箭头 A -> B 读作 A imports B。
 digraph go_hive {
   graph [rankdir=LR, fontname="Helvetica", nodesep=0.28, ranksep=0.9, splines=true];
@@ -136,9 +136,12 @@ digraph go_hive {
   "e2e/cmd/storagecompat" -> "internal/hivehome";
   "e2e/cmd/storagecompat" -> "internal/schemas";
   "e2e/cmd/storagecompat" -> "internal/senders";
+  "e2e/cmd/storagecompat" -> "internal/server";
   "e2e/cmd/storagecompat" -> "internal/session";
   "e2e/cmd/storagecompat" -> "internal/storage";
+  "e2e/cmd/storagecompat" -> "internal/tasks";
   "e2e/cmd/storagecompat" -> "internal/tracker";
+  "e2e/cmd/storagecompat" -> "internal/triggers";
   "internal/agentloop" -> "internal/hiveclock";
   "internal/agentloop" -> "internal/hivehome";
   "internal/agentloop" -> "internal/llm";

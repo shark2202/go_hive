@@ -399,6 +399,41 @@
     "hours": 2,
     "done": true,
     "note": "DONE 2026-11-22（lane resume-guards）：根因=snapshot 只读总线 latest_loop_state 且重启总线为空；修法=runtime 重建还原 cursor park 后在新总线重播恢复等待（client_input_requested / client_credential_form_requested + loop_state_changed），SSE 首帧即同一 ComputeSessionSnapshot。真机复跑 park/resume-snapshot.json=awaiting_input=true/park_reason=ask_user/pending_questions 非空（崩溃会话同 cold_interrupted）；测试 TestRestoredAskUserParkShowsInSnapshotAndFirstSSEFrame。"
+   },
+   {
+    "id": "unported-credentials-check-agent",
+    "label": "unported 分诊 P1：移植 agent 凭据校验（validation.py 的 validate_agent_credentials/compute_unavailable_tools/CredentialStatus + setup.py 的 load_agent_nodes）并接线 /api/credentials/check-agent 与 /api/credentials/resync（现 check-agent 恒 500、Resync 生产未赋值；前端 CredentialsModal 打开即报错）",
+    "hours": 10,
+    "done": false,
+    "note": "证据 go_hive/docs/unported-triage.md（含 CURATED 条目）；Go 锚点 server/routes_agents.go:254（500 占位）、server/routes_credentials.go:590（deps.Resync nil→500）。bootstrap.go EnsureCredentialKeyEnv 也是仅测试调用，接线时一并复核。"
+   },
+   {
+    "id": "unported-tool-input-coercer-wire",
+    "label": "unported 分诊 P1：接线 tool_input_coercer——agent loop 派发前调用 internal/tools/coerce.go 的 CoerceToolInput（对应 Python agent_loop.py:4805 的派发前强制转换；Go 实现全量但仅 coerce_test.go 调用）",
+    "hours": 2,
+    "done": false,
+    "note": "证据 go_hive/docs/unported-triage.md；grep CoerceToolInput 全库仅测试命中（fromJSON 被 tools/mcp.go:194 复用属例外）。收尾：补接线测试 + go test -count=1 ./internal/agentloop/ ./internal/tools/。"
+   },
+   {
+    "id": "unported-sentinel-setup-tool",
+    "label": "unported 分诊 P2：移植 sentinel_setup 模型工具（sentinel_tool.py：status/configure/test/detect_chat + Slack/Telegram 校验 + 凭据/令牌存取 + publish refresh），替换 tool_surface_flat.go 的 not_implemented 占位",
+    "hours": 8,
+    "done": false,
+    "note": "证据 go_hive/docs/unported-triage.md；现状 tool_surface_flat.go:174 与 :536-541 明示 not_implemented（桌面连接器替代）。internal/sentinel listeners/manager/token 已在 Go，可复用。"
+   },
+   {
+    "id": "unported-antigravity-provider",
+    "label": "unported 分诊 P2：实现 Antigravity（Google Cloud Code Assist）provider，或从订阅列表隐藏该入口（antigravity.py：账号/IDE DB 载入、token refresh、Gemini schema 清洗、SSE 解析）",
+    "hours": 12,
+    "done": false,
+    "note": "证据 go_hive/docs/unported-triage.md；现状 server/main_slot.go:39 显式 ErrAntigravityUnsupported（失败响亮），但 llm_config.go:82 订阅列表仍含 antigravity。"
+   },
+   {
+    "id": "unported-ga-tool-migration",
+    "label": "unported 分诊 P2：移植 GA 工具 sidecar 愈合迁移（tools_ga_migration.py + queen_tools_defaults 的 _CATEGORY_ADDITIONS/grant_role_default_additions；启动时按 sidecar saved_on_version 追加新 GA 工具）",
+    "hours": 4,
+    "done": false,
+    "note": "证据 go_hive/docs/unported-triage.md；routes_queens_tools.go:380-384 自述 \"That versioned healing table has no Go port yet\"。幂等性按 sidecar saved_on_version。"
    }
   ]
  }
