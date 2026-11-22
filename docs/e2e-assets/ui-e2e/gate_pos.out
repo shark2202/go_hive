@@ -1,0 +1,2 @@
+{"ok": false, "colony": "ui_e2e_012144", "route_id": "ui-e2e-012144", "stage": "sidebar_present", "sidebar_ms": 151468, "reason": "colony 'ui-e2e-012144' not in sidebar after 151468ms. colony links="}
+EXIT=1

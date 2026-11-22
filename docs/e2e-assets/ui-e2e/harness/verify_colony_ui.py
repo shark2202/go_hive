@@ -35,8 +35,15 @@ except ImportError:
           "drive the system Chrome via channel='chrome').", file=sys.stderr)
     sys.exit(2)
 
-# Page text that means we landed on an error surface, not a colony.
-ERROR_PAGE_RE = re.compile(r"not found|404|something went wrong|出错了|加载失败", re.I)
+# Strings that mean we landed on an error surface, not a colony.
+# Deliberately narrow: the colony page renders a CHAT TRANSCRIPT, and a
+# transcript legitimately contains prose like "Colony not found" (that is
+# exactly what this gate's own not-found test writes). Substring-matching the
+# whole body over a loose /not found/i turned that into a false FAIL on a
+# perfectly healthy colony. Match only the app's own surface markers.
+ERROR_PAGE_RE = re.compile(
+    r"Page not found|Colony not found|未找到蜂群|页面不存在|something went wrong",
+    re.I)
 
 
 def slug_to_colony_id(slug):
@@ -65,6 +72,31 @@ def run(colony, base, out_dir, keep_open_sec):
         if not ok:
             failures.append("%s: %s" % (name, detail))
 
+    # The display name is owned by the BACKEND (worker.json -> /api/discover),
+    # not by any client-side title-casing. Asserting on it (instead of a
+    # lowercased suffix substring) is what makes these checks exact: a suffix
+    # match passed "012144" only because it is all digits, failed "ghost"
+    # ("ghost" != "Ghost"), and would false-PASS "demo" against "Demo2".
+    def backend_display_name():
+        try:
+            import urllib.request
+            with urllib.request.urlopen(base + "/api/discover", timeout=10) as r:
+                disc = json.loads(r.read().decode("utf-8"))
+        except Exception as e:
+            return None, "discover failed: %r" % (e,)
+        for v in disc.values():
+            if not isinstance(v, list):
+                continue
+            for item in v:
+                if not isinstance(item, dict):
+                    continue
+                if os.path.basename(item.get("path", "")) == colony:
+                    return item.get("name"), None
+        return None, "colony %r not in /api/discover" % colony
+
+    display_name, dn_err = backend_display_name()
+    result["evidence"]["backend_display_name"] = display_name
+
     os.makedirs(out_dir, exist_ok=True)
 
     with sync_playwright() as p:
@@ -89,20 +121,29 @@ def run(colony, base, out_dir, keep_open_sec):
               page.title() == "Hive" and "root" in page.content(),
               "title=%r" % page.title())
 
+        # Exact href, not substring: '#/colony/demo' must not be satisfied by
+        # '#/colony/demo2'.
+        want_href = "#/colony/%s" % colony_id
         links = page.eval_on_selector_all(
             "a[href*='/colony/']", "els => els.map(e => e.getAttribute('href'))")
-        sidebar_target = sorted({h for h in links if colony_id in h or colony in h})
         check("sidebar: colony link present",
-              len(sidebar_target) > 0,
-              "links=%s" % sorted(set(links)))
+              want_href in links,
+              "want=%s got=%s" % (want_href, sorted(set(links))))
 
-        # The sidebar renders the human-readable display name; match on the
-        # timestamp suffix so we don't depend on title-casing rules.
-        suffix = colony.rsplit("_", 1)[-1] if "_" in colony else colony
-        sidebar_text = page.inner_text("aside, nav, body")
-        check("sidebar: colony name visible in list",
-              suffix in sidebar_text,
-              "looked for %r" % suffix)
+        # Compare against the backend's exact display name, on the entry's own
+        # text -- so "Demo" cannot be satisfied by the neighbouring "Demo2" row.
+        label = display_name
+        if label is None:
+            check("sidebar: colony name visible in list", False,
+                  "no backend display name (%s)" % dn_err)
+        else:
+            entry_text = page.eval_on_selector_all(
+                "a[href*='/colony/']",
+                "els => els.filter(e => e.getAttribute('href') === %r)"
+                "        .map(e => (e.textContent || '').trim())" % want_href)
+            check("sidebar: colony name visible in list",
+                  any(t == label for t in entry_text),
+                  "want=%r got=%s" % (label, entry_text))
 
         page.screenshot(path=os.path.join(out_dir, "sidebar.png"), full_page=False)
         result["evidence"]["sidebar_png"] = os.path.join(out_dir, "sidebar.png")
@@ -123,21 +164,31 @@ def run(colony, base, out_dir, keep_open_sec):
               colony_id in page.url,
               "url=%s" % page.url)
 
-        check("colony page: heading names the colony",
-              any(suffix in h for h in h1s),
-              "h1=%s" % h1s)
+        if display_name is None:
+            check("colony page: heading names the colony", False,
+                  "no backend display name (%s)" % dn_err)
+        else:
+            check("colony page: heading names the colony",
+                  display_name in h1s,
+                  "want=%r h1=%s" % (display_name, h1s))
 
+        # Only inspect the app's own chrome, not the chat transcript body.
+        err_match = ERROR_PAGE_RE.search(" ".join(h1s)) or \
+                    ERROR_PAGE_RE.search(page.inner_text("nav") if page.query_selector("nav") else "")
         check("colony page: not an error surface",
-              not ERROR_PAGE_RE.search(body_text),
-              "matched an error pattern in body text")
+              not err_match,
+              "matched %r in page chrome" % (err_match.group(0) if err_match else ""))
 
         # A colony page renders its panel chrome. If the colony failed to
         # resolve, this collapses and the requirement is not actually met.
         panel_markers = ["数据", "计划", "自动化", "工作节点",
                          "Data", "Plan", "Automations", "Workers"]
+        found_markers = [m for m in panel_markers if m in body_text]
+        # The page is localised, so a run yields one language's four tabs.
+        full_panel = len(found_markers) >= 4
         check("colony page: colony panel rendered",
-              any(m in body_text for m in panel_markers),
-              "no panel markers found")
+              full_panel,
+              "markers=%s (%d/4)" % (found_markers, len(found_markers)))
 
         page.screenshot(path=os.path.join(out_dir, "colony-page.png"), full_page=True)
         result["evidence"]["colony_page_png"] = os.path.join(out_dir, "colony-page.png")

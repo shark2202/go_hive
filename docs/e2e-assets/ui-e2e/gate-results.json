@@ -1,0 +1,128 @@
+[
+  {
+    "id": "A1",
+    "assertion": "A1 sidebar lists >=1 colony on cold load",
+    "ok": true,
+    "detail": "16 colony links"
+  },
+  {
+    "id": "A2",
+    "assertion": "A2 sidebar contains ui-e2e-012144 on cold load",
+    "ok": true,
+    "detail": "[{'href': '#/colony/ui-e2e-012144', 'text': 'Ui E2E 012144'}]"
+  },
+  {
+    "id": "A3",
+    "assertion": "A3 /api/discover hit on this cold load",
+    "ok": true,
+    "detail": "['/api/discover', '/api/sessions', '/api/sessions/history', '/api/sessions/live']"
+  },
+  {
+    "id": "A4",
+    "assertion": "A4 sidebar screenshot",
+    "ok": true,
+    "detail": "gate-a-sidebar-cold.png"
+  },
+  {
+    "id": "A5",
+    "assertion": "A5 zero console errors on cold root load",
+    "ok": true,
+    "detail": "[]"
+  },
+  {
+    "id": "B0",
+    "assertion": "B0 modals cleared before click",
+    "ok": true,
+    "detail": "visible dialogs=0"
+  },
+  {
+    "id": "B1",
+    "assertion": "B1 click lands on colony route",
+    "ok": true,
+    "detail": "http://127.0.0.1:8788/#/colony/ui-e2e-012144"
+  },
+  {
+    "id": "B1",
+    "assertion": "B1 h1 EQUALS the backend display name 'Ui E2E 012144'",
+    "ok": true,
+    "detail": "{'h1': ['Ui E2E 012144'], 'history': [\"['\u563f\uff0c\u6709\u4ec0\u4e48\u53ef\u4ee5\u5e2e\u4f60\u7684\uff1f']\", \"['Ui E2E 012144']\"]}"
+  },
+  {
+    "id": "B2",
+    "assertion": "B2 h1 is not merely the URL slug 'ui-e2e-012144'",
+    "ok": true,
+    "detail": "['Ui E2E 012144']"
+  },
+  {
+    "id": "B3",
+    "assertion": "B3 main region resolves queen 'queen_growth' -> 'Head of Growth'",
+    "ok": true,
+    "detail": "\u5bf9\u8bdd |  | 11\u670823\u65e5, 1:30 | Steve Jobs | Head of Growth | 1:30 |  | PASS. Both surfaces verified against the live UI, not just the code path. |  | Sidebar \u2014 button \"\u8702\u7fa4 4\" with link \"Ui E2E 012144\" sitting in the list alongside Demo, Demo2, and"
+  },
+  {
+    "id": "B4",
+    "assertion": "B4 main region left the '\u6b63\u5728\u8fde\u63a5\u667a\u80fd\u4f53' placeholder",
+    "ok": true,
+    "detail": "{'saw_connecting': False, 'states': ['\u5bf9\u8bdd\\n\\n11\u670823\u65e5, 1:30\\nSteve Jobs\\nHead of Growth\\n1:30\\n\\nPASS. Both surfaces verified ag']}"
+  },
+  {
+    "id": "B5",
+    "assertion": "B5 no error surface in main",
+    "ok": true,
+    "detail": "clean"
+  },
+  {
+    "id": "C1",
+    "assertion": "C1 h1 EQUALS the backend display name 'Ui E2E 012144'",
+    "ok": true,
+    "detail": "{'h1': ['Ui E2E 012144'], 'history': [\"['Ui E2E 012144']\"]}"
+  },
+  {
+    "id": "C2",
+    "assertion": "C2 h1 is not merely the URL slug 'ui-e2e-012144'",
+    "ok": true,
+    "detail": "['Ui E2E 012144']"
+  },
+  {
+    "id": "C3",
+    "assertion": "C3 main region resolves queen 'queen_growth' -> 'Head of Growth'",
+    "ok": true,
+    "detail": "\u5bf9\u8bdd |  | 11\u670823\u65e5, 1:30 | Steve Jobs | Head of Growth | 1:30 |  | PASS. Both surfaces verified against the live UI, not just the code path. |  | Sidebar \u2014 button \"\u8702\u7fa4 4\" with link \"Ui E2E 012144\" sitting in the list alongside Demo, Demo2, and"
+  },
+  {
+    "id": "C4",
+    "assertion": "C4 main region left the '\u6b63\u5728\u8fde\u63a5\u667a\u80fd\u4f53' placeholder",
+    "ok": true,
+    "detail": "{'saw_connecting': False, 'states': ['\u5bf9\u8bdd\\n\\n11\u670823\u65e5, 1:30\\nSteve Jobs\\nHead of Growth\\n1:30\\n\\nPASS. Both surfaces verified ag']}"
+  },
+  {
+    "id": "C5",
+    "assertion": "C5 no error surface in main",
+    "ok": true,
+    "detail": "clean"
+  },
+  {
+    "id": "C6",
+    "assertion": "C6 zero console errors on cold deep-link",
+    "ok": true,
+    "detail": "[]"
+  },
+  {
+    "id": "N1",
+    "assertion": "N1 ghost colony absent from sidebar",
+    "ok": true,
+    "detail": "16 links, ghost hits=[]"
+  },
+  {
+    "id": "N2",
+    "assertion": "N2 ghost deep-link does NOT resolve a queen (gate is backend-sensitive)",
+    "ok": true,
+    "detail": "{'h1': ['ui-e2e-999999'], 'main': '\u6b63\u5728\u8fde\u63a5\u667a\u80fd\u4f53\u2026 |  | \u5bf9\u8bdd'}"
+  },
+  {
+    "id": "N3",
+    "assertion": "N3 ghost deep-link h1 is the raw slug, not a display name",
+    "ok": true,
+    "detail": "['ui-e2e-999999']"
+  }
+]

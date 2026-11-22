@@ -29,6 +29,58 @@ import urllib.request
 DEFAULT_BASE = os.environ.get("HIVE_BASE", "http://127.0.0.1:8788")
 
 
+def is_error_page(page, body: str) -> bool:
+    """True only if the colony page actually fell back to an error render.
+
+    Deliberately NOT a blind substring scan of body text. A colony's chat
+    transcript is part of the body, so a test colony whose messages discuss
+    "404" or "Colony not found" would red-light itself -- a false positive
+    that trains people to ignore the gate.
+
+    We assert the real error signature instead. When a colony fails to load,
+    colony-chat.tsx:2287-2294 replaces the whole render with a single
+    <p>Colony not found: {id}</p> -- no h1, no session tabs. So:
+      - the standalone "Colony not found" paragraph is present, OR
+      - the structural shell is missing entirely (no h1 / no session tabs).
+    """
+    try:
+        not_found_p = page.query_selector("xpath=//p[contains(., 'Colony not found')]")
+    except Exception:
+        not_found_p = None
+    if not_found_p is not None:
+        return True
+
+    # Structural fallback: a rendered colony always has an h1 and the session
+    # tab strip. Their absence means we got the bare error shell.
+    has_h1 = False
+    for sel in ("h1",):
+        try:
+            el = page.query_selector(sel)
+            has_h1 = el is not None and (el.inner_text() or "").strip() != ""
+        except Exception:
+            has_h1 = False
+    if not has_h1:
+        return True
+    return False
+
+
+def error_page_detail(page, body: str) -> str:
+    """Report WHICH signal fired, so a red build is diagnosable."""
+    try:
+        el = page.query_selector("xpath=//p[contains(., 'Colony not found')]")
+        if el is not None:
+            return f"error render: {(el.inner_text() or '').strip()!r}"
+    except Exception:
+        pass
+    try:
+        h1 = (page.inner_text("h1") or "").strip()
+    except Exception:
+        h1 = ""
+    if not h1:
+        return "error render: no h1 (bare error shell)"
+    return f"rendered ok (h1={h1!r}); chat text may mention 'not found' -- ignored"
+
+
 def slug_to_route_id(slug: str) -> str:
     """Exact mirror of the frontend's slugToColonyId (src/lib/colony-registry.ts):
 
@@ -136,8 +188,8 @@ def verify(base, colony_slug, shots=None, headless=True):
 
         body = page.inner_text("body") or ""
         res.check("page is not an error page",
-                  not any(m in body.lower() for m in ("not found", "404", "something went wrong")),
-                  "no error markers")
+                  not is_error_page(page, body),
+                  error_page_detail(page, body))
         res.check("route stayed on colony", page.url.endswith(f"#/colony/{route_id}"), page.url)
 
         if api_row:

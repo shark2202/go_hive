@@ -1,9 +1,9 @@
 {
  "wave": 81,
- "at": "2026-11-23 01:43",
- "head": "bfabc84e",
+ "at": "2026-11-23 01:44",
+ "head": "2b66f79c",
  "ci": 0,
  "qc": 0,
  "publish": 0,
- "note": "i18n-fill8 合并（8 条缺译→0；vitest 17/17）+ UI E2E 证据入库；CI 首跑 claudecode flaky、独占重跑绿；journey 6/6；QC 9/9；publish 44e0467"
+ "note": "更正发布结果：publish 93eaf4f（sync @ 2b66f79c，01:44 CST，首推遇 GitHub 443、重试成功）；i18n-fill8（8 条缺译→0，vitest 17/17）+ UI E2E 证据；CI 独占重跑绿；journey 6/6；QC 9/9"
 }

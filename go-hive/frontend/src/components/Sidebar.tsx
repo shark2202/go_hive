@@ -151,7 +151,7 @@ function CollapsedQueenAvatar({
 export default function Sidebar() {
   const navigate = useNavigate();
   const { t } = useI18n();
-  const { colonies, queens, queenProfiles, sidebarCollapsed, setSidebarCollapsed, refresh } = useColony();
+  const { colonies, queens, queenProfiles, sidebarCollapsed, setSidebarCollapsed, refresh, loading } = useColony();
   const { me } = useMe();
   // Decommissioned queens vanish from the sidebar entirely; users
   // re-hire them from the org chart, not from here.
@@ -523,7 +523,7 @@ export default function Sidebar() {
                   ))}
                   {colonies.length === 0 && (
                     <p className="px-5 py-2 text-xs text-sidebar-muted">
-                      {t("No colonies yet")}
+                      {loading ? t("Loading colonies...") : t("No colonies yet")}
                     </p>
                   )}
                 </>

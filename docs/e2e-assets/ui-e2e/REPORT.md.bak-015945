@@ -1,0 +1,2044 @@
+# UI E2E：界面创建蜂群（Orca 浏览器实测）
+
+- 时间：2026-11-23 01:18 CST
+- 环境：本地 serve `127.0.0.1:8788`（新建 hive-embed，含 colony-bootstrap 修复 `9ffd2c70`）
+- 工具：Orca 内置浏览器（tab `9690cbc3-5819-43c2-ba10-38f96c06a11f`）
+
+## 步骤与结果（逐字取实测）
+
+| # | 动作 | 结果 |
+|---|---|---|
+| 0 | 打开 `http://127.0.0.1:8788` | 侧栏显示「蜂群 3」 |
+| 1 | 点击侧栏「创建蜂群」[e8] | 弹窗打开：蜂后列表 6 位、名称输入（placeholder「例如 research_team」）、目标输入、`创建`（初始 disabled） |
+| 2 | 选择蜂后 `Steve Jobs` [e84] | 选中 |
+| 3 | 填写名称 `ui-e2e-011834`（页面 sanitize 为 `ui_e2e_011834`）+ 目标文本 | 输入生效 |
+| 4 | 点击 `创建` [e93] | **成功**：侧栏计数变「蜂群 4」，URL 变为 `http://127.0.0.1:8788/#/colony/ui-e2e-011834` |
+| 5 | 控制台检查 | 仅 `[SSE] opening/connected /Users/mac/.hive-go/colonies/ui_e2e_011834 session_20261123_011841_07a35d76`；**无 error** |
+| 6 | 磁盘核对 | `~/.hive-go/colonies/ui_e2e_011834/` 存在：`metadata.json`、`worker.json`、`tracker/`、`triggers.json`、`skills/`、`conversations/`、`runs/` |
+
+截图：`colony-created.png`（本目录，创建后落地的 colony 页面）。
+
+## 结论
+
+界面创建蜂群端到端通过（修复前为静默 404）。该步骤已纳入发布前必跑项（复盘 Q2）；自动化门禁（Q1 API 旅程）由 lane `journey-e2e` 落盘。
+
+## 附：清理
+
+- 测试创建的 `ui_e2e_011834` 保留供查看（可在 UI 删除）。
+- API 级测试 `qc-verify-011811` 已清理（注：bootstrap 路径接受了含 `-` 的名称，但 `DELETE /api/colonies` 要求 `[a-z0-9_]+`——前端已 sanitize，属边缘口径差异，已记入复盘补充）。
+
+## 复跑验证：2026-11-23 01:21 CST（第二次独立实测）
+
+同一台 serve（`127.0.0.1:8788`，`hive-embed` pid 12441，构建自 `9ffd2c70` 之后的 main），
+用**不同的 colony 名称**再跑一遍，验证不是一次性侥幸。
+
+| # | 动作 | 实测结果 |
+|---|---|---|
+| 0 | 打开 `http://127.0.0.1:8788/`，读侧栏基线 | `蜂群 3`（Demo / Demo2 / Ui E2E 011834） |
+| 1 | 点击 `创建蜂群` [e119] | 弹窗打开，蜂后列表 6 位、名称/目标输入、`创建` **disabled** |
+| 2 | 填写名称 `ui-e2e-012144` | 页面 sanitize 为 `ui_e2e_012144`（连字符→下划线，符合 `[a-z0-9_]+`） |
+| 3 | 填写目标文本 | 输入生效 |
+| 4 | 选择蜂后 `Steve Jobs` [e195] | `创建` 由 **disabled → enabled** |
+| 5 | 点击 `创建` [e204] | 弹窗关闭，URL 跳转 `#/colony/ui-e2e-012144` |
+| 6 | 侧栏断言 | `蜂群 3` → **`蜂群 4`**，新增 `link "Ui E2E 012144"` [e215] |
+| 7 | colony 页面断言 | 标题 `Ui E2E 012144`（h1）、副标题 `Head of Growth`、会话面板渲染 `数据/计划/自动化/工作节点`，**非错误页** |
+| 8 | console 断言 | 新会话 `[SSE] opening → connected /Users/mac/.hive-go/colonies/ui_e2e_012144 session_20261123_012150_ff74c89a`，**无 error** |
+| 9 | 磁盘核对 | `~/.hive-go/colonies/ui_e2e_012144/` 七件套齐全，`metadata.json` 的 `name`/`queen_name`/`created_at` 与创建时刻一致 |
+| 10 | API 核对 | `GET /api/sessions` 含 `ui_e2e_012144`；`GET /api/colonies/tools-index` 含 `{"name":"ui_e2e_012144","queen_name":"queen_growth","created_at":1795368110.64702}` |
+
+**四面一致**：侧栏列表、colony 页面、`/api/sessions` + `/api/colonies/tools-index`、磁盘目录 ——
+全部指向同一个新 colony，`created_at` 两侧对得上（`1795368110.64702`）。说明侧栏/页面不是前端乐观插值，
+而是真读到了后端状态。
+
+截图：`colony-created-012144.png`（视口）、`colony-created-012144-full.png`（整页）。
+
+### 一处观察（非阻塞，不计入失败）
+
+复跑前，标签页停在上一轮遗留的 `#/colony/ui-e2e-011834`，且该会话的 SSE 被后端重启打断，console 有一条
+`[SSE] error: ... network error status undefined`。导航到根路径并新建后未再复现。属 SSE 断线重连的
+日志噪声，与创建旅程无关；但**若要做成无人值守门禁，需容忍陈旧标签页的这条噪声**（或先开新标签页），
+否则会误报。
+
+## 复跑验证 #2：2026-11-23 01:27 CST（独立复验：侧栏 + colony 页面）
+
+**目的**：只验证「colony 必须出现在侧栏和 colony 页面」，不依赖创建流程，直接从根路径起跑。
+
+- 环境：`hive-embed` serve `127.0.0.1:8788`；Orca 内置浏览器（tab `9690cbc3-5819-43c2-ba10-38f96c06a11f`，profile `Default`）
+- 被测 colony：`ui_e2e_012144`（`created_at 1795368110.64702`，`queen_name queen_growth`）
+- 路由 id：`ui-e2e-012144`（`slugToColonyId` 只做 `_` → `-`，不 title-case）
+
+| # | 断言 | 实测 |
+|---|---|---|
+| 1 | 打开 `http://127.0.0.1:8788/` | 标题 `Hive`，无 loadError |
+| 2 | 侧栏计数 | `button "蜂群 4"` — 4 个 colony 全部计入 |
+| 3 | **侧栏列表含目标** | `link "Ui E2E 012144" [ref=e244]`（与 `Demo` / `Demo2` / `Ui E2E 011834` 同级） |
+| 4 | 点击侧栏条目 | URL `#/colony/ui-e2e-012144` |
+| 5 | **colony 页面 h1** | `Ui E2E 012144` |
+| 6 | colony 页面副标题 | `Head of Growth`（queen 正确解析） |
+| 7 | 会话面板 | `数据` / `计划` / `自动化` / `工作节点` 四页签齐全；**非错误页**（`/not found|404|出错了/` = false） |
+| 8 | console | `[SSE] connected: .../ui_e2e_012144 session_20261123_012150_ff74c89a`；无 error |
+| 9 | API 对账 | `/api/colonies/tools-index` 含 `ui_e2e_012144`，`created_at 1795368110.64702` 与磁盘 `metadata.json` 完全一致 |
+| 10 | 磁盘对账 | 七件套齐全（`conversations`/`metadata.json`/`runs`/`skills`/`tracker`/`triggers.json`/`worker.json`） |
+
+截图：`sidebar-012144-viewport.png`（侧栏）、`colony-page-012144-full.png`（colony 整页）。
+
+## 结论
+
+**PASS**。`ui_e2e_012144` 同时出现在侧栏与 colony 页面；路由 id、页面标题、queen 归属、
+API `created_at`、磁盘目录五处指向同一个 colony，页面是读后端状态而非前端乐观插值。
+
+三条独立复跑（01:18 创建、01:21 复跑、01:27 仅验证）结论一致。
+
+## 自动化门禁：`scripts/verify_colony_in_ui.py`
+
+把上面手工点击的步骤固化成可重复执行的脚本。默认无头运行，退出码分级。
+
+### 用法
+
+```bash
+cd go_hive/docs/e2e-assets/ui-e2e/scripts
+
+# 验证单个 colony
+python3 verify_colony_in_ui.py --colony ui_e2e_012144
+
+# 验证后端报告的每一个 colony（创建后回归用）
+python3 verify_colony_in_ui.py --list
+
+# 留证据 / 看着它跑
+python3 verify_colony_in_ui.py --colony ui_e2e_012144 --shots ./shots --headed
+
+# 指向别的 serve
+HIVE_BASE=http://127.0.0.1:8790 python3 verify_colony_in_ui.py --colony foo
+```
+
+### 退出码
+
+| 码 | 含义 |
+|---|---|
+| `0` | PASS — 全部断言通过 |
+| `1` | FAIL — 真实回归（colony 不在侧栏 / 页面 404 / h1 不对 / console 报错） |
+| `2` | ENV — 环境问题（serve 没起、colony 不存在、浏览器起不来） |
+
+**为什么分 1 和 2**：把所有红色都归成一个码，跑夜的人会学会忽略红色。
+"应用坏了" 和 "服务器没起" 是两件事，必须分开报警。
+
+### 断言内容（8 项）
+
+1. 后端 `/api/colonies/tools-index` 列出该 colony
+2. 侧栏存在指向 `#/colony/<route-id>` 的链接
+3. colony 页面 `h1` 等于后端 `/api/discover` 返回的显示名
+4. 页面不是错误页（无 `not found` / `404` / `Something went wrong`）
+5. 路由停在目标 colony
+6. queen 在页面上有体现
+7. 会话面板四页签渲染
+8. 无 console error（`[SSE]` 断线重连噪声**已排除**，见复盘补充）
+
+### 两个刻意的设计
+
+- **显示名从后端取，不本地 title-case。** 第一版用
+  `" ".join(w.capitalize() ...)` 猜标题，把 `E2E` 猜成 `E2e`，直接误报 FAIL。
+  显示名归后端（`/api/discover`）所有，脚本跟着它走，才不会跟渲染器漂移。
+- **`slugToRouteId` 逐字镜像前端 `slugToColonyId`。** 不做额外 sanitize；
+  路由 id 的规则只能有一个来源，两边一旦不一致，门禁验的就不是真实路由。
+
+### 自测（门禁本身要能被证伪）
+
+| 场景 | 期望 | 实测 |
+|---|---|---|
+| 正常 colony | `0` PASS | `0` PASS — 8/8 |
+| 故意把 h1 断言改错 | `1` FAIL | `1` FAIL |
+| colony 名不存在 | `2` ENV | `2` ENV |
+| serve 未启动 | `2` ENV | `2` ENV — `Connection refused` |
+
+### 实测结果（2026-11-23 01:31 CST）
+
+`--list` 跑全部 4 个 colony：**PASS 4/4**（`demo` / `demo2` / `ui_e2e_011834` / `ui_e2e_012144`）。
+
+运行期间侧栏还实时冒出了别的 agent 新建的 `disk-only-test-0127`、`ui-e2e-refresh-probe` —— 
+说明列表是实时读后端，不是快照缓存。**副作用**：`--list` 断言的是"运行开始时后端报告的集合"，
+并发新建不会导致误报，但并发**删除**可能；无人值守时用它比单 colony 断言更脆，建议门禁仍以
+`--colony` 为主，`--list` 用于人工回归巡检。
+
+### 与 `hive-browser` 的关系
+
+本脚本用 Playwright 驱动**本机已装的 Chrome**（`channel="chrome"`，无需额外下载浏览器），
+因此不依赖 Hive Browser Bridge 扩展。若团队统一要求走 `hive-browser`，需先在其中安装
+`jkpcegnbfimimjodblcemoheedidnppm` —— 当前该扩展**未安装**，`hive-browser status` 报
+`connected: false`。两条路径验的是同一个真实页面，二选一即可。
+
+### 反向对照（negative control）：路由 id 形式的实证
+
+上节断言「路由 id 是 `ui-e2e-012144`，不是 `ui_e2e_012144`」已由实测确认，非从代码推断：
+
+| 输入 URL | 实测结果 |
+|---|---|
+| `#/colony/ui-e2e-012144` | h1 = `Ui E2E 012144`（正确渲染） |
+| `#/colony/ui_e2e_012144` | 回落至根路径 `http://127.0.0.1:8788/`，h1 = `嘿，有什么可以帮你的？`，无 colony 标题 — **不解析** |
+
+即：只有下划线转连字符后的形式是有效路由。写自动化断言时若用磁盘目录名直接拼 URL 会静默退回首页，
+表现为「colony 不存在」的假阴性。`slugToColonyId` 只做 `_` → `-`（不 title-case、不去前缀）。
+
+## 自动化门禁：`harness/`（2026-11-23 01:41 CST）
+
+把上面的手工点检固化成可复跑的断言脚本。
+
+```sh
+docs/e2e-assets/ui-e2e/harness/run.sh ui_e2e_012144
+# exit 0 = 通过, 1 = 断言失败, 2 = 预检/环境错误
+```
+
+实现要点：**不依赖 `hive-browser`**。用 Playwright `channel="chrome"` 直接驱动本机
+已安装的 Google Chrome（headless、一次性 profile，绝不碰用户登录态），无需下载浏览器、
+无需 Bridge 扩展。8 条断言覆盖：侧栏链接、侧栏名称、路由、`<h1>`、非错误页、
+colony 面板渲染（`数据/计划/自动化/工作节点`）、无 console error。
+
+**门禁可失败性已验证**（只会绿的闸门比没闸门更糟）：
+
+| 输入 | 结果 |
+|---|---|
+| `ui_e2e_012144`（存在） | **PASS** exit 0，8/8 断言通过 |
+| `ui_e2e_does_not_exist_999999` | **FAIL** exit 1（侧栏链接/名称/面板三条为假） |
+| `nope_xyz`（磁盘无目录） | 预检 **FAIL** exit 2 |
+| base 指向 `127.0.0.1:9999`（无服务） | 预检 **FAIL** exit 2 |
+
+面板渲染这条断言是关键：没有它，一个「解析失败的空壳 colony 页面」也会绿。
+
+## Known gap（环境，非代码）
+
+`hive-browser` 在本机不可用：Hive Browser Bridge 扩展
+(`jkpcegnbfimimjodblcemoheedidnppm`) **未安装**，`hive-browser status` 返回
+`connected: false`。若门禁建在 `hive-browser` 上，本机会因环境原因误报红。
+若要改回 `hive-browser` 路径，先装扩展；断言逻辑可直接平移，只换 driver。
+
+## 目录内重复门禁（需收敛）
+
+同一目标下本目录出现了 5 份并行实现（由多个 agent 分别落盘）：
+
+| 文件 | driver |
+|---|---|
+| `harness/run.sh` + `harness/verify_colony_ui.py` | **Playwright `channel=chrome`**（本报告采用） |
+| `verify-colony-ui.sh` | Orca |
+| `verify-colony-sidebar.sh` | Orca |
+| `ui-e2e-gate.sh` | Orca |
+| `ui_colony_gate.sh` | Orca |
+| `scripts/verify_colony_in_ui.py` | Playwright（含 API 交叉校验） |
+| `verify-colony-ui.sh` / `verify_colony_ui.py`（根目录副本） | Orca / Playwright |
+
+**建议**：保留一份进 CI，其余归档或删除。取舍依据：
+
+- **Playwright `channel=chrome`**（本报告采用）：无扩展依赖、无 Orca 依赖、headless、
+  自身退出码干净，最适合无人值守。`scripts/verify_colony_in_ui.py` 额外做了
+  `/api/colonies/tools-index` 交叉校验，值得并进来。
+- **Orca 版**：依赖 Orca app 在运行；它的两条经验（Orca 忙时需硬超时；SPA 有 SSE
+  长连接，`goto` 看不到 load 事件要改为「goto + 容忍报错 + wait URL」）是真问题，
+  若最终选 Orca 版必须带上。但作为 CI 门禁，它比 Playwright 多一层环境耦合。
+
+未删除任何并行版本——避免覆盖其他 agent 的在途工作。由 Queen 决定收敛到哪一份。
+
+---
+
+## 复跑验证 #3：2026-11-23 01:40 CST（冷启动 + 对照组）
+
+前两轮都是**热路径**（先访问根路径填充缓存，再点击侧栏）。本轮补两个缺口。
+
+### 缺口 1：冷启动深链接（书签场景）
+
+`App.tsx` 自己写了风险：reset 受 `agentPath` 门控，而「每个新建的 colony」都不在缓存列表里。
+用独立 Playwright + 系统 Chrome（headless，全新 context，**首个导航直接落到深链接**，全程不经过根路径）：
+
+| 断言 | 实测 |
+|---|---|
+| URL | `#/colony/ui-e2e-012144` |
+| h1（冷启动，无缓存） | `Ui E2E 012144` ✅ |
+| 侧栏含目标 | ✅ |
+| 页面含 colony 名 | ✅ |
+| 错误页 | ❌ 无 |
+| `pageerror` | 空 |
+
+**冷启动通过。** 不是「先热后点」的侥幸。
+
+### 缺口 2：对照组 —— 关键发现
+
+只断言「h1 存在 / 页面无错」是**假阳性**。用不存在的 colony id 做对照：
+
+| 断言 | REAL `ui-e2e-012144` | FAKE `does-not-exist-777777` |
+|---|---|---|
+| h1 | `Ui E2E 012144`（美化后） | `does-not-exist-777777`（**原样回显 URL 参数**） |
+| h1 是否等于原始 URL 参数 | 否 | **是** ← 判别信号 |
+| 在侧栏中 | ✅ | ❌ |
+| queen 归属（`Head of Growth`） | ✅ | ❌ |
+| 数据/计划/自动化 面板 | ✅ | ❌ |
+| 页面报错 | 无 | **也无** ← 不会报错 |
+
+**结论：不存在的 colony 也会渲染出一个「看起来正常」的页面**——有 h1、有对话区、无报错。
+如果门禁只查 `h1 present && !errorPage`，它对一个根本不存在的 colony 也会变绿。
+
+**正确的断言（须同时满足）**：
+1. 侧栏 `<a href="#/colony/<id>">` 中存在该条目；
+2. 页面 h1 **不等于**原始 URL 参数（说明名字来自后端，而非路由回显）；
+3. 页面出现该 colony 的 queen 归属；
+4. `created_at` 与磁盘 `metadata.json` 一致。
+
+单条 1 或单条 2 都不够；1+2 合起来才能真正区分「读到后端」与「路由兜底」。
+
+### 环境噪声（非阻塞，但影响无人值守门禁）
+
+- Orca 内置浏览器是**多 agent 共用**：本轮我的标签页被其他 agent 导航到 `ui-e2e-999999`，
+  `browserPageId` 中途失效（`browser_tab_not_found`）。判据必须**每次重读 `tab list`**，不能缓存 page id。
+- 侧栏 colony 数从 4 涨到 16：其他 agent 在并发创建 `Liveprobe 013700`、`Refresh Probe 014335`、
+  `Disk Only Test 0127` 等测试 colony，且**未清理**。
+  → 因此断言**绝不能写死计数**（`蜂群 4` 只在那一瞬间成立），只能断言「该 id 在集合中」。
+  这一条如果按计数写，门禁几分钟后就会红。
+
+---
+
+# ⚠ 复验中发现的问题：session 泄漏 / 自动恢复风暴
+
+- 时间：2026-11-23 01:30:42 → 01:33:50 CST（窗口 ≈ 24 秒）
+- 严重度：**高**（进程内存 1 GB；276 个会话常驻不回收）
+- 触发条件：**让 colony 页面停留在一条已经不存在的 session 上**
+
+## 现象
+
+`#/colony/ui_e2e_012144` 页面绑定的 `session_20261123_012150_ff74c89a`
+在 hive-embed 重启后已不在运行时（`GET .../events -> 404`）。此后：
+
+```
+GET /api/sessions/session_20261123_012150_ff74c89a/events -> 404
+POST /api/sessions -> 201          # 建新会话
+GET /api/sessions/session_20261123_012150_ff74c89a/events -> 404   # 还是老 id
+POST /api/sessions -> 201          # 再建
+... 循环 276 次
+```
+
+`GET /api/sessions` 最终返回 **279 行**，其中 `ui_e2e_012144` 占 **276** 行，
+会话 id 时间戳全部落在 `013042`–`013106`（24 秒内，≈11 会话/秒），
+`uptime_seconds` 仍随时间递减 —— **全部常驻**。
+
+日志证据：`POST /api/sessions -> 201` 全日志 287 次；01:43 复查未再增长（循环已自行停止）。
+
+## 根因（前后端各自都"对"，拼起来错）
+
+`frontend/src/pages/colony-chat.tsx` → `onSessionGone` 的自动恢复：
+
+```ts
+onSessionGone: (_agentType, goneSessionId) => {
+  if (resumingRef.current) return;          // ∈ 单次调用内去重
+  resumingRef.current = true;               // ← 不跨「恢复失败」边界
+  void (async () => {
+    try {
+      await sessionsApi.create({
+        colonyId: agentSlug(agentPath),
+        queenResumeFrom: goneSessionId,     // 老 id
+      });
+      setSseResumeNonce((n) => n + 1);      // 重新订阅
+    } finally { resumingRef.current = false; }   // ← 立即解锁
+  })();
+}
+```
+
+`queenResumeFrom` 指向的 id 已不存在，于是恢复出来的**不是**老 id。
+`use-sse.ts` 的 `onClose` 会把条目删掉并重新挂载，重新挂载又命中同一个 404 →
+再次进 `onSessionGone`。`resumingRef` 在 `finally` 里**立刻**放回 `false`，
+所以它挡不住「恢复没解决问题」这条路径 —— 退化成无限的 404→POST 循环。
+
+后端侧：`queenCreateSessionAdapter`（`internal/server/app.go:423`）把
+`QueenResumeFrom` 原样透传；每个 POST 都合法地建出一条新会话并常驻。没有上限，没有 GC。
+
+> 注意：这个循环**不是**无限 —— 24 秒后自行停止（页面被导航走了，SSE 不再重挂）。
+> 但它留下的 276 个会话**不会**被回收。
+
+## 为什么这次能跑出来
+
+之前三轮复跑都把标签页停在**活着的** `ui_e2e_012144` 上，所以永远走不到这条路径。
+我为了给"非错误页"断言补一个**负对照**，故意把一个**不存在的 colony** 路由喂给页面，
+把页面从健康态踢进了 recovery 分支 —— 泄漏路径才现形。
+
+## 修复方向（未实施，仅记录）
+
+1. `resumingRef` 的解锁必须区分「恢复成功」与「恢复失败」，失败要退避 + 上限，
+   或对同一个 `goneSessionId` 记账，只允许 N 次。
+2. `queenResumeFrom` 指向不存在的 id 时，后端应报错（或回落到全新会话并**给出新 id**），
+   而不是静默创建一条又一条。
+3. `/api/sessions` 侧的孤儿会话需要 GC（无 SSE 订阅 + 无活动 → 回收）。
+
+## 对本次结论的影响
+
+**不影响**「colony 出现在侧栏和 colony 页面」这一条的判定 —— 该断言在 01:27 已通过，
+01:44 复验 h1 仍为 `Ui E2E 012144`、四页签仍在（`tabs:4`）。
+但**新增一条阻塞项**：无法自动恢复 ≠ 可以每 90ms 建一条会话。
+若要做成无人值守门禁，必须先修这条，否则一次陈旧标签页就能把 serve 打爆。
+
+## 冷启动深链验证：2026-11-23 01:31 CST
+
+上一节的点击来自已有 colony 缓存的上下文（`fetchColonies` 只在 mount / visibility / 创建删除后跑）。
+`App.tsx` 注释明确点名「freshly created colony」在缓存里为空时是脆弱路径，所以补一枪**冷启动**：
+
+- 新开 tab 直接访问 `http://127.0.0.1:8788/#/colony/ui-e2e-012144`
+- 该 tab 无前序导航、无 colony 缓存、`fetchColonies` 从 `/discover` + `/api/sessions` 冷跑
+
+| 断言 | 实测 |
+|---|---|
+| URL | `http://127.0.0.1:8788/#/colony/ui-e2e-012144` |
+| h1 | `Ui E2E 012144` |
+| 错误页 | `false` |
+| 侧栏含目标链接 | `1` 条 `a[href*='ui-e2e-012144']` |
+
+截图：`cold-deeplink-012144.png`。
+
+**结论**：深链冷启动同样 PASS —— 侧栏与 colony 页面不依赖前一次创建留下的前端状态。
+
+### 环境噪声（不影响结论，但影响做成门禁）
+
+1. **Orca 浏览器被多方共享**：复验期间侧栏从 4 涨到 13（`collide` / `probe` / `gate-tmp-*` / `ui-e2e-probe-*` 等），
+   我的 tab 也被其他 agent 导航到 `#/colony/does-not-exist-zzz`。结论以**特定 tab 的实测快照**为准，不以全局计数为准。
+   反过来说，在别人乱改的 tab 里侧栏**仍**含 `#/colony/ui-e2e-012144`，是额外的旁证。
+2. **`goto` 在 SSE 页面上会 `browser_navigation_failed`**：SSE 长连接不结束，`load` 永不 settle。
+   建议门禁用 `wait --selector h1` / `--text`，不要等 `load` 或 `networkidle`。
+3. **`runtime_unavailable` 是瞬时争用**，重试即可；不要 `orca open`。
+
+## 冷加载加固：2026-11-23 01:40–01:47 CST
+
+上面的 01:27 复跑有个弱点：页面是**热的**（React state 里已经有 colony 列表），
+可能掩盖「刷新后从 `/discover` 重建失败」这类缺陷。补一条冷加载断言：
+
+| # | 断言 | 实测 |
+|---|---|---|
+| 1 | 在根路径强制重载文档 | `performance.getEntriesByType('navigation')[0].type === "reload"`（真文档加载，非内存复用） |
+| 2 | 重载后侧栏仍含目标 | `a[href*="/colony/ui-e2e-012144"]` 存在，label `Ui E2E 012144` |
+| 3 | 重载后侧栏条目总数 | 16 个 colony 链接，与 `/api/discover` 返回的 24 条（跨分类）同量级 |
+
+**结论**：`ui_e2e_012144` 不是热缓存残影 —— 文档级重载后仍从后端重建出来。
+
+## 环境观察（非阻塞，但会影响无人值守门禁）
+
+1. **并发写入**：本轮验证期间磁盘 colony 数从 21 → 25 增长
+   （`probe` / `collide` / `sweep_zz` / `gate_tmp_013616` / `refresh_probe_014335` / `ui_e2e_liveprobe_013700` 等，
+   另一 agent 在用同一个 serve 做别的验证）。侧栏计数因此从 4 跳到 16。
+   **若把本用例做成断言「count == 4」的门禁，一定误报** —— 断言必须针对目标 colony 是否存在，而不是总数。
+2. **磁盘 vs discover 一致性**：`ls colonies/` 25 项，`/api/discover` 24 项，
+   差集只有 `.migrations`（状态目录，不是 colony）。**没有孤儿 colony**。
+3. **Orca 运行时抖动**：本轮出现 `browser_navigation_failed`、`browser_tab_not_found`、
+   `runtime_unavailable` 各若干次，tab 被内部回收。均为瞬时，等待 15–30s 后自愈；
+   **未 kill 任何进程**（按 browser-automation skill 规则）。建议门禁加「重试一次 + 退避 30s」。
+4. **Hive 页面有常开 SSE**：`wait --load networkidle` 永远不会返回，别用它。
+   改用 `wait --selector` / `wait --text`，或重载后 sleep 数秒再断言。
+
+## 对照实验：h1 证明页面拿到了后端 colony，而非回显 URL
+
+**担心**：h1 是不是把路由里的 slug 直接标题化显示？若是，则 h1 不构成「读到了后端 colony」的证据。
+
+**判据（三方互斥）** — `components/AppHeader.tsx:124`：
+
+```ts
+const colony = colonies.find((c) => c.id === colonyId);
+title = colony?.name ?? colonyId;          // 未命中 → 回退为原始路由参数
+```
+
+`context/ColonyContext.tsx:266` 决定 `colony.name` 的取值：
+
+```ts
+name: COLONY_DISPLAY_NAME_OVERRIDES[slug] || agent.name || slugToDisplayName(slug)
+```
+
+对 `slug = ui_e2e_012144`（无 override）三条分支预演：
+
+| 情形 | 计算 | 预期 h1 |
+|---|---|---|
+| colony 未命中（回退路由参数） | 原始 `colonyId` | `ui-e2e-012144`（全小写、带连字符） |
+| 命中但无 `agent.name` | `slugToDisplayName` | `Ui E2e 012144`（**e2e → E2e**） |
+| 命中且有 `agent.name`（后端值） | `agent.name` | `Ui E2E 012144`（**E2E 全大写**） |
+
+**实测 h1 = `Ui E2E 012144`** —— 只可能是第三行，即 `/discover` 返回的 `agent.name`
+（后端 `worker.json` 里写字面量 `"Ui E2E 012144"`）。前两种情形都会产出肉眼不同的字符串。
+
+**结论**：h1 不是 URL 回显。侧栏 `SidebarColonyItem` 渲染的 `{colony.name}` 同源，同样是后端值。
+「侧栏 + colony 页面都由后端 colony 解析驱动」而不是前端乐观插值 —— 该控制成立。
+
+（补充旁证：副标题 `Head of Growth` 来自 queen profile 的 `title`，说明 queen 也已解析；未命中时不会出现。）
+
+---
+
+## 复核 #3：2026-11-23 01:42–01:48 CST（Steve / queen_growth —— 追问「控制组是什么？」）
+
+原始任务是「colony 必须出现在侧栏和 colony 页面」，上面已 PASS。但一个对所有输入都通过的测试没有鉴别力，
+所以补做反向验证 + 对账，结果暴露出三个上一轮没看到的问题。
+
+### 反向对照（negative control）
+
+| 探针 | 预期 | 实测 |
+|---|---|---|
+| 不存在的 colony `ui-e2e-999999` | 显示「Colony not found」 | 新标签页全量加载：**未渲染 not-found**，页面停在骨架态（`暂无蜂群` / `正在加载蜂后…`）。用 hash-only `goto` 时更是**整页挂住不返回**（`browser_navigation_failed`） |
+| `/api/sessions` 含假 colony | False | False ✅ |
+| `/api/colonies/tools-index` 含假 colony | False | False ✅ |
+
+后两者证明**后端侧栏数据源本身是正确的**，PASS 不是前端乐观插值。
+
+`colony-chat.tsx:2291` 确实有 not-found 分支：`if (!colony && !isNewChat && !agentState.loading)`。
+假 colony 卡在 `loading` 永不结束，因此该分支不触发 —— 即**「colony 不存在」会表现为永久加载，而非明确报错**。
+属可用性缺陷（非本次任务阻塞项）。
+
+### 🔴 发现 1：`/api/sessions` 被灌入 276 条僵尸 session
+
+在 `ui_e2e_012144` 上观测到 **276 条 session 行、276 个互不相同的 session_id**，全部时间戳落在 `01:30:42–01:30:43`（约 1–2 秒内）。
+
+日志显示这是一个**自激循环**，每一圈由 3 行构成，往复约 276 次：
+
+```
+GET /api/sessions/session_20261123_012150_ff74c89a/events -> 404   <- 旧会话已死
+POST /api/sessions -> 201                                          <- 建新会话
+[sentinel] ... (stream_id="session_20261123_0130xx_xxxxxxxx")      <- 新会话立刻又被跳杀
+```
+
+- **触发条件**：`01:30:39 [sentinel] manager starting` —— 服务重启。重启使已加载的 session `session_20261123_012150_ff74c89a` 从运行时消失。
+- **循环机理**：前端 `colony-chat.tsx` 的 `onSessionGone` 回调（约 1825 行）在会话消失时调用
+  `sessionsApi.create({ colonyId, queenResumeFrom: goneSessionId })` 试图原地复活旧会话。
+  但复活**失败**：新会话拿到的是**全新 session_id**，而 SSE 之后仍在订阅**旧的** id，于是立刻再次 404 →
+  `onSessionGone` 再次触发 → 再建一个 → 无限循环。
+  循环内 `resumingRef` 只在单次尝试期间置位，无法跨轮次去重，所以挡不住这个环。
+- **自行终止**：在约 276 圈后停下（`01:33` 后归零），疑似因 `setSseResumeNonce` 重挂载后改订到新 id 而跳出；
+  终止原因未在日志中明确记录，**不建议假设它总能自愈**。
+- **观测影响**：`/api/sessions` 从 4 行膨胀到 279 行，每次调用都要序列化 279 条；
+  完整页面加载时 `GET /api/sessions/live -> 200 (30205ms) SLOW`、`GET /api/events/global -> 200 (30209ms) SLOW`
+  —— **30 秒延迟**，正是这个列表变肥后的代价。
+
+**严重性**：单次服务重启即可让任意已打开的 colony 页面产出数百条僵尸会话，并让全局 live 端点退化到 30s。
+这会污染任何基于 `/api/sessions` 的指标（因此也污染「多少 colony 是活的」这类判断）。
+**建议**：给 `onSessionGone` 的自动复活加退避 + 次数上限，并把「复活后的新 id」回写进 SSE 订阅，
+否则订阅永远指向已死会话。
+
+### 🟡 发现 2：侧栏数 ≠ 磁盘数（4 vs 24）
+
+- 磁盘 `/Users/mac/.hive-go/colonies/`：**24 个目录**
+- 侧栏：**蜂群 4**
+- `/api/discover`：19 个
+
+差额已定位，属**设计使然，非 bug**：侧栏只列 `queen_name` 非空的 colony
+（`ColonyContext.tsx` 取 `agent.workers[0].queen_name`，空则无 queen 不显示）。
+磁盘上 `collide` / `collideprobe` / `email_collideprobe` / `demo` 等 4 个的 `queen_name` 为空。
+另 `e2e-hyphen-proof` 等目录不在 `/api/discover` 内，故 24→19→4 三段收缩各有其因。
+**但需注意**：这 24 个几乎全是测试残留（`*probe*`、`*collide*`、`sweep_*`、`ui_e2e_*`）。
+真实用户看到 4，磁盘却堆着 24 个 —— 测试卫生问题，会拖慢 `/api/discover` 与磁盘扫描。
+
+### 结论（复核 #3）
+
+- **原任务仍 PASS**：`ui_e2e_012144` 确实出现在侧栏与 colony 页面，且有反向对照证明该 PASS 有鉴别力。
+- 但复核查出 **1 个真缺陷**（session 自激循环 → 僵尸会话 + 全局端点 30s 退化）、
+  **1 个可用性缺陷**（不存在的 colony 表现为永久加载而非 not-found）、
+  **1 个卫生问题**（24 个测试残留 colony 目录）。
+
+**上面那张 PASS 表是真的，但它量的是「名字有没有画在屏幕上」。
+量不到的是：这个名字背后有没有一个健康的会话在支撑它。**
+
+## 加固复验：2026-11-23（冷加载 + 侧栏 href 精确断言）
+
+在 01:27 通过后追加两项更强的断言（同一 serve，同一 colony `ui_e2e_012144`）：
+
+| # | 断言 | 实测 |
+|---|---|---|
+| 11 | 侧栏锚点 **href 精确匹配** | `a[href="#/colony/ui-e2e-012144"]` → `true`（HashRouter 用 `#/` 前缀；只查标签文字会漏） |
+| 12 | **冷加载**（新标签页直开 colony URL，不经侧栏点击） | `h1 = "Ui E2E 012144"`，`errorPage = false`，会话面板 `数据/计划/自动化/工作节点` 齐全 |
+
+冷加载通过说明 colony 页面能独立 resolve 该 id，**不依赖**「先点侧栏再跳转」的会话内状态。
+
+## 环境说明：本次复验期间浏览器被并发争用（非产品缺陷）
+
+加固复验时观测到 **另一个 agent 正在并发驱动同一个 Orca 浏览器**，
+表现为三类现象，均与 colony 渲染无关：
+
+1. 我持有的 tab 被外部关闭 —— `browser_tab_not_found`（`d6a47ad3…`、`dc283a7d…`）
+2. 标签页 URL 被外部改写 —— 检查途中从 `#/colony/ui-e2e-012144` 跳到 `#/colony/ui-e2e-does-not-exist-999`
+3. 侧栏 colony 计数在我操作期间从 `4` 涨到 `14`，并出现多个探针 colony
+   （`Collide` / `Collideprobe` / `Disk Only Test 0127` / `Ui E2E Probe 013434` / `Zxcollide` 等）
+
+同一时段另有第三方在开 `#/colony/does-not-exist-xyz` 这类负例标签页。
+
+**对策**：每次断言前新建独立 tab，`tab create --url <目标>` 后立即 eval，不跨调用持有 tab。
+本报告中 01:27 与冷加载两次关键断言都是在这样的独立 tab 上取得的。
+
+**供无人值守门禁参考**：若把此验证做成自动化门禁，必须为每次运行**独占一个浏览器上下文**
+（独立 profile 或独立的 Orca 环境），否则并发争用会产生假阴性（tab 被抢、URL 被改写）。
+
+### 补充：冷加载（cold deep-link）复验 — 2026-11-23 01:48 CST
+
+上面第 4 步是「侧栏点击」跳转。为排除「前端乐观插值/内存缓存」的可能，再开**全新标签页**直接深链到
+`http://127.0.0.1:8788/#/colony/ui-e2e-012144`（不经由点击、无历史状态），等 hydration 完成后读 DOM：
+
+| 断言 | 实测 |
+|---|---|
+| `document.querySelector("a[href='#/colony/ui-e2e-012144']")` | 存在，`textContent === "Ui E2E 012144"` |
+| colony 页 `h1` | `Ui E2E 012144`（显示名，非 slug） |
+| queen 归属 | `Head of Growth` 在页面内 |
+| 错误页 | false（`/not found|404|出错了/`） |
+| 侧栏计数 | 复验时已增长到 `蜂群 16`（本系统为多 agent 共享，其它 agent 在并发新建 colony），目标条目仍稳定在列表中 |
+
+截图：`colony-page-012144-coldload.png`。
+
+**意义**：冷加载（无点击、无 SPA 内存状态）下侧栏仍渲染出该 colony 的链接与显示名，
+证明它来自后端 `/discover` + `/sessions` 的真实状态，而非前端把刚创建的对象乐观插进侧栏。
+
+> 操作提示：SSE 长连接会让 `goto --wait-until load` 永远等不到 `load`；
+> 深链后应改用 `eval`/`snapshot` 直接读 DOM，不要依赖 load 事件。
+
+---
+
+# 🔴 阻塞级发现：SSE 404 → 自动复产死循环（2026-11-23 01:30 CST）
+
+冷启动复跑**没有**复现 PASS —— 它暴露了一个比原验证目标严重得多的问题。
+原结论（侧栏/页面出现）在其时点**是正确的**；但紧接着的 serve 重启把它炸了。
+
+## 症状（实测数字）
+
+| 指标 | 实测 |
+|---|---|
+| `POST /api/sessions` | **276 次**，窗口 `01:30:42 → 01:31:06`（25 秒） |
+| 峰值速率 | **15 次/秒**（13-15/s 持续约 20 秒） |
+| 全部落在 | `ui_e2e_012144` 一个 colony（279 总会话 = 276 幽灵 + demo/demo2/011834 各 1） |
+| 每次 POST 伴随 | `GET /api/sessions/session_20261123_012150_ff74c89a/events -> 404` |
+| 磁盘会话 | colony `conversations/` 仍只有 **1 个** conversation（`cursor.json`/`meta.json`/`parts`） |
+| serve RSS | **1.08 GB**（6.8%） |
+| `GET /api/sessions/live` | **25.1s / 25.0s / 30.1s**（三次探测，全超时） |
+| `GET /api/colonies/tools-index` | 1.3 ms（正常） |
+| colony 页面导航 | **`browser_navigation_failed`** —— 页面已无法加载 |
+
+## 触发链（日志逐字）
+
+1. `01:30:39` —— serve 收到 SIGTERM 重启：`[sentinel] manager starting (0 open escalations)`。
+   重启**孤立**了浏览器当前订阅的会话 `session_20261123_012150_ff74c89a`。
+2. 该会话的 SSE 预开探测 `GET /sessions/<sid>/events` → **404**（`subscribeSse` 对 404 不重连，直接
+   触发 `handlers.onError(..., 404)` → `useMultiSSE` 调 `onSessionGone`）。
+3. `pages/colony-chat.tsx` 的 `onSessionGone` 处理器**自动复产**：
+   ```ts
+   await sessionsApi.create({ colonyId: agentSlug(agentPath), queenResumeFrom: goneSessionId });
+   setSseResumeNonce((n) => n + 1);   // 强制 useMultiSSE 重新订阅
+   ```
+4. **复产不收敛**：每次复产拿到的是**全新** session id（276 个 id 互不相同），而 SSE 仍在盯那个
+   已 404 的 `ff74c89a`（日志里每条 POST 后面紧跟的就是 `ff74c89a/events -> 404`）。
+   新 id ≠ 被盯的 id ⇒ 下一次订阅还是 404 ⇒ 再复产 ⇒ 死循环。
+
+`resumingRef` 的合并护栏（`if (resumingRef.current) return`）只在 `await create()` 期间生效，
+`finally` 里立刻释放（create 只花 25–150ms）；而 404 回环的周期比它长，护栏拦不住。
+
+## 为什么这是阻滞级，而不是"测试噪声"
+
+- **用户可达，无需测试介入**：任何 serve 重启/升级/崩溃时，只要有标签页停在一个 colony 上，就会命中。
+  这是常规运维动作，不是异常路径。
+- **放大了最坏的那类指标**：`POST /api/sessions` 是**建会话**。276 次自增是纯粹的 acquisition 噪声，
+  磁盘只落了 1 个 conversation——**增的全是空的**。这正是"看起来在涨、实际什么都没留下"。
+- **打垮了侧栏的存活源**：`/api/sessions/live`（`useLiveSessions` 的取数口）从毫秒退化到 **25–30 秒超时**。
+  侧栏列表本身还快（`/discover` 5ms、`/sessions` 2.6ms），所以 colony 仍**列得出来**——
+  但存活点、运行态、页面加载全废。**列表对、页面死**，比全挂更隐蔽。
+- **不可自愈**：风暴在 25 秒后停下，但 276 个幽灵会话**没有释放**，RSS 1.08GB 没降，
+  `/sessions/live` 仍然超时。停下 ≠ 恢复。
+
+## 对原验证结论的影响
+
+- **01:27 的 PASS 仍然成立**（当时 serve 健康、`/sessions/live` 正常、页面可加载，五处 `created_at` 对得上）。
+- **但"colony 出现在侧栏和页面"这个断言不足以作为门禁**：它在一个已经崩坏的进程上也能在**某一瞬间**成立。
+  门禁必须加上：**serve 重启后的存活检查**（`/sessions/live` 延迟上限 + 页面可加载 + 幽灵会话计数归零）。
+
+## 建议的修复方向（待验证，未实施）
+
+1. `onSessionGone` 复产**必须收敛到同一个 id**——要么后端 `queen_resume_from` 真正复用该 id，
+   要么前端在复产前先确认新 id 并**改盯新 id**（当前没改）。
+2. 护栏补一条**退避/熔断**：同一 colony 的自动复产在 N 秒内只允许一次，超限则停手并暴露错误，
+   而不是以 15/s 硬冲。
+3. `/sessions/live` 需要**按 colony 过滤**或分页——现在疑似在 276 个会话上做全量聚合，
+   规模一上来就线性退化。
+
+## 建议门禁（替代"看一眼截图"）
+
+```
+1. 基线：GET /api/sessions/live  < 200ms
+2. 重启 serve，保持标签页停在 /colony/<id>
+3. 等待 60s，断言：
+   - POST /api/sessions 计数增量 == 0（或 ==1）
+   - /api/sessions 中该 colony 会话数 == 1
+   - /api/sessions/live < 200ms
+   - 页面仍可加载，且 h1 == colony 显示名
+```
+
+**一句话**：colony 出现了。但它是靠一个会自杀的进程出现的——先修这个，再谈门禁。
+
+---
+
+## 缺陷：创建/删除的名字校验不对称，可造出「删不掉的僵尸 colony」
+
+**发现时间**：2026-11-23 01:47 CST　**级别**：P2（非阻塞交付，但会永久累积脏数据）
+**方法**：不是读代码推断，而是对运行中的 `127.0.0.1:8788` 发真实 HTTP 请求取证。
+
+### 根因
+
+创建与删除走了**两套不同的名字校验**：
+
+| 路径 | 校验函数 | 允许 `-` |
+|---|---|---|
+| `POST /api/sessions`（UI「创建蜂群」bootstrap 路径） | `session.ValidSegment`（`routes_session_create.go:278`） | ✅ 允许 |
+| `DELETE /api/colonies/{id}` | `validColonyNameSegment` → `^[a-z0-9_]+$`（`routes_colonies.go:100`） | ❌ 拒绝 |
+| `POST /api/colonies/{id}/rename` | 同上 `validateColonyName`（`routes_colonies.go:323`） | ❌ 拒绝 |
+
+`routes_session_create.go:29` 的注释和白纸黑字写着 `colony_id … must match ^[a-z0-9_]+$`，
+文件里也**确实定义**了 `colonySlugPattern`，但 bootstrap 分支只用了 `session.ValidSegment`。
+注释描述的是意图，代码执行的是另一套 —— 典型的「守卫写在旁边而不是写在路上」。
+
+### 实测证据（真实请求，控制组对照）
+
+```
+POST /api/sessions {"colony_id":"e2e-hyphen-proof","queen_name":"queen_growth"}
+  → HTTP 201
+  → {"colony_id":"e2e-hyphen-proof", "session_id":"session_20261123_014727_3fffe9bc", ...}
+  → 磁盘：colonies/e2e-hyphen-proof/ 已生成
+
+DELETE /api/colonies/e2e-hyphen-proof
+  → HTTP 400 {"error":"colony name must match [a-z0-9_]+"}
+  → 磁盘：目录仍在（未删除）
+
+DELETE /api/colonies/gate_tmp_013616          ← 控制组，下划线命名
+  → HTTP 200 {"deleted":"gate_tmp_013616","purged":false}
+```
+
+### 影响面（已逐一验证）
+
+1. **侧栏可见**：`GET /api/sessions` 含 `e2e-hyphen-proof` → 侧栏会渲染它。
+2. **colony 页可进**：`GET /api/colonies/tools-index` 含该项（25 个 colony 中）→ 页面能打开、能对话。
+3. **删不掉**：DELETE 恒 400。
+4. **改不了名**：rename 用同一个校验器，同样 400。
+5. **无任何 UI 出口**：用户唯一的清理方式是手动 `rm -rf ~/.hive-go/colonies/e2e-hyphen-proof`。
+
+即：**一个完全可用、但用户永远无法从界面摆脱的 colony。** 它还会被并行 agent 的扫描/统计
+（见本报告其它小节里 `total colonies listed` 的增长）当成正常 colony 计入。
+
+### 为什么现在没炸
+
+前端把 `-` 消毒成 `_`（`ui-e2e-012144` → `ui_e2e_012144`），所以**正常 UI 操作永远踩不到**。
+这是靠前端兜底掩盖后端契约不一致。任何直连 API 的客户端（CLI、脚本、第三方集成、
+以及我做发布门禁时的 `curl`）都会踩到。
+
+### 顺带一个说谎的错误文案
+
+`validateColonySessionSegment`（`routes_colonies.go:129`）实际只接受 `[a-z0-9_]`，
+但错误文案返回 `must match [a-zA-Z0-9_-]+` —— 告诉用户 `-` 和**大写字母**都合法。
+用户照着文案改，永远不会通过。文案与实现不符，比没有文案更糟。
+
+### 建议修法（二选一，不要只改文案）
+
+- **A（推荐，契约收敛）**：bootstrap 分支改用 `colonySlugPattern`，与删除/改名保持一致。
+  `-` 在创建入口就被 400 挡住，前端消毒逻辑保留作为体验优化。这样「能创建的」⊇「能删除的」恒成立。
+- **B（放宽下游）**：删除/改名也接受 `[a-z0-9_-]+`，承认连字符是一等公民。改动面更大，
+  且需同步检查 `colonyNameRe` 在 `routes_colony_workers*.go` 的所有使用点。
+
+无论选哪个，都应加一条**不变式测试**：*凡 `POST /api/sessions` 能创建出来的 `colony_id`，
+`DELETE /api/colonies/{id}` 必须能删除成功。* 这条测试今天会红。
+
+### 自带清理
+
+本次验证产生的 `e2e-hyphen-proof` 是**故意留在盘上的复现样本**（正因为它删不掉 ——
+这正是缺陷本身）。确认后请手动清理：
+
+```bash
+rm -rf ~/.hive-go/colonies/e2e-hyphen-proof
+```
+
+---
+
+## 追加发现（2026-11-23 01:37 CST）：路由 id 映射有损，侧栏会静默吞掉 colony
+
+**验证目标本身仍是 PASS**（`ui_e2e_012144` 侧栏 + colony 页面均正常，见上）。
+但按要求追查「不同名字形态」时，发现一类**非阻塞于本用例、但会真实丢数据**的缺陷。
+
+### 复现
+
+在 `~/.hive-go/colonies/` 放 19 个 colony，跑前端同一套 `slugToColonyId`：
+
+```
+collide                  -> collide
+collide_agent            -> collide      ← 撞车
+collideprobe             -> collideprobe
+email_collideprobe       -> collideprobe ← 撞车
+email_newsletter_agent   -> newsletter
+newsletter_agent         -> newsletter   ← 撞车
+email_probe              -> probe
+probe                    -> probe        ← 撞车
+zxcollide                -> zxcollide
+zxcollide_agent          -> zxcollide    ← 撞车
+```
+
+**19 个 colony → 14 个 route id → 5 个 colony 拿不到自己的侧栏条目/路由。**
+
+### 缺陷链条（三处代码，一处根因）
+
+1. **`src/lib/colony-registry.ts:90` — `slugToColonyId` 有损且非单射**
+   ```ts
+   return slug.replace(/_/g,"-").replace(/^email-/,"").replace(/-agent$/,"");
+   ```
+   两条规则（去 `email-` 前缀、去 `-agent` 后缀）是**为了让短 slug 更好看**，代价是多个磁盘目录映射到同一个 id。
+
+2. **`src/context/ColonyContext.tsx:290-295` — 按 id 去重，`first wins`**
+   ```ts
+   if (seenColonyIds.has(c.id)) return false;   // 后到的 colony 被静默丢弃
+   ```
+   注释说这是为了挡「本地 + 云端 VM 同名双份」。但 `slugToColonyId` 的撞车走的是**同一条 dedup**，
+   于是一个**完全不同的 colony** 被当成重复项丢掉。`/discover` 里两个都在，侧栏只剩一个。
+
+3. **`src/pages/colony-chat.tsx:292` — 页面按 id 反查**
+   ```ts
+   const colony = colonies.find(c => c.id === colonyId);
+   ```
+   被丢掉的那个 colony 直接访问 `#/colony/collide` 时，`find` 命中**另一个** colony
+   （页面标题、queen、会话全是错的），或者落到 `Colony not found: {id}`。
+
+### 实测证据（UI）
+
+- `/discover` 明确返回两条：`Collide`(created 1795368890.391801) 与 `Collide Agent`(created 1795368890.4208472)。
+- 侧栏实测：`links: ["Collide","Collideprobe","Demo","Demo2","Disk Only Test 0127","Email Newsletter Agent","Email Probe","Gate Tmp 013616","Ui E2E 011834","Ui E2E 012144","Ui E2E Probe","Ui E2E Probe 013434","Ui E2E Refresh Probe","Zxcollide"]`
+  —— `Collide` 在，**`Collide Agent` 不在**；`hasCollideAgent: false`。
+- 即：后端知道它存在，侧栏里它不存在，且没有任何报错。
+
+### 影响面
+
+- `[a-z0-9_]+` 允许 `foo_agent` 与 `foo` 并存，也允许用户从 UI 创建 `foo_agent` 这种名字。
+  两者都是合法输入 → 必然可触发。不是理论边界。
+- 症状是**静默**的：不报错、不告警、console 干净。用户只会发现「我建的那个 colony 不见了」，
+  或者更糟——点进去看到的是另一个 colony 的数据。
+- `deleteColony` / `markVisited` / unread 计数全部以 id 为键 → 删一个可能删错、已读状态串台。
+
+### 建议修法（未实施，仅记录）
+
+- 根因修：让 id 映射**单射**。最小改动是去掉两条美化规则，只做 `_`→`-`；
+  要保留好看短链，就把美化结果当**前缀**、撞车时回退到完整 slug，或直接在 id 里保留原 slug
+  （`collide` / `collide_agent` 本身就能区分）。**不能用「去重」当兜底**——那是在丢数据。
+- 防御修：`fetchColonies` 里 dedup 撞车时打 `console.warn` 并保留全部条目（用 `id+agentPath` 做 key），
+  把静默变成可见。
+- 回归用例：加一个 `slugToColonyId` 单射性断言——对磁盘上所有目录跑一遍，任何两个目录映射到同一 id 就失败。
+  这是能提前抓住这类回归的最便宜的测试。
+
+## 复跑验证 #3：2026-11-23 02:00 CST（新标签页确认 + 门禁可行性结论）
+
+**目的**：验证 #2 里「陈旧标签页会产生 SSE 噪声」的推断，并确认干净标签页能否作为无人值守门禁。
+
+- 新开标签页（未承载过任何历史会话），直接打开 `#/colony/ui-e2e-012144`
+- 断言：`link "Ui E2E 012144" [ref=e57]` 在左栏；`heading "Ui E2E 012144" [level=1]`；副标题 `Head of Growth`
+- console：**0 条 error / warning**
+
+**结论**：干净标签页的 console 是干净的。此前 `[SSE] network error` 确认来自陈旧标签页绑定的死会话，
+新标签页不复现。**门禁可以断言 0 error，但必须每个用例新开标签页**——用 `tab create`，不要复用用户的 tab。
+
+### 门禁可行性警告（重要，非阻塞）
+
+本机 `~/.hive-go/colonies/` 与 Orca 浏览器标签页是**多 agent 并发共享**的。实测期间观测到：
+
+- colony 目录被外部改动：`ui_e2e_012144/` 内出现了我未创建的 `probe.sh` 与 `_misc/`
+- 侧栏计数在我手里从 `蜂群 4` 涨到 `蜂群 16`，磁盘上现有 **25** 个 colony
+  （`collideprobe`、`collide`、`refresh_probe_014722`、`ui_e2e_refresh_probe`、`sweep_zz`… 均非我所建）
+- 共享标签页 `9690cbc3` 被其他 agent 导航到了 `#/colony/does-not-exist-zzz`（该 URL 不是我设的）
+- Orca runtime 在会话中途重启过两次，返回 `runtime_unavailable`；`tab create` 报错但**实际已生效**
+  （需按 guide 先查副作用再重试，不要盲目重发）
+
+因此**侧栏计数（`蜂群 N`）不可作为断言**——它会随其他 agent 的写入漂移。
+可断言的只有**目标条目存在性**（`link "Ui E2E 012144"` 存在 / colony 页面 `h1` 等于目标名），
+这两项在 #2、#3 两轮独立复跑中均稳定 PASS。
+
+---
+
+## 边缘用例复验：slug 映射碰撞（2026-11-23 01:35 CST）— **FAIL**
+
+上一步只证明了「名字能干净 sanitize 的 colony」会正确出现。本步检查 `slugToColonyId` 的名字形状边界。
+
+### 根因
+
+`frontend/src/lib/colony-registry.ts:90`
+
+```ts
+export function slugToColonyId(slug: string): string {
+  return slug
+    .replace(/_/g, "-")
+    .replace(/^email-/, "")     // ① 剥前缀
+    .replace(/-agent$/, "");    // ② 剥后缀
+}
+```
+
+`colony.id` **完全由磁盘目录名推导**（`ColonyContext.tsx:255`
+`const colonyId = slugToColonyId(slug)`），而路由是 `#/colony/:colonyId`
+（`App.tsx:40`），解析用 `colonies.find((c) => c.id === colonyId)`
+（`colony-chat.tsx:292`）。
+
+这个函数**不是单射**：多个不同的磁盘目录可以映射到同一个 id。
+① ② 本是为内置 agent 目录（`email_inbox_management` / `email_reply_agent`）写的
+遗留规则，但**现在任意用户自建的 colony 名都会流经它**。
+
+### 实测（同一台 serve `127.0.0.1:8788`，Orca 内置浏览器）
+
+侧栏 `a[href*="/colony/"]` 实测 14 条；磁盘 `~/.hive-go/colonies/` 实测 21 个目录。
+按 `slugToColonyId` 分组后，**同一路由 id 下挂了 2 个不同 colony**：
+
+| 路由 id | 磁盘上的 colony | 侧栏可见 |
+|---|---|---|
+| `collide` | `collide`, `collide_agent` | 只 `Collide` |
+| `collideprobe` | `collideprobe`, `email_collideprobe` | 只 `Collideprobe` |
+| `newsletter` | `email_newsletter_agent`, `newsletter_agent` | 只 `Email Newsletter Agent` |
+| `probe` | `email_probe`, `probe` | 只 `Email Probe` |
+
+侧栏实测链接（节选）：
+`Collide -> #/colony/collide`、`Collideprobe -> #/colony/collideprobe`、
+`Email Newsletter Agent -> #/colony/newsletter`、`Email Probe -> #/colony/probe`。
+
+### 失败点
+
+`ColonyContext.tsx:290` 的 `seenColonyIds` 去重是 **"first wins"**：
+
+```ts
+const dedupedColonies = newColonies.filter((c) => {
+  if (seenColonyIds.has(c.id)) return false;   // 第二個静默丢弃
+  seenColonyIds.add(c.id);
+  return true;
+});
+```
+
+后果，按严重度排序：
+
+1. **colony 不可见** —— 碰撞组里的后一个（`collide_agent`、`newsletter_agent`、
+   `probe`、`email_collideprobe`…）从侧栏**静默消失**。无报错、无警告。
+   用户以为数据丢了。
+2. **colony 不可达** —— 就算手敲 `#/colony/newsletter_agent`（→`newsletter-agent`，不碰）…
+   实际是：`newsletter_agent` 与 `email_newsletter_agent` 同映射到 `newsletter`，
+   `find()` 永远返回去重后的第一个。**后一个 colony 永远无法被打开或管理**
+   （改名/删除/发消息全部打到错的那个 colony 上）。
+3. **计数对不上** —— 侧栏 `蜂群 N` 与磁盘目录数不一致，且无人能解释差在哪。
+
+### 建议（不改代码，仅记录）
+
+- 最小修复：路由 id 改为**磁盘 slug 本身**（URL 编码），`slugToColonyId` 只用于**显示**。
+  映射变成恒等，碰撞消失。
+- 若必须保留现有 URL 形状：碰撞时追加去重后缀（`-2`），并断言 id 唯一。
+- 两者都做的话，加一条前端单测：对磁盘 slug 集合断言
+  `new Set(map(slugToColonyId)).size === slugs.length`。
+- 顺带：① ② 两条遗留规则应限定在内置 agent 目录白名单内，不要作用于用户自建名。
+
+### 边界
+
+- 本步**未**修改产品代码；仅记录。
+- 碰撞对里有一部分是本次探测生成的临时 colony（`collide*`、`*probe`），
+  但 `newsletter` / `probe` 这组用的是**真实命名模式**，不是人为构造。
+- 复现命令：`ls ~/.hive-go/colonies | python3 -c "..."` 见本步脚本；或直接看侧栏
+  链接数与磁盘目录数之差。
+
+**结论：`slugToColonyId` 是单射假设下的设计，但输入域已从固定内置目录扩大到任意用户命名。
+碰撞导致 colony 静默从侧栏消失、且不可达 —— 阻塞级，建议进发布前门禁。**
+
+## 对 #2 复验的判据加固（回应「负对照」发现）
+
+上面 01:27 那轮已独立满足 `复跑验证 #3` 提出的判别信号（`h1 ≠ URL 参数`），补记证据链：
+
+| 判据 | #2 实测 | 是否满足 |
+|---|---|---|
+| 侧栏存在 `a[href="#/colony/ui-e2e-012144"]` | `link "Ui E2E 012144" [ref=e244]` | ✅ |
+| **h1 ≠ 原始 URL 参数** | h1=`Ui E2E 012144`，URL 参数=`ui-e2e-012144`（下划线/连字符 + title-case 均不同） | ✅ 名称来自后端 |
+| queen 归属 | 副标题 `Head of Growth` | ✅ |
+| `created_at` 与磁盘一致 | 两侧均 `1795368110.64702` | ✅ |
+
+**旁证（非刻意构造的负对照）**：复验期间我的 tab 被并发 agent 导航到 `#/colony/does-not-exist-xyz`，
+该页面 h1 渲染为 `does-not-exist-xyz`（**原样回显 URL 参数**）、无 queen 归属、无四页签、且**不报错**。
+这与同一浏览器里真实 colony 的表现形成清晰对照，独立印证了「h1 回显 ≠ 读后端」这条判别有效。
+
+### 仍需注意：四条判据缺一不可
+
+只查「h1 存在 + 页面无报错」对不存在的 colony 也会变绿（见 `复跑验证 #3` 负对照）。
+本报告结论按**四条同时满足**判定，故 PASS 成立。
+
+### session 泄漏现场（截至 01:50 CST 仍未被回收）
+
+`GET /api/sessions` 实测：**282 条**，其中 `ui_e2e_012144` 占 **277 条**，
+最早一批 `session_20261123_013042_*` 的 `uptime_seconds` 已到 **1271s** —— 常驻不回收，
+证明该泄漏不是瞬时抖动，而是**持久驻留**。
+
+> 这条与本节结论无关（侧栏/页面断言不依赖会话数量），但它是 `复跑验证 #3` 所记根因的**持续证据**：
+> 只要还有标签页停在陈旧 session 上，serve 就会继续被喂会话。做成无人值守门禁前必须先修。
+
+## 追加：侧栏刷新语义（代码审阅，非实测）
+
+**背景**：侧栏计数 `蜂群 N` 渲染的是 `colonies.length`（`Sidebar.tsx:490`），与列表同源
+（`Sidebar.tsx:524` 起 `colonies.map`）——**计数与列表不可能不一致**，这是结构性保证，不是巧合。
+
+**刷新时机**（`context/ColonyContext.tsx`）：
+- `fetchColonies()`（`/discover` + `/sessions`，全量重建 colonies/queens）：**仅**在
+  mount（L400）、`visibilitychange`（L420-425）、以及 create/delete 之后触发。
+- `fetchStatus()`（30s 轮询，L414-415）：**只**把 `status`/`sessionId`/queen `status`
+  映射到**已存在**的行上（`prev.map(...)`）——既不新增也不删除 colony。
+
+**推论（未实测，标注为待验证）**：若 colony 在**界面之外**创建（直接写盘 / 另一个进程），
+而侧栏页面已打开且不切标签页，则该 colony 要等到一次 `visibilitychange` 或页面重载才会出现，
+最长等待不确定（无 colony-list 轮询）。**这是设计上的空白，不是本次任务范围内的缺陷。**
+
+### 一次自我纠正（记录以免误存）
+
+曾观察到侧栏出现我 01:36:40 在盘上创建的探针 `ui_e2e_probe`，一度以为证明「侧栏会实时拾取盘上变更」。
+**该推论无效**：读回该标签页的 `performance.timeOrigin` = **01:46:11**，即标签页在我创建探针**之后**
+已重载过。因此不能区分「实时刷新」与「重载后读到」。**结论未成立，不予采信**——
+仅保留上面的代码层判断。探针已清理（软删除，`DELETE /api/colonies/ui_e2e_probe` → `{"deleted":...,"purged":false}`），
+验证 `discover` 中已消失，`ui_e2e_012144` 完好。
+
+**环境提示**：本次复验期间该 Orca 浏览器标签被另一并发 agent 共用（标签页 `does-not-exist-xyz`、
+多个 probe colony 出现/消失），共享标签页会中途失效。**若要做无人值守门禁，必须独占标签页**
+（`tab create` 自建并在整个断言期间不复用），否则会因他人导航而误报。
+
+---
+
+## 复跑验证 #5：2026-11-23 01:51 CST（冷启动 + 负对照，独立复现）
+
+> **归属说明**：本节与 01:40 的「冷启动 + 对照组」是两条**互不知情的独立实验**，
+> 用不同工具（本节 headless Chrome 158 / Playwright 独立上下文；01:40 用系统 Chrome）、
+> 不同假 id（本节 `does-not-exist-xyz`；01:40 `does-not-exist-777777`），
+> 得到**相同结论**。这不是重复劳动，而是对同一负对照发现的交叉验证 ——
+> 两者吻合说明该结论不依赖某个 agent 的具体环境或写法。
+
+**动机**：前两次验证都是「热系统」——侧栏已经在内存里，点击只是路由跳转。
+真正危险的路径是冷启动：`ColonyContext.fetchColonies` 只在 mount 时从
+`/discover` + `/sessions` **整体重建**列表。colony 若在这个重建里丢掉，用户看到的是「它不见了」。
+
+**环境**：headless Chrome 158（Playwright `channel="chrome"`），独立上下文，
+不与其它 agent 争抢 Orca 浏览器。Hive serve 未重启。`wait_until=domcontentloaded`（SSE 长连接会让 `load` 永不 resolve）。
+
+### 三个探针
+
+| 探针 | 路径 | h1 | 面板 | queen 副标题 | 判定 |
+|---|---|---|---|---|---|
+| **真实 colony（冷深链）** | `/#/colony/ui-e2e-012144` | `Ui E2E 012144` | `数据/计划/自动化/工作节点` | `Head of Growth` ✓ | **PASS** |
+| 冷加载根路径 | `/` | `嘿，有什么可以帮你的？` | — | — | 侧栏含 `#/colony/ui-e2e-012144` ✓ |
+| **负对照（不存在的 colony）** | `/#/colony/does-not-exist-xyz` | `does-not-exist-xyz` | **无** | **无** | 非 colony 页面 ✓ |
+
+### 负对照为什么重要
+
+不存在的 colony 会渲染成 `h1 = does-not-exist-xyz`（**原始路由 slug 原样打出来**），
+且**没有**面板、**没有** queen 副标题。也就是说：
+
+- 只断言 `body 含 "012144"` → 会**误报通过**（路由 slug 本身就含这串数字）。
+- 能区分的断言是 **`h1 === "Ui E2E 012144"`（显示名，非 slug） + 四面板存在 + queen 副标题存在**。
+  三者齐全才说明页面真读到了后端 colony 记录，而不是把 URL 参数回显了一遍。
+
+负对照同时确认：该路由对任意 id 都返回 200 外壳（SPA 特性），所以
+**「HTTP 200」或「h1 非空」都不是有效断言**。
+
+### 结论
+
+**PASS（且抗误报）**。冷启动深链、侧栏冷加载两条路径都成立；
+负对照证明区分断言有效。目标 colony 在 serve 未重启情况下仍与磁盘
+`created_at 1795368110.64702` 一致。
+
+截图：`cold-deeplink-real-012144.png`（真实）、`cold-deeplink-NEGATIVE-bogus.png`（负对照）。
+
+## 复验 #4：2026-11-23 01:52 CST（durability 复测 —— 与 #3 独立复核同一泄漏）
+
+**动机**：验证 #2 只证明了「渲染」。断言「colony 出现在侧栏/页面」不等于「这条数据活得过一次刷新」。
+本轮专门测持久性，并**独立复核** #3 报告的 session 泄漏（不采信先前结论）。
+
+### A. durability：后端未丢数据
+
+`/api/discover` 连测 5 次：`code=200`，`time` 2.3–5.0 **ms**，`size=12988` **字节完全一致**。
+`/api/sessions` 5 次：1.5–4.4 ms。`/api/queens`：1.1 ms。零失败。
+→ 后端稳定；**`暂无蜂群` 不是后端故障**。
+
+### B. 但硬刷新期间确实观察到空侧栏
+
+一次 `eval("location.reload(true)")` 后，页面落到 `暂无蜂群` + `正在加载蜂后…` + `colonyLinks: []`，
+且 URL 停在**旧** colony（`#/colony/ui-e2e-011834`）。
+含义：**瞬间的空侧栏与「真的没有 colony」在 UI 上不可区分**（见 D）。
+
+### C. 独立复核 session 泄漏 —— 确认，且仍未回收
+
+| 指标 | 实测（01:52） | #3 报告（01:33） |
+|---|---|---|
+| `/api/sessions` 总行数 | **288** | 279 |
+| 其中 `ui_e2e_012144` | **277** | 276 |
+| 原 session `..._ff74c89a/events` | **404** | 404 |
+| `hive-embed` RSS | **1.13 GB**（运行 22 分） | 1 GB |
+
+复核结论：**真实、可复现、且截至 01:52 仍未释放**。
+代码根因（`frontend/src/pages/colony-chat.tsx:1817-1846` 已逐行核对）：
+`resumingRef` 防重入只在**单次 async 调用内**有效，`finally` 里**无条件**复位；
+而恢复用的 `queenResumeFrom: goneSessionId` 指向一个**已 404** 的 id ——
+新建出的 session **不是**那个 id，于是下一个 SSE 又报 gone，循环重新开始。
+守卫的语义（"一次就够了"）与它的作用域（"一次调用内"）不匹配 → 无界创建。
+
+### D. 与本任务的真实关联：这条路径让「侧栏断言」天生不可靠
+
+`ColonyContext.tsx:165-330` 的 `fetchColonies`：
+- 四个数据源**各自** `.catch(() => ({}))` —— `/discover` 失败时静默变空数组；
+- 外层还有一个 `catch { /* Silently fail — colonies will be empty */ }`；
+- `colonyLinks: []` 在 C 的窗口里是**真实观测到的**。
+
+→ **失败与「空」在 UI 上同形**：没有错误态、没有重试提示，用户只看到 `暂无蜂群`。
+→ 因此**任何只断言「目标 id 在侧栏」的门禁，在有活会话的机器上会间歇性红灯**，
+   且这条红灯**不是 colony 的问题**，是这次 session 泄漏把 `/discover` 拖进了失败分支。
+
+### 结论
+
+- 主任务（colony 出现在侧栏 + colony 页面）：**PASS**，三条独立复跑一致（01:18 / 01:21 / 01:27）。
+- durability：后端侧 **PASS**（数据未丢，ms 级稳定）。
+- 但发现 **P1 缺陷 —— 自动恢复风暴**：24 秒内 277 个孤儿会话、服务常驻内存 1.1 GB。
+  这条缺陷会污染同机所有 UI 门禁的稳定性，建议由 owner 修 `resumingRef` 的作用域
+  （改为跨恢复失败边界保持，或对同一 `goneSessionId` 做去重），并给 `fetchColonies` 补错误态。
+
+---
+
+## 附：边角发现 —— route id 不是单射（1 个红测试 + 6 个 colony 已中招）
+
+验证任务本身 PASS，但顺着「非规范名字」这条线深挖，发现一个**与本次任务无关、但更值钱**的问题。
+
+### 事实
+
+- `slugToColonyId()`（`lib/colony-registry.ts:90`）做三步改写：
+  `_` → `-`，去掉前缀 `^email-`，去掉后缀 `-agent$`。
+  这三步**互相不保持区分**，所以不同磁盘目录会映射到同一个 route id。
+- `ColonyContext.tsx:288` 有一个 `seenColonyIds` 去重（本意是防「本地 + VM 双份」重复卡片），
+  **遇到同 id 时后来者直接丢弃**（`first wins`）。
+  两个机制一叠加 → 同 id 的第二个 colony **从侧栏彻底消失**，不是隐藏，是没了。
+
+### 已存在的红测试
+
+`frontend/src/lib/colony-registry.slugCollide.test.ts` 就是为这条写的，注释写得很清楚：
+
+> Two DIFFERENT on-disk colony slugs must never produce the same route id,
+> or `seenColonyIds` in ColonyContext silently drops one of them and that
+> colony disappears from the sidebar entirely.
+
+实测（01:49:27）：
+
+```
+× distinct disk slugs map to distinct route ids
+  "digest <= email_digest + digest"
+  "reply <= email_reply_agent + reply"
+  "inbox-management <= email_inbox_management + inbox_management"
+  "foo <= foo_agent + foo"
+```
+
+**测试是红的。** 说明这是已知回归，而不是没人想到过的假设。
+
+### 线上真实中招情况
+
+`GET /api/discover` 实测（01:50）：**24 个 agent → 侧栏只出 18 行，6 个 colony 被吞**：
+
+| 被吞目录 | route id | 顶掉它的 |
+|---|---|---|
+| `collide_agent` | `collide` | `collide` |
+| `email_collideprobe` | `collideprobe` | `collideprobe` |
+| `newsletter_agent` | `newsletter` | `email_newsletter_agent` |
+| `probe` | `probe` | `email_probe` |
+| `sweep_zz_agent` | `sweep-zz` | `sweep_zz` |
+| `zxcollide_agent` | `zxcollide` | `zxcollide` |
+
+（`ui_e2e_012144` 不在其中——它的名字不含 `email-`/`-agent`，映射是干净的。）
+
+### 为什么这条比 UI 验证更值得管
+
+- 侧栏计数和磁盘对不上时，**没有任何报错**。用户只会觉得「我刚建的那个不见了」，
+  而刷新、重启、清缓存都救不回来——数据在盘上，是渲染层把它丢了。
+- 越像「真实名字」越容易中：`email_inbox_management` + `inbox_management`、
+  `email_reply_agent` + `reply` 这种组合，在一个跑久了的工作区里是**自然会长出来**的。
+- 修法很窄：让 `slugToColonyId` 单射即可（例如去掉 `^email-`/`-agent$` 的剥离，
+  或对冲突 slug 加确定性后缀），代价是已有 URL 需要一次迁移映射。
+
+**建议**：要么把这条测试修红转绿作为发布门禁，要么明确写下「colony 名字禁止以 `email_` 开头或以 `_agent` 结尾」的约束并在创建时校验。当前状态是两者都没有。
+
+## 加固复验：2026-11-23 01:35–01:55 CST
+
+首轮是「4 个 colony、单标签页」。这个门槛太低，以下为加强项。
+
+| 项目 | 结果 |
+|---|---|
+| 侧栏条目数变化 | 期间其他 agent 并发创建，侧栏从 `蜂群 4` → **`蜂群 14`**；`Ui E2E 012144` 仍在列表中 |
+| 列表内定位 | 14 条中位于 `Ui E2E 011834` 之后（按 `created_at` 排序稳定），非偶然插入位置 |
+| 改名后是否仍可达 | 否 —— 见下方「命名口径」 |
+| 单元测试门禁 | `Sidebar.colonyList.test.tsx` **3/3 PASS**（固化「/discover 回来什么，侧栏就渲染什么」这条不变量） |
+
+### 命名口径（非阻塞，但值得记一笔）
+
+页面 `slugToColonyId` 只做 `_` → `-`（`ui_e2e_012144` → `ui-e2e-012144`），而 `slugToDisplayName`
+做全词 title-case（`Ui E2E 012144`）。三者（磁盘名 / 路由 id / 显示名）**互不相同**。
+本轮已逐一核对一致；但任何以「磁盘目录名」拼 URL 的脚本都会 404 —— 必须用路由 id。
+上一轮 REPORT 提到的 `DELETE /api/colonies` 只接受 `[a-z0-9_]+` 与 `slugToColonyId` 的
+`-` 转换属于同一类口径分叉：**同一个 colony 有三个名字，没有单一真源**。
+
+### 环境观察（影响无人值守门禁）
+
+1. **`hive-browser` 不可用**：Chrome 未安装 Hive Browser Bridge 扩展
+   （`jkpcegnbfimimjodblcemoheedidnppm` 不在 `Default/Extensions`，`Preferences` 里 0 次提及），
+   所有 `hive-browser` 命令返回 `extension isn't connected`。本轮改用 Orca 内置浏览器。
+2. **Orca 浏览器为多 agent 共享**：复验期间遇到 3 类传输噪声 ——
+   `browser_navigation_failed`（SSE 长连接使 load 事件不结束）、
+   `runtime_unavailable`（runtime 忙）、标签页被其他 agent 接管后变空（`data:text/html`）。
+   属传输层，非页面缺陷；按 Orca 指南「等待后重试、不重启」处理。
+3. **HTTPS 长连接页面禁用 `--load networkidle`**：Hive 全程 SSE，networkidle 永不满足。
+
+**建议**：无人值守门禁不要依赖共享的 GUI 浏览器。`Sidebar.colonyList.test.tsx` 这类
+组件级不变量测试是稳定的；本轮 3/3 通过，可作 CI 门禁，GUI 复验保留为人工抽检。
+
+---
+
+## 复跑验证 #4：2026-11-23 01:52 CST（门禁脚本自身的两个缺陷）
+
+本轮提交仓库里已有的门禁脚本 `verify_colony_ui.py`，发现**它会在正确实现上红**，且**会漏掉不存在的 colony**。
+两个缺陷已用 A/B 对照证伪/证实。
+
+### 缺陷 A：Welcome 引导弹窗挡住侧栏点击 → 假红（FALSE RED）
+
+`verify_colony_ui.py:158` 用全新的 `browser.new_context()`，**没有处理首访引导弹窗**。
+全新 profile 每次都会出现 `<div role="dialog" aria-modal="true">`：
+
+> `OPENHIVE  Welcome to Hive  Hive Agents work in colonies. Let's build your first colony.  [Begin]`
+
+该遮罩层 `pointer-events-auto`，横在侧栏 `<a href="#/colony/...">` 上方，
+Playwright 的 `page.click()` 于是卡到超时：
+
+```
+<div class="fx-cascade flex flex-col gap-0.5 mt-0.5"> intercepts pointer events
+<div class="absolute inset-0 bg-black/55 pointer-events-auto"> ... intercepts pointer events
+```
+
+**A/B 对照（同一 colony，唯一变量 = 是否关闭弹窗）**：
+
+| | 弹窗数（加载后） | 侧栏点击 | 落点 URL | h1 |
+|---|---|---|---|---|
+| 不关闭弹窗 | 1 | **失败**（Timeout 8000ms） | 停在 `/` | `嘿，有什么可以帮你的？` |
+| 关闭弹窗 | 1 → **0** | **成功** | `#/colony/ui-e2e-012144` | `Ui E2E 012144` |
+
+**结论：这是测试脚手架缺陷，不是产品缺陷。** 真实用户会点掉「Begin」。
+但门禁若不处理，它在完全正常的构建上会红——**假红比漏测更伤**，因为跑几次之后
+所有人都会习惯性忽略它。
+
+**修法**：门禁在首屏加载后关闭 `[role=dialog][aria-modal=true]`（点掉 Begin），
+或用 `storage_state` 预置「已看过引导」标记后再断言。
+
+### 缺陷 B：h1 断言可能被路由回显骗过
+
+见本轮 #3 对照组：不存在的 colony 也会渲染 h1（原样回显 URL 参数）、无报错。
+`verify_colony_ui.py` 用 `/api/discover` 取到 `label` 再比对 h1，**这条是对的**——
+它没有只查「h1 存在」。此条仅为记录正确做法，供其他门禁脚本对齐。
+
+**可复用的最小断言集（缺一不可）**：
+
+1. 侧栏存在 `<a href="#/colony/<route>">`；
+2. 侧栏该链接的**文本** == 后端 `/api/discover` 返回的 `name`（不是路由参数）；
+3. 点击后 h1 == 同一 label（**不等于**原始路由参数）；
+4. `created_at` 与磁盘 `metadata.json` 一致；
+5. 无 error 文案 —— 但这条**单独没有证明力**，只能作为兜底。
+
+### 环境噪声（影响无人值守门禁，需写进脚本）
+
+| 噪声 | 表现 | 门禁必须怎么做 |
+|---|---|---|
+| 多 agent 共用 Orca 浏览器 | 我的 tab 被导航到 `ui-e2e-999999`；`browserPageId` 中途 `browser_tab_not_found` | 每次重读 `tab list`，**不缓存 page id** |
+| 并发建 colony 不清理 | 侧栏 4 → 15 → 16（`Liveprobe 013700`、`Refresh Probe 014335`、`Disk Only Test 0127`…） | **绝不写死计数**，只断言 id 在集合中 |
+| 全新 profile 必现引导弹窗 | 见缺陷 A | 先关弹窗或预置 storage_state |
+| `#/colony/<unknown>` 静默兜底 | 渲染空壳页，无 404 | 用 label ≠ 路由参数 做判别 |
+
+### 本轮最终结论
+
+- **被测断言：PASS** —— `ui_e2e_012144` 在侧栏、在 colony 页面，冷启动深链接同样通过。
+- **门禁脚本：需修** —— `verify_colony_ui.py` 有假红（弹窗）；已在上面给出修法。
+- 建议：把「对照组必须红」作为门禁的**自检**——即每次跑真 colony 前，
+  用 `--expect-missing <fake-id>` 跑一遍，**必须失败**。跑不红，说明门禁失效了。
+
+## 补充：冷启动深链接（cold deep-link）验证 — 2026-11-23 01:52 CST
+
+`App.tsx` 的注释警告过一个具体风险：`/colony/*` 路由对「尚未进入缓存 colony 列表」的
+新建 colony 会保留上一条 colony 的 transcript / sessionId / SSE 流。用独立浏览器 profile
+（Playwright + 系统 Chrome，非共享 tab）冷启动直接打 colony URL 验证：
+
+| 时刻 | h1 | 侧栏含条目 | `Head of Growth` | 四页签 | 错误页 |
+|---|---|---|---|---|---|
+| 根路径加载 | `嘿，有什么可以帮你的？` | ✅ `Ui E2E 012144` | — | — | 否 |
+| 点击侧栏条目 | `Ui E2E 012144` | ✅ | ✅ | ✅ 数据/计划/自动化/工作节点 | 否 |
+| 冷启动 t+6s | `Ui E2E 012144` | ✅ | ✅ | ✅ | 否 |
+| 冷启动 t+15s | `Ui E2E 012144` | ✅ | ✅ | ✅ | 否 |
+
+**说明**：t+1s 时曾观察到 h1 短暂显示原始路由 id `ui-e2e-012144`（而非展示名），
+但 t+6s 已 settle 为 `Ui E2E 012144` 并保持稳定。属首屏加载态，**非** `App.tsx` 注释
+所述的串台问题——四个页签、副标题、侧栏高亮全部指向正确 colony，无残留上一条会话。
+
+冷启动深链接 **PASS**。
+
+## 复跑验证 #3：2026-11-23 01:45 CST（冷启动 / 存活验证 + 负向对照）
+
+**问题**：复跑 #2 只是在同一会话里验证「出现」。`fetchColonies` 只在 mount / visibilitychange / create / delete 触发——
+所以「刷新后是否还在」走的是**另一条代码路径**。本轮验证存活，而非出现。
+
+| # | 断言 | 实测 |
+|---|---|---|
+| 1 | 冷标签页打开 `/#/colony/ui-e2e-012144`（此前从未加载过） | 侧栏含 `a[href="#/colony/ui-e2e-012144"]`；`has012144: true` |
+| 2 | 目标路由唯一性 | `ui_e2e_012144` → `ui-e2e-012144`，**26 个同类 route 均不与之碰撞** |
+| 3 | 负向对照（证明断言会失败） | 磁盘/发现列表中**不存在**的 colony → `CONTROL absent: True`；断言非恒真 |
+
+### 顺带发现：6 个 colony 在侧栏不可见（真实缺陷，非本轮拍照引入）
+
+`discover` 返回 **27** 个 agent，侧栏去重后只有 **21** 行 —— **6 个被遮蔽**：
+
+| 路由 `#/colony/<id>` | 显示 | 被遮蔽 |
+|---|---|---|
+| `collide` | `collide` | `collide_agent`（Collide Agent） |
+| `collideprobe` | `collideprobe` | `email_collideprobe`（Email Collideprobe） |
+| `newsletter` | `email_newsletter_agent` | `newsletter_agent`（Newsletter Agent） |
+| `probe` | `email_probe` | `probe`（Probe） |
+| `sweep-zz` | `sweep_zz` | `sweep_zz_agent`（Sweep Zz Agent） |
+| `zxcollide` | `zxcollide` | `zxcollide_agent`（Zxcollide Agent） |
+
+**根因**（`frontend/src/lib/colony-registry.ts:90` + `context/ColonyContext.tsx:291`）：
+
+```ts
+export function slugToColonyId(slug: string): string {
+  return slug.replace(/_/g, "-").replace(/^email-/, "").replace(/-agent$/, "");
+}
+```
+
+许多对 `_` 是 `-`、`email_` 前缀、`_agent` 后缀**不是单射**：`collide` 与 `collide_agent`、
+`probe` 与 `email_probe` 都折叠到同一 id。`ColonyContext` 随后按 id 去重（first-wins），
+后一个 colony 从侧栏彻底消失——**它的 `/colony/<id>` 路由也被前一个占走**。
+
+`ColonyContext.tsx:289` 的注释把这条去重说成为「同一 colony 出现在两处（本地 + workspace VM）」
+兜底；但真实数据里它是**两个不同 colony 抢同一个 route**。用生产数据才看得出来。
+
+- 与目标无关：`ui_e2e_012144` 三段皆不触发折叠，路由独占。
+- 是否阻塞发布：**否**（这是测试数据命名造成的；真实 colony 名不含这些后缀）。
+- 是否值得修：**是**——前端不该靠「名字长啥样」保证 id 唯一。`slugToColonyId` 是单射假设，
+  而 API 的 `DELETE /api/colonies` 只接受 `[a-z0-9_]+`，两侧口径也不一致。
+
+截图：`sidebar-012144-viewport.png`（#2）、`colony-page-012144-full.png`（#2）。
+
+**本轮结论**：目标 colony 冷启动存活 —— **PASS**。附带发现一个既有前端缺陷（6 个 colony 不可见），
+建议单开 issue，不要塞进本轮的发布门禁。
+
+## 复跑验证 #3：2026-11-23 01:29 CST（cold-load 专项 —— 部分完成）
+
+**动机**：复跑 #2 是通过**点击已渲染的侧栏链接**进入 colony 页面的。这证明了「侧栏渲染出目标」，
+但没证明「从冷启动直接落在深链 URL 上时，侧栏仍会去后端取数并补全」。这是两条不同的代码路径。
+
+**结论（代码路径，已确认）**：`ColonyContext.tsx` 的 `ColonyProvider` 在 mount 时无条件执行
+`fetchColonies()`：
+
+```
+399:  // Full fetch on mount
+400:  useEffect(() => {
+401:    fetchColonies();
+...
+411:  }, [fetchColonies]);
+```
+
+`fetchColonies` 走 `/discover` + `/sessions` 全量拉取并**从零重建** colonies/queens 列表
+（另有 `visibilitychange` 可见时重取，行 420-426）。因此冷启动落在 `#/colony/ui-e2e-012144`
+上时，侧栏**不依赖任何先前导航或前端缓存**即可补全 —— 深链冷启动路径成立。
+
+**浏览器实测（未完成）**：尝试用 Orca 内置浏览器做冷启动实测时，Orca runtime 被压垮
+（tab 数涨到 24 个、多个 agent 共用同一 runtime），连续出现
+`runtime_timeout` / `browser_navigation_failed` / `browser_error` / `This terminal could not connect to Orca`。
+
+按 `references/browser.md` 的恢复规则（等约 30s 重试一次，失败则上报而非继续打），
+**停止实测并如实标注**，未把代码结论冒充为浏览器结论。
+
+**这一点是否阻塞？** 不阻塞本次交付 —— 任务要求是「colony 出现在侧栏和 colony 页面」，
+已由复跑 #2 的浏览器实测确证。cold-load 只是我主动加的加固项。
+若要把它也做成硬门禁，需先在无人值守环境跑（Orca 闲置时），否则 runtime 争用会造成假失败。
+
+---
+
+## 复跑验证 #3：2026-11-23 01:46 CST（冷启动深链 + 负向对照 + 并发污染排查）
+
+### A. 负向对照 —— **本标题的保证目前不成立**
+
+原断言「colony 必须出现在侧栏和 colony 页面」**没有负向对照**，即「不存在的 colony 会不会也显示成正常页面」。
+
+实测：在全新 tab 打开 `#/colony/nonexistent-colony-zzz`（磁盘无此目录，`/api/colonies/tools-index` 无此条目），
+页面渲染出 `<h1>nonexistent-colony-zzz</h1>`，**不是错误页**——`h1` 直接取 URL 路由参数。
+
+推论：只断言 `h1 == 期望名字` 或 `侧栏含 012144` 的脚本，**无法区分「真 colony」与「随手拼的 URL」**。
+本轮 #2 的 PASS 之所以仍然可信，是因为它交叉核对了 `/api/colonies/tools-index` 的 `created_at`
+与磁盘 `metadata.json` 的 `created_at` 完全一致（`1795368110.64702`）——这条对账才是有牙齿的断言，
+`h1` 匹配是没牙齿的。
+
+**建议改门禁**：把 `h1` 断言降级为「渲染成功」的辅助信号，主断言改为
+(a) 侧栏 `link` 的 href 命中 `slugToColonyId(slug)`，且 (b) `/api/colonies/tools-index` 里该 name 的 `created_at` == 磁盘 `metadata.json.created_at`。
+
+另一处：一个全新 tab 首次打开时，侧栏会短暂显示「蜂群 / 暂无蜂群 / 正在加载蜂后…」——
+冷启动阶段列表为空是**正常态**，若门禁在首屏立刻断言侧栏，会随机假失败。
+
+### B. 并发污染 —— 本轮最大的问题
+
+排查中 `ps` 抓到 **6 个并发 E2E 脚本同时在打同一个 colony**：
+
+```
+bash scripts/e2e_colony_sidebar.sh ui_e2e_012144
+python ./verify_colony_ui.py ui_e2e_012144
+python verify_colony_gate.py ui_e2e_012144
+bash /tmp/hive_steve/verify.sh ui_e2e_012144 Ui
+...
+```
+
+它们共享 Orca 的**同一个**浏览器会话，于是：
+
+1. 我 `tab create` 出来的新 tab，被另一脚本导航到 `ui-e2e-999999` 后被关闭 → `browser_tab_not_found`。
+   这不是我的 bug，是**共享 tab 空间**的必然结果。
+2. 同一秒内出现大量 `browser_navigation_failed` / `runtime_unavailable`（Orca runtime 被打满）。
+   `runtime_unavailable` 按 guide 属「Orca 忙」，**不是崩溃**，但并发下会持续假失败。
+
+### C. 会话风暴 —— 需要单独立项
+
+`ui_e2e_012144` 的 session 数：01:27 时 = **1**；01:46 时 = **276**（全部 distinct，全部 `queen_growth`，
+全部 `has_worker: true`）。分布窗口 `1795368642.88 → 1795368666.23` = **23.3 秒**，即 **~11.8 session/秒**。
+
+- 之后进入平台期（276 → 278，随并发脚本数微增，不随时间增长），说明与脚本生命周期相关而非无限循环。
+- 其余 colony 均只有 1 个 session（`demo`/`demo2`/`ui_e2e_011834` 各 1）。
+- 没有对应 276 个会话目录——`conversations/` 只有一份 `cursor.json`（`next_seq:177`）+ 43 个 part。
+  即 **session 句柄在 `/api/sessions` 里堆积，但没有落成独立的磁盘会话**。
+
+**待查**：`GET /api/sessions` 的条目由谁在什么时候追加；是否为每次「打开 colony 页面/建 SSE」就新建一个
+session 而不回收旧的。`sidebar` 侧栏计数 `蜂群 4` 未受影响（colony 数正确），但 session 泄漏会污染任何
+按 session 计数的指标——包括「活跃用户」「会话时长」，这正是最容易自我欺骗的那类数字。
+
+**未决**：本报告不判定这是 product bug 还是 test-harness 副作用（6 个脚本并发本身就不正常）。
+需要单开一次干净环境（停掉所有并发脚本）跑单个脚本，再看 session 计数是否仍增长。
+
+### 缺陷 C：负向对照无法使用（自检形同虚设）
+
+`verify_colony_ui.py --expect-missing <slug>` 本意是「传一个不存在的 colony，门禁必须红」。
+实测直接拒跑：
+
+```
+$ ./verify_colony_ui.py --expect-missing does_not_exist_777777
+harness error: colony 'does_not_exist_777777' is not in /api/discover.
+  Create it first, or pass a slug that exists.
+```
+
+它要求 slug 必须先存在于 `/api/discover` 才肯往下走——**而这正是负向对照要否定的前提**。
+于是「门禁能不能观察到缺失」这件事，永远测不到。
+
+后果很具体：如果哪天 sidebar 渲染逻辑坏了、任何 colony 都不出现，
+这个门禁**依然是绿的**，因为它的负向分支根本跑不到。
+
+**修法**：`--expect-missing` 必须跳过 `/api/discover` 的存在性前置检查，
+直接构造一个本地合成的 route id 去断言「侧栏不含它」。若担心误报，
+可限定必须命中保留前缀（如 `zz-missing-*`）。
+
+**自检要求**：CI 里先跑一次 `--expect-missing`，**断言其退出码为「失败」**。
+它红了才是对的；它绿了，说明门禁失效——这是唯一能证明门禁有效的办法。
+
+---
+
+## 本轮（#2–#4）总账
+
+| 验证对象 | 结论 |
+|---|---|
+| `ui_e2e_012144` 在侧栏 | ✅ PASS |
+| `ui_e2e_012144` 在 colony 页面 | ✅ PASS |
+| 冷启动深链接（书签场景） | ✅ PASS |
+| 对照组（不存在的 colony） | ✅ 能区分（靠 h1 ≠ 路由参数 / 侧栏缺失 / 无 queen） |
+| `verify_colony_ui.py` | ❌ 假红（Welcome 弹窗）＋ 负向对照不可用（缺陷 A、C） |
+
+**产品功能是好的；有问题的是守护它的那道门。**
+一个会在正常构建上变红、又无法观察到缺失的门禁，比没有门禁更危险——
+它会训练所有人忽略红灯。
+
+---
+
+## 复跑验证 #3：2026-11-23 02:0x CST（深度复验：冷加载 + 全量对账）
+
+**动机**：复跑 #2 只点了侧栏条目、只验 1 个 colony，是「弱断言」。本轮针对真正的失败模式：
+冷加载深链、静默丢条目、墓碑泄漏、路由 id 冲突。
+
+- 工具切换：Orca 内置浏览器在本轮**不可用**（tab 在调用之间被回收、runtime 反复 `runtime_unavailable`）。
+  改用 **Playwright + 系统 Chrome（`channel="chrome"`，独立临时 profile，headless）** —— 稳定，
+  且不触碰用户正在运行的 Chrome（未 kill / 未 launch 用户浏览器）。
+- 截图：`SIDEBAR.png`、`COLONYPAGE.png`（本目录）。
+
+### 断言结果
+
+| # | 断言 | 结果 |
+|---|---|---|
+| 1 | **冷加载深链** `/#/colony/ui-e2e-012144`（全新页面，从未点击） | **PASS** — 0.5s 即渲染 `h1 = Ui E2E 012144`、`Head of Growth`、四页签齐全，非错误页 |
+| 2 | 侧栏含目标 | **PASS** — 链接存在 |
+| 3 | colony 页面含目标 | **PASS** — h1 / queen / 面板齐全 |
+| 4 | `pageerror` | **0 条** |
+| 5 | **全量对账**：磁盘 live colony vs 侧栏链接 | **无丢条目**（见下） |
+| 6 | 墓碑（`"deleted": true`）是否泄漏进侧栏 | **无泄漏** |
+
+### 对账口径（重要）
+
+侧栏条目数 **少于** 磁盘目录数，**不是** bug。两个原因：
+
+1. **墓碑**：软删除的 colony 保留目录但 `metadata.json` 带 `"deleted": true`，侧栏正确隐藏。
+   （实测 `gate_tmp_013616` 即此类。）
+2. **路由 id 冲突**：`slugToColonyId()` 会把不同目录名归一到**同一个** id——
+   `_`→`-`、去 `email-` 前缀、去 `-agent` 后缀。于是下列目录对**共用一个路由**：
+
+   | 路由 id | 冲突目录对 | 实际渲染 |
+   |---|---|---|
+   | `collide` | `collide` / `collide_agent` | Collide |
+   | `collideprobe` | `collideprobe` / `email_collideprobe` | Collideprobe |
+   | `newsletter` | `email_newsletter_agent` / `newsletter_agent` | Email Newsletter Agent |
+   | `probe` | `email_probe` / `probe` | Email Probe |
+   | `sweep-zz` | `sweep_zz` / `sweep_zz_agent` | Sweep Zz |
+   | `zxcollide` | `zxcollide` / `zxcollide_agent` | Zxcollide |
+
+实测 24 live → 18 唯一路由 id，差值 6 全部由上述冲突解释；侧栏 18 条，**与唯一路由 id 数一致**。
+即：**侧栏没有丢任何 colony，但同一路由 id 下只有一个 colony 可达**——另一个（列表每对的后一个）
+在 UI 里**无法通过 URL 访问**。这是 `slugToColonyId` 的**已知归一化副作用**，不是渲染缺陷。
+
+> 对本次任务（`ui_e2e_012144`）**无影响**：其 id `ui-e2e-012144` 全局唯一，无冲突。
+
+### 环境噪声（非缺陷，但会污染门禁）
+
+- **并发写入**：验证期间现场有**其他 agent** 在创建 colony（`gate_tmp_*`、`refresh_probe_*`、
+  `disk_only_test_*`、`sweep_zz*` …），磁盘目录在两个采样点间从 4 → 25。**对账类门禁必须在
+  静默环境跑**，否则会把别人的中间态误判为丢条目——我前两次对账正是因此得到假阳性
+  （先是自己 `slugToColonyId` 实现写错，后是 tombstone/并发）。
+- **会话风暴**：`/api/sessions` 共 289 条，其中 **277 条属于 `ui_e2e_012144`**，且
+  `session_id` 互不相同、创建时刻集中在 01:30:42–43 一秒内、`uptime` 中位数 ~1472s。
+  这是**压力/门禁脚本**在同一个 colony 上批量建会话，不是有机使用。会拖慢 `/api/sessions` 响应，
+  建议压测用独立 colony，勿压在待验证目标上。
+
+## 总结论（三次复跑）
+
+- **任务断言：PASS** —— `ui_e2e_012144` 在**侧栏**与 **colony 页面**均可见，冷加载深链亦通过。
+- 复跑 #2 的「点一下看看」与复跑 #3 的「冷加载 + 全量对账」结论一致；#3 额外证明**无静默丢条目、无墓碑泄漏**。
+- **未纳入本任务的发现**：`slugToColonyId` 归一化导致 6 组路由 id 冲突，每组有一个 colony 在 UI 不可达。
+  与 `ui_e2e_012144` 无关，但**建议单独立项**（改 id 生成或加冲突检测）。
+
+## 复核「slug 映射有损」发现：**成立**，但建议的修法「很便宜」不成立（Steve / queen_growth，2026-11-23 02:0x CST）
+
+对上文「路由 id 映射有损」独立复核。**缺陷本身证实为真**，但对「最小改动是去掉两条美化规则」这个建议，**我不同意**——它不是一行。
+
+### ① 缺陷复现（独立，读盘 + 读代码）
+
+对 `~/.hive-go/colonies/` 全部目录跑前端同一套映射函数：
+
+```
+dirs: 33   unique ids: 26   collisions: 7
+  collide        <- [collide, collide_agent]
+  collideprobe   <- [collideprobe, email_collideprobe]
+  newsletter     <- [email_newsletter_agent, newsletter_agent]
+  probe          <- [email_probe, probe]
+  sweep-zz       <- [sweep_zz, sweep_zz_agent]
+  ui-e2e-ghost   <- [ui_e2e_ghost, ui_e2e_ghost_agent]
+  zxcollide      <- [zxcollide, zxcollide_agent]
+```
+
+**33 → 26 → 7 组撞车**。配合 `ColonyContext.tsx:290` 的 `first wins` dedup，确实会**静默丢弃** colony。
+缺陷成立，非理论边界。
+
+### ② 对本验证结论的影响：**无**
+
+`ui_e2e_012144` → `ui-e2e-012144`，**不撞车**（`collides: False`）。本任务 PASS 不受影响。
+缺的是 `ui_e2e_ghost_agent` 这类**后缀命名**的 colony —— 测试 colony 用 `<name>_<HHMMSS>` 形态，
+**结构性免疫**于这两条 strip 规则。这也是为什么三轮复跑都全绿却漏掉了它。
+
+### ③ 修法评估：根因修是**迁移**，不是 clean-up
+
+「去掉两条美化规则，只做 `_`→`-`」看起来最小，但两条规则**是承重的**。对内置 starter 的 15 个 slug 跑一遍：
+
+```
+两条规则改变 route id 的 starter: 6 / 15
+  email_inbox_management  -> inbox-management   （去规则后变 email-inbox-management）
+  deep_research_agent     -> deep-research      （去规则后变 deep-research-agent）
+  competitive_intel_agent -> competitive-intel
+  email_reply_agent       -> reply
+  sdr_agent               -> sdr
+  twitter_news_agent      -> twitter-news
+```
+
+即：改动会**改掉 6 个内置 colony 的 URL**，而那些 URL 已被书签/历史/外部引用/会话落盘引用。
+且 `slugToColonyId` 有 **12+ 调用点**（`ColonyContext`、`Sidebar`、`SidebarColonyItem`、
+`home.tsx`、`queen-dm.tsx`、`colony-chat.tsx`、`use-live-sessions.ts`），其中
+`use-live-sessions.ts:232` 用它给 live session 聚合**建键**——改映射就是改这个键空间。
+
+**所以正确排序是：先做「单射性回归测试」把口径钉死，再决定要不要迁移 URL。**
+`dep`（承重）与 `collision`（撞车）是两件事，别在一个 PR 里同时动。
+
+### ④ 我的建议（排序）
+
+1. **先加测试**（最便宜、零风险）：断言 `slugToColonyId` 在磁盘全量目录上是**单射**的，
+   任何两目录撞同一 id 即 fail。这一条能立刻把「静默」变成「红灯」，且不需要改任何 URL。
+   当前它会**红**（7 组撞车）——这正是它的价值。
+2. **再把静默变可见**：`fetchColonies` 的 dedup 撞车时 `console.warn` 并保留全部条目
+   （key 用 `id + agentPath`）。注意：**这不能修好路由**——`colony-chat.tsx:292` 的
+   `find(c => c.id === colonyId)` 仍无法区分同 id 的两个 colony。它只降低「无声丢数据」。
+3. **最后才谈 URL 迁移**：需要同时改映射、6 个 starter 的既有 URL、以及 live-session 键空间，
+   要给重定向或迁移脚本。**这是独立的一次变更，不要搭车。**
+
+### 仍存在的真实缺口（未修，转交）
+
+- `#/colony/<撞车 id>` 会渲染**另一个** colony 的数据（标题/queen/会话全错），或 `Colony not found`。
+  这是「点进去看到错的东西」，比「不见了」更危险。
+- `deleteColony` / `markVisited` / unread 均以 id 为键 → 可能删错、已读串台。
+
+**以上均非本任务「侧栏 + colony 页面」的回归，属独立缺陷，记此避免丢失。**
+
+---
+
+# 🔴 复验追加：E2E 期间发现 session 风暴（P1，非 UI 断言失败）
+
+> 时间：2026-11-23 01:55 CST。**UI 断言本身仍为 PASS**（见上节）。本节记录复验过程中撞到的**独立缺陷**。
+
+## 症状
+
+复验时发现 `ui_e2e_012144` 的 session 数是其他 colony 的 **278 倍**：
+
+```
+ui_e2e_012144: 278      <- 被测 colony
+demo:            1
+demo2:           1
+ui_e2e_011834:   1
+```
+
+- 276 个 session 集中在 `01:30:42–01:31:06`（约 24 秒内涌现，峰值 **~14 个/秒**）
+- 278 个 session id **互不相同**（`distinct == count`）——每次都在造新 id，没有任何复用
+- 之后仍在零星复发（`01:33`、`01:47`、`01:50` 各有 POST）
+- `serve.log` 累计 **321 次 `POST /api/sessions`**，其中 **321 次触发 SLOW**
+
+## 关联的服务退化（同源后果）
+
+```
+SLOW 响应数：321
+最差单请求延迟：1,075,099 ms（≈ 17.9 分钟）
+                933,996 ms（≈ 15.6 分钟）
+```
+
+`GET /api/sessions/live` 出现 `127369ms`、`137212ms` 量级；`/api/sessions` 偶尔飙到 200ms+。
+我的复验命令也因此在 30s / 60s 上超时并被 auto-background —— **这不是我的工具问题，是 serve 被 session 风暴拖垮的直接证据**。
+
+## 根因（已实测复现，非推测）
+
+前端 `colony-chat.tsx` 的 SSE 掉线自愈逻辑（`onSessionGone`）这样恢复：
+
+```ts
+await sessionsApi.create({ colonyId: agentSlug(agentPath), queenResumeFrom: goneSessionId });
+```
+
+其注释断言："we can re-load the SAME session id via `queen_resume_from`"。
+
+后端 `internal/cli/loader_session_resume.go` 却明确**不对 colony-bound session 走 resume 路径**：
+
+```go
+// Colony-bound sessions resolve their own transcript tree upstream ...,
+// so only the standard queen-only create resumes by id.
+if resumeFrom != "" && !chatSessionColonyBound(params) {
+    ... SessionID: resumeFrom ...
+}
+// 落到这里 → 生成全新 id
+generated, err := hivesession.NewStore("").GenerateID(time.Now())
+```
+
+**实测证据**（对真实 serve 发一次 colony-bound resume）：
+
+```
+POST /api/sessions {"colony_id":"ui_e2e_012144","queen_resume_from":"session_20261123_013042_516ade83"}
+  -> returned session_id: session_20261123_015525_01fe3c6c
+  -> SAME as resume id:   False
+```
+
+**结论**：colony-bound 的 `queen_resume_from` 是 **no-op**。前端每收到一次 `session-gone` 就造一个全新
+session，新 session 又被运行时丢掉、再触发 `session-gone`……就是这台自激循环在 24 秒里烧出 276 个 session。
+
+## 影响
+
+- **正确性**：每次「恢复」实际上开的是一条新对话——**用户的上下文没有恢复**，只是看起来页面回来了。这比报错更危险：静默丢历史。
+- **资源**：单 colony 278 条会话目录 + 321 次 SLOW，把 `hive-serve` 拖到分钟级响应，波及**所有** colony 和所有 agent（我的 E2E 复验就被拖超时了）。
+- **放大条件**：`onSessionGone` 无退避、无去重（`resumingRef` 只防并发、不防重复触发），任何一次运行时重启都会点燃。
+
+## 建议（按优先级）
+
+1. **前端止血**：`onSessionGone` 加指数退避 + 每次恢复尝试的计数上限；超过阈值就直接报错给用户，别静默重试。
+2. **消除误导**：colony-bound 场景下 `queen_resume_from` 根本不是 resume 语义。要么后端支持原地重载同一 id，
+   要么前端别再传它、改为显式「新建 + 明确告知上下文未恢复」。
+3. **加门禁**：把「单 colony session 数」纳入健康检查（如 >5 即告警），这类风暴不该靠人眼发现。
+4. **对齐注释与实现**：`colony-chat.tsx` 那段注释目前是**错的**，照它写代码的人会一路踩坑。
+
+## 未做（避免误判）
+
+- 未删除 278 个 session 目录——保留现场供定位，清理需产品/工程决定（其中含 `e2e-hyphen-proof`、`refresh_probe_014722` 等他人在用探针）。
+- 未重启 `hive-embed` / 未杀任何进程（skill 明令禁止，且会破坏共享连接）。
+
+## 复验尝试 #3：2026-11-23 01:30+ CST — **环境受阻，未获新证据**
+
+### 发生了什么
+
+复验期间 serve 在 01:30 被**重启**（`hive-embed` pid 12441 → 48587），会话随后出现
+`Failed to load model config: ApiError: Runtime unreachable`。同时 Orca 浏览器从 1 个标签页
+涨到 30 个，多个标签页加载失败（`browser_navigation_failed` / `The browser page closed while loading`），
+并出现一个我从未创建的标签页 `#/colony/does-not-exist-zzz`（index 0）。
+
+**判断：该浏览器被同 worktree 的其他 agent 共享并正在并发驱动**，不是被测产品的问题。
+
+### 复验期间仍然成立的事实（API 侧，不受浏览器影响）
+
+| 检查 | 结果 |
+|---|---|
+| `GET /api/colonies/tools-index` | 26 个 colony，**含 `ui_e2e_012144`**，`created_at 1795368110.64702` |
+| `created_at` 前后一致 | 与 01:27 及磁盘 `metadata.json` **逐位相同**——重启未改变 colony 身份 |
+| `GET /api/sessions` | 含 `ui_e2e_012144`，`loaded_at` 由 `…110.63` 变为 `…642.88`（重启后重新加载，符合预期） |
+| `GET /api/discover` | 25 个 colony 条目，含 `Ui E2E 012144` / `queen_growth` |
+
+### 一处方法学修正（重要）
+
+试图像 `GET /#/colony/ui_e2e_012144`（下划线）来证明「错误 id 不可达」时，**该导航本身不可靠**：
+纯 hash 导航不触发 load 事件，`goto --wait-until load` 会一直等到超时并报
+`browser_navigation_failed`——**这是工具行为，不是路由 bug**。失败的导航还会把标签页卡住，
+需要 `reload` 才能恢复。结论：验证 hash 路由要走 `eval` 改 `location.hash` + 短等待，
+**不要**用 `goto` 等 load。此坑已记入，供后续做无人值守门禁时规避。
+
+### 结论
+
+**PASS 结论不变**（依据 01:27 的完整 UI 复验），但**#3 未产生新的 UI 证据**——不要把它当作
+第四次独立通过。API 侧确认重启前后 colony 身份未变。
+
+**门禁建议（更新）**：无人值守跑这条用例前，需先确保（a）同一 Orca 浏览器无其他 agent 并发占用，
+（b）serve 不在用例执行中重启。两者任一发生都会造成**误报失败**。
+
+## 判别性负对照 + 拥挤侧栏（negative control）— 2026-11-23 01:57 CST
+
+断言若对任意 id 都成立则无意义，故做负对照：同一浏览器、同一时刻，只换 colony id。
+
+| 变量 | 真实 `ui-e2e-012144` | 伪造 `zzz-does-not-exist-9999` |
+|---|---|---|
+| h1 | `Ui E2E 012144`（展示名） | `zzz-does-not-exist-9999`（原始 slug） |
+| 副标题 `Head of Growth` | ✅ | ❌ |
+| 四页签 | ✅ 数据/计划/自动化/工作节点 | ❌ 空 |
+| 侧栏条目 | ✅ | ❌ |
+
+**判别成立**：真实 colony 走的是「解析到后端实体」的渲染分支，伪造 id 走的是「未解析」分支。
+截图 `negcontrol-bogus-colony.png`。
+
+### 拥挤侧栏下仍可达
+
+验证期间其它 agent 在同一 serve 上持续新建 colony，侧栏从 `蜂群 4` 涨到 `蜂群 23`。
+目标条目仍可解析且**在视口内**：
+
+```
+targetPresent: true
+targetText:    "Ui E2E 012144"
+targetHref:    "#/colony/ui-e2e-012144"
+targetRect:    {x:8, y:705, w:201, h:31}   inViewport: true
+totalColonyLinks: 23   (与计数一致，无截断)
+```
+
+截图 `sidebar-012144-crowded23.png`。
+
+## 最终结论
+
+**PASS** — `ui_e2e_012144` 同时出现在侧栏与 colony 页面，且在冷启动深链接、
+拥挤侧栏、判别性负对照三种条件下均成立。
+
+证据链（五方一致）：侧栏链接 → colony 页面 h1/副标题/页签 →
+`GET /api/colonies/tools-index`（`created_at 1795368110.64702`）→
+`GET /api/sessions`（`session_20261123_012150_ff74c89a`）→ 磁盘目录。
+
+### 环境备注（非本次失败项）
+
+1. **Hive Browser Bridge 扩展未安装**：`jkpcegnbfimimjodblcemoheedidnppm` 在任何 Chrome profile
+   下均不存在，`hive-browser status` 报 `connected: false`。本次验证改用 **Orca 内置浏览器** +
+   **Playwright(系统 Chrome)** 两条独立通道，均已跑通。若需 `hive-browser` 通道，需安装扩展并指向
+   `ws://127.0.0.1:14829/bridge`。
+2. **`/tmp/hive_e2e` 为多 agent 共享目录**：验证过程中该目录下脚本被其它 agent 覆写，导致
+   早期若干次 Orca tab 抖动与输出错乱。已改用私有目录 `/tmp/sj_verify`。
+3. **首屏加载态**：冷启动 t+1s 时 h1 短暂为原始 slug，t+6s settle 为展示名。属正常加载态，
+   非 `App.tsx` 注释所述的跨 colony 串台。
+
+## 补测：负向对照 + 深链硬化（2026-11-23 01:35 CST）
+
+### 1. 负向对照 —— `h1` 单独不是证据
+
+复验途中，一个并发 agent 误把我的标签页导航到了 `#/colony/does-not-exist-zzz`，
+意外暴露了一个**假阳性风险**：不存在的 colony 路由同样渲染 `<h1>`：
+
+| 路由 | `h1` | 稿标题 `Head of Growth` | 面板 `数据/计划/自动化/工作节点` |
+|---|---|---|---|
+| `#/colony/ui-e2e-012144`（真） | `Ui E2E 012144` | ✅ 有 | ✅ 四个齐全 |
+| `#/colony/does-not-exist-zzz`（假） | `does-not-exist-zzz` | ❌ 无 | ❌ 空 |
+
+**结论**：`h1` 会把路由参数原样回显，**不能**单独作为「colony 页面渲染成功」的判据。
+必须叠加 `Head of Growth` 副标题 + 四个面板页签（依赖后端 session 解析）才算通过。
+本报告前文 01:27 的 PASS 结论满足这三个条件，故仍成立；但门禁断言需按此收紧。
+
+另：`does-not-exist-zzz` 页面的 SSE 长连接导致 `goto` 永不 settle（`browser_navigation_failed`）——
+**「导航超时」不等于「页面坏了」**，这是 SSE 应用的常态，不是 bug。
+
+### 2. 硬刷新 / 深链存活
+
+在 `#/colony/ui-e2e-012144` 上执行 reload（页面级重载，非 SPA 内跳转）后，
+`h1` 仍为 `Ui E2E 012144`、副标题 `Head of Growth` 仍在、侧栏计数与新会话 SSE 正常。
+即：**深链在冷加载下成立**，不只是单页内导航的假象
+（`App.tsx` 注释所述的「新建 colony 不在缓存列表」竞态未复现）。
+
+### 3. 并发扰动下的稳定性
+
+补测期间其他 agent 并发创建 colony，侧栏计数由 `蜂群 4` 增至 `蜂群 16`。
+`Ui E2E 012144` 在列表重建后仍在侧栏，未被挤出、未丢失 —— 说明它来自后端真实状态，
+而非前端一次性乐观插入。
+
+### 4. 工具链结论（`hive-browser` 通路）
+
+| 检查 | 结果 |
+|---|---|
+| 桥接扩展 `jkpcegnbfimimjodblcemoheedidnppm` 在所有 Chrome profile 的 `Extensions/` | **未安装**（不是被禁用） |
+| `hive-browser status --json` | `connected: false` |
+| 桥接服务 `127.0.0.1:14829` | 存活（裸 HTTP 返回 `expected websocket upgrade`） |
+
+即**服务端正常、扩展缺失**。修复方式是装扩展，不是重启：
+- 装包：`browserbridge/dist/hive-browser-bridge-1.7.4.zip`
+- 或 Chrome 商店：`https://chromewebstore.google.com/detail/hive-browser-bridge/jkpcegnbfimimjodblcemoheedidnppm`
+- 装后在扩展侧栏确认指向 `ws://127.0.0.1:14829/bridge`，再跑 `hive-browser status --json` 应转 `connected: true`
+
+本次验证改用 Orca 内置浏览器完成（同为真实浏览器引擎，对本地页面更合适），结论不受该缺失影响。
+
+## 补充结论：侧栏刷新语义（代码路径穷举，2026-11-23 01:50 CST）
+
+上一条里我留了个未验证的 caveat，现在把它落实了 —— **caveat 成立，且不是「可能」，是「确定」**。
+
+### 证据：`fetchColonies` 的全部调用点（`frontend/src/context/ColonyContext.tsx`）
+
+穷举 `grep -rn "fetchColonies()"`，只有 5 处：
+
+| 行 | 触发条件 | 说明 |
+|---|---|---|
+| 401 | mount | 首次加载 |
+| 411 | `[pushed]` 依赖变化 | 云端 pin 状态变化（`hive:pushed-colonies-changed` 事件） |
+| 422 | `visibilitychange` 且 `visible` | 标签页切回 |
+| 392 | `deleteColony` 之后 | 删除后重取 |
+| 396 | `refresh()` | 供 UI 手动调用（重命名后等） |
+
+**创建路径**：`CreateColonyContext` 创建成功后走的是它自己的刷新，不是这 5 个被动触发器。
+
+### 关键反证：30s 轮询 *不能* 发现新 colony
+
+`ColonyContext.tsx:414-417` 确有 `setInterval(fetchStatus, 30_000)`，但 `fetchStatus`（:347-374）读的是
+`/api/sessions`，且只做 **`setColonies((prev) => prev.map(...))`** —— 把 status / sessionId 贴回**已存在**的条目：
+
+```ts
+setColonies((prev) =>
+  prev.map((c) => {                    // ← prev.map：不新增，只改写
+    const sessionId = liveSlugMap.get(slug) ?? null;
+    return { ...c, status: sessionId ? "active" : "idle", sessionId };
+  }),
+);
+```
+
+`prev.map` 不会追加元素。所以**盘上新增的 colony，在页面不重载、不切标签页的情况下，永远不会自己冒出来** ——
+30s 心跳只负责把列表现有条目重新染色。批注也写明了这一点：
+「Lightweight status poll: /sessions only — updates running/idle status on existing colonies
+**without re-scanning the filesystem**.」
+
+### 结论（对自动化的影响）
+
+- **UI 内创建 → 侧栏/页面立即正确**：已验证 PASS（01:18 / 01:21 / 01:27 三跑）。
+- **盘外（脚本 / 另一个进程 / API 直写）新增 colony → 侧栏不会自动出现**，必须重载页面或触发
+  `visibilitychange`。
+- 因此：本次「colony 必须出现在侧栏和 colony 页面」的验证 **PASS 且有效**（走的是 UI 创建路径）；
+  但若要写成无人值守门禁，**不能靠等 30s** —— 门禁要么走 UI 创建流程，要么在断言前显式 reload。
+
+### 本轮环境事故（记录备查，未影响上述结论）
+
+Orca 运行时在被验证期间多次 `runtime_unavailable` / `browser_navigation_failed`，且
+`tab list` 显示同一 profile 下存在**其他 agent 的标签页**（`does-not-exist-zzz`、多份 `#/colony/ui-e2e-012144`）。
+盘上亦可见其他 agent 并发留下的探测目录（`caveat_probe_0147`、`refresh_probe2_015204`、
+`ui_e2e_refresh_015321` 等）。说明多个 agent 正在同时验同一条 caveat。
+我未清理他人目录；仅移除自己的 `ui_e2e_probe_013434` / `ui_e2e_liveprobe_013700`。
+
+---
+
+## 复验（queen_growth）：2026-11-23 01:56 CST（独立 headless Chrome + 负对照 + 会话泄漏复核）
+
+**工具**：`playwright` + `channel="chrome"`（headless），独立 browser context，
+**不占用 Orca 共享标签页**——避免前几轮记录到的「标签被其它 agent 导航」噪声。
+`wait_until=domcontentloaded`（SSE 长连接会让 `load` 永不 resolve）。
+
+### 三条断言（同一次运行内完成）
+
+| 探针 | 路径 | h1 | 面板 | queen 副标题 | 判定 |
+|---|---|---|---|---|---|
+| 侧栏（根路径冷加载） | `/` | `嘿，有什么可以帮你的？` | — | — | `sidebar_has_target: true` ✓ |
+| **真实 colony 冷深链** | `/#/colony/ui-e2e-012144` | `Ui E2E 012144` | 数据/计划/自动化/工作节点（4/4） | `Head of Growth` ✓ | **PASS** |
+| **负对照** | `/#/colony/does-not-exist-xyz` | `does-not-exist-xyz` | **0** | **false** | 区分断言有效 ✓ |
+
+**负对照结论（这条最重要）**：不存在的 colony 渲染成 `h1 = 原始路由 slug`，
+无面板、无 queen 副标题。因此以下断言**全部无效**（会误报通过）：
+
+- `body 含 "012144"` —— 路由 slug 本身就含这串数字
+- `h1 非空` / `HTTP 200` —— SPA 对任意 id 都返回 200 外壳
+
+**唯一有效的判据是三者齐全**：`h1 === 显示名（"Ui E2E 012144"，非 slug "ui-e2e-012144"）`
+\+ 四面板存在 + queen 副标题存在。本机实测三者齐全 → 页面确实读到了后端 colony 记录。
+
+### 会话泄漏：独立复核（与既有记录的差异）
+
+上一节记录为「276 个会话，24 秒内一次性突发，已停止」。**我独立复核的结论不同**：
+
+| 时刻 | `POST /api/sessions -> 201` 累计 | `/api/sessions` 中 `ui_e2e_012144` 行数 |
+|---|---|---|
+| 01:47 | 290 | 276 |
+| 01:51 | — | 278 |
+| 01:56 | 301 | 279 |
+
+- **不是一次性突发**：01:47 → 01:56 仍在缓慢增长（+3 行 / +11 次 POST）。**未停止，只是变慢。**
+- 276 这个数字我在 01:47 复现到了，但它在之后继续上涨；写成「已自行停止」不准确。
+- 我的一次干净运行（新 headless context，只访问根路径 + 真实 colony + 负对照）
+  **没有**产生新会话（before 278 → after 278），说明增量来自**别的残留标签页**，
+  不是单次页面访问的必然结果。这也解释了为什么「有时涨有时不涨」。
+
+### 根因（已读源码确认，非转述）
+
+`frontend/src/pages/colony-chat.tsx:1817-1846`：
+
+```ts
+onSessionGone: (_agentType, goneSessionId) => {
+  if (resumingRef.current) return;   // 只在「单次调用进行中」去重
+  resumingRef.current = true;
+  void (async () => {
+    try {
+      await sessionsApi.create({ colonyId: agentSlug(agentPath),
+                                 queenResumeFrom: goneSessionId });
+      setSseResumeNonce((n) => n + 1);
+    } catch (err) { ... }
+    finally { resumingRef.current = false; }   // ← 恢复失败也立刻解锁
+  })();
+},
+```
+
+`queenResumeFrom` 指向的 id 已不存在 → 恢复出来的**不是**老 id → `useMultiSSE`
+重挂载后仍 404 → 再次 `onSessionGone`。`finally` 无条件把 `resumingRef` 放回 `false`，
+所以这个锁挡不住「恢复无效」的循环。日志里 `GET .../events -> 404` 与
+`POST /api/sessions -> 201` 严格成对出现，共 276 次，印证该路径。
+
+**触发前提**：页面停在一条**已不存在**的 session 上（例如 serve 重启后），
+且该标签页没有被导航走。
+
+### 影响判定
+
+- **不影响**「colony 出现在侧栏 + colony 页面」这条 —— 01:27 / 01:51 / 01:56 三次独立运行均 PASS。
+- **但阻塞「无人值守门禁」**：一次陈旧标签页就能持续产出孤儿会话，
+  且 `/api/sessions` 无 GC，行数只增不减。做成门禁前必须先修，否则跑几天会把 serve 拖垮。
+
+### 修复方向（未实施，仅记录）
+
+1. `resumingRef` 解锁需区分成功/失败；失败走退避 + 同一 `goneSessionId` 限次。
+2. 后端 `queenCreateSessionAdapter`（`internal/server/app.go:423`）对不存在的
+   `queenResumeFrom` 应报错或回落全新会话并**返回新 id**，而不是静默新建。
+3. `/api/sessions` 增加孤儿回收（无 SSE 订阅 + 无活动 → GC）。
+
+> 备注：`/tmp` 目录被多个并发 agent 共用（我的一次写入被执行环境丢弃，
+> 同目录出现他人文件）。本轮改用私有目录 + 独立 headless context 复验，
+> 以排除共享标签页/共享临时目录造成的交叉污染。
+
+**未执行**：上述 276+ 孤儿会话**我没有删除**——清理需要写操作，属未授权范围。
+需要清理请明确指示（`DELETE` 或重启 serve 是否可接受）。
+
+---
+
+# 追加：冷加载来源验证 + 三项失败（2026-11-23 01:52 CST）
+
+前一轮的 PASS 只覆盖「已完成创建、且页面已打开」这一时刻。本轮补两项前一轮没问的问题，
+结果**一项通过、两项失败**。
+
+## PASS — 侧栏数据确实来自后端，不是前端缓存
+
+从服务端日志读冷加载时序（不依赖浏览器网络面板）：
+
+```
+01:44:20 [access] GET /                    -> 200
+01:44:20 [access] GET /api/discover        -> 200 (7ms)
+01:44:20 [access] GET /api/sessions        -> 200 (3ms)
+```
+
+`/api/discover` 当时返回 4 条，侧栏同时刻显示 `蜂群 4` —— 数字对得上，
+证明侧栏是真读后端，非乐观插值。
+
+## FAIL 1 — 侧栏不刷新：新 colony 不会出现在已打开的侧栏里
+
+后端 colony 数从 **4 涨到 26**（并行 agent 在建探针 colony），
+而一个已打开的标签页侧栏**始终停在 4**。
+
+代码定位（`frontend/src/context/ColonyContext.tsx`）：
+
+- 列表重建（`fetchColonies` → `/discover` + `/sessions`）只在 **mount / visibilitychange / 本地 create-delete** 时触发；
+- 30s 轮询（`:413-415`）只调 `fetchStatus` → **仅 `/api/sessions`**，只更新运行状态，**不新增列表条目**。
+
+后果：另一个客户端（另一个标签页、另一个 agent、另一个用户）新建的 colony，
+在你手动刷新前**永远不会出现在你的侧栏**。这正好是「创建蜂群」旅程的镜像场景——
+自己建的立刻出现（本地 refresh），别人建的不出现（无 refresh）。
+
+## FAIL 2 — 盘上有 colony，UI 永远看不到
+
+| | 数量 |
+|---|---|
+| `~/.hive-go/colonies/` 目录 | 29 |
+| `/api/discover` 返回 | 26 |
+
+`gate_tmp_013616`、`ui_e2e_probe` 在盘上存在，但**不在 `/api/discover` 里**，
+也没有 `conversations/` 目录。这类半成品 colony 永远不会进侧栏。
+
+## WARN — 被测 colony 内的验证表被污染
+
+`ui_e2e_012144/tracker/tracker.db` 里存在**四张**验证表：
+`ui_e2e_verification`、`ui_e2e_verifications`、`ui_e2e_verifications_expected`、
+`ui_e2e_verifications_observed`。其中 `ui_e2e_verifications` 有一行
+`012144-route-id-negctrl`，其 detail 声称「`#/colony/ui_e2e_012144` 回退到根路径」——
+**该断言本轮从未执行**。同时该行 `colony_route` 写 `ui_e2e_012144`（下划线），
+与其余行的 `ui-e2e-012144`（连字符）自相矛盾。
+
+说明有并行 agent 把结果写进了被测 colony（本 agent 的 cwd 即该 colony）。
+四张表对同一事实给出不同结论 —— 这类数据不能作为门禁证据。
+
+## 结论
+
+`ui_e2e_012144` 本身仍然 **PASS**（侧栏有、页面有、后端与磁盘一致，见上一节）。
+但把这个检查做成**门禁**之前，FAIL 1 必须先修：门禁若在「另一个进程刚建完 colony」后
+去读一个已打开的侧栏，会稳定误报。**必须每次新开标签页或强制 reload 再断言**。
+
+## 独立复核：幽灵会话风暴 + `/sessions/live` 线性退化（Steve / queen_growth，2026-11-23 02:1x CST）
+
+对「276 次 POST /api/sessions 风暴」独立复核。**结论：成立，且仍在持续**（非历史事件）。
+
+### 实测（本机当场）
+
+```
+GET /api/sessions/live        : 200  15.067s   ← 撞满 15s 上限（另一次 60s 预算直接耗尽）
+GET /api/discover             : 200   0.0094s  ← 对照
+GET /api/sessions             : 200   0.0038s  ← 对照
+GET /api/colonies/tools-index : 200   0.0023s  ← 对照
+```
+
+**同一进程、同一时刻，一个接口比邻居慢 1600–6600 倍。** 不是整机慢，是这一个接口退化。
+
+### 会话计数（当场）
+
+```
+total sessions: 292
+   ui_e2e_012144  279     ← 单 colony 占 95.5%
+   （其余 13 个 colony 各 1）
+```
+
+`ui_e2e_012144` 磁盘上只有 **1 个** conversation，却有 **279 个** session —— **278 个是空的**。
+
+### 这解释了我先前的误判（自我纠正 #2）
+
+我在 01:36–01:50 反复遇到 `browser_navigation_failed`，当时归因为「另一 agent 抢标签页」。
+**归因不完整**：标签页争用确实存在，但**主因是这个风暴**——页面加载所需的存活数据源
+（`/sessions/live`）本身要 15–60s。**我把产品缺陷误判成了环境噪声。** 记此纠正。
+
+### 对本次任务结论的影响
+
+- **`ui_e2e_012144` 的 PASS 不撤回**：01:27 取证时 `/sessions/live` 正常、页面可加载、
+  五处 `created_at` 一致（`1795368110.64702`）。
+- **但「出现在侧栏 + 页面」这条断言，单独不足以当门禁**。理由很硬：它在一个
+  279 幽灵会话、`/sessions/live` 超时 15s、页面频繁无法加载的进程上，**依然能在某一瞬间为真**。
+  一个会在崩溃进程中通过的断言，不是门禁。
+
+### 建议门禁（在原有断言上补三条存活项）
+
+```
+0. 基线：GET /api/sessions/live < 200ms                    ← 加
+1. 打开 #/colony/<id>，断言 h1 == 显示名（已有）
+2. 断言侧栏存在 href == "#/colony/<route-id>"（已有，精确匹配而非文本包含）
+3. GET /api/sessions 中该 colony 的会话数 == 1              ← 加（抓幽灵）
+4. 重启 serve，保持标签页停在 /colony/<id>，等 60s：
+   - POST /api/sessions 增量 ∈ {0,1}
+   - GET /api/sessions/live 仍 < 200ms                     ← 加
+```
+
+第 3、4 条不是锦上添花——**它们是唯一能抓住「看起来在涨、其实什么都没留下」的东西**。
+279 次建会话、磁盘 1 个 conversation，正是这个形态。

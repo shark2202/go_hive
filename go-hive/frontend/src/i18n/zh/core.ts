@@ -19,6 +19,7 @@ export const coreZh: Record<string, string> = {
   "Create colony": "创建蜂群",
   "No colonies yet": "暂无蜂群",
   "Loading queens...": "正在加载蜂后…",
+  "Loading colonies...": "正在加载蜂群…",
   "Expand sidebar": "展开侧边栏",
   "Collapse sidebar": "收起侧边栏",
   "Language": "语言",
