@@ -128,3 +128,5 @@ go vet ./...                                        # 空
 make parity          # TOTAL 5449 5449 0 → OK
 make parity-targets  # parity refs checked: 5871  missing: 0 → OK
 ```
+
+> 目标模型与「目标驱动」全貌（可复用资料）：`docs/goal-design.html`（生成器 `scripts/gen_goal_doc.py`，数字现场重算）。

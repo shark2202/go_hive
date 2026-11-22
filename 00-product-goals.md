@@ -1,11 +1,11 @@
-> 参考基线动态（2026-11-22）：origin/main 已推进到 1.0.15「Notes in Time」（6703b434，35 文件 delta）；本次 merge 后新增 5 项 G1 工作（memory notes 同族 ~23h）。冻结契约的 reference 锚点（python@1b9c458a）是否整体切换待用户拍板。
+> 参考基线动态（2026-11-22 22:15）：上游 1.0.15「Notes in Time」已并入并完成契约漂移收口；**工具契约参考点停留 1.0.14 capture，经 diff 证实 1.0.14→1.0.15 窗口工具面无变化**（仅 memory_tools/terminal_tools，见 `contracts/tool-capture-meta.json`）；memory notes 五项 G1 工作已全部收口；D1/D2/D3 已拍板落地（go1.26.11 / exports=A / MCP 标准别名）。
 
 # 00 · 产品目标与验收标准
 
 > 上游参考：`aden-hive` / `aden-tools`（工具契约 reference commit 见 `contracts/*.json` 的 `reference` 字段）
 > Go 模块：`github.com/aden-hive/hive-go`
 > 本文定义「什么叫移植完成」，是所有实现与评审的共同口径。
-> 最近修订：2026-11-22 00:55（五轴口径 + 当前状态快照）
+> 最近修订：2026-11-22 22:15（五轴口径 + 当前状态快照；含 1.0.27-go.1 预览发布、goal-design/consistency-audit 落盘）
 
 ## 1. 一句话目标
 
@@ -85,23 +85,26 @@
 
 Go 代码与配套文档在 `go_hive/` 下：`go-hive/`（模块）、`contracts/`（冻结契约）、`scripts/`（门禁与生成器）、`docs/`（对齐证据与登记册）、`architecture/`（包结构 model + 生成物）、`dist/slots/`（每 2 小时 slot 版）。上游分析文档 `01`–`10` 描述 Python 版本，仅作参考。
 
-## 8. 验收清单（快照 2026-11-22 00:55）
+## 8. 验收清单（快照 2026-11-22 22:15）
 
 | 门禁 | 命令 | 通过标准 | 当前状态 |
 | --- | --- | --- | --- |
 | 格式/静态 | `make fmt-check && make vet` | 无输出 | 通过 |
 | 单元测试 | `make test` | 全部包 `ok` | 通过（Makefile 已固化 `TEST_FLAGS ?= -count=1`） |
 | 交叉编译 | `make cross` | 6 平台 | 通过 |
-| parity 注解 | `make parity` | 退出码 0 | 通过：**5,816/5,816**（wave-71；refs 6,391 全解析） |
+| parity 注解 | `make parity` | 退出码 0 | 通过：**5,816/5,816**（wave-73；refs 6,391 全解析） |
 | parity 引用 | `make parity-targets` | 退出码 0 | 通过：全解析，0 missing |
 | 接线 | `make wiring-check` | 退出码 0 | 通过 |
 | 升级兼容 | `make compat-check` | 12 项全过 | 通过（C1–C12；C12 = 273 条登记 0 未登记：ported 220 / partial 27 / out_of_scope 9 / unported 17（triage + coercion + sentinel/antigravity/GA 并集）；config 137 键 / 22 section） |
-| 架构 | `make arch-check` | 7 生成物一致 | 通过（82 包 / 223 边 / 8 层 / 1 条 info warning；soul→queen 反向依赖已消除） |
+| 架构 | `make arch-check` | 7 生成物一致 | 通过（87 包 / 233 边 / 8 层 / 1 条 info warning；soul→queen 反向依赖已消除） |
 | 行为冻结 | `refactor_freeze.sh compare wave15-base` | OK（allowlist 逐条理由） | 通过（结构重构 lane 必跑） |
+| govulncheck | `govulncheck ./...` | 0 OSV | 通过（go1.26.11，连续 wave-66/67/69/70/72/73 复验） |
 | QC | `scripts/qc_check.py` | 9/9 | 通过 |
-| slot | 每 2 小时 `dist/slots/<slot>` | artifact+manifest+compat | 22:00/00:00 已产；24h 窗口 |
+| slot | 每 2 小时 `dist/slots/<slot>` | artifact+manifest+compat | 已产至 **20261122-22（1.0.27-go.1）**；试用包 `dist/trial/20261122-22/`（SHA 12/12 OK） |
+| 公开预览 | GitHub `shark2202/go_hive` | pre-release ≥7 资产 | **v1.0.27-go.1 已发**（六平台+SHA256SUMS，7/7 uploaded） |
 
 > 逐项核查（全量）：`docs/consistency-audit.md`（18 原语 / 273 模块全列 / 104 集成分级 / 契约表面 8 层 / 50 机制；JSON + 生成器可重算）。
+> 目标模型参考：`docs/goal-design.html`（Goal/成功标准/约束/驱动回路；生成器 `scripts/gen_goal_doc.py`，`--check` 防漂移）。
 
 ## 9. 与 Python 上游的关系
 

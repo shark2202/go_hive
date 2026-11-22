@@ -55,8 +55,8 @@ ANCHORS = [
     *[
         {
             "module": module,
-            "file": "google_workspace.go",
-            "line": 223,
+            "file": "gworkspace/google_workspace.go",
+            "line": 215,
             "expect": "Bearer",
             "claim": "Google 共享客户端 Bearer 头",
         }
@@ -64,7 +64,7 @@ ANCHORS = [
     ],
     {
         "module": "freshdesk",
-        "file": "freshdesk.go",
+        "file": "crm/freshdesk.go",
         "line": 285,
         "expect": "basicAuth",
         "claim": "Basic base64(api_key:X)",

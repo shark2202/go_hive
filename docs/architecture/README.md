@@ -9,7 +9,7 @@
 
 > 正文里的路径相对 `go_hive/`；命令行示例假定在仓库根执行，所以带 `go_hive/` 前缀。
 >
-> 最近同步：2026-11-22 —— **73 包 / 8 层 / 196 条内部依赖 / 220 条 HTTP 路由 / 77 种事件 / 34 条契约**；`make arch-check` 已并入 `make ci`，文档漂移会阻断 CI。
+> 最近同步：2026-11-22 —— **87 包 / 8 层 / 233 条内部依赖 / 225 条 HTTP 路由 / 77 种事件 / 34 条契约**（2026-11-22 深夜复核：sentinel/antigravity/GA/coercion 等 lane 并入后重生成）；`make arch-check` 已并入 `make ci`，文档漂移会阻断 CI。
 
 ```text
 architecture/model.yaml ──┐
@@ -21,7 +21,7 @@ go list -json ./...  ─────┘                       └─→ 5 张图
 
 | 文件 | 谁读 | 说明 |
 | --- | --- | --- |
-| `architecture/model.yaml` | 维护者 | **唯一手写源**：8 层、67 包职责、12 条业务能力、业务主链路、接口契约与磁盘格式 |
+| `architecture/model.yaml` | 维护者 | **唯一手写源**：8 层、87 包职责、12 条业务能力、业务主链路、接口契约与磁盘格式 |
 | `architecture/graph.json` | AI agent / 工具 | 业务 + 技术 + 契约的机器可读图（节点、边、能力、contracts、warnings） |
 | `docs/architecture/capability-map.mmd` | 人 | 业务能力关系图，标注人工审批点 |
 | `docs/architecture/capability-tech-crosswalk.md` | 人 + agent | 业务能力 ↔ 模块 ↔ 入口 ↔ 落盘证据 ↔ 成熟度 |
@@ -175,7 +175,7 @@ flowchart LR
 # 三、技术视图：分层依赖
 
 ```mermaid
-%% 完整 67 包版本见 docs/architecture/dependency-map.mmd（本图只画层间主要流向）
+%% 完整 87 包版本见 docs/architecture/dependency-map.mmd（本图只画层间主要流向）
 flowchart TB
   subgraph entry["入口层 entry"]
     cmd_hive["cmd/hive"]
@@ -243,7 +243,7 @@ flowchart TB
 - **层是严格有序的**：`entry(0) / harness(0) → assembly(1) → transport(2) → orchestration(3) → runtime(4) → capability(5) → foundation(6)`。`harness` 是测试与评测装置（e2e 假上游、契约对照工具），不随发布物交付；与 `entry` 同为 depth 0，只被测试和内部评测入口引用。生成器会检查每条 import 边，从深层指向浅层就写进 `warnings`。
 - **同层依赖是允许的**（例如 `colony → tracker`）：它们是一组协作的编排组件，不是分层违规。
 - **入度高的包是改动放大器**：`internal/hivehome`（15 个包依赖）、`internal/eventbus`、`internal/schemas`、`internal/agentloop` 改一次要考虑的面很大。具体数字在 `MODULES.md`。
-- **当前分层检查结果**：196 条 import 边，**0 条反向依赖**；**1 个包没有内部导入方**（`internal/orchestrator`，未接线）。`internal/quality`、`internal/envcontract` 与 e2e 命令按 `expected_orphan` 约定不计入。
+- **当前分层检查结果**：223 条 import 边，**0 条反向依赖**；**1 个包没有内部导入方**（`internal/orchestrator`，未接线）。`internal/quality`、`internal/envcontract` 与 e2e 命令按 `expected_orphan` 约定不计入。
 
 层定义、每包职责、依赖/被依赖计数与入口标记，全部在 [`MODULES.md`](./MODULES.md)。
 
@@ -314,7 +314,7 @@ flowchart TB
 
 ## 4.5 生成物与读法
 
-`contracts.md` 包含五块：按 kind 的汇总表、每条契约的明细、全量 HTTP 路由表（当前 220 条 method+path）、EventType 表（当前 77 个）、人工维护的磁盘格式表。`graph.json` 的 `contracts` 数组是同一份数据的机器可读版本，`stats` 里同时给出 `contracts` / `http_routes` / `event_types` 计数。
+`contracts.md` 包含五块：按 kind 的汇总表、每条契约的明细、全量 HTTP 路由表（当前 225 条 method+path）、EventType 表（当前 77 个）、人工维护的磁盘格式表。`graph.json` 的 `contracts` 数组是同一份数据的机器可读版本，`stats` 里同时给出 `contracts` / `http_routes` / `event_types` 计数。
 
 改契约的流程：改 `model.yaml` 的 `contracts:` 或 `disk_formats:` → 在 `go_hive/` 下运行 `python3 scripts/gen_arch.py` → 提交 `model.yaml`、`graph.json` 与 `docs/architecture/contracts.md`。不要手改生成物。
 

@@ -1,5 +1,5 @@
 // go_hive 分层依赖图（生成物，勿手改）
-// 源：architecture/model.yaml + go list -json ./... · commit 389ba7a352a9
+// 源：architecture/model.yaml + go list -json ./... · commit a3c53b7eb947
 // 箭头 A -> B 读作 A imports B。
 digraph go_hive {
   graph [rankdir=LR, fontname="Helvetica", nodesep=0.28, ranksep=0.9, splines=true];
@@ -89,9 +89,14 @@ digraph go_hive {
     "internal/tools/integrations" [fillcolor="white", color="#7e22ce"];
     "internal/tools/integrations/ai" [fillcolor="white", color="#7e22ce"];
     "internal/tools/integrations/cloudflare" [fillcolor="white", color="#7e22ce"];
+    "internal/tools/integrations/collab" [fillcolor="white", color="#7e22ce"];
+    "internal/tools/integrations/commerce" [fillcolor="white", color="#7e22ce"];
+    "internal/tools/integrations/crm" [fillcolor="white", color="#7e22ce"];
+    "internal/tools/integrations/data" [fillcolor="white", color="#7e22ce"];
     "internal/tools/integrations/devops" [fillcolor="white", color="#7e22ce"];
     "internal/tools/integrations/enrichment" [fillcolor="white", color="#7e22ce"];
     "internal/tools/integrations/excel" [fillcolor="white", color="#7e22ce"];
+    "internal/tools/integrations/gworkspace" [fillcolor="white", color="#7e22ce"];
     "internal/tools/integrations/infra" [fillcolor="white", color="#7e22ce"];
     "internal/tools/integrations/pdf" [fillcolor="white", color="#7e22ce"];
     "internal/tools/integrations/schedchat" [fillcolor="white", color="#7e22ce"];
@@ -322,9 +327,14 @@ digraph go_hive {
   "internal/tools/integrations" -> "internal/tools/integrationkit";
   "internal/tools/integrations" -> "internal/tools/integrations/ai";
   "internal/tools/integrations" -> "internal/tools/integrations/cloudflare";
+  "internal/tools/integrations" -> "internal/tools/integrations/collab";
+  "internal/tools/integrations" -> "internal/tools/integrations/commerce";
+  "internal/tools/integrations" -> "internal/tools/integrations/crm";
+  "internal/tools/integrations" -> "internal/tools/integrations/data";
   "internal/tools/integrations" -> "internal/tools/integrations/devops";
   "internal/tools/integrations" -> "internal/tools/integrations/enrichment";
   "internal/tools/integrations" -> "internal/tools/integrations/excel";
+  "internal/tools/integrations" -> "internal/tools/integrations/gworkspace";
   "internal/tools/integrations" -> "internal/tools/integrations/infra";
   "internal/tools/integrations" -> "internal/tools/integrations/pdf";
   "internal/tools/integrations" -> "internal/tools/integrations/schedchat";
@@ -332,9 +342,14 @@ digraph go_hive {
   "internal/tools/integrations" -> "internal/tools/integrations/webintel";
   "internal/tools/integrations/ai" -> "internal/tools/integrationkit";
   "internal/tools/integrations/cloudflare" -> "internal/tools/integrationkit";
+  "internal/tools/integrations/collab" -> "internal/tools/integrationkit";
+  "internal/tools/integrations/commerce" -> "internal/tools/integrationkit";
+  "internal/tools/integrations/crm" -> "internal/tools/integrationkit";
+  "internal/tools/integrations/data" -> "internal/tools/integrationkit";
   "internal/tools/integrations/devops" -> "internal/tools/integrationkit";
   "internal/tools/integrations/enrichment" -> "internal/tools/integrationkit";
   "internal/tools/integrations/excel" -> "internal/tools/integrationkit";
+  "internal/tools/integrations/gworkspace" -> "internal/tools/integrationkit";
   "internal/tools/integrations/infra" -> "internal/tools/integrationkit";
   "internal/tools/integrations/pdf" -> "internal/tools/integrationkit";
   "internal/tools/integrations/schedchat" -> "internal/tools/integrationkit";

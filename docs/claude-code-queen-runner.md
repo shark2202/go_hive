@@ -5,6 +5,7 @@
 
 一位 Claude Code queen 就是 Claude Code 本身：其他 queen 用 `list_queens` / `message_queen` 找到她并写信；每封信触发一次 `claude -p` 回合，在她与写信人之间持久化的会话里（首轮 `--session-id`，之后 `--resume`），回合结束的最终文本按 `reply_to` 回写到写信人的会话。
 
+HTTP 回调端点契约：`docs/queen-mail-api.md`。
 Go 实现分布：
 
 | 层 | 文件 |

@@ -1,6 +1,6 @@
 # 业务能力 ↔ 技术模块对照（生成物，勿手改）
 
-> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` 生成。commit: `389ba7a352a9`
+> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` 生成。commit: `a3c53b7eb947`
 > 这是业务视图与技术视图的接缝：左边是人关心的结果，右边是代码里真实存在的包、入口与落盘文件。
 
 ## 成熟度与审批口径
@@ -79,7 +79,7 @@
 
 ## 未被业务能力直接引用的模块
 
-共 39 个。基础层与入口层通常不需要挂到业务能力上；如果能力层出现这里的包，说明画图时漏了映射，应该补 `model.yaml` 的 `capabilities[].modules`。
+共 44 个。基础层与入口层通常不需要挂到业务能力上；如果能力层出现这里的包，说明画图时漏了映射，应该补 `model.yaml` 的 `capabilities[].modules`。
 
 | 模块 | 层 | 说明 |
 | --- | --- | --- |
@@ -87,9 +87,14 @@
 | `internal/pipeline` | capability | 能力层未映射，建议补充 modules |
 | `internal/tools/integrations/ai` | capability | 能力层未映射，建议补充 modules |
 | `internal/tools/integrations/cloudflare` | capability | 能力层未映射，建议补充 modules |
+| `internal/tools/integrations/collab` | capability | 能力层未映射，建议补充 modules |
+| `internal/tools/integrations/commerce` | capability | 能力层未映射，建议补充 modules |
+| `internal/tools/integrations/crm` | capability | 能力层未映射，建议补充 modules |
+| `internal/tools/integrations/data` | capability | 能力层未映射，建议补充 modules |
 | `internal/tools/integrations/devops` | capability | 能力层未映射，建议补充 modules |
 | `internal/tools/integrations/enrichment` | capability | 能力层未映射，建议补充 modules |
 | `internal/tools/integrations/excel` | capability | 能力层未映射，建议补充 modules |
+| `internal/tools/integrations/gworkspace` | capability | 能力层未映射，建议补充 modules |
 | `internal/tools/integrations/infra` | capability | 能力层未映射，建议补充 modules |
 | `internal/tools/integrations/pdf` | capability | 能力层未映射，建议补充 modules |
 | `internal/tools/integrations/schedchat` | capability | 能力层未映射，建议补充 modules |

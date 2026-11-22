@@ -488,3 +488,12 @@ func batch7Lane9EmailReply(ctx context.Context, rt *Runtime, input map[string]an
 		"subject":  subject,
 	}, nil
 }
+
+// gmailAuthError is the Gmail auth failure email.go returns for its gmail
+// transport.
+func gmailAuthError() map[string]any {
+	return map[string]any{
+		"error": "Gmail credentials not configured",
+		"help":  "Connect Gmail via hive.adenhq.com",
+	}
+}

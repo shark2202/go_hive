@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "module": "github.com/aden-hive/hive-go",
-  "generated_at_commit": "389ba7a352a9",
+  "generated_at_commit": "a3c53b7eb947",
   "generated_from": "architecture/model.yaml + go list -json ./... + internal/server mux.HandleFunc + internal/eventbus event_type.go",
   "stats": {
-    "packages": 82,
-    "package_edges": 223,
+    "packages": 87,
+    "package_edges": 233,
     "capabilities": 12,
     "capability_edges": 85,
     "layers": 8,
@@ -132,9 +132,14 @@
         "internal/tools/integrations",
         "internal/tools/integrations/ai",
         "internal/tools/integrations/cloudflare",
+        "internal/tools/integrations/collab",
+        "internal/tools/integrations/commerce",
+        "internal/tools/integrations/crm",
+        "internal/tools/integrations/data",
         "internal/tools/integrations/devops",
         "internal/tools/integrations/enrichment",
         "internal/tools/integrations/excel",
+        "internal/tools/integrations/gworkspace",
         "internal/tools/integrations/infra",
         "internal/tools/integrations/pdf",
         "internal/tools/integrations/schedchat",
@@ -142,7 +147,7 @@
         "internal/tools/integrations/webintel",
         "internal/visionfallback"
       ],
-      "package_count": 29
+      "package_count": 34
     },
     {
       "id": "foundation",
@@ -817,7 +822,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 1,
-      "dependents": 11
+      "dependents": 16
     },
     {
       "id": "pkg:internal/tools/integrations",
@@ -828,7 +833,7 @@
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 14,
+      "direct_dependencies": 19,
       "dependents": 1
     },
     {
@@ -849,6 +854,54 @@
       "package": "internal/tools/integrations/cloudflare",
       "layer": "capability",
       "responsibility": "Cloudflare 领域子包（第六个领域子包）：zones / DNS / analytics / security / cache / Workers·R2·Pages / 账户管理的目录、54 个 action 实现与共享 helper；只 import integrationkit。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 1,
+      "dependents": 1
+    },
+    {
+      "id": "pkg:internal/tools/integrations/collab",
+      "kind": "technical",
+      "package": "internal/tools/integrations/collab",
+      "layer": "capability",
+      "responsibility": "协作/知识库领域子包（P3 第十三个领域子包）：Jira / Confluence / Asana / Notion / Linear 的目录、60 个 action 实现、账号别名 helper 与 Linear GraphQL 传输；只 import integrationkit。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 1,
+      "dependents": 1
+    },
+    {
+      "id": "pkg:internal/tools/integrations/commerce",
+      "kind": "technical",
+      "package": "internal/tools/integrations/commerce",
+      "layer": "capability",
+      "responsibility": "电商/财务领域子包（P3 第十五个领域子包）：Shopify / QuickBooks / Plaid / Razorpay 的目录、29 个 action 实现与共享 helper；只 import integrationkit。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 1,
+      "dependents": 1
+    },
+    {
+      "id": "pkg:internal/tools/integrations/crm",
+      "kind": "technical",
+      "package": "internal/tools/integrations/crm",
+      "layer": "capability",
+      "responsibility": "CRM/客户支持领域子包（P3 第十四个领域子包）：Salesforce / Pipedrive / Zoho CRM / Attio、Intercom / Zendesk / Freshdesk / Greenhouse 与 HubSpot / Obsidian 的目录、109 个 action 实现、OAuth2 刷新与账号 helper；只 import integrationkit。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 1,
+      "dependents": 1
+    },
+    {
+      "id": "pkg:internal/tools/integrations/data",
+      "kind": "technical",
+      "package": "internal/tools/integrations/data",
+      "layer": "capability",
+      "responsibility": "数据库/数据平台领域子包（P3 第十二个领域子包）：Postgres / Redis / MongoDB / Supabase（含 pgwire/RESP 线协议）与 Snowflake / BigQuery / Databricks / Redshift / Azure SQL / Power BI / SAP 的目录、65 个 action 实现与共享 helper；只 import integrationkit。",
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
@@ -885,6 +938,18 @@
       "package": "internal/tools/integrations/excel",
       "layer": "capability",
       "responsibility": "Excel 领域子包（结构试点）：工具目录、OOXML 读写与 6 个 action 实现；只 import integrationkit。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 1,
+      "dependents": 1
+    },
+    {
+      "id": "pkg:internal/tools/integrations/gworkspace",
+      "kind": "technical",
+      "package": "internal/tools/integrations/gworkspace",
+      "layer": "capability",
+      "responsibility": "Google Workspace 领域子包（P3 第十一个领域子包）：Google Sheets / Docs / Gmail / Calendar 的目录、39 个 action 实现、账号别名与 OAuth2 刷新 helper；只 import integrationkit。",
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
@@ -2612,6 +2677,26 @@
     },
     {
       "from": "pkg:internal/tools/integrations",
+      "to": "pkg:internal/tools/integrations/collab",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tools/integrations",
+      "to": "pkg:internal/tools/integrations/commerce",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tools/integrations",
+      "to": "pkg:internal/tools/integrations/crm",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tools/integrations",
+      "to": "pkg:internal/tools/integrations/data",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tools/integrations",
       "to": "pkg:internal/tools/integrations/devops",
       "kind": "depends"
     },
@@ -2623,6 +2708,11 @@
     {
       "from": "pkg:internal/tools/integrations",
       "to": "pkg:internal/tools/integrations/excel",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tools/integrations",
+      "to": "pkg:internal/tools/integrations/gworkspace",
       "kind": "depends"
     },
     {
@@ -2661,6 +2751,26 @@
       "kind": "depends"
     },
     {
+      "from": "pkg:internal/tools/integrations/collab",
+      "to": "pkg:internal/tools/integrationkit",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tools/integrations/commerce",
+      "to": "pkg:internal/tools/integrationkit",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tools/integrations/crm",
+      "to": "pkg:internal/tools/integrationkit",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tools/integrations/data",
+      "to": "pkg:internal/tools/integrationkit",
+      "kind": "depends"
+    },
+    {
       "from": "pkg:internal/tools/integrations/devops",
       "to": "pkg:internal/tools/integrationkit",
       "kind": "depends"
@@ -2672,6 +2782,11 @@
     },
     {
       "from": "pkg:internal/tools/integrations/excel",
+      "to": "pkg:internal/tools/integrationkit",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tools/integrations/gworkspace",
       "to": "pkg:internal/tools/integrationkit",
       "kind": "depends"
     },

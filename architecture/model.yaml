@@ -221,6 +221,26 @@ packages:
     layer: capability
     responsibility: "PDF 读取领域子包（第十个领域子包）：pdf_read 工具目录、单 action 实现与从零实现的解析栈（xref/流解码/词法/文本抽取/字体编码）；只 import integrationkit。"
     stability: evolving
+  - package: internal/tools/integrations/gworkspace
+    layer: capability
+    responsibility: "Google Workspace 领域子包（P3 第十一个领域子包）：Google Sheets / Docs / Gmail / Calendar 的目录、39 个 action 实现、账号别名与 OAuth2 刷新 helper；只 import integrationkit。"
+    stability: evolving
+  - package: internal/tools/integrations/data
+    layer: capability
+    responsibility: "数据库/数据平台领域子包（P3 第十二个领域子包）：Postgres / Redis / MongoDB / Supabase（含 pgwire/RESP 线协议）与 Snowflake / BigQuery / Databricks / Redshift / Azure SQL / Power BI / SAP 的目录、65 个 action 实现与共享 helper；只 import integrationkit。"
+    stability: evolving
+  - package: internal/tools/integrations/collab
+    layer: capability
+    responsibility: "协作/知识库领域子包（P3 第十三个领域子包）：Jira / Confluence / Asana / Notion / Linear 的目录、60 个 action 实现、账号别名 helper 与 Linear GraphQL 传输；只 import integrationkit。"
+    stability: evolving
+  - package: internal/tools/integrations/crm
+    layer: capability
+    responsibility: "CRM/客户支持领域子包（P3 第十四个领域子包）：Salesforce / Pipedrive / Zoho CRM / Attio、Intercom / Zendesk / Freshdesk / Greenhouse 与 HubSpot / Obsidian 的目录、109 个 action 实现、OAuth2 刷新与账号 helper；只 import integrationkit。"
+    stability: evolving
+  - package: internal/tools/integrations/commerce
+    layer: capability
+    responsibility: "电商/财务领域子包（P3 第十五个领域子包）：Shopify / QuickBooks / Plaid / Razorpay 的目录、29 个 action 实现与共享 helper；只 import integrationkit。"
+    stability: evolving
   - package: internal/llm
     layer: capability
     responsibility: "LLM 传输：provider 选择、Anthropic/OpenAI 协议、流式事件、模型目录与出站限速门。"

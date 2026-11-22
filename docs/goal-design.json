@@ -1,0 +1,264 @@
+{
+  "schema": "goal-design/v1",
+  "generated_at": "2026-11-22T22:09:00",
+  "goal_status_members": [
+    "DRAFT",
+    "READY",
+    "ACTIVE",
+    "COMPLETED",
+    "FAILED",
+    "SUSPENDED"
+  ],
+  "criterion_metrics": [
+    "output_contains",
+    "output_equals",
+    "llm_judge",
+    "custom"
+  ],
+  "constraint_kinds": [
+    "hard",
+    "soft"
+  ],
+  "constraint_categories": [
+    "general",
+    "time",
+    "cost",
+    "safety",
+    "scope",
+    "quality"
+  ],
+  "goal_fields": [
+    {
+      "name": "id",
+      "type": "str",
+      "default": null
+    },
+    {
+      "name": "name",
+      "type": "str",
+      "default": null
+    },
+    {
+      "name": "description",
+      "type": "str",
+      "default": null
+    },
+    {
+      "name": "status",
+      "type": "GoalStatus",
+      "default": "GoalStatus.DRAFT"
+    },
+    {
+      "name": "success_criteria",
+      "type": "list[SuccessCriterion]",
+      "default": "Field(default_factory=list)"
+    },
+    {
+      "name": "constraints",
+      "type": "list[Constraint]",
+      "default": "Field(default_factory=list)"
+    },
+    {
+      "name": "context",
+      "type": "dict[str, Any]",
+      "default": "Field(default_factory=dict, description='Additional context: domain knowledge, user preferences, etc.')"
+    },
+    {
+      "name": "required_capabilities",
+      "type": "list[str]",
+      "default": "Field(default_factory=list, description=\"What the colony needs: 'llm', 'web_search', 'code_execution', etc.\")"
+    },
+    {
+      "name": "version",
+      "type": "str",
+      "default": "'1.0.0'"
+    },
+    {
+      "name": "parent_version",
+      "type": "str | None",
+      "default": "None"
+    },
+    {
+      "name": "evolution_reason",
+      "type": "str | None",
+      "default": "None"
+    },
+    {
+      "name": "created_at",
+      "type": "datetime",
+      "default": "Field(default_factory=datetime.now)"
+    },
+    {
+      "name": "updated_at",
+      "type": "datetime",
+      "default": "Field(default_factory=datetime.now)"
+    }
+  ],
+  "criterion_fields": [
+    {
+      "name": "id",
+      "type": "str",
+      "default": null
+    },
+    {
+      "name": "description",
+      "type": "str",
+      "default": "Field(description='Human-readable description of what success looks like')"
+    },
+    {
+      "name": "metric",
+      "type": "str",
+      "default": "Field(description=\"How to measure: 'output_contains', 'output_equals', 'llm_judge', 'custom'\")"
+    },
+    {
+      "name": "type",
+      "type": "str",
+      "default": "Field(default='success_rate', description='Runtime evaluation type')"
+    },
+    {
+      "name": "target",
+      "type": "Any",
+      "default": "Field(description='The target value or condition')"
+    },
+    {
+      "name": "weight",
+      "type": "float",
+      "default": "Field(default=1.0, ge=0.0, le=1.0, description='Relative importance (0-1)')"
+    },
+    {
+      "name": "met",
+      "type": "bool",
+      "default": "False"
+    }
+  ],
+  "constraint_fields": [
+    {
+      "name": "id",
+      "type": "str",
+      "default": null
+    },
+    {
+      "name": "description",
+      "type": "str",
+      "default": null
+    },
+    {
+      "name": "constraint_type",
+      "type": "str",
+      "default": "Field(description=\"Type: 'hard' (must not violate) or 'soft' (prefer not to violate)\")"
+    },
+    {
+      "name": "category",
+      "type": "str",
+      "default": "Field(default='general', description=\"Category: 'time', 'cost', 'safety', 'scope', 'quality'\")"
+    },
+    {
+      "name": "check",
+      "type": "str",
+      "default": "Field(default='', description=\"How to check: expression, function name, or 'llm_judge'\")"
+    }
+  ],
+  "orchestrator_methods": [
+    "Goal.is_success",
+    "Goal.to_prompt_context"
+  ],
+  "aggregator_methods": [
+    "OutcomeAggregator.__init__",
+    "OutcomeAggregator.record_decision",
+    "OutcomeAggregator.record_outcome",
+    "OutcomeAggregator.evaluate_goal_progress",
+    "OutcomeAggregator.get_stats"
+  ],
+  "go": {
+    "结构": {
+      "funcs": [
+        "valid",
+        "EffectiveWeight",
+        "SetWeight",
+        "Validate",
+        "MarshalJSON",
+        "UnmarshalJSON",
+        "MarshalJSON",
+        "UnmarshalJSON",
+        "IsSuccess",
+        "ToPromptContext",
+        "Validate",
+        "MarshalJSON"
+      ],
+      "types": [
+        "GoalStatus",
+        "SuccessCriterion",
+        "Constraint",
+        "Goal"
+      ],
+      "lines": 293
+    },
+    "评估": {
+      "funcs": [
+        "Map",
+        "UnmetCriterionIDs",
+        "criterionMaps",
+        "EvaluateGoal",
+        "weightedMetFraction",
+        "evaluateGoalCriterion",
+        "normalizedGoalMetric",
+        "goalTargetText",
+        "goalTargetList",
+        "goalCriterionPrompt",
+        "GoalContextPrompt"
+      ],
+      "types": [
+        "GoalCriterionResult",
+        "GoalEvaluation"
+      ],
+      "lines": 347
+    },
+    "结果持久化": {
+      "funcs": [
+        "workerSystemPrompt",
+        "goalOutputText",
+        "evaluateWorkerGoal",
+        "judgeEventWriter",
+        "criterionStatusMap",
+        "mergeReportData"
+      ],
+      "types": [],
+      "lines": 150
+    }
+  },
+  "c12": {
+    "schema": {
+      "python_path": "core/framework/schemas/goal.py",
+      "status": "partial",
+      "go": "go_hive/go-hive/internal/schemas/goal.go"
+    },
+    "orchestrator": {
+      "python_path": "core/framework/orchestrator/goal.py",
+      "status": "partial",
+      "go": "go_hive/go-hive/internal/schemas/goal.go"
+    },
+    "聚合器": {
+      "python_path": "core/framework/host/outcome_aggregator.py",
+      "status": "ported",
+      "go": "go_hive/go-hive/internal/colony/goal_outcome.go"
+    },
+    "colony 宿主": {
+      "python_path": "core/framework/host/colony_runtime.py",
+      "status": "ported",
+      "go": "go_hive/go-hive/internal/colony/runtime.go"
+    }
+  },
+  "cli_subcommands": [
+    "serve",
+    "open",
+    "queen",
+    "colony",
+    "session",
+    "chat",
+    "skill",
+    "debugger",
+    "mcp",
+    "janitor"
+  ],
+  "cli_missing": []
+}

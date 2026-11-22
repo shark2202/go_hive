@@ -37,7 +37,7 @@
 | parity refs | 0 missing | 全解析 |
 | compat-check | 12/12 | **12/12**（C12：273 条 = 220 ported / 27 partial / 9 oos / 17 unported（triage + coercion + sentinel/antigravity/GA 三 lane 并集）） |
 | QC | 9/9 | **9/9** |
-| arch | 7 生成物一致 | **82 包 / 219 边 / 8 层 / 1 info** |
+| arch | 7 生成物一致 | **87 包 / 233 边 / 8 层 / 1 info** |
 | govulncheck | 0 OSV | **0（go1.26.11，同 scanner/DB 23→0）** |
 | 冻结面 | allowlist 逐条理由 | OK |
 | slot | 2h 一版 | 今日 10 版（00–18）；最新 `20261122-18` |
@@ -46,7 +46,7 @@
 ## 5. 证据矩阵（按轴）
 
 - **外观**：`docs/surface-tracking-matrix.html`（218/225 路由一致、端点 18/18、前端缺失 0）· `tool-parity-matrix.html` · `api-contract-diff.md` / `env-config-contract-diff.md` / `cli-surface-diff.md` / `error-taxonomy-diff.md`
-- **语义**：`judge-parity.md`（J2 已对齐）· `memory-notes-parity.md`（1.0.15 全族）· `session-titles-parity.md` · `stall-check-parity.md` · `goal-marshal-parity.md`
+- **语义**：`judge-parity.md`（J2 已对齐）· `memory-notes-parity.md`（1.0.15 全族）· `session-titles-parity.md` · `stall-check-parity.md` · `goal-marshal-parity.md`（目标模型全貌：`goal-design.html`）
 - **特性**：`docs/e2e-assets/`（dashboard-memory-1015 5 截图 · installer-verify Docker · reliability 27/27 · longmemeval 60q/200q · memory-notes 探针）
 - **迁移**：`dist/slots/*/compat.json`（v1/v2/v3）· `docs/exports-baseline-decision.md`
 - **性能**：`docs/perf-recall-15k.md`（15k 轮：冷建 388.5ms、warm p50 **12.7ms**（perf-opt 9.7×，p95 13.5ms）、索引 7.05MB、RSS +12%）

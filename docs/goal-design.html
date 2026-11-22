@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hive Goal 模型 · 目标驱动设计参考</title>
+<style>
+:root{--bg:#0b0f14;--panel:#121923;--panel2:#0f1620;--line:#233041;--text:#e6edf3;--muted:#8b9bb0;--accent:#f0b429;--accent2:#58a6ff;--ok:#3fb950;--warn:#d29922;--bad:#f85149;--code:#0a0e13}
+*{box-sizing:border-box} body{margin:0;background:linear-gradient(180deg,#0b0f14,#0d131b 55%,#0b0f14);color:var(--text);font:14.5px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;overflow-wrap:anywhere}
+a{color:var(--accent2);text-decoration:none} a:hover{text-decoration:underline}
+.wrap{max-width:1280px;margin:0 auto;padding:44px 26px 80px}
+header{border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:28px}
+.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+h1{font-size:30px;line-height:1.25;margin:10px 0 10px;letter-spacing:-.02em} h1 span{color:var(--accent)}
+.lede{color:var(--muted);max-width:1040px;font-size:15px} .meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:15px;color:var(--muted);font-size:12.5px} .meta b{color:var(--text)}
+section{margin:38px 0} h2{font-size:22px;margin:0 0 8px} h2 .num{color:var(--accent);font-size:14px;margin-right:8px} h3{font-size:15.5px;margin:22px 0 8px;color:#cfdae6}
+p{color:#c6d2df;margin:8px 0} .sub{color:var(--muted);font-size:12.5px}
+.grid{display:grid;gap:12px} .g4{grid-template-columns:repeat(4,minmax(0,1fr))} .g3{grid-template-columns:repeat(3,minmax(0,1fr))} .grid>*{min-width:0}
+@media(max-width:900px){.g4{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr}} @media(max-width:560px){.g4,.g3{grid-template-columns:1fr}.wrap{padding:30px 16px 60px}h1{font-size:24px}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:15px;min-width:0} .card .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700} .card .v{font-size:20px;font-weight:800;margin-top:5px;letter-spacing:-.01em} .card .d{color:var(--muted);font-size:12px;margin-top:5px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:14px 0;background:var(--panel2);max-width:100%}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed} th,td{border-bottom:1px solid var(--line);padding:9px 10px;vertical-align:top;text-align:left;overflow-wrap:anywhere;word-break:break-word} th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;background:#0d141d;position:sticky;top:0;z-index:1} tr:hover td{background:#121a25} tr:last-child td{border-bottom:0}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--code);border:1px solid #1e2937;border-radius:5px;padding:1px 4px;color:#d7e3f0;overflow-wrap:anywhere}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#cfe0f2;max-width:100%}
+.callout{border-left:3px solid var(--accent);background:#161207;padding:11px 14px;border-radius:0 9px 9px 0;margin:14px 0;color:#e8d9b4;overflow-wrap:anywhere} .callout.bad{border-color:var(--bad);background:#1a0f0f;color:#f2c7c7} .callout.info{border-color:var(--accent2);background:#0d1622;color:#cfe3ff}
+.toc{display:flex;flex-wrap:wrap;gap:7px;margin-top:18px} .toc a{font-size:12px;border:1px solid var(--line);background:var(--panel);padding:5px 9px;border-radius:999px;color:var(--muted)} .toc a:hover{color:var(--text);text-decoration:none}
+ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin-top:44px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:12px}
+figure.diagram{background:var(--code);border:1px solid var(--line);border-radius:12px;padding:14px;overflow-x:auto;margin:16px 0;max-width:100%}
+figure.diagram figcaption{color:var(--muted);font-size:12px;margin-top:8px}
+@media(max-width:560px){table{font-size:12px}th,td{padding:7px 6px}.toc a{padding:8px 12px;font-size:13px;min-height:44px;display:inline-flex;align-items:center}}
+@media(max-width:760px){.tablewrap table{min-width:760px}}
+</style>
+</head><body>
+<h1>Goal 模型与「目标驱动」设计 <span class="pill ok">可复用资料</span></h1>
+<p class="sub">生成：2026-11-22 22:09  · 数据现场重算自源码（AST + 注册表）·
+生成器 <code>go_hive/scripts/gen_goal_doc.py</code>（可复跑；数字不手抄）</p>
+
+<h2>§1 结论速览</h2>
+<div class="cards">
+<div class="card ok"><div class="k">goal 设计</div><div class="v">有</div><div class="d">结构 + 权重 + 约束 + 演化 + 评估闭环</div></div>
+<div class="card warn"><div class="k">独立「goal 模式」开关</div><div class="v">无</div><div class="d">宿主是 colony（多体）；单聊为对话驱动</div></div>
+<div class="card"><div class="k">CLI 子命令</div><div class="v">10</div><div class="d">serve、open、queen、colony、session、chat、skill、debugger、mcp、janitor</div></div>
+<div class="card"><div class="k">Go 对齐</div><div class="v">ported</div><div class="d">schema / 评估 / 结果持久化 三件套</div></div>
+</div>
+
+<h2>§2 数据模型（core/framework/schemas/goal.py 现场解析）</h2>
+<p><b>GoalStatus</b>：DRAFT · READY · ACTIVE · COMPLETED · FAILED · SUSPENDED</p>
+<table><tr><th>Goal 字段</th><th>类型</th><th>默认</th></tr>
+<tr><td><code>id</code></td><td><code>str</code></td><td><code>—</code></td></tr>
+<tr><td><code>name</code></td><td><code>str</code></td><td><code>—</code></td></tr>
+<tr><td><code>description</code></td><td><code>str</code></td><td><code>—</code></td></tr>
+<tr><td><code>status</code></td><td><code>GoalStatus</code></td><td><code>GoalStatus.DRAFT</code></td></tr>
+<tr><td><code>success_criteria</code></td><td><code>list[SuccessCriterion]</code></td><td><code>Field(default_factory=list)</code></td></tr>
+<tr><td><code>constraints</code></td><td><code>list[Constraint]</code></td><td><code>Field(default_factory=list)</code></td></tr>
+<tr><td><code>context</code></td><td><code>dict[str, Any]</code></td><td><code>Field(default_factory=dict, description=&#x27;Additional context: domain knowledge, user preferences, etc.&#x27;)</code></td></tr>
+<tr><td><code>required_capabilities</code></td><td><code>list[str]</code></td><td><code>Field(default_factory=list, description=&quot;What the colony needs: &#x27;llm&#x27;, &#x27;web_search&#x27;, &#x27;code_execution&#x27;, etc.&quot;)</code></td></tr>
+<tr><td><code>version</code></td><td><code>str</code></td><td><code>&#x27;1.0.0&#x27;</code></td></tr>
+<tr><td><code>parent_version</code></td><td><code>str | None</code></td><td><code>None</code></td></tr>
+<tr><td><code>evolution_reason</code></td><td><code>str | None</code></td><td><code>None</code></td></tr>
+<tr><td><code>created_at</code></td><td><code>datetime</code></td><td><code>Field(default_factory=datetime.now)</code></td></tr>
+<tr><td><code>updated_at</code></td><td><code>datetime</code></td><td><code>Field(default_factory=datetime.now)</code></td></tr></table>
+<table><tr><th>SuccessCriterion</th><th>类型</th><th>默认</th></tr>
+<tr><td><code>id</code></td><td><code>str</code></td><td><code>—</code></td></tr>
+<tr><td><code>description</code></td><td><code>str</code></td><td><code>Field(description=&#x27;Human-readable description of what success looks like&#x27;)</code></td></tr>
+<tr><td><code>metric</code></td><td><code>str</code></td><td><code>Field(description=&quot;How to measure: &#x27;output_contains&#x27;, &#x27;output_equals&#x27;, &#x27;llm_judge&#x27;, &#x27;custom&#x27;&quot;)</code></td></tr>
+<tr><td><code>type</code></td><td><code>str</code></td><td><code>Field(default=&#x27;success_rate&#x27;, description=&#x27;Runtime evaluation type&#x27;)</code></td></tr>
+<tr><td><code>target</code></td><td><code>Any</code></td><td><code>Field(description=&#x27;The target value or condition&#x27;)</code></td></tr>
+<tr><td><code>weight</code></td><td><code>float</code></td><td><code>Field(default=1.0, ge=0.0, le=1.0, description=&#x27;Relative importance (0-1)&#x27;)</code></td></tr>
+<tr><td><code>met</code></td><td><code>bool</code></td><td><code>False</code></td></tr></table>
+<p class="sub">metric 可选值（从源码 description 解析）：output_contains · output_equals · llm_judge · custom；weight 约束：float（Field(default=1.0, ge=0.0, le=1.0, description=&#x27;Relative importance (0-1)&#x27;)）</p>
+<table><tr><th>Constraint</th><th>类型</th><th>默认</th></tr>
+<tr><td><code>id</code></td><td><code>str</code></td><td><code>—</code></td></tr>
+<tr><td><code>description</code></td><td><code>str</code></td><td><code>—</code></td></tr>
+<tr><td><code>constraint_type</code></td><td><code>str</code></td><td><code>Field(description=&quot;Type: &#x27;hard&#x27; (must not violate) or &#x27;soft&#x27; (prefer not to violate)&quot;)</code></td></tr>
+<tr><td><code>category</code></td><td><code>str</code></td><td><code>Field(default=&#x27;general&#x27;, description=&quot;Category: &#x27;time&#x27;, &#x27;cost&#x27;, &#x27;safety&#x27;, &#x27;scope&#x27;, &#x27;quality&#x27;&quot;)</code></td></tr>
+<tr><td><code>check</code></td><td><code>str</code></td><td><code>Field(default=&#x27;&#x27;, description=&quot;How to check: expression, function name, or &#x27;llm_judge&#x27;&quot;)</code></td></tr></table>
+<p class="sub">约束类型：hard / soft；类别：general · time · cost · safety · scope · quality</p>
+
+<h2>§3 驱动回路</h2>
+<pre>
+trigger（timer / playbook）
+   → queen marshal（goal 分解为任务 / 派 worker）
+   → worker 执行（worker.json 可带 success_criteria）
+   → OutcomeAggregator 聚合（OutcomeAggregator.__init__, OutcomeAggregator.record_decision, OutcomeAggregator.record_outcome, OutcomeAggregator.evaluate_goal_progress, OutcomeAggregator.get_stats）
+   → agentloop goal_eval 按成功标准×权重判定（加权比例，LLM judge 可参与）
+   → 未达标 → 重试 / 升级；达标 → 推进 / 结束
+（宿主 = colony runtime：core/framework/host/colony_runtime.py 持有 overall goal 与 get_goal_progress）
+</pre>
+<p>orchestrator 侧方法：Goal.is_success · Goal.to_prompt_context（<code>to_prompt_context</code> 把目标与约束注入模型上下文）。</p>
+
+<h2>§4 go_hive 对应实现</h2>
+<table><tr><th>面</th><th>Go 文件</th><th>关键符号（前 12）</th><th>行数</th></tr>
+<tr><td>结构</td><td><code>go_hive/go-hive/internal/schemas/goal.go</code></td><td><code>valid, EffectiveWeight, SetWeight, Validate, MarshalJSON, UnmarshalJSON, MarshalJSON, UnmarshalJSON, IsSuccess, ToPromptContext, Validate, MarshalJSON</code></td><td>293</td></tr><tr><td>评估</td><td><code>go_hive/go-hive/internal/agentloop/goal_eval.go</code></td><td><code>Map, UnmetCriterionIDs, criterionMaps, EvaluateGoal, weightedMetFraction, evaluateGoalCriterion, normalizedGoalMetric, goalTargetText, goalTargetList, goalCriterionPrompt, GoalContextPrompt</code></td><td>347</td></tr><tr><td>结果持久化</td><td><code>go_hive/go-hive/internal/colony/goal_outcome.go</code></td><td><code>workerSystemPrompt, goalOutputText, evaluateWorkerGoal, judgeEventWriter, criterionStatusMap, mergeReportData</code></td><td>150</td></tr>
+</table>
+<p class="sub">类型导出：结构: GoalStatus, SuccessCriterion, Constraint, Goal; 评估: GoalCriterionResult, GoalEvaluation; 结果持久化: —</p>
+
+<h2>§5 C12 登记状态（contracts/module-inventory.json）</h2>
+<table><tr><th>面</th><th>Python</th><th>状态</th><th>Go counterpart</th></tr>
+<tr><td>schema</td><td><code>core/framework/schemas/goal.py</code></td><td>partial</td><td><code>go_hive/go-hive/internal/schemas/goal.go</code></td></tr><tr><td>orchestrator</td><td><code>core/framework/orchestrator/goal.py</code></td><td>partial</td><td><code>go_hive/go-hive/internal/schemas/goal.go</code></td></tr><tr><td>聚合器</td><td><code>core/framework/host/outcome_aggregator.py</code></td><td>ported</td><td><code>go_hive/go-hive/internal/colony/goal_outcome.go</code></td></tr><tr><td>colony 宿主</td><td><code>core/framework/host/colony_runtime.py</code></td><td>ported</td><td><code>go_hive/go-hive/internal/colony/runtime.go</code></td></tr>
+</table>
+
+<h2>§6 使用方式与入口</h2>
+<ul>
+<li><b>colony 带目标</b>：建 colony 时带 overall Goal；trigger（timer/playbook）驱动长跑；进度经 <code>get_goal_progress</code> 暴露。</li>
+<li><b>单聊不跑 goal</b>：queen chat 是对话驱动；目标体系只在 colony 多体场景生效。</li>
+<li><b>无 CLI 子命令</b>：<code>hive</code> 现有 10 个子命令（serve、open、queen、colony、session、chat、skill、debugger、mcp、janitor），不含 goal；管理走 colony 配置/queen 工具链。</li>
+<li><b>worker 级标准</b>：worker.json 的 success_criteria 进 judge；colony 级进 goal_eval。</li>
+</ul>
+
+<h2>§7 复用链接</h2>
+<ul>
+<li><code>docs/goal-marshal-parity.md</code>：weight=0 语义 / ID 省略 / prompt context / colony path 双跑证据</li>
+<li><code>docs/hive-concepts-inventory.html</code>：18 原语与机制定位（Goal 属 Plan/Tracker 族）</li>
+<li><code>docs/loop-vocabulary.html</code>：等待/注意力/守卫/自治术语</li>
+<li><code>docs/module-interfaces.html</code> 与 <code>docs/hive-package-atlas.html</code>：模块与包定位</li>
+<li><code>docs/consistency-audit.md</code>：逐项核查表（模块级）</li>
+</ul>
+<footer>本页由 <code>go_hive/scripts/gen_goal_doc.py</code> 生成；改动源码后重跑即可刷新（数字全部现场重算）。CLI 子命令断言：全部命中 Go CLI 源</footer>
+</body></html>

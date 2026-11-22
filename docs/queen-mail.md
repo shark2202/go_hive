@@ -3,6 +3,7 @@
 上游事实源：`core/framework/tools/queen_mail_tools.py`、`core/framework/server/queen_mail.py`、`core/framework/server/channels.py`。
 上游测试：`core/framework/server/tests/test_queen_mail.py`、`core/framework/server/tests/test_claude_code_queens.py`。
 
+HTTP 端点契约（`/api/queen-mail/queens`、`/api/queen-mail/letters`）：`docs/queen-mail-api.md`（字段/状态码/鉴权/错误文案逐条 + 两侧互映测试）。
 Go 实现分布：
 
 | 层 | 文件 |

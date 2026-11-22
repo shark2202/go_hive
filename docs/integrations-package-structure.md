@@ -59,10 +59,35 @@ internal/tools/
         ├── doc.go / kit.go / register.go / common.go
         ├── terraform.go / pagerduty.go / prometheus.go / kafka.go / n8n.go / tines.go
         └── digest_test.go
-    └── webintel/            # ✅ Web-intelligence 领域子包（int-p2-webintel）
+    └── webintel/               # ✅ Web-intelligence 领域子包（int-p2-webintel）
         ├── doc.go / kit.go / register.go / common.go
         ├── similarweb.go / news.go / google_maps.go
         └── web_intelligence_test.go / digest_test.go
+    ├── gworkspace/             # ✅ Google Workspace 领域子包（int-split-p3）
+    │   ├── doc.go / kit.go / common.go / shared.go / register 内建
+    │   ├── google_workspace*.go / calendar.go / gmail.go / google_docs.go / google_sheets.go
+    │   └── *_test.go / testkit_test.go / digest_test.go
+    ├── data/                   # ✅ 数据库/数据平台领域子包（int-split-p3）
+    │   ├── doc.go / kit.go / common.go / shared.go / register.go
+    │   ├── databases.go / postgres.go / pgwire*.go / redis.go / mongodb.go / supabase.go
+    │   ├── data_platform.go / snowflake.go / bigquery.go / databricks.go / redshift.go
+    │   ├── azure_sql.go / powerbi.go / sap.go
+    │   └── *_test.go / testkit_test.go / digest_test.go
+    ├── collab/                 # ✅ 协作/知识库领域子包（int-split-p3）
+    │   ├── doc.go / kit.go / common.go / shared.go / register.go
+    │   ├── atlassian_asana.go / jira.go / confluence.go / asana.go
+    │   ├── notion*.go / linear*.go
+    │   └── *_test.go / digest_test.go
+    ├── crm/                    # ✅ CRM/客户支持领域子包（int-split-p3）
+    │   ├── doc.go / kit.go / common.go / shared.go / register.go
+    │   ├── crm_common.go / salesforce.go / pipedrive.go / zoho_crm.go / attio.go
+    │   ├── support_ats.go / intercom.go / zendesk.go / freshdesk*.go / greenhouse.go
+    │   ├── hubspot_obsidian.go / hubspot.go / obsidian.go
+    │   └── *_test.go / digest_test.go
+    └── commerce/               # ✅ 电商/财务领域子包（int-split-p3）
+        ├── doc.go / kit.go / common.go / shared.go
+        ├── finance_commerce.go / shopify.go / quickbooks.go / plaid.go / razorpay.go
+        └── *_test.go / digest_test.go
 ```
 
 ## 依赖规则
@@ -171,7 +196,7 @@ internal/tools/
 
 | 门禁 | 位置 | 当前基线 |
 | --- | --- | --- |
-| lane 前缀预算 | `internal/quality/lane_prefix_test.go` + `lane_prefix_waiver.json` | 1908（brief 标称）→ 1906（冻结实测）→ 1902（excel 迁出后）→ 1818（devops 迁出后）→ 1357→1265（helpers+ai/social）→ 1172（三 lane）→ 1089→1014（infra/cloudflare）→ 957（webintel）→ **876**（八领域全部迁出后实测）；只减不增 |
+| lane 前缀预算 | `internal/quality/lane_prefix_test.go` + `lane_prefix_waiver.json` | 1908（brief 标称）→ 1906（冻结实测）→ 1902（excel 迁出后）→ 1818（devops 迁出后）→ 1357→1265（helpers+ai/social）→ 1172（三 lane）→ 1089→1014（infra/cloudflare）→ 957（webintel）→ **876**（八领域全部迁出后实测）→ 867（pdf 迁出）→ **222**（P3 五族迁出后实测，limit 222）；只减不增 |
 | 行为冻结 | `make refactor-freeze`（compare wave15-base） | 契约文件 sha256 不变；不进 ci，重构 lane 必跑 |
 | 证据审计锚点 | `go_hive/scripts/check_integrations_evidence.py`（qc C9） | `integrations-evidence-audit.json` 的 GA/GSC/GW/freshdesk 四处 auth 证据逐条校验：file 存在、line 在范围内、行内含预期 token（`googleJWT` / `GOOGLE_SEARCH_CONSOLE_TOKEN` / `Bearer` / `basicAuth`）；JSON 证据串必须与锚点登记表一致，拆分/改名再漂移即 FAIL；P2 拆包后已刷新（GA 96→94、72→70；GSC 623→127；GW 192→223；freshdesk 285 复核不变） |
 
@@ -208,3 +233,72 @@ integrations 任何包）；`internal/colony` 的 playbook 迁移用例单跑 0.
 5. 生成器 `gen_catalog.py` 的产物路径与子包 catalog 对齐（如需跨包生成，第二阶段再定）。
 6. 每阶段都跑 `make refactor-freeze` + catalog digest；行为面零变化是硬前提。
 
+
+## 第三阶段（P3）：五族拆出（本分支 `int-split-p3`）
+
+基线 `00d51e22`。目标：按集成族再拆 3–5 个子包，把根包压到 **<100 文件 / <40k 行**，
+行为零变化（工具定义/描述/schema/输出不动）。
+
+### 族清单（实测）
+
+| 子包 | 迁出 lane | 文件（prod+test） | 迁出行数 | 工具 / action | 旧构造器 → 新入口 |
+| --- | --- | --- | --- | --- | --- |
+| `gworkspace/` | batch-5 lane-3 | 9 + 5 = 14 | 4,286 | 4 / 39 | `newBatch5Lane3Registry` → `NewRegistry` |
+| `data/` | batch-5 lane-2 + batch-6 lane-4 | 16 + 13 = 29 | 10,004 | 11 / 65 | `newBatch5Lane2Registry` → `NewDatabasesRegistry`；`newBatch6Lane4Registry` → `NewPlatformRegistry` |
+| `collab/` | batch-5 lane-1 + batch-4 | 14 + 6 = 20 | 6,772 | 5 / 60 | `newBatch5Lane1Registry` → `NewAtlassianRegistry`；`newBatch4Registry` → `NewNotionRegistry` |
+| `crm/` | batch-6 lane-1 + lane-2 + batch-5 lane-4 | 16 + 12 = 28 | 11,327 | 10 / 109 | `newBatch6Lane1Registry` → `NewCRMRegistry`；`newBatch6Lane2Registry` → `NewSupportRegistry`；`newBatch5Lane4Registry` → `NewHubSpotObsidianRegistry` |
+| `commerce/` | batch-6 lane-3 | 5 + 5 = 10 | 3,774 | 4 / 29 | `newBatch6Lane3Registry` → `NewRegistry` |
+| 合计 | 9 lane | **101** | **36,163** | 34 / 302 | 9 个构造器 |
+
+根包：**199 文件 / 72,652 行 → 99 文件 / 37,050 行**（实测 `ls *.go | wc -l`、
+`cat *.go | wc -l`；两处均满足 <100 / <40k）。根包新增的装配/兼容面：
+`p3_installs.go`（五族安装 facade 合一，18 个函数）、`test_helpers_test.go`
+（跨族测试共用的 batch4*/batch5Lane4*/batch6* recorder 与 JSON helper、`notionVersion`、
+`batch5Lane3TestRegistry`）；`account_routing.go` 并入 `oauth.go`，`gmail_shared.go`
+（`gmailAuthError`）并入 `email.go`，用于压文件数。
+
+### 导出面处理
+
+1. **每 lane 一个构造器**：子包导出 `New<Lane>Registry(opts ...Option) *Registry`，
+   以原构造器逐字节搬迁（tool 顺序、modules 映射、Option 语义不变）；多 lane 子包另导
+   `NewRegistry` = 各 lane 并集（仅测试/诊断用）。
+2. **根包保留历史名字**：`InstallBatch*` 与 `newBatch*Registry` 在 `p3_installs.go`
+   继续存在并转发到子包，CLI（`internal/cli/session_tools.go`）与跨族测试无需改动。
+3. **标识符改名**：五个子包内 `batch5Lane3*`/`batch5Lane2*`/`batch6Lane4*`/`batch5Lane1*`/
+   `batch4*`/`batch6Lane1*`/`batch6Lane2*`/`batch5Lane4*`/`batch6Lane3*` 共 655 个
+   prod 标识符改为领域名（如 `batch6Lane4SAPImpls` → `sapImpls`）；lane 前缀预算
+   **867 → 222**（逐族实测 758/538/478/299/222，`lane_prefix_waiver.json` limit=222）。
+4. **共享 helper 本地化**：`moduleToken`/`resolveAccountToken`/OAuth2 刷新声明/`notionOptional*`
+   等跨族 helper 按需复制进各子包 `common.go`（只 import integrationkit；子包不 import
+   根包/`internal/tools`，测试文件按既有约定可 import `internal/tools` 做注册表断言）。
+5. **测试随实现迁出**：41 个 `*_test.go` 随族迁入；跨族的 account-alias / OAuth-refresh
+   测试留在根包，其依赖的 recorder/JSON helper 在根包 `test_helpers_test.go` 等价保留。
+
+### 回归证据
+
+- **工具面 digest 逐字节不变**：迁移前在根包旧构造器上实测基线，迁移后由各子包
+  `digest_test.go` 锁定（11 条 lane digest + 5 条族并集 digest）：
+  gworkspace `5bb8117a…`；data `bcb63e53…`/`6814f1fc…`/`4a890430…`；
+  collab `e2334c4d…`/`38f807aa…`/`74f76688…`；
+  crm `9e97e7ae…`/`8d90a93d…`/`64a178d0…`/`fff012ee…`；commerce `f448b5a7…`。
+- **门禁**：`gofmt` clean；`go vet ./...` clean；`go test -count=1 ./...`（见 lane 报告）；
+  `merge_postcheck.sh` 四关 PASS（gofmt / wiring 21 文件 68 项 / C12 / arch）；
+  `make parity` 5821/5821 注解；`make parity-targets` 6391 refs 0 missing；
+  `make compat-check` 12 pass / 0 fail（含 C8 工具定义冻结、C11 CLI 外观 0 漂移、C12 273/273）；
+  `tool-surface-check` 与 `tool-output-check` OK；`make refactor-freeze` OK（10 契约 sha 不变）；
+  证据审计 `check_integrations_evidence.py` 8/8 anchors PASS（gws/freshdesk 锚点已刷新为
+  `gworkspace/google_workspace.go:215`、`crm/freshdesk.go:285`）。
+- **架构产物**：`architecture/model.yaml` 登记 5 包，`gen_arch.py` 重生成后 87 包 / 233 边，
+  `arch-check` 一致。
+- **规模门禁**：integrations 子树文件 ≤800 行、函数 ≤200 行全过（无需新增 waiver；
+  `integrationSizeWaivers` 仍为空，`catalog_gen.go` 的生成物 waiver 不动）。
+
+### 编译耗时（参考）
+
+方法：`CGO_ENABLED=0 go build -a ./internal/tools/integrations/...`（强制重建含 stdlib），
+3 次取中位；另测 `go test -c -o /dev/null ./internal/tools/integrations/`。前后同机同热缓存。
+实测（3 次中位，同机、热缓存、`-a` 强制重建）：拆前 6.22s → 拆后 **5.88s**（−0.34s，−5.5%）；
+`go test -c -o /dev/null ./internal/tools/integrations/`（根包测试编译）：拆前 0.50s → 拆后 **0.48s**。
+单包构建收益有限是因为 `-a ./internal/tools/integrations/...` 仍编译全部 12 个相关包；
+拆分的收益主要是**根包单包重建/测试编译面**（66 prod + 39 test → 60 prod + 39 test，且体量从
+72,652 行降到 37,050 行）与并行/审阅边界，而不是全树冷构建。

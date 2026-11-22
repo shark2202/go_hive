@@ -1,0 +1,665 @@
+// Redis integration (upstream redis_tool, 11 actions) over the RESP2 protocol.
+//
+// The repository forbids new dependencies, so commands are written directly on
+// a TCP or TLS connection instead of using a Redis client library.
+//
+// Deliberate limits:
+//   - one connection per action (no pool), 10s command timeout like upstream
+//   - RESP2 only; no pub/sub subscription (publish is supported), no cluster
+//     redirection, no RESP3 push messages
+//   - AUTH supports both the classic password form and ACL user+password
+package data
+
+import (
+	"bufio"
+	"bytes"
+	"context"
+	"crypto/tls"
+	"errors"
+	"fmt"
+	"io"
+	"net"
+	"net/url"
+	"strconv"
+	"strings"
+	"time"
+)
+
+const (
+	redisDialTimeout = 10 * time.Second
+	redisIOTimeout   = 10 * time.Second
+	redisMaxBulk     = 64 << 20
+	redisMaxArray    = 1 << 20
+)
+
+// redisValue is one RESP2 reply.
+type redisValue struct {
+	kind byte // '+', ':', '$', '*', 'n' (null)
+	str  string
+	num  int64
+	arr  []redisValue
+}
+
+func (v redisValue) isNull() bool { return v.kind == 'n' }
+
+func (v redisValue) text() (string, bool) {
+	if v.kind == '$' || v.kind == '+' {
+		return v.str, true
+	}
+	return "", false
+}
+
+// redisConn is one live connection.
+type redisConn struct {
+	conn net.Conn
+	r    *bufio.Reader
+	w    *bufio.Writer
+}
+
+// redisConnect parses REDIS_URL (redis:// or rediss://), authenticates
+// and selects the database from the URL path.
+func redisConnect(ctx context.Context, rawURL string) (*redisConn, error) {
+	parsed, err := url.Parse(strings.TrimSpace(rawURL))
+	if err != nil {
+		return nil, fmt.Errorf("invalid Redis URL: %w", err)
+	}
+	if parsed.Scheme != "redis" && parsed.Scheme != "rediss" {
+		return nil, fmt.Errorf("unsupported Redis URL scheme %q", parsed.Scheme)
+	}
+	host := parsed.Hostname()
+	if host == "" {
+		host = "localhost"
+	}
+	port := parsed.Port()
+	if port == "" {
+		port = "6379"
+	}
+	dialer := net.Dialer{Timeout: redisDialTimeout}
+	raw, err := dialer.DialContext(ctx, "tcp", net.JoinHostPort(host, port))
+	if err != nil {
+		return nil, err
+	}
+	if parsed.Scheme == "rediss" {
+		tlsConn := tls.Client(raw, &tls.Config{ServerName: host, MinVersion: tls.VersionTLS12})
+		if err := tlsConn.HandshakeContext(ctx); err != nil {
+			raw.Close()
+			return nil, err
+		}
+		raw = tlsConn
+	}
+	conn := &redisConn{conn: raw, r: bufio.NewReader(raw), w: bufio.NewWriter(raw)}
+	if parsed.User != nil {
+		password, hasPassword := parsed.User.Password()
+		username := parsed.User.Username()
+		switch {
+		case hasPassword && username != "" && username != "default":
+			if _, err := conn.do(ctx, "AUTH", username, password); err != nil {
+				conn.Close()
+				return nil, err
+			}
+		case hasPassword:
+			if _, err := conn.do(ctx, "AUTH", password); err != nil {
+				conn.Close()
+				return nil, err
+			}
+		}
+	}
+	if db := strings.TrimPrefix(parsed.Path, "/"); db != "" && db != "0" {
+		if _, err := strconv.Atoi(db); err != nil {
+			conn.Close()
+			return nil, fmt.Errorf("invalid Redis database index %q", db)
+		}
+		if _, err := conn.do(ctx, "SELECT", db); err != nil {
+			conn.Close()
+			return nil, err
+		}
+	}
+	return conn, nil
+}
+
+// Close releases the connection.
+func (c *redisConn) Close() {
+	if c == nil || c.conn == nil {
+		return
+	}
+	_ = c.conn.Close()
+}
+
+// do writes one command and reads its reply. A RESP error reply is returned as
+// a Go error carrying the server message.
+func (c *redisConn) do(ctx context.Context, args ...string) (redisValue, error) {
+	if err := ctx.Err(); err != nil {
+		return redisValue{}, err
+	}
+	deadline := time.Now().Add(redisIOTimeout)
+	if ctxDeadline, ok := ctx.Deadline(); ok && ctxDeadline.Before(deadline) {
+		deadline = ctxDeadline
+	}
+	if err := c.conn.SetDeadline(deadline); err != nil {
+		return redisValue{}, err
+	}
+	var payload bytes.Buffer
+	fmt.Fprintf(&payload, "*%d\r\n", len(args))
+	for _, arg := range args {
+		fmt.Fprintf(&payload, "$%d\r\n", len(arg))
+		payload.WriteString(arg)
+		payload.WriteString("\r\n")
+	}
+	if _, err := c.w.Write(payload.Bytes()); err != nil {
+		return redisValue{}, err
+	}
+	if err := c.w.Flush(); err != nil {
+		return redisValue{}, err
+	}
+	return c.readReply()
+}
+
+func (c *redisConn) readReply() (redisValue, error) {
+	line, err := c.readLine()
+	if err != nil {
+		return redisValue{}, err
+	}
+	if line == "" {
+		return redisValue{}, errors.New("redis: empty reply")
+	}
+	switch line[0] {
+	case '+':
+		return redisValue{kind: '+', str: line[1:]}, nil
+	case '-':
+		return redisValue{}, errors.New(line[1:])
+	case ':':
+		number, err := strconv.ParseInt(line[1:], 10, 64)
+		if err != nil {
+			return redisValue{}, fmt.Errorf("redis: invalid integer reply %q", line[1:])
+		}
+		return redisValue{kind: ':', num: number}, nil
+	case '$':
+		length, err := strconv.Atoi(line[1:])
+		if err != nil {
+			return redisValue{}, fmt.Errorf("redis: invalid bulk length %q", line[1:])
+		}
+		if length == -1 {
+			return redisValue{kind: 'n'}, nil
+		}
+		if length < 0 || length > redisMaxBulk {
+			return redisValue{}, fmt.Errorf("redis: bulk length out of range: %d", length)
+		}
+		buffer := make([]byte, length+2)
+		if _, err := io.ReadFull(c.r, buffer); err != nil {
+			return redisValue{}, err
+		}
+		return redisValue{kind: '$', str: string(buffer[:length])}, nil
+	case '*':
+		count, err := strconv.Atoi(line[1:])
+		if err != nil {
+			return redisValue{}, fmt.Errorf("redis: invalid array length %q", line[1:])
+		}
+		if count == -1 {
+			return redisValue{kind: 'n'}, nil
+		}
+		if count < 0 || count > redisMaxArray {
+			return redisValue{}, fmt.Errorf("redis: array length out of range: %d", count)
+		}
+		items := make([]redisValue, 0, count)
+		for index := 0; index < count; index++ {
+			item, err := c.readReply()
+			if err != nil {
+				return redisValue{}, err
+			}
+			items = append(items, item)
+		}
+		return redisValue{kind: '*', arr: items}, nil
+	default:
+		return redisValue{}, fmt.Errorf("redis: unexpected reply %q", line)
+	}
+}
+
+func (c *redisConn) readLine() (string, error) {
+	line, err := c.r.ReadString('\n')
+	if err != nil {
+		return "", err
+	}
+	if !strings.HasSuffix(line, "\r\n") {
+		return "", errors.New("redis: malformed reply line")
+	}
+	return line[:len(line)-2], nil
+}
+
+// ---------------------------------------------------------------- actions ---
+
+func redisMissingURL() map[string]any {
+	return map[string]any{
+		"error": "REDIS_URL not set",
+		"help":  "Set REDIS_URL (e.g. redis://localhost:6379 or redis://:password@host:6379/0)",
+	}
+}
+
+// redisOpen resolves REDIS_URL and connects.
+func redisOpen(ctx context.Context, rt *Runtime) (*redisConn, map[string]any, error) {
+	rawURL := configuredToken(rt, "redis_tool", "REDIS_URL")
+	if rawURL == "" {
+		return nil, redisMissingURL(), nil
+	}
+	conn, err := redisConnect(ctx, rawURL)
+	if err != nil {
+		return nil, nil, err
+	}
+	return conn, nil, nil
+}
+
+// redisRun executes one command and maps failures to the upstream
+// "<COMMAND> failed: <detail>" error shape.
+func redisRun(ctx context.Context, rt *Runtime, command string, args ...string) (redisValue, map[string]any, error) {
+	conn, response, err := redisOpen(ctx, rt)
+	if response != nil || err != nil {
+		return redisValue{}, response, err
+	}
+	defer conn.Close()
+	value, cmdErr := conn.do(ctx, args...)
+	if cmdErr != nil {
+		return redisValue{}, databaseErr("Redis " + command + " failed: " + cmdErr.Error()), nil
+	}
+	return value, nil, nil
+}
+
+// Parity: tools/src/aden_tools/tools/redis_tool/redis_tool.py::redis_get
+func redisGet(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+	key := stringArg(input, "key")
+	if key == "" {
+		return databaseErr("key is required"), nil
+	}
+	value, response, err := redisRun(ctx, rt, "GET", "GET", key)
+	if response != nil || err != nil {
+		return response, err
+	}
+	if value.isNull() {
+		return map[string]any{"key": key, "value": nil}, nil
+	}
+	text, _ := value.text()
+	return map[string]any{"key": key, "value": text}, nil
+}
+
+// Parity: tools/src/aden_tools/tools/redis_tool/redis_tool.py::redis_set
+func redisSet(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+	key, value := stringArg(input, "key"), stringArg(input, "value")
+	if key == "" {
+		return databaseErr("key is required"), nil
+	}
+	ttl := intArg(input, "ttl", 0)
+	var response map[string]any
+	var err error
+	if ttl > 0 {
+		_, response, err = redisRun(ctx, rt, "SET", "SETEX", key, strconv.Itoa(ttl), value)
+	} else {
+		_, response, err = redisRun(ctx, rt, "SET", "SET", key, value)
+	}
+	if response != nil || err != nil {
+		return response, err
+	}
+	return map[string]any{"status": "ok", "key": key}, nil
+}
+
+// Parity: tools/src/aden_tools/tools/redis_tool/redis_tool.py::redis_delete
+func redisDelete(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+	rawKeys := stringArg(input, "keys")
+	if rawKeys == "" {
+		return databaseErr("keys is required"), nil
+	}
+	var keys []string
+	for _, key := range strings.Split(rawKeys, ",") {
+		if trimmed := strings.TrimSpace(key); trimmed != "" {
+			keys = append(keys, trimmed)
+		}
+	}
+	args := append([]string{"DEL"}, keys...)
+	value, response, err := redisRun(ctx, rt, "DELETE", args...)
+	if response != nil || err != nil {
+		return response, err
+	}
+	return map[string]any{"deleted": value.num}, nil
+}
+
+// Parity: tools/src/aden_tools/tools/redis_tool/redis_tool.py::redis_keys
+func redisKeys(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+	pattern := stringArg(input, "pattern")
+	if pattern == "" {
+		pattern = "*"
+	}
+	count := intArg(input, "count", 100)
+	if count < 1 {
+		count = 1
+	}
+	if count > 1000 {
+		count = 1000
+	}
+	conn, response, err := redisOpen(ctx, rt)
+	if response != nil || err != nil {
+		return response, err
+	}
+	defer conn.Close()
+	perPage := count
+	if perPage > 100 {
+		perPage = 100
+	}
+	keys := make([]string, 0, count)
+	cursor := "0"
+	for len(keys) < count {
+		reply, scanErr := conn.do(ctx, "SCAN", cursor, "MATCH", pattern, "COUNT", strconv.Itoa(perPage))
+		if scanErr != nil {
+			return databaseErr("Redis KEYS failed: " + scanErr.Error()), nil
+		}
+		if reply.kind != '*' || len(reply.arr) != 2 || reply.arr[1].kind != '*' {
+			return databaseErr("Redis KEYS failed: unexpected SCAN reply"), nil
+		}
+		cursor = reply.arr[0].str
+		for _, item := range reply.arr[1].arr {
+			keys = append(keys, item.str)
+		}
+		if cursor == "0" {
+			break
+		}
+	}
+	if len(keys) > count {
+		keys = keys[:count]
+	}
+	return map[string]any{"pattern": pattern, "keys": keys}, nil
+}
+
+// Parity: tools/src/aden_tools/tools/redis_tool/redis_tool.py::redis_hset
+func redisHSet(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+	key, field, value := stringArg(input, "key"), stringArg(input, "field"), stringArg(input, "value")
+	if key == "" || field == "" {
+		return databaseErr("key and field are required"), nil
+	}
+	reply, response, err := redisRun(ctx, rt, "HSET", "HSET", key, field, value)
+	if response != nil || err != nil {
+		return response, err
+	}
+	return map[string]any{"status": "ok", "key": key, "field": field, "created": reply.num == 1}, nil
+}
+
+// Parity: tools/src/aden_tools/tools/redis_tool/redis_tool.py::redis_hgetall
+func redisHGetAll(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+	key := stringArg(input, "key")
+	if key == "" {
+		return databaseErr("key is required"), nil
+	}
+	reply, response, err := redisRun(ctx, rt, "HGETALL", "HGETALL", key)
+	if response != nil || err != nil {
+		return response, err
+	}
+	data := map[string]any{}
+	if reply.kind == '*' {
+		for index := 0; index+1 < len(reply.arr); index += 2 {
+			data[reply.arr[index].str] = reply.arr[index+1].str
+		}
+	}
+	return map[string]any{"key": key, "data": data}, nil
+}
+
+// Parity: tools/src/aden_tools/tools/redis_tool/redis_tool.py::redis_lpush
+func redisLPush(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+	key, rawValues := stringArg(input, "key"), stringArg(input, "values")
+	if key == "" || rawValues == "" {
+		return databaseErr("key and values are required"), nil
+	}
+	values := make([]string, 0, 4)
+	for _, value := range strings.Split(rawValues, ",") {
+		if trimmed := strings.TrimSpace(value); trimmed != "" {
+			values = append(values, trimmed)
+		}
+	}
+	args := append([]string{"LPUSH", key}, values...)
+	reply, response, err := redisRun(ctx, rt, "LPUSH", args...)
+	if response != nil || err != nil {
+		return response, err
+	}
+	return map[string]any{"key": key, "length": reply.num}, nil
+}
+
+// Parity: tools/src/aden_tools/tools/redis_tool/redis_tool.py::redis_lrange
+func redisLRange(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+	key := stringArg(input, "key")
+	if key == "" {
+		return databaseErr("key is required"), nil
+	}
+	start, stop := intArg(input, "start", 0), intArg(input, "stop", -1)
+	reply, response, err := redisRun(ctx, rt, "LRANGE", "LRANGE", key, strconv.Itoa(start), strconv.Itoa(stop))
+	if response != nil || err != nil {
+		return response, err
+	}
+	items := make([]string, 0, len(reply.arr))
+	for _, item := range reply.arr {
+		items = append(items, item.str)
+	}
+	return map[string]any{"key": key, "items": items}, nil
+}
+
+// Parity: tools/src/aden_tools/tools/redis_tool/redis_tool.py::redis_publish
+func redisPublish(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+	channel, message := stringArg(input, "channel"), stringArg(input, "message")
+	if channel == "" || message == "" {
+		return databaseErr("channel and message are required"), nil
+	}
+	reply, response, err := redisRun(ctx, rt, "PUBLISH", "PUBLISH", channel, message)
+	if response != nil || err != nil {
+		return response, err
+	}
+	return map[string]any{"channel": channel, "receivers": reply.num}, nil
+}
+
+// Parity: tools/src/aden_tools/tools/redis_tool/redis_tool.py::redis_info
+func redisInfo(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+	reply, response, err := redisRun(ctx, rt, "INFO", "INFO")
+	if response != nil || err != nil {
+		return response, err
+	}
+	text, _ := reply.text()
+	fields := redisParseInfo(text)
+	info := map[string]any{
+		"redis_version":              fields["redis_version"],
+		"connected_clients":          redisIntField(fields, "connected_clients"),
+		"used_memory_human":          fields["used_memory_human"],
+		"total_connections_received": redisIntField(fields, "total_connections_received"),
+		"uptime_in_seconds":          redisIntField(fields, "uptime_in_seconds"),
+		"db0":                        redisParseDBInfo(fields["db0"]),
+	}
+	return info, nil
+}
+
+// Parity: tools/src/aden_tools/tools/redis_tool/redis_tool.py::redis_ttl
+func redisTTL(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
+	key := stringArg(input, "key")
+	if key == "" {
+		return databaseErr("key is required"), nil
+	}
+	reply, response, err := redisRun(ctx, rt, "TTL", "TTL", key)
+	if response != nil || err != nil {
+		return response, err
+	}
+	return map[string]any{"key": key, "ttl": reply.num}, nil
+}
+
+// ---------------------------------------------------------------- parsing ---
+
+// redisParseInfo flattens an INFO reply into key/value pairs. Section
+// headers are ignored; later sections override earlier duplicate keys, which is
+// what redis-py's info() dictionary ends up with.
+func redisParseInfo(text string) map[string]string {
+	fields := map[string]string{}
+	for _, line := range strings.Split(text, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		index := strings.IndexByte(line, ':')
+		if index <= 0 {
+			continue
+		}
+		fields[line[:index]] = line[index+1:]
+	}
+	return fields
+}
+
+func redisIntField(fields map[string]string, name string) int64 {
+	if number, err := strconv.ParseInt(strings.TrimSpace(fields[name]), 10, 64); err == nil {
+		return number
+	}
+	return 0
+}
+
+// redisParseDBInfo mirrors redis-py's keyspace dict parsing:
+// "keys=1,expires=0,avg_ttl=0" becomes a map with integer values.
+func redisParseDBInfo(raw string) map[string]any {
+	out := map[string]any{}
+	for _, part := range strings.Split(raw, ",") {
+		index := strings.IndexByte(part, '=')
+		if index <= 0 {
+			continue
+		}
+		name, value := strings.TrimSpace(part[:index]), strings.TrimSpace(part[index+1:])
+		if name == "" {
+			continue
+		}
+		if number, err := strconv.ParseInt(value, 10, 64); err == nil {
+			out[name] = number
+		} else {
+			out[name] = value
+		}
+	}
+	return out
+}
+
+// redisImpls maps the upstream action names to handlers.
+func redisImpls() map[string]ActionFunc {
+	return map[string]ActionFunc{
+		"redis_get":     redisGet,
+		"redis_set":     redisSet,
+		"redis_delete":  redisDelete,
+		"redis_keys":    redisKeys,
+		"redis_hset":    redisHSet,
+		"redis_hgetall": redisHGetAll,
+		"redis_lpush":   redisLPush,
+		"redis_lrange":  redisLRange,
+		"redis_publish": redisPublish,
+		"redis_info":    redisInfo,
+		"redis_ttl":     redisTTL,
+	}
+}
+
+// redisTool is the model-facing catalog entry.
+var redisTool = &Tool{
+	ID:          "redis_tool",
+	Name:        "redis",
+	DisplayName: "Redis",
+	Summary:     "Redis key-value, hash, list and pub/sub integration (11 actions).",
+	Actions: []Action{
+		{
+			Name:     "redis_get",
+			Summary:  "Get the value of a key (null when the key does not exist).",
+			Source:   "redis_tool/redis_tool.py",
+			Required: []string{"key"},
+			Params:   map[string]any{"key": param("string")},
+			Requires: []string{"REDIS_URL"},
+		},
+		{
+			Name:     "redis_set",
+			Summary:  "Set a key-value pair with an optional TTL in seconds.",
+			Source:   "redis_tool/redis_tool.py",
+			Required: []string{"key", "value"},
+			Params: map[string]any{
+				"key":   param("string"),
+				"value": param("string"),
+				"ttl":   paramDefault("integer", 0),
+			},
+			Requires: []string{"REDIS_URL"},
+		},
+		{
+			Name:     "redis_delete",
+			Summary:  "Delete one or more comma-separated keys.",
+			Source:   "redis_tool/redis_tool.py",
+			Required: []string{"keys"},
+			Params:   map[string]any{"keys": param("string")},
+			Requires: []string{"REDIS_URL"},
+		},
+		{
+			Name:    "redis_keys",
+			Summary: "List keys matching a glob pattern using SCAN.",
+			Source:  "redis_tool/redis_tool.py",
+			Params: map[string]any{
+				"pattern": paramDefault("string", "*"),
+				"count":   paramDefault("integer", 100),
+			},
+			Requires: []string{"REDIS_URL"},
+		},
+		{
+			Name:     "redis_hset",
+			Summary:  "Set a field in a hash.",
+			Source:   "redis_tool/redis_tool.py",
+			Required: []string{"key", "field", "value"},
+			Params: map[string]any{
+				"key":   param("string"),
+				"field": param("string"),
+				"value": param("string"),
+			},
+			Requires: []string{"REDIS_URL"},
+		},
+		{
+			Name:     "redis_hgetall",
+			Summary:  "Get all fields and values from a hash.",
+			Source:   "redis_tool/redis_tool.py",
+			Required: []string{"key"},
+			Params:   map[string]any{"key": param("string")},
+			Requires: []string{"REDIS_URL"},
+		},
+		{
+			Name:     "redis_lpush",
+			Summary:  "Push comma-separated values to the head of a list.",
+			Source:   "redis_tool/redis_tool.py",
+			Required: []string{"key", "values"},
+			Params: map[string]any{
+				"key":    param("string"),
+				"values": param("string"),
+			},
+			Requires: []string{"REDIS_URL"},
+		},
+		{
+			Name:     "redis_lrange",
+			Summary:  "Get a range of list elements (inclusive stop index).",
+			Source:   "redis_tool/redis_tool.py",
+			Required: []string{"key"},
+			Params: map[string]any{
+				"key":   param("string"),
+				"start": paramDefault("integer", 0),
+				"stop":  paramDefault("integer", -1),
+			},
+			Requires: []string{"REDIS_URL"},
+		},
+		{
+			Name:     "redis_publish",
+			Summary:  "Publish a message and return the receiver count.",
+			Source:   "redis_tool/redis_tool.py",
+			Required: []string{"channel", "message"},
+			Params: map[string]any{
+				"channel": param("string"),
+				"message": param("string"),
+			},
+			Requires: []string{"REDIS_URL"},
+		},
+		{
+			Name:     "redis_info",
+			Summary:  "Get server version, clients, memory and keyspace statistics.",
+			Source:   "redis_tool/redis_tool.py",
+			Params:   map[string]any{},
+			Requires: []string{"REDIS_URL"},
+		},
+		{
+			Name:     "redis_ttl",
+			Summary:  "Get a key's time-to-live in seconds (-1 no expiry, -2 missing).",
+			Source:   "redis_tool/redis_tool.py",
+			Required: []string{"key"},
+			Params:   map[string]any{"key": param("string")},
+			Requires: []string{"REDIS_URL"},
+		},
+	},
+}

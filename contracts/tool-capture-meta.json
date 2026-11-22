@@ -139,5 +139,10 @@
   "go-queen-tools.json": "9d1b0eb426b96a9aae54b54e0909a569e8e9ede5594619a7172a1090a3f28ac8",
   "go-llm-tools.json": "926845b18ab07ca4cc8d1a974171f3b04dae6e88d1937a5981cc02ec02ccdcee"
  },
- "generated_at_utc": "2026-11-20T15:35:11Z"
+ "generated_at_utc": "2026-11-20T15:35:11Z",
+ "recheck": {
+  "checked_at": "2026-11-22",
+  "scope": "1.0.14 (4ede5499) -> 1.0.15 (72eb6d7b) window",
+  "result": "LLM-visible tool surface unchanged: the window only touched core/framework/agent_loop (memory_reminders etc.), tools/src/memory_tools, tools/src/terminal_tools and version files; no core/framework/tools, no tools/src/aden_tools/tools/** or aden_tools/credentials changes. Tool contract at version 1.0.15 therefore equals the 1.0.14 capture; a re-capture run is only required when a future upstream window touches tool defs."
+ }
 }

@@ -1,9 +1,9 @@
 {
- "wave": 72,
- "at": "2026-11-22 21:55",
- "head": "cef49cbd",
+ "wave": 73,
+ "at": "2026-11-22 22:01",
+ "head": "acd0689f",
  "ci": 0,
  "qc": 0,
  "publish": 0,
- "note": "browser-final-parity 合并后"
+ "note": "isHiveGroup 决策（保留富化）+ 文档同步后"
 }
