@@ -1,9 +1,9 @@
 {
- "wave": 52,
- "at": "2026-11-22 09:57",
- "head": "7a8dbcb4",
+ "wave": 53,
+ "at": "2026-11-22 10:04",
+ "head": "ba5a7524",
  "ci": 2,
  "qc": 0,
  "publish": 0,
- "note": "wiring 重定位 + postcheck 加固后"
+ "note": "C6/C12 锚点修复 + postcheck 三重防线"
 }

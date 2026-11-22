@@ -1,6 +1,6 @@
 # 接口与契约（生成物，勿手改）
 
-> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` 的 `contracts:` / `disk_formats:`，加上 `internal/server` 路由注册与 `internal/eventbus` 常量生成。commit: `41ae8d322918`
+> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` 的 `contracts:` / `disk_formats:`，加上 `internal/server` 路由注册与 `internal/eventbus` 常量生成。commit: `21f07de2a493`
 > 契约是模块之间「靠什么约束交互」的清单：谁提供、谁消费、定义在哪、保证什么、失败怎么表现、变更属于加法还是破坏、由什么机制强制。
 > `providers` / `consumers` 里的 `ext:` 前缀表示外部消费面（前端、运维、MCP server、外部调用方），不是仓库内的包。
 
@@ -631,8 +631,8 @@
 | POST | `/api/sessions/{session_id}/presence` | `handleSessionPresence` | `internal/server/routes_execution.go:58` |
 | POST | `/api/sessions/{session_id}/queen-context` | `handleQueenContext` | `internal/server/routes_execution.go:49` |
 | POST | `/api/sessions/{session_id}/record-message` | `handleRecordUserMessage` | `internal/server/routes_execution.go:52` |
-| DELETE | `/api/sessions/{session_id}/reminders` | `handleDismissSessionReminders` | `internal/server/routes_reminders.go:359` |
-| GET | `/api/sessions/{session_id}/reminders` | `handleGetSessionReminders` | `internal/server/routes_reminders.go:356` |
+| DELETE | `/api/sessions/{session_id}/reminders` | `handleDismissSessionReminders` | `internal/server/routes_reminders.go:361` |
+| GET | `/api/sessions/{session_id}/reminders` | `handleGetSessionReminders` | `internal/server/routes_reminders.go:358` |
 | POST | `/api/sessions/{session_id}/report-bundle` | `handleReportSessionBundle` | `internal/server/routes_sessions.go:135` |
 | POST | `/api/sessions/{session_id}/reveal` | `handleRevealSession` | `internal/server/routes_sessions.go:132` |
 | GET | `/api/sessions/{session_id}/skill-installs` | `deps.handleListSkillInstalls` | `internal/server/routes_skills.go:71` |

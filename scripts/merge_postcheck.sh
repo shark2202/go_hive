@@ -37,3 +37,14 @@ if [ -f "$ROOT/../scripts/check_module_inventory.py" ]; then
   fi
   tail -1 /tmp/merge_postcheck_c12.log
 fi
+
+# arch 生成物里带路由/file:line，任何 server 文件行移都会漂移
+# （w48/w53 两次 arch-check 红）。这里只做 --check，红了就提示重生成并失败。
+if [ -f "$ROOT/scripts/gen_arch.py" ]; then
+  if ! python3 "$ROOT/scripts/gen_arch.py" --check >/tmp/merge_postcheck_arch.log 2>&1; then
+    echo "merge-postcheck: arch 产物过期（行号漂移？先 python3 scripts/gen_arch.py 再提交）："
+    tail -6 /tmp/merge_postcheck_arch.log
+    exit 1
+  fi
+  tail -1 /tmp/merge_postcheck_arch.log
+fi
