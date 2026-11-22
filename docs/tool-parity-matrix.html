@@ -927,8 +927,8 @@ ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin
 <tr><td>chart_render</td><td>已实现（Chrome 无头渲染 ECharts/Mermaid → PNG）；返回值字段级对齐（round 6：无 <code>theme</code>、成功/错误 envelope 字段顺序与错误文案逐字、工具定义 desc/schema 逐字）；残余（进程模型、无 CDN 回退、参数校验位置、解码器细则等）见 docs/chart-render.md §8</td></tr>
 <tr><td>Browser Bridge</td><td>22/22 active + CLI + serve 托管 + control RPC 14831/空闲退出 + notify 注入 + 3 条面板代理已对齐；残余：快照 ref/注解图、CLI 错误码等形状差异</td></tr>
 <tr><td>Claude Code queen</td><td>运行器/MCP/回复闭环 + 真实 dashboard 列表/transcript 已实现并经真实 <code>claude -p</code> 验证；真实模型主动调 <code>message_queen</code> 未联调</td></tr>
-<tr><td>Soul 自动演化</td><td>每日反思 + <code>POST /soul/reflect</code> 已接通（202/409/review/auto；真实二进制 E2E 用脚本化模型 PASS）；真实模型日调度未跑；差异见 docs/soul-daily-reflection.md</td></tr>
-<tr><td>Memory 双跑</td><td>timeline/past recall/recall 与 Python 双跑 PASS；stop flush、past recall twice 已修；真实慢模型/UI/cooldown 到期未验，见 docs/memory-e2e.md</td></tr>
+<tr><td>Soul 自动演化</td><td>每日反思 + <code>POST /soul/reflect</code> 已接通（202/409/review/auto；真实二进制 E2E 用脚本化模型 PASS）；真实模型日调度未跑；机制参考 <a href="memory-and-soul.html">memory-and-soul.html</a>；差异见 docs/soul-daily-reflection.md</td></tr>
+<tr><td>Memory 双跑</td><td>timeline/past recall/recall 与 Python 双跑 PASS；stop flush、past recall twice 已修；真实慢模型/UI/cooldown 到期未验；机制参考 <a href="memory-and-soul.html">memory-and-soul.html</a>，见 docs/memory-e2e.md</td></tr>
 <tr><td>LongMemEval</td><td>harness + 脱敏 fixture + 脚本化管线 PASS；真实 S/M 数据集与官方 judge 因无外网未验证，<b>没有任何分数</b></td></tr>
 <tr><td>第三方集成</td><td>81 个需凭据模块未做真实 API 验证；本矩阵的“已实现”仅指代码路径/测试</td></tr>
 <tr><td>发送人工具</td><td><code>senders</code> 已实现，但 <code>email_senders</code> 默认关闭，默认工具表不含 9 个 action</td></tr>

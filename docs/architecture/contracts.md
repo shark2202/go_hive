@@ -1,6 +1,6 @@
 # 接口与契约（生成物，勿手改）
 
-> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` 的 `contracts:` / `disk_formats:`，加上 `internal/server` 路由注册与 `internal/eventbus` 常量生成。commit: `c80dd898a798`
+> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` 的 `contracts:` / `disk_formats:`，加上 `internal/server` 路由注册与 `internal/eventbus` 常量生成。commit: `528bdcd6b649`
 > 契约是模块之间「靠什么约束交互」的清单：谁提供、谁消费、定义在哪、保证什么、失败怎么表现、变更属于加法还是破坏、由什么机制强制。
 > `providers` / `consumers` 里的 `ext:` 前缀表示外部消费面（前端、运维、MCP server、外部调用方），不是仓库内的包。
 
@@ -439,8 +439,8 @@
 | 方法 | 路径 | handler | 来源 |
 | --- | --- | --- | --- |
 | GET | `/` | `app.handleSPA` | `internal/server/app.go:331` |
-| DELETE | `/api/agents` | `handleDeleteAgent` | `internal/server/routes_agents.go:30` |
-| PATCH | `/api/agents/metadata` | `handleUpdateAgentMetadata` | `internal/server/routes_agents.go:33` |
+| DELETE | `/api/agents` | `handleDeleteAgent` | `internal/server/routes_agents.go:35` |
+| PATCH | `/api/agents/metadata` | `handleUpdateAgentMetadata` | `internal/server/routes_agents.go:38` |
 | GET | `/api/browser/contexts` | `handleBrowserPanelContexts` | `internal/server/routes_browser_panel.go:86` |
 | POST | `/api/browser/contexts/close` | `handleBrowserPanelClose` | `internal/server/routes_browser_panel.go:92` |
 | GET | `/api/browser/status` | `handleBrowserStatus` | `internal/server/routes_app_extra.go:149` |
@@ -497,17 +497,17 @@
 | PUT | `/api/config/rate-limits` | `handleUpdateRateLimits` | `internal/server/routes_config.go:291` |
 | GET | `/api/config/sentinel` | `handleGetSentinel` | `internal/server/routes_config.go:277` |
 | PUT | `/api/config/sentinel` | `handleUpdateSentinel` | `internal/server/routes_config.go:278` |
-| GET | `/api/credentials` | `routes.handleListCredentials` | `internal/server/routes_credentials.go:78` |
-| POST | `/api/credentials` | `routes.handleSaveCredential` | `internal/server/routes_credentials.go:79` |
-| POST | `/api/credentials/check-agent` | `handleCheckAgent` | `internal/server/routes_agents.go:36` |
+| GET | `/api/credentials` | `routes.handleListCredentials` | `internal/server/routes_credentials.go:89` |
+| POST | `/api/credentials` | `routes.handleSaveCredential` | `internal/server/routes_credentials.go:90` |
+| POST | `/api/credentials/check-agent` | `handleCheckAgent` | `internal/server/routes_agents.go:41` |
 | POST | `/api/credentials/local` | `routes.handleSaveLocalCredential` | `internal/server/routes_credentials_local.go:59` |
 | DELETE | `/api/credentials/local/{credential_id}/{alias}` | `routes.handleDeleteLocalCredential` | `internal/server/routes_credentials_local.go:60` |
-| GET | `/api/credentials/oauth-status` | `routes.handleOAuthStatus` | `internal/server/routes_credentials.go:75` |
-| POST | `/api/credentials/resync` | `routes.handleResync` | `internal/server/routes_credentials.go:76` |
-| GET | `/api/credentials/specs` | `routes.handleListSpecs` | `internal/server/routes_credentials.go:74` |
-| POST | `/api/credentials/validate-key` | `routes.handleValidateKey` | `internal/server/routes_credentials.go:77` |
-| DELETE | `/api/credentials/{credential_id}` | `routes.handleDeleteCredential` | `internal/server/routes_credentials.go:85` |
-| GET | `/api/credentials/{credential_id}` | `routes.handleGetCredential` | `internal/server/routes_credentials.go:84` |
+| GET | `/api/credentials/oauth-status` | `routes.handleOAuthStatus` | `internal/server/routes_credentials.go:86` |
+| POST | `/api/credentials/resync` | `routes.handleResync` | `internal/server/routes_credentials.go:87` |
+| GET | `/api/credentials/specs` | `routes.handleListSpecs` | `internal/server/routes_credentials.go:85` |
+| POST | `/api/credentials/validate-key` | `routes.handleValidateKey` | `internal/server/routes_credentials.go:88` |
+| DELETE | `/api/credentials/{credential_id}` | `routes.handleDeleteCredential` | `internal/server/routes_credentials.go:96` |
+| GET | `/api/credentials/{credential_id}` | `routes.handleGetCredential` | `internal/server/routes_credentials.go:95` |
 | POST | `/api/crm/changed` | `handleCRMChanged` | `internal/server/routes_events.go:74` |
 | POST | `/api/crm/claim` | `handleCRMProxy` | `internal/server/routes_colony_workers_global.go:787` |
 | GET | `/api/crm/grid/schema` | `handleCRMProxy` | `internal/server/routes_colony_workers_global.go:752` |
@@ -519,7 +519,7 @@
 | PATCH | `/api/crm/grid/{entity}/{id}` | `handleCRMProxy` | `internal/server/routes_colony_workers_global.go:772` |
 | POST | `/api/crm/grid/{entity}/{id}/stage` | `handleCRMProxy` | `internal/server/routes_colony_workers_global.go:782` |
 | POST | `/api/crm/release` | `handleCRMProxy` | `internal/server/routes_colony_workers_global.go:790` |
-| GET | `/api/discover` | `handleDiscoverAgents` | `internal/server/routes_agents.go:27` |
+| GET | `/api/discover` | `handleDiscoverAgents` | `internal/server/routes_agents.go:32` |
 | GET | `/api/events/global` | `handleGlobalEvents` | `internal/server/routes_events.go:71` |
 | GET | `/api/global/crm/status` | `handleGlobalCRMStatus` | `internal/server/routes_colony_workers_global.go:722` |
 | GET | `/api/global/data/changes` | `handleGlobalChanges` | `internal/server/routes_colony_workers_global.go:728` |
@@ -621,7 +621,7 @@
 | GET | `/api/sessions/{session_id}/colony/skills` | `handleListColonySkills` | `internal/server/routes_colony_workers.go:652` |
 | GET | `/api/sessions/{session_id}/colony/tools` | `handleListColonyTools` | `internal/server/routes_colony_workers.go:655` |
 | POST | `/api/sessions/{session_id}/compact-and-fork` | `handleCompactAndFork` | `internal/server/routes_execution.go:64` |
-| POST | `/api/sessions/{session_id}/credential-form` | `routes.handleCredentialForm` | `internal/server/routes_credentials.go:83` |
+| POST | `/api/sessions/{session_id}/credential-form` | `routes.handleCredentialForm` | `internal/server/routes_credentials.go:94` |
 | POST | `/api/sessions/{session_id}/dismiss-colony-pivot` | `handleDismissColonyPivot` | `internal/server/routes_sessions.go:117` |
 | GET | `/api/sessions/{session_id}/events` | `handleSessionEventsStream` | `internal/server/chat_routes.go:36` |
 | GET | `/api/sessions/{session_id}/events/history` | `handleSessionEventsHistory` | `internal/server/routes_sessions.go:123` |

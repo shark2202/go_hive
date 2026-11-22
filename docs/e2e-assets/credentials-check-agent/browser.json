@@ -1,0 +1,41 @@
+{
+  "phase": "frontend-real-call-path",
+  "server": {
+    "binary": "go build ./cmd/hive (worktree .wt/cred-check @ cred-check)",
+    "url": "http://127.0.0.1:8798",
+    "note": "8788 was already bound by another lane's hive-embe process; this lane used 8798. HIVE_HOME=<scratch>/cred-check-e2e/home; GITHUB_TOKEN=ghp_fake_e2e_token; ADEN key absent at page load, saved later through POST /api/credentials"
+  },
+  "page": {
+    "url": "http://127.0.0.1:8798/colony/cred_demo",
+    "title": "🐴 Hive",
+    "body_snippet": "Open Hive / 新建对话 / … / Cred Demo … v1.0.26-go.1",
+    "served_bundle": "http://127.0.0.1:8798/assets/index-Z2alDRTm.js",
+    "bundle_contains_check_agent_call": true,
+    "bundle_contains_resync_call": true,
+    "js_errors": []
+  },
+  "modal_request": {
+    "source": "frontend/src/api/credentials.ts::credentialsApi.checkAgent — POST /credentials/check-agent {agent_path} (CredentialsModal.fetchStatus)",
+    "request": {"method": "POST", "path": "/api/credentials/check-agent", "body": {"agent_path": "<HIVE_HOME>/colonies/cred_demo"}},
+    "response_status": 200,
+    "response_body": {"has_aden_key": true, "required_count": 2, "rows": [
+      {"credential_id": "aden_api_key", "available": true, "valid": null},
+      {"credential_id": "github", "available": true, "valid": false, "validation_message": "GitHub token is invalid or expired"}
+    ]},
+    "network_entry": {"name": "http://127.0.0.1:8798/api/credentials/check-agent", "initiatorType": "fetch", "duration_ms": 537.8},
+    "server_access_log": "2026-11-22 20:12:28 [access] POST /api/credentials/check-agent -> 200 (535ms)"
+  },
+  "resync_request": {
+    "source": "frontend/src/api/credentials.ts::credentialsApi.resync — POST /credentials/resync {} (ToolsEditor focus path / credentials page)",
+    "response_status": 200,
+    "response_body": {"synced": true, "accounts_by_provider": {}},
+    "network_entry": {"name": "http://127.0.0.1:8798/api/credentials/resync", "initiatorType": "fetch"}
+  },
+  "specs_cross_check": {
+    "status": 200,
+    "aden_row_first": true,
+    "github_available": true,
+    "github_env_var": "GITHUB_TOKEN"
+  },
+  "limitation": "The CredentialsModal auto-open trigger in the shipped dashboard is a 424 credentials_required response / SSE event; the Go runtime defines the error type and the 424 mapping but no production path raises it yet (registered observation, not this lane). The modal's own request (exact path/body the component sends) is what this transcript exercises from the served dashboard origin."
+}

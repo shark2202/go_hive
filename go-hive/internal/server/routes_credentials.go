@@ -42,10 +42,13 @@ type CredentialRouteDeps struct {
 	Store credentialRouteStore
 	// Manager resolves the live session behind a credential-form submission.
 	// Nil leaves the credential-form route answering 404 (no session surface).
-	Manager                *SessionManager
-	Specs                  func() []CredentialSpecView
-	SpecsStore             func() credentialRouteStore
-	Accounts               func() map[string][]map[string]any
+	Manager    *SessionManager
+	Specs      func() []CredentialSpecView
+	SpecsStore func() credentialRouteStore
+	Accounts   func() map[string][]map[string]any
+	// Resync forces a credential resync. Nil installs the local default
+	// (resyncLocalCredentials) when the caller supplied Home; without Home the
+	// route keeps its explicit 500.
 	Resync                 func() error
 	ValidateKey            func(providerID, apiKey string) (map[string]any, error)
 	PublishCredentialEvent func(connected bool, credentialID, provider string)
@@ -71,6 +74,14 @@ func RegisterCredentialRoutes(mux *http.ServeMux, deps CredentialRouteDeps) {
 		}
 	}
 	routes := &CredentialRoutes{deps: deps, homeGiven: homeGiven}
+	if routes.deps.Resync == nil && homeGiven {
+		// Production default: re-read the local credential sources and mirror
+		// them into the process environment. The reference force-fetches Aden
+		// OAuth tokens here; the Go port has no Aden client yet (separate
+		// backlog item), so this is the observable local equivalent — a key
+		// written by another process becomes visible without a restart.
+		routes.deps.Resync = routes.resyncLocalCredentials
+	}
 	mux.HandleFunc("GET /api/credentials/specs", routes.handleListSpecs)
 	mux.HandleFunc("GET /api/credentials/oauth-status", routes.handleOAuthStatus)
 	mux.HandleFunc("POST /api/credentials/resync", routes.handleResync)
@@ -171,6 +182,25 @@ func (rt *CredentialRoutes) syncEnv() {
 		return
 	}
 	credentials.SyncEnvFromStore(rt.deps.Home.CredentialsDir(), allCredentialEnvBindings(specs))
+}
+
+// resyncLocalCredentials is the production Resync default. The reference
+// force-fetches Aden OAuth tokens and drops its adapter/queen caches; the Go
+// port has no Aden client yet (separate backlog item), so this is the
+// observable local equivalent: re-read the bootstrap keys from their local
+// sources (secrets file, shell config), drop the credential store's in-memory
+// cache, and re-run the store → environment bridge — a credential written by
+// another process becomes visible without a restart.
+func (rt *CredentialRoutes) resyncLocalCredentials() error {
+	_, _ = credentials.LoadCredentialKey()
+	_, _ = credentials.LoadAdenAPIKey()
+	if store, err := rt.credentialStore(); err == nil {
+		if clearer, ok := store.(interface{ ClearCache() }); ok {
+			clearer.ClearCache()
+		}
+	}
+	rt.syncEnv()
+	return nil
 }
 
 func (rt *CredentialRoutes) adenKeyPresent() bool {

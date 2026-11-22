@@ -42,9 +42,12 @@ func (l *AgentLoop) captionToolImagesEnabled(agentCtx *AgentContext) bool {
 // fractions) or the exhausted marker when no caption could be produced. A
 // captioning failure never fails the turn.
 //
+// input is the call's coerced input — upstream builds the caption intent from
+// tc.tool_input, which the pre-dispatch coercion pass already healed.
+//
 // Parity: framework/agent_loop/agent_loop.py (vision_fallback_marker splice)
-func (l *AgentLoop) captionToolImages(ctx context.Context, conv *NodeConversation, tc llm.ToolCall, result ToolResult) string {
-	intent := visionfallback.IntentForTool(tc.Name, parseToolInput(tc.Arguments), func() string {
+func (l *AgentLoop) captionToolImages(ctx context.Context, conv *NodeConversation, toolName string, input map[string]any, result ToolResult) string {
+	intent := visionfallback.IntentForTool(toolName, input, func() string {
 		return conv.LastAssistantText()
 	})
 	caption, ok := l.VisionCaptioner.Caption(ctx, intent, result.ImageContent)

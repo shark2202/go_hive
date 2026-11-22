@@ -19,6 +19,11 @@ type AgentRouteDeps struct {
 	Manager *SessionManager
 	Home    hivehome.Home
 	Roots   *agents.AllowedRoots
+	// EnsureCredentialEnv overrides the shell-config credential bootstrap
+	// check-agent runs before validating. Nil keeps the production default
+	// (credentials.EnsureCredentialKeyEnv over the registry's env vars); tests
+	// pin a no-op so they never read the developer's real shell config.
+	EnsureCredentialEnv func()
 }
 
 // Parity: framework/server/routes_sessions.py::register_routes
@@ -272,11 +277,25 @@ func handleCheckAgent(w http.ResponseWriter, r *http.Request, deps AgentRouteDep
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": internalServerError})
 		return
 	}
-	if _, err := deps.allowedRoots().Validate(pathString); err != nil {
+	resolved, err := deps.allowedRoots().Validate(pathString)
+	if err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
 		return
 	}
-	writeJSON(w, http.StatusInternalServerError, map[string]any{"error": "Internal server error while checking credentials"})
+
+	// Body: {"agent_path": "...", "verify": true} — verify defaults on, and any
+	// truthy JSON value keeps it on (Python truthiness, as upstream).
+	verify := true
+	if value, present := body["verify"]; present {
+		verify = pythonTruthy(value)
+	}
+
+	response, checkErr := deps.checkAgentCredentialRequirements(resolved, verify)
+	if checkErr != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": "Internal server error while checking credentials"})
+		return
+	}
+	writeJSON(w, http.StatusOK, response)
 }
 
 func marshalPythonIndent(value any, ensureASCII bool) ([]byte, error) {

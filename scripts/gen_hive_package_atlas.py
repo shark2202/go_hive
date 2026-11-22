@@ -552,14 +552,14 @@ figure.diagram figcaption{{color:var(--muted);font-size:12px;margin-top:8px}}
 <li><b>数字来源</b>：包表/边/SCC/反向边全部来自生成器的静态解析；职责描述是人工标注（<code>ROLES</code> 表），改包职责时同步改脚本再跑。</li>
 <li><b>口径</b>：非测试文件排除 <code>tests/</code> 目录与 <code>test_*.py</code>；导入边只统计 <code>framework.*</code> 绝对导入（函数内延迟 import 也算，所以会出现"下层→上层"的边）。</li>
 <li><b>校验</b>：HTMLParser 标签闭合/锚点；桌面 1440 与手机 390 的 scrollWidth、裁切、TOC 触控高度；改动后再跑一次。</li>
-<li><b>相关文档</b>：<a href="../../docs/architecture/README.md">architecture/README.md</a>（叙事架构）、<a href="../../docs/key_concepts/runtime_spine.md">runtime_spine.md</a>（层间脊柱）、<a href="module-interfaces.html">module-interfaces.html</a>（不变量）、<a href="skill-discovery.html">skill-discovery.html</a>（技能扫描面）、<a href="hive-core-designs.html">hive-core-designs.html</a>（核心机制）、<a href="surface-tracking-matrix.html">surface-tracking-matrix.html</a>（外观矩阵）。</li>
+<li><b>相关文档</b>：<a href="../../docs/architecture/README.md">architecture/README.md</a>（叙事架构）、<a href="../../docs/key_concepts/runtime_spine.md">runtime_spine.md</a>（层间脊柱）、<a href="hive-concepts-inventory.html">hive-concepts-inventory.html</a>（概念清单：18 原语 / 50 机制）、<a href="loop-vocabulary.html">loop-vocabulary.html</a>（术语表：park / nudge / stall / Sentinel）、<a href="event-bus.html">event-bus.html</a>（事件总线：77 类型 / 发布管线 / 消费方）、<a href="memory-and-soul.html">memory-and-soul.html</a>（记忆 / 时间线 / 召回 / 自我）、<a href="module-interfaces.html">module-interfaces.html</a>（不变量）、<a href="skill-discovery.html">skill-discovery.html</a>（技能扫描面）、<a href="hive-core-designs.html">hive-core-designs.html</a>（核心机制）、<a href="surface-tracking-matrix.html">surface-tracking-matrix.html</a>（外观矩阵）。</li>
 </ol>
 <div class="callout info"><b>边界声明</b>：这是<b>静态结构图</b>，不证明运行时行为；行为证据看各包测试、<code>docs/e2e-assets/</code> 与 go_hive 的 parity 报告。</div>
 </section>
 
 <footer>
 <p>生成器：<code>go_hive/scripts/gen_hive_package_atlas.py</code> · 数据：<a href="hive-package-graph.json">hive-package-graph.json</a> · 基线：<code>core/framework @ {ESC(d['baseline'])}</code> · 生成时间：{ESC(d['generated_at'])}</p>
-<p>相关：<a href="module-interfaces.html">模块接口与不变量</a> · <a href="skill-discovery.html">技能发现</a> · <a href="hive-core-designs.html">核心设计</a> · <a href="surface-tracking-matrix.html">外观矩阵</a> · <a href="../../docs/architecture/README.md">架构叙事</a></p>
+<p>相关：<a href="module-interfaces.html">模块接口与不变量</a> · <a href="hive-concepts-inventory.html">概念清单</a> · <a href="loop-vocabulary.html">Hive 术语表</a> · <a href="event-bus.html">Event Bus 事件总线</a> · <a href="memory-and-soul.html">Memory &amp; Soul</a> · <a href="skill-discovery.html">技能发现</a> · <a href="hive-core-designs.html">核心设计</a> · <a href="surface-tracking-matrix.html">外观矩阵</a> · <a href="../../docs/architecture/README.md">架构叙事</a></p>
 </footer>
 </div></body></html>"""
 

@@ -1,440 +1,440 @@
 {
- "note": "剩余工作项（lane-hours 估算）。done 项不计入；external 项不计入速度换算，只保留基线日期。",
- "gates": {
-  "G2": [
-   {
-    "id": "old-home-e2e",
-    "label": "真实旧 HIVE_HOME 全量双跑",
-    "hours": 8,
-    "done": true
-   },
-   {
-    "id": "rollback-drill",
-    "label": "Go→Python 回滚演练",
-    "hours": 4,
-    "done": true
-   },
-   {
-    "id": "install-upgrade",
-    "label": "安装/升级演练与脚本",
-    "hours": 4,
-    "done": true
-   },
-   {
-    "id": "sidecar-parity",
-    "label": "session meta/tasks/colony sidecar",
-    "hours": 4,
-    "done": true
-   },
-   {
-    "id": "g2-docs",
-    "label": "无损替换文档与支持矩阵",
-    "hours": 2,
-    "done": true
-   },
-   {
-    "id": "g2-support-matrix",
-    "label": "G2 支持矩阵与无损替换声明",
-    "hours": 2,
-    "done": true
-   }
-  ],
-  "G3": [
-   {
-    "id": "windows-real",
-    "label": "Windows 实机验证",
-    "hours": 8,
-    "external": true
-   },
-   {
-    "id": "actions-release",
-    "label": "GitHub Actions release 执行",
-    "hours": 4,
-    "external": true
-   },
-   {
-    "id": "govulncheck",
-    "label": "govulncheck + 安全审查",
-    "hours": 2
-   },
-   {
-    "id": "installer-verify",
-    "label": "六平台安装器复验",
-    "hours": 2,
-    "done": true,
-    "note": "DONE 2026-11-22：六平台归档 36/36 PASS；linux/arm64 debian:stable-slim 容器真跑 20/20（version/help/serve+/api/health/cred/browserbridge），linux/amd64 模拟 20/20，darwin 双架构本机全 PASS；windows 无宿主仅静态。文档 docs/installer-verify.md，证据 docs/e2e-assets/installer-verify/2026-11-22/。"
-   },
-   {
-    "id": "longmemeval-60q-evidence",
-    "label": "LongMemEval n=60 两侧真实 LLM 对比（Go 86.7% vs Py 85.0%，McNemar p=1.000）",
-    "hours": 3,
-    "done": true,
-    "note": "DONE 2026-11-22：docs/e2e-assets/longmemeval/2026-11-22-60q-real-run.md，逐题 JSON+sha 落盘；判分敏感性 TypeSafe 0.8B 次判 Go+1 方向一致；失败模式 7 分歧+5 双错已归类。"
-   },
-   {
-    "id": "exports-baseline-decision",
-    "label": "exports/ 基准差异决策（Python=CWD vs Go=HIVe_HOME）；备忘已产，待用户拍板 Q1/Q2",
-    "hours": 1,
-    "done": false,
-    "note": "备忘：docs/exports-baseline-decision.md（选项 A/B/C/C′/D，推荐 A，若必须自动迁移则 C′）。F4 .migrations 已复核：colony list 两侧逐字一致（sha 30e73cca），登记为行为对齐无需修。"
-   }
-  ],
-  "G1": [
-   {
-    "id": "api-probe-matrix",
-    "label": "扩大 REST 端点值级/失败矩阵",
-    "hours": 6,
-    "done": true
-   },
-   {
-    "id": "tool-output-golden",
-    "label": "工具输出/失败路径 golden",
-    "hours": 4,
-    "done": true
-   },
-   {
-    "id": "api-ws-canonical",
-    "label": "API/SSE 帧级 golden 收口",
-    "hours": 2,
-    "done": true
-   },
-   {
-    "id": "prompt-skill-catalog",
-    "label": "system prompt/catalog/turn_context 收敛",
-    "hours": 6,
-    "done": true
-   },
-   {
-    "id": "schema-residuals",
-    "label": "lifecycle/session_cwd/exa schema 残差",
-    "hours": 3,
-    "done": true
-   },
-   {
-    "id": "tool-desc-residual",
-    "label": "同名 desc 40/41 与输出文案",
-    "hours": 2,
-    "done": true
-   },
-   {
-    "id": "queen-prompt-assembly",
-    "label": "queen system prompt 结构与文本对齐",
-    "hours": 8,
-    "done": true
-   },
-   {
-    "id": "searchable-manifest",
-    "label": "search_tools 清单 307 vs 1029 收敛",
-    "hours": 3,
-    "done": true
-   },
-   {
-    "id": "runtime-state-gap",
-    "label": "REST 会话挂 PhaseState（session_live_tools 空面）",
-    "hours": 3,
-    "done": true
-   },
-   {
-    "id": "browser-ws-residuals",
-    "label": "Browser WS 残差 R09–R14（并发/帧上限/低风险）",
-    "hours": 5,
-    "done": true
-   },
-   {
-    "id": "cron-seconds",
-    "label": "croniter 6 字段/秒级 cron（Python 可调度、Go 现拒绝）",
-    "hours": 3,
-    "done": true,
-    "note": "merged"
-   },
-   {
-    "id": "cli-usage-error-shape",
-    "label": "usage 错误前缀/usage 行形状（argparse root vs leaf）",
-    "hours": 2,
-    "done": true,
-    "note": "merged"
-   },
-   {
-    "id": "judge-conversation-level2",
-    "label": "conversation_judge.py（Level2 会话质量门）移植或显式范围外声明",
-    "hours": 4,
-    "done": true,
-    "note": "登记范围外（judge-parity J4）"
-   },
-   {
-    "id": "judge-subagent-urgency",
-    "label": "SubagentJudge 迭代余量 URGENT/WARNING 层",
-    "hours": 2,
-    "done": true,
-    "note": "登记不移植（judge-parity J5）"
-   },
-   {
-    "id": "goal-marshal-parity",
-    "label": "goal 序列化差异：id 字段 / weight=0 归一 / context 键序",
-    "hours": 3,
-    "done": true
-   },
-   {
-    "id": "worker-health-summary",
-    "label": "移植 get_worker_health_summary（worker_monitoring_tools.py；Go 缺失）",
-    "hours": 3,
-    "done": true
-   },
-   {
-    "id": "inventory-triage-fixes",
-    "label": "清单误判/注解修正：tracker_tools/tracker_db/worker_profiles/colony_tools_config/outcome_aggregator + skills/discovery + server/sse + pipeline/registry 错配",
-    "hours": 3,
-    "done": true,
-    "note": "done: merge 6624019b + registry 重生成 283d16d6（ported 202；C12 PASS）"
-   },
-   {
-    "id": "server-readme-delta",
-    "label": "上游 server/README 文档债清单（graph 时代路由 vs 现役代码 vs Go 覆盖）",
-    "hours": 2,
-    "done": true,
-    "note": "done: merge e3c4517d（docs/server-readme-delta.md）"
-   },
-   {
-    "id": "pipeline-stages",
-    "label": "pipeline 配置面：读 configuration.json pipeline.stages 并实现 7 个内置 stage 等价（默认空管线语义）",
-    "hours": 6,
-    "done": true
-   },
-   {
-    "id": "config-key-pipeline",
-    "label": "config 契约补 pipeline 键（当前 134 键未含）",
-    "hours": 1,
-    "done": true
-   },
-   {
-    "id": "streamtoken-refresh-scope",
-    "label": "server/streamtoken_refresh.py（云端 streamToken 轮换）归属：实现或登记 out_of_scope(cloud)",
-    "hours": 2,
-    "done": true,
-    "note": "done: merge e3c4517d（out_of_scope(cloud) + CURATED）"
-   },
-   {
-    "id": "browser-audit-d02-refresh",
-    "label": "browser 审计页 D02 文案与 tool-surface 22/22 sha 证据不一致，需刷新口径",
-    "hours": 1,
-    "done": true,
-    "note": "done: merge e3c4517d（D02 → 可宣布对齐，22/22 sha）"
-   },
-   {
-    "id": "memory-tools-defs",
-    "label": "memory 工具定义逐字+契约覆盖：search_messages desc/3 条 nullable、search_timeline 入契约、memory 文件四工具（list/read/write/delete_memory_file）入契约或登记",
-    "hours": 4,
-    "done": true
-   },
-   {
-    "id": "tool-desc-residual-7",
-    "label": "tool-contract-diff 当前 description 34/41（7 条未逐字）+ schema 归一 20/41 收口",
-    "hours": 2,
-    "done": true,
-    "note": "done: 已被 round 8 live recheck 口径取代（desc 47/47）；旧 34/41 数字作废"
-   },
-   {
-    "id": "integrations-structure-p1",
-    "label": "integrations 包结构重构（一）：内核下沉 integrationkit + 类型别名骨架 + 目录文档 + lane 前缀只减不增门禁 + 1 个领域子包试点",
-    "hours": 6,
-    "done": true,
-    "note": "delivered 33837a81（待合并）"
-   },
-   {
-    "id": "integrations-structure-p2",
-    "label": "integrations 包结构重构（二）：9 大领域文件迁子包、1908 个 batch 前缀标识符改名、248 个重复 helper 收敛、豁免清单清零",
-    "hours": 10,
-    "done": true,
-    "note": "进展 2026-11-22：devops 子包拆分完成（939e4fb9，最大文件 643 行）；batch 前缀改名 200 个 + 165 helper 收敛入 integrationkit（f5e84600，前缀 1901→1535）；剩余 8 领域拆子包 + waivers 清零。 | 阶段2 进展（2026-11-22）：已拆子包 devops/ai/social/enrichment 四个领域（工具面 sha 均逐字节不变）；前缀 1901→1172（limit 同步降）；剩余：cloudflare/infra_automation/web_intelligence/scheduling_chat + pdf/excel/scrape 拆分 + waivers 清零。 | 领域子包八/八完成（2026-11-22 深夜波）：devops/ai/social/enrichment/cloudflare/infra/webintel/schedchat 全部迁出，工具面 sha 逐字节不变；前缀 1901→876（limit 876）；剩余：pdf/excel/scrape 拆分 + waivers 清零（本项 -1h 收尾）。 | DONE 2026-11-22：八领域子包（devops/ai/social/enrichment/cloudflare/infra/webintel/schedchat）+ pdf 子包全部迁出；200+ 前缀标识符改语义名、165 helper 收敛；integrations size waiver 仅剩 catalog_gen（生成文件，设计保留）；前缀 1901→867（limit 867）；工具面 sha 全部逐字节不变。"
-   },
-   {
-    "id": "queen-mail-mcp-parity",
-    "label": "queen-mail MCP stdio 协议面收口：description 逐字/title/outputSchema/structuredContent+isError/错误码，capabilities 与 serverInfo.version 登记例外；docs/queen-mail.md §6 补录",
-    "hours": 3,
-    "done": true,
-    "note": "done: merged 71bd29cd"
-   },
-   {
-    "id": "qmail-package-split",
-    "label": "拆包：internal/qmail → internal/queenmail（信件引擎+MCP 面）+ internal/claudecode（runner/transcript/procsys/conversations）；去交叉耦合、arch/docs 同步、行为零变化",
-    "hours": 5,
-    "done": true,
-    "note": "merged 986628d5"
-   },
-   {
-    "id": "reflection-atomic-write",
-    "label": "reflection.go:302 os.WriteFile 非原子写 → temp+rename，消除 TestChatRuntimeTurnDoneReflectsIntoQueenMemory flake 根因",
-    "hours": 1,
-    "done": true,
-    "note": "done: merged cfd0d415（原子写+回归测试）"
-   },
-   {
-    "id": "soul-queen-reverse-dep",
-    "label": "结构：消除 internal/soul → internal/queen 反向依赖（QueenProfile 格式化下沉/注入），arch 仅剩 0 条反向边",
-    "hours": 2,
-    "done": true,
-    "note": "done: merge 187c5204（QueenProfileSource 注入；arch 196 边/1 info，grep 0）"
-   },
-   {
-    "id": "skills-worker-scope",
-    "label": "worker 技能可见面：补齐 queen scope 对其名下 colony 的可见性（GAP-07），或登记为有意偏差",
-    "hours": 3,
-    "done": true,
-    "note": "done: merge 98c0937b（queen_ui→colony_ui；GAP-07 已修复）"
-   },
-   {
-    "id": "colony-audit-refresh",
-    "label": "刷新 queen-worker-colony-parity-audit.html：GAP-04 playbook 已修、GAP-09 LongMemEval 已有 n=20、turn_context P-05 已注入等过时条目",
-    "hours": 1,
-    "done": true,
-    "note": "done: merge e3c4517d（GAP-04/09/P-05 刷新）"
-   },
-   {
-    "id": "qmail-split-frozen-surfaces",
-    "label": "qmail→queenmail 后刷新冻结面引用：module-inventory/appearance registry/矩阵中的旧包路径（走 allowlist/重生流程）",
-    "hours": 1,
-    "done": true,
-    "note": "done: module-inventory/appearance registry 已随 qmail-split 刷新并入 allowlist"
-   },
-   {
-    "id": "tool-metric-unify",
-    "label": "统一 tool 一致度口径：冻结快照 diff（§3: desc 15/41）vs 实时 recheck（34/41）两套数字并存，需单一权威指标并写入治理页",
-    "hours": 1,
-    "done": true
-   },
-   {
-    "id": "cli-log-global-count2",
-    "label": "cli 包 -count=2 压力模式下 cred log 与 serve log 全局状态互染（CI -count=1 不受影响）：setupCredLogging 的 log.SetOutput(file) 与 installRuntimeLogBuffer 的 TimestampWriter 全局重定向在二次迭代时串味",
-    "hours": 2,
-    "done": true,
-    "note": "2026-11-22 观察：go test -count=2 ./internal/cli/ 时 TestCredLogFileMatchesPythonLineFormat 偶发读到其它用例的 serve-log 探针行；-count=1 全包 5 轮全绿，CI 用 -count=1，不阻塞；修法方向=日志输出按 test 作用域隔离（或该测试改用独立 sink 断言）。 | DONE：根因=夹具未钉 HIVE_HOME，进程级 os.Setenv(HIVE_CREDENTIAL_KEY) 泄漏（17 个命中点）；修 4 个测试文件（tempdir helper/生命周期夹具/cred log 独立），-count=2 -shuffle=on ×4 轮全绿。"
-   },
-   {
-    "id": "server-relay-flake",
-    "label": "server 包 TestChatRuntimeRelaysClientMessageToOverseer 偶发失败（1/3）：中继顺序断言，pristine 45aa262e 上可复现",
-    "hours": 2,
-    "done": true,
-    "note": "2026-11-22 观察（int-p2-mid lane 主席）：失败签名与 docs/judge-parity.md §6 登记一致；修法方向=等中继落定再断言（与 EventBus 异步派发同类）。 | DONE：分类=测试时序（队列先中继后记录，Close 前缺有界等待）；改为等 execution_completed 边界再断言，-count=300 ×2 共 610 连跑 0 失败；产品零改动。"
-   },
-   {
-    "id": "integrations-evidence-audit-anchors",
-    "label": "docs/integrations-evidence-audit.json 四处 file:line 锚点漂移（GA 96/623、GW 192、freshdesk 285）",
-    "hours": 1,
-    "done": true,
-    "note": "无门禁校验该文件；随文件拆分/改名刷新锚点或加 --check。 | DONE：4 处锚点修复（GA/GSC/GW/freshdesk）+ 新门禁 check_integrations_evidence.py（qc C9），QC 8/8→9/9。"
-   },
-   {
-    "id": "mcp-ns-residuals-registered",
-    "label": "MCP 命名空间残余三组已用 Python 参考实跑对照并登记（R1 折叠不可逆/R2 >64 无截断/R3 序列化与畸形载荷）",
-    "hours": 3,
-    "done": true,
-    "note": "DONE 2026-11-22：13 用例冻结（mcp_namespace_parity_test.go）+ docs/mcp-namespace-residuals.md；折叠字符集属冻结契约不修，长名上限双侧缺位。"
-   },
-   {
-    "id": "memory-notes-1.0.15-parity",
-    "label": "上游 1.0.15「Notes in Time」memory notes 特性移植（notes 先于回答到达；log.jsonl 历史/恢复；用户自有 notes；note 年龄=最后确认日；memory_reflection worker 模型；recall 索引化 30ms/3s 上限；HIVE_MEMORY_RECALL、memory_recall/memory_reflection 配置；routes /api/memories* /api/config/memory）",
-    "hours": 12,
-    "done": true,
-    "note": "2026-11-22 引入（origin/main 6703b434 合并后实测）：新增 py 2 文件（memory_reminders.py、queen/memory_log.py）+ queen_memory_v2/recall_selector/reflection_agent/agent_loop 修改 + 前端 Settings→Memory；Go 侧缺失 5 条有效路由。 | DONE 2026-11-22（lane mem-notes-push + mem-notes-log）：notes 推送 index/wait 双模式（header 逐字）、recall 索引化（per-owner/冷建 3s 让路/删除重建）、log.jsonl 历史+恢复、8 条 /api/memories 路由 + /api/config/memory、自有标记、年龄=最后确认日；Python 探针 51/51 + 上游 pytest 95 passed；missing_in_go_effective 5→0。 | DONE 2026-11-22（lane bg-recall）：background 模式时序对齐上游（缓存块随下一条消息送达 + 挑选在后台任务，探针 36/36，见 bg-recall-probe.json）；残余：挑选 seed 未移植、双 scope 串行挑选、索引 JSON vs SQLite（已登记 memory-notes-parity.md）。"
-   },
-   {
-    "id": "memory-recall-index-1.0.15",
-    "label": "recall 索引化（per-queen index，首条消息后台建索引，删除安全）+ 3s 上限",
-    "hours": 3,
-    "done": true,
-    "note": "上游 1.0.15 changed 项；与 memory-notes 同族，实现时一并做。 | DONE：随 notes-push 落地（$HIVE_HOME/.message_index/recall/<scope>/<owner>.json，冷建让路 ≤3s，warm 增量刷新，删除可重建）。"
-   },
-   {
-    "id": "long-wait-and-parallel-tools-1.0.15",
-    "label": "长等待不耗模型回合（terminal/worker 等待最长 10 分钟、每秒检查、新消息结束等待）+ 非 Anthropic 模型并行工具调用（拒绝则去掉再问）",
-    "hours": 4,
-    "done": true,
-    "note": "DONE 2026-11-22：探针实跑 + 登记 docs/long-wait-parallel-tools-1.0.15.md（A/B 两表）。agent 层等待/中断/预算与并行工具请求字段/拒绝闩锁/同回合批量均一致；修 DefaultReportWait 60s→600s；登记 2 项差异（collect_result 长等待无 background tools 载体；ChatAppProvider 生产未接线，无渠道会话来源）。"
-   },
-   {
-    "id": "frontend-vendor-1.0.15",
-    "label": "前端 vendor 同步 1.0.15（MemorySettingsSection、memory-library 历史/恢复、config/memories API 客户端、SettingsModal）",
-    "hours": 3,
-    "done": true,
-    "note": "上游 7 个前端文件变更；vendor 必须用原版 React 应用。 | DONE：vendor 同步 7 文件（MemorySettingsSection/memory-library/SettingsModal/config/memories 客户端 + i18n 30 条）；tsc 0 错、vitest 286 passed、python_only 3→0。"
-   },
-   {
-    "id": "longmemeval-e2e-1.0.15-sync",
-    "label": "e2e longmemeval 测试同步 1.0.15（memory notes 可构建、测试基线跟进）",
-    "hours": 1,
-    "done": true,
-    "note": "评估 2026-11-22（docs/long-wait-parallel-tools-1.0.15.md §4）：上游变更仅 HIVE_LME_NOTES=1 构建 notes（依赖 memory notes），默认关，Go runner（cmd/hive-longmemeval）无 notes 可建 → 现跑法（60q/run-*.sh）暂不改；待 memory-notes-1.0.15-parity 落地后补 --notes/HIVE_LME_NOTES 等价开关并重跑。 | DONE：上游 notes 开关（HIVE_LME_NOTES）依赖 memory notes；Go runner 60q 跑法不改（评估原因已落文档），notes 落地后补等价开关（跟随项）。"
-   },
-   {
-    "id": "memory-reflection-worker-slot",
-    "label": "反射/时间线默认用 worker_llm 槽（上游 1.0.15 changed）；Go 已读写 memory_reflection.model 但调度仍用会话模型",
-    "hours": 2,
-    "done": true,
-    "note": "DONE 2026-11-22（lane g1-resid）：上游 ef4779ef 的 _MemoryLLM 规则实跑确认（test_queen_memory.py -k memory_llm，3 passed）；Go 新 internal/server/chat_memory_llm.go 按调用解析 worker/main（worker_llm 段 JSON 变化才重建，未配置回退会话模型），reflection scheduler 与 timeline（backfill/after-turn）共用；端口 3 条上游测试 + 2 条 runtime 接线测试。结论落 docs/memory-notes-log.md。"
-   },
-   {
-    "id": "chat-app-provider-gap",
-    "label": "chat-app provider 缺口（B7）：提示词+门控已实现，但 ChatAppProvider 生产未赋值、adapter 不透传、无渠道会话来源",
-    "hours": 4,
-    "done": true,
-    "note": "DONE 2026-11-22（lane g1-resid）：复核边界——queen mail 在 Go 已是渠道会话（meta channel=queens），行为可无外部连接器复现，故接线而非仅登记：Session.Channel（claim + meta 恢复）、ChatAppProvider 生产赋值、ReminderAgentContext + tasks adapter 透传；测试 server/agentloop/cli 三处。外部渠道宿主（onebot/Telegram/Slack 包）仍为前置，重看条件已落 docs/long-wait-parallel-tools-1.0.15.md §3.2。dashboard 面无行为变化。"
-   },
-   {
-    "id": "title-llm-worker-slot",
-    "label": "会话标题生成 LLM 槽位差异：Go 传会话 provider，上游 _title_llm 优先 build_worker_llm() or session.llm",
-    "hours": 1,
-    "done": true,
-    "note": "DONE 2026-11-22（lane title-llm）：上游 _title_llm 规则实跑确认（test_session_titles.py 8 passed + 选槽探针：未配置回退会话模型、读取时机=订阅时一次）；Go 新增 TitleTriggerLLM（internal/server/session_titles.go），两处 SubscribeTitleTrigger 接线改走 worker_llm 槽（loader.go:627、loader_preloaded_session.go:275）；新增 TestTitleTriggerLLMTakesTheWorkerSlotWhenConfigured（回退/worker 槽/读取时机）。结论与证据落 docs/session-titles-parity.md；工具面 sha 与基线一致（refactor-freeze wave15-base 通过，差异属既有 allowlist）。"
-   },
-   {
-    "id": "cold-resume-midturn-guard",
-    "label": "上游 cold-resume mid-turn guard：崩溃时写 cold_interrupted（Go 该 park reason 无生产者，resume 写 turn_done）",
-    "hours": 2,
-    "done": true,
-    "note": "DONE 2026-11-22（lane resume-guards）：上游 §6b1½ 真探针取证（core 侧 pytest 2 passed；条件=restore 命中会话+queen+首迭代无 drain 注入+无 pending_input；字段=cursor pending_input.reason=cold_interrupted/emit_client_request=true + [System] note + client_input_requested/loop_state_changed，证据 docs/e2e-assets/reliability-2026-11-22/resume-guards/upstream-probe/）后对齐：chat_park.go 在 runtime 重建时按上游条件写 ParkReasonColdInterrupted（会话已有 parts + cursor 无 pending_input；create 自带 initial_prompt 经 InitialInputPending 抑制，等价 drained-injection 条件）。真机复跑 post-resume-cursor.json reason=cold_interrupted、snapshot awaiting_input=true。登记差异：未注入上游的 [System] note（Go 恢复不自动起回合，见报告 §5）。测试 internal/server/chat_resume_guard_test.go；报告 docs/reliability-soak-recovery.md §5。"
-   },
-   {
-    "id": "resume-snapshot-first-frame",
-    "label": "resume 后 /snapshot 与 SSE 首帧空态（即使 cursor=ask_user）",
-    "hours": 2,
-    "done": true,
-    "note": "DONE 2026-11-22（lane resume-guards）：根因=snapshot 只读总线 latest_loop_state 且重启总线为空；修法=runtime 重建还原 cursor park 后在新总线重播恢复等待（client_input_requested / client_credential_form_requested + loop_state_changed），SSE 首帧即同一 ComputeSessionSnapshot。真机复跑 park/resume-snapshot.json=awaiting_input=true/park_reason=ask_user/pending_questions 非空（崩溃会话同 cold_interrupted）；测试 TestRestoredAskUserParkShowsInSnapshotAndFirstSSEFrame。"
-   },
-   {
-    "id": "unported-credentials-check-agent",
-    "label": "unported 分诊 P1：移植 agent 凭据校验（validation.py 的 validate_agent_credentials/compute_unavailable_tools/CredentialStatus + setup.py 的 load_agent_nodes）并接线 /api/credentials/check-agent 与 /api/credentials/resync（现 check-agent 恒 500、Resync 生产未赋值；前端 CredentialsModal 打开即报错）",
-    "hours": 10,
-    "done": false,
-    "note": "证据 go_hive/docs/unported-triage.md（含 CURATED 条目）；Go 锚点 server/routes_agents.go:254（500 占位）、server/routes_credentials.go:590（deps.Resync nil→500）。bootstrap.go EnsureCredentialKeyEnv 也是仅测试调用，接线时一并复核。"
-   },
-   {
-    "id": "unported-tool-input-coercer-wire",
-    "label": "unported 分诊 P1：接线 tool_input_coercer——agent loop 派发前调用 internal/tools/coerce.go 的 CoerceToolInput（对应 Python agent_loop.py:4805 的派发前强制转换；Go 实现全量但仅 coerce_test.go 调用）",
-    "hours": 2,
-    "done": false,
-    "note": "证据 go_hive/docs/unported-triage.md；grep CoerceToolInput 全库仅测试命中（fromJSON 被 tools/mcp.go:194 复用属例外）。收尾：补接线测试 + go test -count=1 ./internal/agentloop/ ./internal/tools/。"
-   },
-   {
-    "id": "unported-sentinel-setup-tool",
-    "label": "unported 分诊 P2：移植 sentinel_setup 模型工具（sentinel_tool.py：status/configure/test/detect_chat + Slack/Telegram 校验 + 凭据/令牌存取 + publish refresh），替换 tool_surface_flat.go 的 not_implemented 占位",
-    "hours": 8,
-    "done": false,
-    "note": "证据 go_hive/docs/unported-triage.md；现状 tool_surface_flat.go:174 与 :536-541 明示 not_implemented（桌面连接器替代）。internal/sentinel listeners/manager/token 已在 Go，可复用。"
-   },
-   {
-    "id": "unported-antigravity-provider",
-    "label": "unported 分诊 P2：实现 Antigravity（Google Cloud Code Assist）provider，或从订阅列表隐藏该入口（antigravity.py：账号/IDE DB 载入、token refresh、Gemini schema 清洗、SSE 解析）",
-    "hours": 12,
-    "done": false,
-    "note": "证据 go_hive/docs/unported-triage.md；现状 server/main_slot.go:39 显式 ErrAntigravityUnsupported（失败响亮），但 llm_config.go:82 订阅列表仍含 antigravity。"
-   },
-   {
-    "id": "unported-ga-tool-migration",
-    "label": "unported 分诊 P2：移植 GA 工具 sidecar 愈合迁移（tools_ga_migration.py + queen_tools_defaults 的 _CATEGORY_ADDITIONS/grant_role_default_additions；启动时按 sidecar saved_on_version 追加新 GA 工具）",
-    "hours": 4,
-    "done": false,
-    "note": "证据 go_hive/docs/unported-triage.md；routes_queens_tools.go:380-384 自述 \"That versioned healing table has no Go port yet\"。幂等性按 sidecar saved_on_version。"
-   }
-  ]
- }
+  "note": "剩余工作项（lane-hours 估算）。done 项不计入；external 项不计入速度换算，只保留基线日期。",
+  "gates": {
+    "G2": [
+      {
+        "id": "old-home-e2e",
+        "label": "真实旧 HIVE_HOME 全量双跑",
+        "hours": 8,
+        "done": true
+      },
+      {
+        "id": "rollback-drill",
+        "label": "Go→Python 回滚演练",
+        "hours": 4,
+        "done": true
+      },
+      {
+        "id": "install-upgrade",
+        "label": "安装/升级演练与脚本",
+        "hours": 4,
+        "done": true
+      },
+      {
+        "id": "sidecar-parity",
+        "label": "session meta/tasks/colony sidecar",
+        "hours": 4,
+        "done": true
+      },
+      {
+        "id": "g2-docs",
+        "label": "无损替换文档与支持矩阵",
+        "hours": 2,
+        "done": true
+      },
+      {
+        "id": "g2-support-matrix",
+        "label": "G2 支持矩阵与无损替换声明",
+        "hours": 2,
+        "done": true
+      }
+    ],
+    "G3": [
+      {
+        "id": "windows-real",
+        "label": "Windows 实机验证",
+        "hours": 8,
+        "external": true
+      },
+      {
+        "id": "actions-release",
+        "label": "GitHub Actions release 执行",
+        "hours": 4,
+        "external": true
+      },
+      {
+        "id": "govulncheck",
+        "label": "govulncheck + 安全审查",
+        "hours": 2
+      },
+      {
+        "id": "installer-verify",
+        "label": "六平台安装器复验",
+        "hours": 2,
+        "done": true,
+        "note": "DONE 2026-11-22：六平台归档 36/36 PASS；linux/arm64 debian:stable-slim 容器真跑 20/20（version/help/serve+/api/health/cred/browserbridge），linux/amd64 模拟 20/20，darwin 双架构本机全 PASS；windows 无宿主仅静态。文档 docs/installer-verify.md，证据 docs/e2e-assets/installer-verify/2026-11-22/。"
+      },
+      {
+        "id": "longmemeval-60q-evidence",
+        "label": "LongMemEval n=60 两侧真实 LLM 对比（Go 86.7% vs Py 85.0%，McNemar p=1.000）",
+        "hours": 3,
+        "done": true,
+        "note": "DONE 2026-11-22：docs/e2e-assets/longmemeval/2026-11-22-60q-real-run.md，逐题 JSON+sha 落盘；判分敏感性 TypeSafe 0.8B 次判 Go+1 方向一致；失败模式 7 分歧+5 双错已归类。"
+      },
+      {
+        "id": "exports-baseline-decision",
+        "label": "exports/ 基准差异决策（Python=CWD vs Go=HIVe_HOME）；备忘已产，待用户拍板 Q1/Q2",
+        "hours": 1,
+        "done": false,
+        "note": "备忘：docs/exports-baseline-decision.md（选项 A/B/C/C′/D，推荐 A，若必须自动迁移则 C′）。F4 .migrations 已复核：colony list 两侧逐字一致（sha 30e73cca），登记为行为对齐无需修。"
+      }
+    ],
+    "G1": [
+      {
+        "id": "api-probe-matrix",
+        "label": "扩大 REST 端点值级/失败矩阵",
+        "hours": 6,
+        "done": true
+      },
+      {
+        "id": "tool-output-golden",
+        "label": "工具输出/失败路径 golden",
+        "hours": 4,
+        "done": true
+      },
+      {
+        "id": "api-ws-canonical",
+        "label": "API/SSE 帧级 golden 收口",
+        "hours": 2,
+        "done": true
+      },
+      {
+        "id": "prompt-skill-catalog",
+        "label": "system prompt/catalog/turn_context 收敛",
+        "hours": 6,
+        "done": true
+      },
+      {
+        "id": "schema-residuals",
+        "label": "lifecycle/session_cwd/exa schema 残差",
+        "hours": 3,
+        "done": true
+      },
+      {
+        "id": "tool-desc-residual",
+        "label": "同名 desc 40/41 与输出文案",
+        "hours": 2,
+        "done": true
+      },
+      {
+        "id": "queen-prompt-assembly",
+        "label": "queen system prompt 结构与文本对齐",
+        "hours": 8,
+        "done": true
+      },
+      {
+        "id": "searchable-manifest",
+        "label": "search_tools 清单 307 vs 1029 收敛",
+        "hours": 3,
+        "done": true
+      },
+      {
+        "id": "runtime-state-gap",
+        "label": "REST 会话挂 PhaseState（session_live_tools 空面）",
+        "hours": 3,
+        "done": true
+      },
+      {
+        "id": "browser-ws-residuals",
+        "label": "Browser WS 残差 R09–R14（并发/帧上限/低风险）",
+        "hours": 5,
+        "done": true
+      },
+      {
+        "id": "cron-seconds",
+        "label": "croniter 6 字段/秒级 cron（Python 可调度、Go 现拒绝）",
+        "hours": 3,
+        "done": true,
+        "note": "merged"
+      },
+      {
+        "id": "cli-usage-error-shape",
+        "label": "usage 错误前缀/usage 行形状（argparse root vs leaf）",
+        "hours": 2,
+        "done": true,
+        "note": "merged"
+      },
+      {
+        "id": "judge-conversation-level2",
+        "label": "conversation_judge.py（Level2 会话质量门）移植或显式范围外声明",
+        "hours": 4,
+        "done": true,
+        "note": "登记范围外（judge-parity J4）"
+      },
+      {
+        "id": "judge-subagent-urgency",
+        "label": "SubagentJudge 迭代余量 URGENT/WARNING 层",
+        "hours": 2,
+        "done": true,
+        "note": "登记不移植（judge-parity J5）"
+      },
+      {
+        "id": "goal-marshal-parity",
+        "label": "goal 序列化差异：id 字段 / weight=0 归一 / context 键序",
+        "hours": 3,
+        "done": true
+      },
+      {
+        "id": "worker-health-summary",
+        "label": "移植 get_worker_health_summary（worker_monitoring_tools.py；Go 缺失）",
+        "hours": 3,
+        "done": true
+      },
+      {
+        "id": "inventory-triage-fixes",
+        "label": "清单误判/注解修正：tracker_tools/tracker_db/worker_profiles/colony_tools_config/outcome_aggregator + skills/discovery + server/sse + pipeline/registry 错配",
+        "hours": 3,
+        "done": true,
+        "note": "done: merge 6624019b + registry 重生成 283d16d6（ported 202；C12 PASS）"
+      },
+      {
+        "id": "server-readme-delta",
+        "label": "上游 server/README 文档债清单（graph 时代路由 vs 现役代码 vs Go 覆盖）",
+        "hours": 2,
+        "done": true,
+        "note": "done: merge e3c4517d（docs/server-readme-delta.md）"
+      },
+      {
+        "id": "pipeline-stages",
+        "label": "pipeline 配置面：读 configuration.json pipeline.stages 并实现 7 个内置 stage 等价（默认空管线语义）",
+        "hours": 6,
+        "done": true
+      },
+      {
+        "id": "config-key-pipeline",
+        "label": "config 契约补 pipeline 键（当前 134 键未含）",
+        "hours": 1,
+        "done": true
+      },
+      {
+        "id": "streamtoken-refresh-scope",
+        "label": "server/streamtoken_refresh.py（云端 streamToken 轮换）归属：实现或登记 out_of_scope(cloud)",
+        "hours": 2,
+        "done": true,
+        "note": "done: merge e3c4517d（out_of_scope(cloud) + CURATED）"
+      },
+      {
+        "id": "browser-audit-d02-refresh",
+        "label": "browser 审计页 D02 文案与 tool-surface 22/22 sha 证据不一致，需刷新口径",
+        "hours": 1,
+        "done": true,
+        "note": "done: merge e3c4517d（D02 → 可宣布对齐，22/22 sha）"
+      },
+      {
+        "id": "memory-tools-defs",
+        "label": "memory 工具定义逐字+契约覆盖：search_messages desc/3 条 nullable、search_timeline 入契约、memory 文件四工具（list/read/write/delete_memory_file）入契约或登记",
+        "hours": 4,
+        "done": true
+      },
+      {
+        "id": "tool-desc-residual-7",
+        "label": "tool-contract-diff 当前 description 34/41（7 条未逐字）+ schema 归一 20/41 收口",
+        "hours": 2,
+        "done": true,
+        "note": "done: 已被 round 8 live recheck 口径取代（desc 47/47）；旧 34/41 数字作废"
+      },
+      {
+        "id": "integrations-structure-p1",
+        "label": "integrations 包结构重构（一）：内核下沉 integrationkit + 类型别名骨架 + 目录文档 + lane 前缀只减不增门禁 + 1 个领域子包试点",
+        "hours": 6,
+        "done": true,
+        "note": "delivered 33837a81（待合并）"
+      },
+      {
+        "id": "integrations-structure-p2",
+        "label": "integrations 包结构重构（二）：9 大领域文件迁子包、1908 个 batch 前缀标识符改名、248 个重复 helper 收敛、豁免清单清零",
+        "hours": 10,
+        "done": true,
+        "note": "进展 2026-11-22：devops 子包拆分完成（939e4fb9，最大文件 643 行）；batch 前缀改名 200 个 + 165 helper 收敛入 integrationkit（f5e84600，前缀 1901→1535）；剩余 8 领域拆子包 + waivers 清零。 | 阶段2 进展（2026-11-22）：已拆子包 devops/ai/social/enrichment 四个领域（工具面 sha 均逐字节不变）；前缀 1901→1172（limit 同步降）；剩余：cloudflare/infra_automation/web_intelligence/scheduling_chat + pdf/excel/scrape 拆分 + waivers 清零。 | 领域子包八/八完成（2026-11-22 深夜波）：devops/ai/social/enrichment/cloudflare/infra/webintel/schedchat 全部迁出，工具面 sha 逐字节不变；前缀 1901→876（limit 876）；剩余：pdf/excel/scrape 拆分 + waivers 清零（本项 -1h 收尾）。 | DONE 2026-11-22：八领域子包（devops/ai/social/enrichment/cloudflare/infra/webintel/schedchat）+ pdf 子包全部迁出；200+ 前缀标识符改语义名、165 helper 收敛；integrations size waiver 仅剩 catalog_gen（生成文件，设计保留）；前缀 1901→867（limit 867）；工具面 sha 全部逐字节不变。"
+      },
+      {
+        "id": "queen-mail-mcp-parity",
+        "label": "queen-mail MCP stdio 协议面收口：description 逐字/title/outputSchema/structuredContent+isError/错误码，capabilities 与 serverInfo.version 登记例外；docs/queen-mail.md §6 补录",
+        "hours": 3,
+        "done": true,
+        "note": "done: merged 71bd29cd"
+      },
+      {
+        "id": "qmail-package-split",
+        "label": "拆包：internal/qmail → internal/queenmail（信件引擎+MCP 面）+ internal/claudecode（runner/transcript/procsys/conversations）；去交叉耦合、arch/docs 同步、行为零变化",
+        "hours": 5,
+        "done": true,
+        "note": "merged 986628d5"
+      },
+      {
+        "id": "reflection-atomic-write",
+        "label": "reflection.go:302 os.WriteFile 非原子写 → temp+rename，消除 TestChatRuntimeTurnDoneReflectsIntoQueenMemory flake 根因",
+        "hours": 1,
+        "done": true,
+        "note": "done: merged cfd0d415（原子写+回归测试）"
+      },
+      {
+        "id": "soul-queen-reverse-dep",
+        "label": "结构：消除 internal/soul → internal/queen 反向依赖（QueenProfile 格式化下沉/注入），arch 仅剩 0 条反向边",
+        "hours": 2,
+        "done": true,
+        "note": "done: merge 187c5204（QueenProfileSource 注入；arch 196 边/1 info，grep 0）"
+      },
+      {
+        "id": "skills-worker-scope",
+        "label": "worker 技能可见面：补齐 queen scope 对其名下 colony 的可见性（GAP-07），或登记为有意偏差",
+        "hours": 3,
+        "done": true,
+        "note": "done: merge 98c0937b（queen_ui→colony_ui；GAP-07 已修复）"
+      },
+      {
+        "id": "colony-audit-refresh",
+        "label": "刷新 queen-worker-colony-parity-audit.html：GAP-04 playbook 已修、GAP-09 LongMemEval 已有 n=20、turn_context P-05 已注入等过时条目",
+        "hours": 1,
+        "done": true,
+        "note": "done: merge e3c4517d（GAP-04/09/P-05 刷新）"
+      },
+      {
+        "id": "qmail-split-frozen-surfaces",
+        "label": "qmail→queenmail 后刷新冻结面引用：module-inventory/appearance registry/矩阵中的旧包路径（走 allowlist/重生流程）",
+        "hours": 1,
+        "done": true,
+        "note": "done: module-inventory/appearance registry 已随 qmail-split 刷新并入 allowlist"
+      },
+      {
+        "id": "tool-metric-unify",
+        "label": "统一 tool 一致度口径：冻结快照 diff（§3: desc 15/41）vs 实时 recheck（34/41）两套数字并存，需单一权威指标并写入治理页",
+        "hours": 1,
+        "done": true
+      },
+      {
+        "id": "cli-log-global-count2",
+        "label": "cli 包 -count=2 压力模式下 cred log 与 serve log 全局状态互染（CI -count=1 不受影响）：setupCredLogging 的 log.SetOutput(file) 与 installRuntimeLogBuffer 的 TimestampWriter 全局重定向在二次迭代时串味",
+        "hours": 2,
+        "done": true,
+        "note": "2026-11-22 观察：go test -count=2 ./internal/cli/ 时 TestCredLogFileMatchesPythonLineFormat 偶发读到其它用例的 serve-log 探针行；-count=1 全包 5 轮全绿，CI 用 -count=1，不阻塞；修法方向=日志输出按 test 作用域隔离（或该测试改用独立 sink 断言）。 | DONE：根因=夹具未钉 HIVE_HOME，进程级 os.Setenv(HIVE_CREDENTIAL_KEY) 泄漏（17 个命中点）；修 4 个测试文件（tempdir helper/生命周期夹具/cred log 独立），-count=2 -shuffle=on ×4 轮全绿。"
+      },
+      {
+        "id": "server-relay-flake",
+        "label": "server 包 TestChatRuntimeRelaysClientMessageToOverseer 偶发失败（1/3）：中继顺序断言，pristine 45aa262e 上可复现",
+        "hours": 2,
+        "done": true,
+        "note": "2026-11-22 观察（int-p2-mid lane 主席）：失败签名与 docs/judge-parity.md §6 登记一致；修法方向=等中继落定再断言（与 EventBus 异步派发同类）。 | DONE：分类=测试时序（队列先中继后记录，Close 前缺有界等待）；改为等 execution_completed 边界再断言，-count=300 ×2 共 610 连跑 0 失败；产品零改动。"
+      },
+      {
+        "id": "integrations-evidence-audit-anchors",
+        "label": "docs/integrations-evidence-audit.json 四处 file:line 锚点漂移（GA 96/623、GW 192、freshdesk 285）",
+        "hours": 1,
+        "done": true,
+        "note": "无门禁校验该文件；随文件拆分/改名刷新锚点或加 --check。 | DONE：4 处锚点修复（GA/GSC/GW/freshdesk）+ 新门禁 check_integrations_evidence.py（qc C9），QC 8/8→9/9。"
+      },
+      {
+        "id": "mcp-ns-residuals-registered",
+        "label": "MCP 命名空间残余三组已用 Python 参考实跑对照并登记（R1 折叠不可逆/R2 >64 无截断/R3 序列化与畸形载荷）",
+        "hours": 3,
+        "done": true,
+        "note": "DONE 2026-11-22：13 用例冻结（mcp_namespace_parity_test.go）+ docs/mcp-namespace-residuals.md；折叠字符集属冻结契约不修，长名上限双侧缺位。"
+      },
+      {
+        "id": "memory-notes-1.0.15-parity",
+        "label": "上游 1.0.15「Notes in Time」memory notes 特性移植（notes 先于回答到达；log.jsonl 历史/恢复；用户自有 notes；note 年龄=最后确认日；memory_reflection worker 模型；recall 索引化 30ms/3s 上限；HIVE_MEMORY_RECALL、memory_recall/memory_reflection 配置；routes /api/memories* /api/config/memory）",
+        "hours": 12,
+        "done": true,
+        "note": "2026-11-22 引入（origin/main 6703b434 合并后实测）：新增 py 2 文件（memory_reminders.py、queen/memory_log.py）+ queen_memory_v2/recall_selector/reflection_agent/agent_loop 修改 + 前端 Settings→Memory；Go 侧缺失 5 条有效路由。 | DONE 2026-11-22（lane mem-notes-push + mem-notes-log）：notes 推送 index/wait 双模式（header 逐字）、recall 索引化（per-owner/冷建 3s 让路/删除重建）、log.jsonl 历史+恢复、8 条 /api/memories 路由 + /api/config/memory、自有标记、年龄=最后确认日；Python 探针 51/51 + 上游 pytest 95 passed；missing_in_go_effective 5→0。 | DONE 2026-11-22（lane bg-recall）：background 模式时序对齐上游（缓存块随下一条消息送达 + 挑选在后台任务，探针 36/36，见 bg-recall-probe.json）；残余：挑选 seed 未移植、双 scope 串行挑选、索引 JSON vs SQLite（已登记 memory-notes-parity.md）。"
+      },
+      {
+        "id": "memory-recall-index-1.0.15",
+        "label": "recall 索引化（per-queen index，首条消息后台建索引，删除安全）+ 3s 上限",
+        "hours": 3,
+        "done": true,
+        "note": "上游 1.0.15 changed 项；与 memory-notes 同族，实现时一并做。 | DONE：随 notes-push 落地（$HIVE_HOME/.message_index/recall/<scope>/<owner>.json，冷建让路 ≤3s，warm 增量刷新，删除可重建）。"
+      },
+      {
+        "id": "long-wait-and-parallel-tools-1.0.15",
+        "label": "长等待不耗模型回合（terminal/worker 等待最长 10 分钟、每秒检查、新消息结束等待）+ 非 Anthropic 模型并行工具调用（拒绝则去掉再问）",
+        "hours": 4,
+        "done": true,
+        "note": "DONE 2026-11-22：探针实跑 + 登记 docs/long-wait-parallel-tools-1.0.15.md（A/B 两表）。agent 层等待/中断/预算与并行工具请求字段/拒绝闩锁/同回合批量均一致；修 DefaultReportWait 60s→600s；登记 2 项差异（collect_result 长等待无 background tools 载体；ChatAppProvider 生产未接线，无渠道会话来源）。"
+      },
+      {
+        "id": "frontend-vendor-1.0.15",
+        "label": "前端 vendor 同步 1.0.15（MemorySettingsSection、memory-library 历史/恢复、config/memories API 客户端、SettingsModal）",
+        "hours": 3,
+        "done": true,
+        "note": "上游 7 个前端文件变更；vendor 必须用原版 React 应用。 | DONE：vendor 同步 7 文件（MemorySettingsSection/memory-library/SettingsModal/config/memories 客户端 + i18n 30 条）；tsc 0 错、vitest 286 passed、python_only 3→0。"
+      },
+      {
+        "id": "longmemeval-e2e-1.0.15-sync",
+        "label": "e2e longmemeval 测试同步 1.0.15（memory notes 可构建、测试基线跟进）",
+        "hours": 1,
+        "done": true,
+        "note": "评估 2026-11-22（docs/long-wait-parallel-tools-1.0.15.md §4）：上游变更仅 HIVE_LME_NOTES=1 构建 notes（依赖 memory notes），默认关，Go runner（cmd/hive-longmemeval）无 notes 可建 → 现跑法（60q/run-*.sh）暂不改；待 memory-notes-1.0.15-parity 落地后补 --notes/HIVE_LME_NOTES 等价开关并重跑。 | DONE：上游 notes 开关（HIVE_LME_NOTES）依赖 memory notes；Go runner 60q 跑法不改（评估原因已落文档），notes 落地后补等价开关（跟随项）。"
+      },
+      {
+        "id": "memory-reflection-worker-slot",
+        "label": "反射/时间线默认用 worker_llm 槽（上游 1.0.15 changed）；Go 已读写 memory_reflection.model 但调度仍用会话模型",
+        "hours": 2,
+        "done": true,
+        "note": "DONE 2026-11-22（lane g1-resid）：上游 ef4779ef 的 _MemoryLLM 规则实跑确认（test_queen_memory.py -k memory_llm，3 passed）；Go 新 internal/server/chat_memory_llm.go 按调用解析 worker/main（worker_llm 段 JSON 变化才重建，未配置回退会话模型），reflection scheduler 与 timeline（backfill/after-turn）共用；端口 3 条上游测试 + 2 条 runtime 接线测试。结论落 docs/memory-notes-log.md。"
+      },
+      {
+        "id": "chat-app-provider-gap",
+        "label": "chat-app provider 缺口（B7）：提示词+门控已实现，但 ChatAppProvider 生产未赋值、adapter 不透传、无渠道会话来源",
+        "hours": 4,
+        "done": true,
+        "note": "DONE 2026-11-22（lane g1-resid）：复核边界——queen mail 在 Go 已是渠道会话（meta channel=queens），行为可无外部连接器复现，故接线而非仅登记：Session.Channel（claim + meta 恢复）、ChatAppProvider 生产赋值、ReminderAgentContext + tasks adapter 透传；测试 server/agentloop/cli 三处。外部渠道宿主（onebot/Telegram/Slack 包）仍为前置，重看条件已落 docs/long-wait-parallel-tools-1.0.15.md §3.2。dashboard 面无行为变化。"
+      },
+      {
+        "id": "title-llm-worker-slot",
+        "label": "会话标题生成 LLM 槽位差异：Go 传会话 provider，上游 _title_llm 优先 build_worker_llm() or session.llm",
+        "hours": 1,
+        "done": true,
+        "note": "DONE 2026-11-22（lane title-llm）：上游 _title_llm 规则实跑确认（test_session_titles.py 8 passed + 选槽探针：未配置回退会话模型、读取时机=订阅时一次）；Go 新增 TitleTriggerLLM（internal/server/session_titles.go），两处 SubscribeTitleTrigger 接线改走 worker_llm 槽（loader.go:627、loader_preloaded_session.go:275）；新增 TestTitleTriggerLLMTakesTheWorkerSlotWhenConfigured（回退/worker 槽/读取时机）。结论与证据落 docs/session-titles-parity.md；工具面 sha 与基线一致（refactor-freeze wave15-base 通过，差异属既有 allowlist）。"
+      },
+      {
+        "id": "cold-resume-midturn-guard",
+        "label": "上游 cold-resume mid-turn guard：崩溃时写 cold_interrupted（Go 该 park reason 无生产者，resume 写 turn_done）",
+        "hours": 2,
+        "done": true,
+        "note": "DONE 2026-11-22（lane resume-guards）：上游 §6b1½ 真探针取证（core 侧 pytest 2 passed；条件=restore 命中会话+queen+首迭代无 drain 注入+无 pending_input；字段=cursor pending_input.reason=cold_interrupted/emit_client_request=true + [System] note + client_input_requested/loop_state_changed，证据 docs/e2e-assets/reliability-2026-11-22/resume-guards/upstream-probe/）后对齐：chat_park.go 在 runtime 重建时按上游条件写 ParkReasonColdInterrupted（会话已有 parts + cursor 无 pending_input；create 自带 initial_prompt 经 InitialInputPending 抑制，等价 drained-injection 条件）。真机复跑 post-resume-cursor.json reason=cold_interrupted、snapshot awaiting_input=true。登记差异：未注入上游的 [System] note（Go 恢复不自动起回合，见报告 §5）。测试 internal/server/chat_resume_guard_test.go；报告 docs/reliability-soak-recovery.md §5。"
+      },
+      {
+        "id": "resume-snapshot-first-frame",
+        "label": "resume 后 /snapshot 与 SSE 首帧空态（即使 cursor=ask_user）",
+        "hours": 2,
+        "done": true,
+        "note": "DONE 2026-11-22（lane resume-guards）：根因=snapshot 只读总线 latest_loop_state 且重启总线为空；修法=runtime 重建还原 cursor park 后在新总线重播恢复等待（client_input_requested / client_credential_form_requested + loop_state_changed），SSE 首帧即同一 ComputeSessionSnapshot。真机复跑 park/resume-snapshot.json=awaiting_input=true/park_reason=ask_user/pending_questions 非空（崩溃会话同 cold_interrupted）；测试 TestRestoredAskUserParkShowsInSnapshotAndFirstSSEFrame。"
+      },
+      {
+        "id": "unported-credentials-check-agent",
+        "label": "unported 分诊 P1：移植 agent 凭据校验（validation.py 的 validate_agent_credentials/compute_unavailable_tools/CredentialStatus + setup.py 的 load_agent_nodes）并接线 /api/credentials/check-agent 与 /api/credentials/resync（现 check-agent 恒 500、Resync 生产未赋值；前端 CredentialsModal 打开即报错）",
+        "hours": 10,
+        "done": true,
+        "note": "证据 go_hive/docs/unported-triage.md（含 CURATED 条目）；Go 锚点 server/routes_agents.go:254（500 占位）、server/routes_credentials.go:590（deps.Resync nil→500）。bootstrap.go EnsureCredentialKeyEnv 也是仅测试调用，接线时一并复核。 | DONE 2026-11-22 lane cred-check（worktree .wt/cred-check）：check-agent 实装（internal/credentials/agent_validation.go + health_check.go + agent_nodes.go；routes_agents.go handleCheckAgent），resync 生产 hook 接线（routes_credentials.go resyncLocalCredentials），前端 CredentialsModal 真实调用 200；go build ./... / internal/{credentials,server} 测试绿、merge_postcheck 四关过；证据 go_hive/docs/e2e-assets/credentials-check-agent/。Aden 云端 token 拉取仍属 P2 credentials/aden/client.py。"
+      },
+      {
+        "id": "unported-tool-input-coercer-wire",
+        "label": "unported 分诊 P1：接线 tool_input_coercer——agent loop 派发前调用 internal/tools/coerce.go 的 CoerceToolInput（对应 Python agent_loop.py:4805 的派发前强制转换；Go 实现全量但仅 coerce_test.go 调用）",
+        "hours": 2,
+        "done": true,
+        "note": "证据 go_hive/docs/unported-triage.md；grep CoerceToolInput 全库仅测试命中（fromJSON 被 tools/mcp.go:194 复用属例外）。收尾：补接线测试 + go test -count=1 ./internal/agentloop/ ./internal/tools/。 ｜ 2026-11-22 完成：coercer-wire lane 合并（f41657a5+4ddd76d5），C12 升级 ported（217/27/9/20）"
+      },
+      {
+        "id": "unported-sentinel-setup-tool",
+        "label": "unported 分诊 P2：移植 sentinel_setup 模型工具（sentinel_tool.py：status/configure/test/detect_chat + Slack/Telegram 校验 + 凭据/令牌存取 + publish refresh），替换 tool_surface_flat.go 的 not_implemented 占位",
+        "hours": 8,
+        "done": false,
+        "note": "证据 go_hive/docs/unported-triage.md；现状 tool_surface_flat.go:174 与 :536-541 明示 not_implemented（桌面连接器替代）。internal/sentinel listeners/manager/token 已在 Go，可复用。"
+      },
+      {
+        "id": "unported-antigravity-provider",
+        "label": "unported 分诊 P2：实现 Antigravity（Google Cloud Code Assist）provider，或从订阅列表隐藏该入口（antigravity.py：账号/IDE DB 载入、token refresh、Gemini schema 清洗、SSE 解析）",
+        "hours": 12,
+        "done": false,
+        "note": "证据 go_hive/docs/unported-triage.md；现状 server/main_slot.go:39 显式 ErrAntigravityUnsupported（失败响亮），但 llm_config.go:82 订阅列表仍含 antigravity。"
+      },
+      {
+        "id": "unported-ga-tool-migration",
+        "label": "unported 分诊 P2：移植 GA 工具 sidecar 愈合迁移（tools_ga_migration.py + queen_tools_defaults 的 _CATEGORY_ADDITIONS/grant_role_default_additions；启动时按 sidecar saved_on_version 追加新 GA 工具）",
+        "hours": 4,
+        "done": false,
+        "note": "证据 go_hive/docs/unported-triage.md；routes_queens_tools.go:380-384 自述 \"That versioned healing table has no Go port yet\"。幂等性按 sidecar saved_on_version。"
+      }
+    ]
+  }
 }

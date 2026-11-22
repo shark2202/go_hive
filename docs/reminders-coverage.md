@@ -24,11 +24,14 @@ colony 会话的 queen scope 解析。基线：`main@46939ab5` 之上的 `remind
   （去掉 Go 专有标题 / `[External event]` 前缀，补回 hub footer）。残余（见 §7）：
   仍不在 hub、SESSION_START 不重复召回、overseer 的 skills catalog 走既有 relay、
   worker 没有 searchable_tools tier。这些均登记为「实现形态差异」而非静默缺口。
+- **2026-11-22 计数修正**：上游注册数 **13 → 15**，补 `memory_recall` / `memory_index`
+  （两者均在 `chat_reminders.go:221-222` 注册，provider 由 `queen_orchestrator.py:1722-1723`
+  接线）；`ReminderPoint` 共 **9** 个（含 `STREAM_STALLED`）。
 
 ## 2. 上游 source 全量清单
 
 `core/framework/agent_loop/agent_loop.py::AgentLoop.__init__` 在**每个** AgentLoop 的
-`ReminderHub` 上注册 13 个 source，再由各 source 的 `applies_to` 按角色/阶段过滤：
+`ReminderHub` 上注册 15 个 source，再由各 source 的 `applies_to` 按角色/阶段过滤：
 
 | # | source | points | applies_to（上游） |
 | --- | --- | --- | --- |
@@ -36,15 +39,17 @@ colony 会话的 queen scope 解析。基线：`main@46939ab5` 之上的 `remind
 | 2 | `colony_parallel` | POST_TOOL_USE | queen |
 | 3 | `active_workers` | USER_PROMPT_SUBMIT | queen |
 | 4 | `past_conversations` | SESSION_START, USER_PROMPT_SUBMIT | queen + recall provider |
-| 5 | `turn_context` | SESSION_START, USER_PROMPT_SUBMIT | queen + turn-context provider |
-| 6 | `searchable_tools` | SESSION_START, USER_PROMPT_SUBMIT, POST_TOOL_USE, POST_COMPACT | queen，或自带 provider 的分层 worker |
-| 7 | `skills_catalog` | 同上 | queen |
-| 8 | `tracker_snapshot` | POST_TOOL_USE | queen + colony binding provider |
-| 9 | `worker_tracker_snapshot` | POST_TOOL_USE | **worker** + colony binding provider |
-| 10 | `colony_worker_snapshot` | TOOL_BUDGET_CHECKPOINT | queen + colony binding provider |
-| 11 | `idle_nudge` | IDLE_TICK（ticker） | 所有 agent |
-| 12 | `sentinel_escalation` | IDLE_TICK（ticker） | queen + 已绑定 colony |
-| 13 | `stream_stall` | STREAM_STALLED（reactive，同步 collect） | 所有 agent |
+| 5 | `memory_recall` | SESSION_START, USER_PROMPT_SUBMIT, POST_COMPACT | queen + recall provider |
+| 6 | `memory_index` | SESSION_START, USER_PROMPT_SUBMIT, POST_COMPACT | queen + memory index provider |
+| 7 | `turn_context` | SESSION_START, USER_PROMPT_SUBMIT | queen + turn-context provider |
+| 8 | `searchable_tools` | SESSION_START, USER_PROMPT_SUBMIT, POST_TOOL_USE, POST_COMPACT | queen，或自带 provider 的分层 worker |
+| 9 | `skills_catalog` | 同上 | queen |
+| 10 | `tracker_snapshot` | POST_TOOL_USE | queen + colony binding provider |
+| 11 | `worker_tracker_snapshot` | POST_TOOL_USE | **worker** + colony binding provider |
+| 12 | `colony_worker_snapshot` | TOOL_BUDGET_CHECKPOINT | queen + colony binding provider |
+| 13 | `idle_nudge` | IDLE_TICK（ticker） | 所有 agent |
+| 14 | `sentinel_escalation` | IDLE_TICK（ticker） | queen + 已绑定 colony |
+| 15 | `stream_stall` | STREAM_STALLED（reactive，同步 collect） | 所有 agent |
 
 说明：
 
@@ -72,6 +77,8 @@ colony 会话的 queen scope 解析。基线：`main@46939ab5` 之上的 `remind
 | searchable_tools | ✅ | ✅ | |
 | skills_catalog | ✅ | ✅ | provider 现按会话 queen scope |
 | turn_context | ✅ | ✅ | 保持 wiring-check 约束 |
+| memory_index | ✅ | ✅ | 既有注册（本次补记）；provider 按会话 queen scope |
+| memory_recall | ✅ | ✅ | 既有注册（本次补记）；`memory_recall.mode` 决定 index/wait |
 | idle_nudge | ✅ | ✅ | ticker 随会话启停 |
 | sentinel_escalation | ✅ | ✅ | `sentinel_runtime.go` 注册 |
 | stream_stall | ❌（零注册） | ✅ | 本分支补 + 真实触发 |
@@ -85,12 +92,12 @@ colony 会话的 queen scope 解析。基线：`main@46939ab5` 之上的 `remind
 | worker_tracker_snapshot | ❌ | ✅（cadence 20 calls，tracker_* 重置，空表不自耗） |
 | idle_nudge | ✅ | ✅ |
 | stream_stall | ❌ | ✅（注册；worker completer 目前非流式，见 §7） |
-| colony_parallel / active_workers / tracker_snapshot / colony_worker_snapshot / skills_catalog | ❌ | ❌（上游 `applies_to` 对 worker 为 False，注册也会被 bind 过滤） |
+| colony_parallel / active_workers / tracker_snapshot / colony_worker_snapshot / skills_catalog / turn_context / memory_recall / memory_index | ❌ | ❌（上游 `applies_to` 对 worker 为 False，注册也会被 bind 过滤） |
 | searchable_tools | ❌ | ❌（Go worker 无 search_tools tier；上游同样只在 provider 存在时绑定） |
 
 ### 3.3 Colony overseer（`internal/colony/overseer_reminders.go`）
 
-上游 `ColonyRuntime.start_overseer` 构造的是完整 `AgentLoop`（13 个 source 全部注册，靠
+上游 `ColonyRuntime.start_overseer` 构造的是完整 `AgentLoop`（15 个 source 全部注册，靠
 `applies_to` 过滤）；Go 之前是裸 `&AgentLoop{}`，**hub 为 nil**。本分支为它建立 hub：
 
 | source | before | after | 说明 |
@@ -103,6 +110,7 @@ colony 会话的 queen scope 解析。基线：`main@46939ab5` 之上的 `remind
 | idle_nudge | ❌ | ❌ | 会话级 idle 由 chat runtime 唯一持有，避免同一会话双 ticker 双唤醒 |
 | skills_catalog | ❌ | ❌ | 预载会话首次客户端消息的 relay 已携带 catalog（上游 overseer 也是 prompt 路径） |
 | tasks | ❌ | ❌ | task 提醒读进程级 task store，overseer 任务在 colony 存储域；注册会变成空转 |
+| memory_recall / memory_index | ❌ | ❌ | 上游需 memory provider；overseer 无 recall/index provider，注册也会自跳过 |
 
 ## 4. 触发 / 抑制边界
 

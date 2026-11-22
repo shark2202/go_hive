@@ -1,9 +1,9 @@
 {
- "wave": 66,
- "at": "2026-11-22 19:42",
- "head": "f2045f10",
+ "wave": 67,
+ "at": "2026-11-22 19:48",
+ "head": "f3fd6f85",
  "ci": 0,
  "qc": 0,
  "publish": 0,
- "note": "disk-sc + unported-triage 合并后（go1.26.11 全链）"
+ "note": "perf-opt 合并后（recall 9.7×）"
 }

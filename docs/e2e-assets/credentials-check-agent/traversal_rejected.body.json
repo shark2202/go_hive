@@ -1,0 +1,1 @@
+{"error":"agent_path must be inside an allowed directory ($HIVE_HOME/colonies/, exports/, examples/, or $HIVE_HOME/agents/)"}

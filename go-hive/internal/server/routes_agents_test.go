@@ -9,13 +9,20 @@ import (
 	"testing"
 
 	"github.com/aden-hive/hive-go/internal/agents"
+	"github.com/aden-hive/hive-go/internal/credentials"
 	"github.com/aden-hive/hive-go/internal/hivehome"
 )
 
 func agentRoutesMux(home hivehome.Home, manager *SessionManager) *http.ServeMux {
 	mux := http.NewServeMux()
 	roots := agents.NewAllowedRoots(home.ColoniesDir(), home.Root, filepath.Join(home.Root, "agents"))
-	RegisterAgentRoutes(mux, AgentRouteDeps{Manager: manager, Home: home, Roots: roots})
+	RegisterAgentRoutes(mux, AgentRouteDeps{
+		Manager: manager,
+		Home:    home,
+		Roots:   roots,
+		// Hermetic: never read the developer's real shell config.
+		EnsureCredentialEnv: func() {},
+	})
 	return mux
 }
 
@@ -320,6 +327,8 @@ func TestCheckAgentCredentialsRejectsTraversal(t *testing.T) {
 func TestCheckAgentRemainingBranches(t *testing.T) {
 	home := hivehome.Home{Root: t.TempDir()}
 	colony := makeColonyFixture(t, home, "my_colony")
+	t.Setenv("HIVE_CREDENTIAL_KEY", "")
+	t.Setenv(credentials.AdenEnvVar, "")
 	mux := agentRoutesMux(home, NewSessionManager())
 
 	recorder, body := doSessionJSON(t, mux, http.MethodPost, "/api/credentials/check-agent", `{}`)
@@ -334,11 +343,15 @@ func TestCheckAgentRemainingBranches(t *testing.T) {
 
 	recorder, body = doSessionJSON(t, mux, http.MethodPost, "/api/credentials/check-agent",
 		`{"agent_path":"`+colony+`"}`)
-	if recorder.Code != http.StatusInternalServerError {
-		t.Fatalf("valid path status = %d", recorder.Code)
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("valid path status = %d, body = %s", recorder.Code, recorder.Body.String())
 	}
-	if body["error"] != "Internal server error while checking credentials" {
-		t.Fatalf("valid path error = %#v", body["error"])
+	required, ok := body["required"].([]any)
+	if !ok || len(required) != 0 {
+		t.Fatalf("required = %#v, want []", body["required"])
+	}
+	if body["has_aden_key"] != false {
+		t.Fatalf("has_aden_key = %#v", body["has_aden_key"])
 	}
 }
 

@@ -95,7 +95,7 @@ Go 代码与配套文档在 `go_hive/` 下：`go-hive/`（模块）、`contracts
 | parity 注解 | `make parity` | 退出码 0 | 通过：**5,722/5,722**（wave-66；refs 全解析） |
 | parity 引用 | `make parity-targets` | 退出码 0 | 通过：全解析，0 missing |
 | 接线 | `make wiring-check` | 退出码 0 | 通过 |
-| 升级兼容 | `make compat-check` | 12 项全过 | 通过（C1–C12；C12 = 273 条登记 0 未登记：ported 216 / partial 27 / out_of_scope 9 / unported 21（triage 修正 11 假标）；config 137 键 / 22 section） |
+| 升级兼容 | `make compat-check` | 12 项全过 | 通过（C1–C12；C12 = 273 条登记 0 未登记：ported 217 / partial 27 / out_of_scope 9 / unported 20（triage 修正 11 假标 + coercion 升级）；config 137 键 / 22 section） |
 | 架构 | `make arch-check` | 7 生成物一致 | 通过（82 包 / 219 边 / 8 层 / 1 条 info warning；soul→queen 反向依赖已消除） |
 | 行为冻结 | `refactor_freeze.sh compare wave15-base` | OK（allowlist 逐条理由） | 通过（结构重构 lane 必跑） |
 | QC | `scripts/qc_check.py` | 9/9 | 通过 |

@@ -115,12 +115,18 @@
 - `credentials/aden/provider.py`、`credentials/aden/storage.py` 登记为 ported，但 Go 侧只有通用 `credentials/provider.go`/`storage.go`，没有 Aden 同步 provider/缓存存储（`AdenSyncProvider`/`AdenCachedStorage` grep 0 命中）。属于「文件级 ported 掩盖子系统缺失」的潜在假标，建议下一轮 inventory lane 复核。
 - `host/stream_runtime.py` 与 `tracker/decision_tracker.py` 是同一决策记录子系统的两半；若决定不移植，应合并登记为范围外，而不是长期留在 unported。
 
+## 后续变更（2026-11-22 晚，lane `cred-check`）
+
+- **P1 `unported-credentials-check-agent` 已闭环**：`/api/credentials/check-agent` 由 500 占位改为完整实现（`internal/credentials/agent_validation.go` ValidateAgentCredentials / `health_check.go` 42 个 checker / `agent_nodes.go` LoadAgentNodes；路由 `internal/server/routes_agents.go:264`），`/api/credentials/resync` 的生产 hook 已接线为本地默认（`internal/server/routes_credentials.go:194` resyncLocalCredentials：重读密钥 + store→env 桥 + store 缓存清理），Aden 云端 token 拉取仍属 P2 `credentials/aden/client.py`。
+- **登记册变化**：`credentials/setup.py` unported → partial（load_agent_nodes 已移植接线）；`credentials/validation.py` 保持 partial（validate/compute/CredentialStatus 已移植，build_setup_session_from_error 未移植）；`credentials/aden/client.py` 保持 unported，basis 注明 resync 已接线。重生后总计 **273 = 217 ported / 27 partial / 9 out_of_scope / 20 unported**（`contracts/module-inventory.json`，C12 PASS；其中 tool_input_coercer 已由 coercer-wire lane 接线升级 ported）。
+- 证据与复算：`go_hive/docs/e2e-assets/credentials-check-agent/README.md`。
+
 ## 复现
 
 ```sh
 # 符号对撞（本 lane 探针）：ast 取 Python 顶层 def/class → 归一化（lower/去非字母数字）
 # ↔ go_hive/go-hive 非测试 Go 标识符集合；输出同 basename / 共享符号候选，再逐条读调用点确认。
-python3 scripts/gen_module_inventory.py --dry-run     # 矩阵：files=273 ported=216 partial=27 out_of_scope=9 unported=21
+python3 scripts/gen_module_inventory.py --dry-run     # 矩阵：files=273 ported=216 partial=28 out_of_scope=9 unported=20（本分支实测）
 python3 scripts/check_module_inventory.py --check     # verdict=PASS，无 WARN
 python3 scripts/check_module_inventory.py --report    # 按领域矩阵 + Top unported
 ```

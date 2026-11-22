@@ -74,7 +74,7 @@
 **今日新增（不在登记册）**
 - 🔧 resume-guards 两项（cold_interrupted 生产者、resume 首帧）—— lane 在跑
 - ✅ D1 govulncheck：已批准并合并（go.mod→1.26.11），wave-66 govulncheck 0 OSV；⬜ prep-mcp-alias 已预实现待批准
-- ✅ module-inventory 51 条 triage 完成（`528bdcd6`）：假标 11 / partial 17 / oos 2 / 真缺口 21；C12 216/27/9/21
+- ✅ module-inventory 51 条 triage 完成（`528bdcd6`）：假标 11 / partial 17 / oos 2 / 真缺口 21；C12 217/27/9/20（coercion 接线后再升 1）
 - ⬜ perf-recall 15k 报告（lane 在跑，今晚出）
 - 🌐 91 第三方集成未验证
 

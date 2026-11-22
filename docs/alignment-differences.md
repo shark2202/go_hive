@@ -59,9 +59,10 @@
 - **并发**：10 会话 × 5 轮 50/50，0 错误；RSS +12MB；SSE 53/53 无丢帧。
 - **长等待/并行工具**：A 表 10 项、B 表 7 项实测；修复 colony worker 等待 60→600s。
 - **新登记（非阻断）**：① cold-resume mid-turn guard（`cold_interrupted` 无生产者）② resume 后快照/SSE 首帧空态。两条由 `resume-guards` lane 收口中。
+- **凭证校验已闭环（lane `cred-check`）**：`POST /api/credentials/check-agent` 由 500 占位改为上游语义全实现（presence + 健康检查两阶段、Aden 平台行、`alternative_group` 任一满足、14 字段响应 + `has_aden_key`）；`POST /api/credentials/resync` 生产 hook 接线为本地默认（Aden 云端 token 拉取仍缺，P2 `credentials/aden/client.py`）。前端 CredentialsModal 真实打开不再报错。证据 `docs/e2e-assets/credentials-check-agent/`、`docs/unported-triage.md` 末节。
 
 ## 6. 证据与质量
 
-- parity **5,722/5,722**；C12 **273**（216/27/9/21）；QC **9/9**；compat **12/12**；arch **82 包/219 边**；govulncheck **0 OSV**。
+- parity **5,726/5,726**；C12 **273**（217/27/9/20：cred-check 重生 + tool_input_coercer 升级 ported）；QC **9/9**；compat **12/12**；arch **82 包/222 边**；govulncheck **0 OSV**。
 - 性能：`perf-recall-15k`（15,000 轮冷建/warm/搜索/冷启动/RSS）产出中，落 `docs/perf-recall-15k.md`。
 - 大样本行为：LongMemEval n=200 四组（`e2e-assets/longmemeval/2026-11-22-200q-real-run.md`）；配对检验均不显著，新增 140 题 126:126。

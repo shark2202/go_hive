@@ -191,6 +191,13 @@ WIRING: tuple[WiringPoint, ...] = (
         ),
     ),
     WiringPoint(
+        path="internal/agentloop/loop.go",
+        description="工具派发前的 tool input coercion（与上游 agent_loop.py::_run_turn_loop 的 coerce_tool_input 同点位）",
+        requirements=(
+            Requirement("coerceToolCallInput 调用点", r"coerceToolCallInputs?\("),
+        ),
+    ),
+    WiringPoint(
         path="internal/agentloop/loop_judge.go",
         description="Judge 面：runJudgeStep 内的门控、判定评估与应用（2026-11-22 从 loop.go 抽出守函数规模预算）",
         requirements=(
