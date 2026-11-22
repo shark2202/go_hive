@@ -640,28 +640,8 @@ func (r *Runner) createSessionWithRuntime(
 	// missing colony is a 404 and a runtime that cannot start is a 500, so
 	// the create route reports the failure instead of returning a session
 	// that silently has no colony behind it.
-	switch {
-	case prebuilt != nil:
-		record.Colony = prebuilt
-		record.WorkerPath = prebuiltPath
-	case record.ColonyID != "":
-		colonyPath := home.ColonyDir(record.ColonyID)
-		info, statErr := os.Stat(colonyPath)
-		if statErr != nil || !info.IsDir() {
-			if statErr == nil {
-				statErr = fmt.Errorf("colony '%s' is not a directory", record.ColonyID)
-			}
-			return nil, &hiveserver.SessionCreateColonyNotFoundError{Err: statErr}
-		}
-		built, buildErr := r.newColonyHost(colonyPath, record.ColonyID, home, requestedModel)
-		if buildErr != nil {
-			return nil, fmt.Errorf("colony runtime unavailable for %s: %w", record.ColonyID, buildErr)
-		}
-		if startErr := startColonyHost(context.Background(), built, home, record.QueenName, record.ColonyID); startErr != nil {
-			return nil, startErr
-		}
-		record.Colony = built
-		record.WorkerPath = colonyPath
+	if err := r.bindSessionColony(record, home, requestedModel, prebuilt, prebuiltPath); err != nil {
+		return nil, err
 	}
 
 	// A colony-bound session rebuilds its triggers.json runtime before it is
@@ -692,6 +672,36 @@ func (r *Runner) createSessionWithRuntime(
 // on disk before resuming it live. Every failure is returned as an error the
 // route maps to 4xx/5xx — a session never looks colony-backed while its runtime
 // is missing.
+// bindSessionColony attaches the session's colony host: a prebuilt one wins,
+// otherwise the colony is built and started from disk. Extracted from
+// createSessionWithRuntime to keep that function inside the size budget.
+func (r *Runner) bindSessionColony(record *hiveserver.Session, home hivehome.Home, requestedModel string, prebuilt *colonyhost.Host, prebuiltPath string) error {
+	switch {
+	case prebuilt != nil:
+		record.Colony = prebuilt
+		record.WorkerPath = prebuiltPath
+	case record.ColonyID != "":
+		colonyPath := home.ColonyDir(record.ColonyID)
+		info, statErr := os.Stat(colonyPath)
+		if statErr != nil || !info.IsDir() {
+			if statErr == nil {
+				statErr = fmt.Errorf("colony '%s' is not a directory", record.ColonyID)
+			}
+			return &hiveserver.SessionCreateColonyNotFoundError{Err: statErr}
+		}
+		built, buildErr := r.newColonyHost(colonyPath, record.ColonyID, home, requestedModel)
+		if buildErr != nil {
+			return fmt.Errorf("colony runtime unavailable for %s: %w", record.ColonyID, buildErr)
+		}
+		if startErr := startColonyHost(context.Background(), built, home, record.QueenName, record.ColonyID); startErr != nil {
+			return startErr
+		}
+		record.Colony = built
+		record.WorkerPath = colonyPath
+	}
+	return nil
+}
+
 type colonyLifecycle struct {
 	manager *hiveserver.SessionManager
 	home    hivehome.Home

@@ -1,9 +1,9 @@
 {
- "wave": 49,
- "at": "2026-11-22 09:15",
- "head": "b538f781",
- "ci": 0,
+ "wave": 50,
+ "at": "2026-11-22 09:43",
+ "head": "6375dd0d",
+ "ci": 2,
  "qc": 0,
  "publish": 0,
- "note": "arch 重生成后"
+ "note": "g1-resid（worker 槽位+chat-app 接线）后"
 }
