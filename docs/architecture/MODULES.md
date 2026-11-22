@@ -1,6 +1,6 @@
 # 模块清单（生成物，勿手改）
 
-> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` + `go list` 生成。commit: `ba611d73c559`
+> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` + `go list` 生成。commit: `9be92a87185f`
 > 修改分层或职责请改 `architecture/model.yaml`，不要编辑本文件。
 
 ## 分层统计

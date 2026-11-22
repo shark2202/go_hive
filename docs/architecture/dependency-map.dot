@@ -1,5 +1,5 @@
 // go_hive 分层依赖图（生成物，勿手改）
-// 源：architecture/model.yaml + go list -json ./... · commit ba611d73c559
+// 源：architecture/model.yaml + go list -json ./... · commit 9be92a87185f
 // 箭头 A -> B 读作 A imports B。
 digraph go_hive {
   graph [rankdir=LR, fontname="Helvetica", nodesep=0.28, ranksep=0.9, splines=true];

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "module": "github.com/aden-hive/hive-go",
-  "generated_at_commit": "ba611d73c559",
+  "generated_at_commit": "9be92a87185f",
   "generated_from": "architecture/model.yaml + go list -json ./... + internal/server mux.HandleFunc + internal/eventbus event_type.go",
   "stats": {
     "packages": 82,
