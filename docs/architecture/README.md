@@ -9,7 +9,7 @@
 
 > 正文里的路径相对 `go_hive/`；命令行示例假定在仓库根执行，所以带 `go_hive/` 前缀。
 >
-> 最近同步：2026-11-22 —— **87 包 / 8 层 / 233 条内部依赖 / 225 条 HTTP 路由 / 77 种事件 / 34 条契约**（2026-11-22 深夜复核：sentinel/antigravity/GA/coercion 等 lane 并入后重生成）；`make arch-check` 已并入 `make ci`，文档漂移会阻断 CI。
+> 最近同步：2026-11-22 —— **87 包 / 8 层 / 234 条内部依赖 / 225 条 HTTP 路由 / 77 种事件 / 34 条契约**（2026-11-22 深夜复核：sentinel/antigravity/GA/coercion 等 lane 并入后重生成）；`make arch-check` 已并入 `make ci`，文档漂移会阻断 CI。
 
 ```text
 architecture/model.yaml ──┐

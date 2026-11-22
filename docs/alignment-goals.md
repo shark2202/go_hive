@@ -37,7 +37,7 @@
 | parity refs | 0 missing | 全解析 |
 | compat-check | 12/12 | **12/12**（C12：273 条 = 220 ported / 27 partial / 9 oos / 17 unported（triage + coercion + sentinel/antigravity/GA 三 lane 并集）） |
 | QC | 9/9 | **9/9** |
-| arch | 7 生成物一致 | **87 包 / 233 边 / 8 层 / 1 info** |
+| arch | 7 生成物一致 | **87 包 / 234 边 / 8 层 / 1 info** |
 | govulncheck | 0 OSV | **0（go1.26.11，同 scanner/DB 23→0）** |
 | 冻结面 | allowlist 逐条理由 | OK |
 | slot | 2h 一版 | 今日 10 版（00–18）；最新 `20261122-18` |

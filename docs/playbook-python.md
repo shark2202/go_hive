@@ -3,6 +3,7 @@
 > 适用：`go_hive`（纯 Go 主二进制，`CGO_ENABLED=0`）  
 > 上游契约：`core/framework/host/playbook/runner.py`（`PlaybookRun`）、`core/framework/tools/playbook_tools.py`（`run_playbook`）  
 > 实现：`internal/playbook/python.go`、内嵌 `internal/playbook/python_bootstrap.py`、`internal/colony/playbook_tools.go`、`internal/colony/playbook_verbatim.go`、`internal/colony/playbook_notify.go`、`internal/colony/worker_slots.go`  
+> 运行时选型（是否内嵌 JS/Lua、npm/PyPI 复用）：`docs/playbook-runtime-options.md`
 > 记录日期：2026-11-21（本机实测 Python 3.9.6（系统 `python3`）与 3.14.7（`HIVE_PYTHON`）/ Darwin arm64）
 
 ## 1. 结论

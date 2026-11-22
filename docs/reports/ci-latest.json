@@ -1,9 +1,9 @@
 {
- "wave": 74,
- "at": "2026-11-22 22:47",
- "head": "9be7d6c2",
+ "wave": 75,
+ "at": "2026-11-22 23:35",
+ "head": "fcb1b221",
  "ci": 0,
  "qc": 0,
  "publish": 0,
- "note": "P3 五族拆包合并（根包 99 文件/37k 行）；parity 5824；refs 6396/0；arch 87 包/233 边；QC 9/9；镜像 d03df50"
+ "note": "chat-images 合入（用户发图 images/display_message 全语义）；parity 5833；refs 6423/0；arch 87 包/234 边；QC 9/9；镜像 5a81337"
 }
