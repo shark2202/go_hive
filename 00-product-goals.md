@@ -1,3 +1,5 @@
+> 参考基线动态（2026-11-22）：origin/main 已推进到 1.0.15「Notes in Time」（6703b434，35 文件 delta）；本次 merge 后新增 5 项 G1 工作（memory notes 同族 ~23h）。冻结契约的 reference 锚点（python@1b9c458a）是否整体切换待用户拍板。
+
 # 00 · 产品目标与验收标准
 
 > 上游参考：`aden-hive` / `aden-tools`（工具契约 reference commit 见 `contracts/*.json` 的 `reference` 字段）

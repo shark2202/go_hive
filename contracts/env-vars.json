@@ -24,13 +24,13 @@
       "go_only": 35
     },
     "reproduced": {
-      "python": 89,
+      "python": 90,
       "go": 118,
       "common": 83,
-      "python_only": 6,
+      "python_only": 7,
       "go_only": 35
     },
-    "counts_match": true,
+    "counts_match": false,
     "published_lists_compared": {
       "file": "go_hive/docs/env-surface-audit.json",
       "commit": "622cc236",
@@ -85,24 +85,26 @@
         "HIVE_SPLIT_WORKER_EVENTS",
         "HIVE_TRACKER_WORKER_TOOL_CALLS"
       ],
-      "python_only_added": [],
+      "python_only_added": [
+        "HIVE_MEMORY_RECALL"
+      ],
       "normalization": "published 'HIVE_RETENTION_' (trailing underscore) maps to 'HIVE_RETENTION_*'"
     }
   },
   "summary": {
-    "python": 89,
+    "python": 90,
     "go": 118,
     "common": 83,
-    "python_only": 6,
+    "python_only": 7,
     "go_only": 35,
     "status_counts": {
       "aligned": 68,
       "go_only": 8,
       "literal_only": 37,
       "parse_differs": 5,
-      "python_only": 6
+      "python_only": 7
     },
-    "python_read_sites": 138,
+    "python_read_sites": 139,
     "go_read_sites": 104
   },
   "inventory": {
@@ -197,7 +199,8 @@
       "HIVE_GCU_MEMTRACE_FRAMES",
       "HIVE_GCU_MEMTRACE_INTERVAL_S",
       "HIVE_GCU_MEMTRACE_TOP",
-      "HIVE_GCU_SCREENSHOT_CONCURRENCY"
+      "HIVE_GCU_SCREENSHOT_CONCURRENCY",
+      "HIVE_MEMORY_RECALL"
     ],
     "go_only": [
       "HIVE_BROWSERBRIDGE_ARGS",
@@ -559,14 +562,14 @@
         "prod_reads": [
           {
             "file": "core/framework/server/routes_config.py",
-            "line": 236,
+            "line": 237,
             "symbol": "_detect_subscriptions",
             "parse": "string",
             "snippet": "if os.environ.get(\"HIVE_API_KEY\"):"
           },
           {
             "file": "core/framework/server/routes_config.py",
-            "line": 281,
+            "line": 282,
             "symbol": "_get_subscription_token",
             "parse": "string",
             "snippet": "return os.environ.get(\"HIVE_API_KEY\")"
@@ -1617,7 +1620,7 @@
         "test_reads": 15,
         "writes": [],
         "mentions": 37,
-        "comments": 5
+        "comments": 7
       }
     },
     {
@@ -1653,10 +1656,10 @@
           }
         ],
         "dev_reads": [],
-        "test_reads": 1,
+        "test_reads": 3,
         "writes": [],
         "mentions": 1,
-        "comments": 6
+        "comments": 8
       }
     },
     {
@@ -2050,7 +2053,7 @@
         "writes": [
           {
             "file": "core/framework/config.py",
-            "line": 1338,
+            "line": 1385,
             "scope": "runtime"
           }
         ],
@@ -2528,7 +2531,7 @@
           },
           {
             "file": "go_hive/go-hive/internal/tools/integrations/scrape.go",
-            "line": 596,
+            "line": 610,
             "symbol": "batch3ScrapeArtifactDir",
             "parse": "string",
             "snippet": "home := strings.TrimSpace(os.Getenv(\"HIVE_HOME\"))",
@@ -2536,10 +2539,10 @@
           }
         ],
         "dev_reads": [],
-        "test_reads": 58,
+        "test_reads": 59,
         "writes": [],
-        "mentions": 211,
-        "comments": 93
+        "mentions": 238,
+        "comments": 96
       },
       "notes": "fallback ~/.hive on both; Go converts to an absolute path."
     },
@@ -2854,7 +2857,7 @@
         "dev_reads": [],
         "test_reads": 1,
         "writes": [],
-        "mentions": 3,
+        "mentions": 4,
         "comments": 0
       },
       "go": {
@@ -3317,7 +3320,7 @@
         "prod_reads": [
           {
             "file": "core/framework/server/queen_orchestrator.py",
-            "line": 1589,
+            "line": 1618,
             "symbol": "create_queen",
             "parse": "string",
             "snippet": "_iter_cap = _os.environ.get(\"HIVE_MAX_ITER\")"
@@ -3524,6 +3527,37 @@
       "notes": "both default 240s; garbage/<=0 -> 240s."
     },
     {
+      "name": "HIVE_MEMORY_RECALL",
+      "audit_membership": "python_only",
+      "status": "python_only",
+      "status_basis": "python has a read site, go has none",
+      "python": {
+        "prod_reads": [
+          {
+            "file": "core/framework/config.py",
+            "line": 1075,
+            "symbol": "get_memory_recall_env_mode",
+            "parse": "string",
+            "snippet": "mode = os.environ.get(\"HIVE_MEMORY_RECALL\", \"\").strip().lower()",
+            "default": "\"\""
+          }
+        ],
+        "dev_reads": [],
+        "test_reads": 6,
+        "writes": [],
+        "mentions": 2,
+        "comments": 1
+      },
+      "go": {
+        "prod_reads": [],
+        "dev_reads": [],
+        "test_reads": 0,
+        "writes": [],
+        "mentions": 0,
+        "comments": 0
+      }
+    },
+    {
       "name": "HIVE_MEMORY_TIMELINE",
       "audit_membership": "common",
       "status": "aligned",
@@ -3532,7 +3566,7 @@
         "prod_reads": [
           {
             "file": "core/framework/config.py",
-            "line": 1310,
+            "line": 1357,
             "symbol": "get_memory_timeline_enabled",
             "parse": "string",
             "snippet": "raw = os.environ.get(\"HIVE_MEMORY_TIMELINE\")"
@@ -3648,7 +3682,7 @@
         "dev_reads": [],
         "test_reads": 2,
         "writes": [],
-        "mentions": 10,
+        "mentions": 11,
         "comments": 8
       },
       "notes": "py: `if not os.getenv(...)` — any non-empty value (incl. \"0\") turns the $HIVE_HOME/logs/hive-server.log handler off (20MB×3); go: same gate in internal/logging, wired into the serve logger by installRuntimeLogBuffer."
@@ -4701,7 +4735,7 @@
           },
           {
             "file": "go_hive/go-hive/internal/tools/integrations/scrape.go",
-            "line": 593,
+            "line": 607,
             "symbol": "batch3ScrapeArtifactDir",
             "parse": "string",
             "snippet": "if storage := strings.TrimSpace(os.Getenv(\"HIVE_STORAGE_PATH\")); storage != \"\" {",

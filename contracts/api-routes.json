@@ -1,28 +1,28 @@
 {
   "schema": "hive-api-routes/1",
   "description": "Frozen HTTP route tables. The contract reference is the Python hive checkout (reference=python@<commit>); go_hive is the target being aligned (target=go_hive@<commit>). Static extraction; path parameters are compared by shape, original spelling preserved.",
-  "reference_id": "python@e702559a631424313374b56659621d74d9965bb6",
-  "target_id": "go_hive@e702559a631424313374b56659621d74d9965bb6",
+  "reference_id": "python@265d93d17ab9ad62520ce05b841ecbfc42439ae7",
+  "target_id": "go_hive@265d93d17ab9ad62520ce05b841ecbfc42439ae7",
   "reference": {
     "implementation": "python",
-    "version": "1.0.14",
-    "commit": "e702559a631424313374b56659621d74d9965bb6",
-    "last_core_commit": "8dcaa569684ffe021037105dee7f0a4776bcce1c",
-    "last_tools_commit": "68b6c230f20e237953dea7a3af7bb583b9fbe0fd",
+    "version": "1.0.15",
+    "commit": "265d93d17ab9ad62520ce05b841ecbfc42439ae7",
+    "last_core_commit": "265d93d17ab9ad62520ce05b841ecbfc42439ae7",
+    "last_tools_commit": "72eb6d7bb9f833ac221ed17ad6c334f5944d89bb",
     "source_root": "core/framework/server"
   },
   "target": {
     "implementation": "go_hive",
     "version": "1.0.26-go.1",
-    "commit": "e702559a631424313374b56659621d74d9965bb6",
+    "commit": "265d93d17ab9ad62520ce05b841ecbfc42439ae7",
     "source_root": "go_hive/go-hive/internal/server"
   },
-  "generated_at": "2026-11-22T02:36:22+08:00",
+  "generated_at": "2026-11-22T08:21:11+08:00",
   "python": {
-    "version": "1.0.14",
-    "commit": "e702559a631424313374b56659621d74d9965bb6",
+    "version": "1.0.15",
+    "commit": "265d93d17ab9ad62520ce05b841ecbfc42439ae7",
     "source_root": "core/framework/server",
-    "route_count": 217,
+    "route_count": 222,
     "routes": [
       {
         "method": "DELETE",
@@ -317,7 +317,7 @@
         "path": "/api/config/external-skills",
         "path_shape": "/api/config/external-skills",
         "handler": "handle_get_external_skills",
-        "source": "core/framework/server/routes_config.py:1411",
+        "source": "core/framework/server/routes_config.py:1481",
         "kind": "api"
       },
       {
@@ -325,7 +325,7 @@
         "path": "/api/config/external-skills",
         "path_shape": "/api/config/external-skills",
         "handler": "handle_put_external_skills",
-        "source": "core/framework/server/routes_config.py:1412",
+        "source": "core/framework/server/routes_config.py:1482",
         "kind": "api"
       },
       {
@@ -333,7 +333,7 @@
         "path": "/api/config/features",
         "path_shape": "/api/config/features",
         "handler": "handle_get_features",
-        "source": "core/framework/server/routes_config.py:1421",
+        "source": "core/framework/server/routes_config.py:1491",
         "kind": "api"
       },
       {
@@ -341,7 +341,7 @@
         "path": "/api/config/features",
         "path_shape": "/api/config/features",
         "handler": "handle_update_features",
-        "source": "core/framework/server/routes_config.py:1422",
+        "source": "core/framework/server/routes_config.py:1492",
         "kind": "api"
       },
       {
@@ -349,7 +349,7 @@
         "path": "/api/config/llm",
         "path_shape": "/api/config/llm",
         "handler": "handle_get_llm_config",
-        "source": "core/framework/server/routes_config.py:1409",
+        "source": "core/framework/server/routes_config.py:1479",
         "kind": "api"
       },
       {
@@ -357,7 +357,7 @@
         "path": "/api/config/llm",
         "path_shape": "/api/config/llm",
         "handler": "handle_update_llm_config",
-        "source": "core/framework/server/routes_config.py:1417",
+        "source": "core/framework/server/routes_config.py:1487",
         "kind": "api"
       },
       {
@@ -365,7 +365,7 @@
         "path": "/api/config/llm-sections",
         "path_shape": "/api/config/llm-sections",
         "handler": "handle_get_llm_sections",
-        "source": "core/framework/server/routes_config.py:1410",
+        "source": "core/framework/server/routes_config.py:1480",
         "kind": "api"
       },
       {
@@ -373,15 +373,33 @@
         "path": "/api/config/llm-sections",
         "path_shape": "/api/config/llm-sections",
         "handler": "handle_put_llm_section",
-        "source": "core/framework/server/routes_config.py:1413",
+        "source": "core/framework/server/routes_config.py:1483",
         "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/config/memory",
+        "path_shape": "/api/config/memory",
+        "handler": "handle_get_memory_settings",
+        "source": "core/framework/server/routes_config.py:1493",
+        "kind": "api",
+        "served_by_alias": ""
+      },
+      {
+        "method": "PUT",
+        "path": "/api/config/memory",
+        "path_shape": "/api/config/memory",
+        "handler": "handle_update_memory_settings",
+        "source": "core/framework/server/routes_config.py:1494",
+        "kind": "api",
+        "served_by_alias": ""
       },
       {
         "method": "GET",
         "path": "/api/config/models",
         "path_shape": "/api/config/models",
         "handler": "handle_get_models",
-        "source": "core/framework/server/routes_config.py:1418",
+        "source": "core/framework/server/routes_config.py:1488",
         "kind": "api"
       },
       {
@@ -389,7 +407,7 @@
         "path": "/api/config/profile",
         "path_shape": "/api/config/profile",
         "handler": "handle_get_profile",
-        "source": "core/framework/server/routes_config.py:1425",
+        "source": "core/framework/server/routes_config.py:1497",
         "kind": "api"
       },
       {
@@ -397,7 +415,7 @@
         "path": "/api/config/profile",
         "path_shape": "/api/config/profile",
         "handler": "handle_update_profile",
-        "source": "core/framework/server/routes_config.py:1426",
+        "source": "core/framework/server/routes_config.py:1498",
         "kind": "api"
       },
       {
@@ -405,7 +423,7 @@
         "path": "/api/config/profile/avatar",
         "path_shape": "/api/config/profile/avatar",
         "handler": "handle_get_user_avatar",
-        "source": "core/framework/server/routes_config.py:1428",
+        "source": "core/framework/server/routes_config.py:1500",
         "kind": "api"
       },
       {
@@ -413,7 +431,7 @@
         "path": "/api/config/profile/avatar",
         "path_shape": "/api/config/profile/avatar",
         "handler": "handle_upload_user_avatar",
-        "source": "core/framework/server/routes_config.py:1427",
+        "source": "core/framework/server/routes_config.py:1499",
         "kind": "api"
       },
       {
@@ -421,7 +439,7 @@
         "path": "/api/config/provider-library",
         "path_shape": "/api/config/provider-library",
         "handler": "handle_get_provider_library",
-        "source": "core/framework/server/routes_config.py:1414",
+        "source": "core/framework/server/routes_config.py:1484",
         "kind": "api"
       },
       {
@@ -429,7 +447,7 @@
         "path": "/api/config/provider-library",
         "path_shape": "/api/config/provider-library",
         "handler": "handle_put_provider_library",
-        "source": "core/framework/server/routes_config.py:1415",
+        "source": "core/framework/server/routes_config.py:1485",
         "kind": "api"
       },
       {
@@ -437,7 +455,7 @@
         "path": "/api/config/provider-library/apply",
         "path_shape": "/api/config/provider-library/apply",
         "handler": "handle_apply_provider_library",
-        "source": "core/framework/server/routes_config.py:1416",
+        "source": "core/framework/server/routes_config.py:1486",
         "kind": "api"
       },
       {
@@ -445,7 +463,7 @@
         "path": "/api/config/rate-limits",
         "path_shape": "/api/config/rate-limits",
         "handler": "handle_get_rate_limits",
-        "source": "core/framework/server/routes_config.py:1423",
+        "source": "core/framework/server/routes_config.py:1495",
         "kind": "api"
       },
       {
@@ -453,7 +471,7 @@
         "path": "/api/config/rate-limits",
         "path_shape": "/api/config/rate-limits",
         "handler": "handle_update_rate_limits",
-        "source": "core/framework/server/routes_config.py:1424",
+        "source": "core/framework/server/routes_config.py:1496",
         "kind": "api"
       },
       {
@@ -461,7 +479,7 @@
         "path": "/api/config/sentinel",
         "path_shape": "/api/config/sentinel",
         "handler": "handle_get_sentinel_config",
-        "source": "core/framework/server/routes_config.py:1419",
+        "source": "core/framework/server/routes_config.py:1489",
         "kind": "api"
       },
       {
@@ -469,7 +487,7 @@
         "path": "/api/config/sentinel",
         "path_shape": "/api/config/sentinel",
         "handler": "handle_update_sentinel_config",
-        "source": "core/framework/server/routes_config.py:1420",
+        "source": "core/framework/server/routes_config.py:1490",
         "kind": "api"
       },
       {
@@ -837,7 +855,7 @@
         "path": "/api/memories",
         "path_shape": "/api/memories",
         "handler": "handle_list_memories",
-        "source": "core/framework/server/routes_memories.py:261",
+        "source": "core/framework/server/routes_memories.py:328",
         "kind": "api"
       },
       {
@@ -845,7 +863,7 @@
         "path": "/api/memories/file",
         "path_shape": "/api/memories/file",
         "handler": "handle_delete_memory",
-        "source": "core/framework/server/routes_memories.py:265",
+        "source": "core/framework/server/routes_memories.py:332",
         "kind": "api"
       },
       {
@@ -853,7 +871,7 @@
         "path": "/api/memories/file",
         "path_shape": "/api/memories/file",
         "handler": "handle_get_memory",
-        "source": "core/framework/server/routes_memories.py:262",
+        "source": "core/framework/server/routes_memories.py:329",
         "kind": "api"
       },
       {
@@ -861,7 +879,7 @@
         "path": "/api/memories/file",
         "path_shape": "/api/memories/file",
         "handler": "handle_create_memory",
-        "source": "core/framework/server/routes_memories.py:263",
+        "source": "core/framework/server/routes_memories.py:330",
         "kind": "api"
       },
       {
@@ -869,8 +887,35 @@
         "path": "/api/memories/file",
         "path_shape": "/api/memories/file",
         "handler": "handle_update_memory",
-        "source": "core/framework/server/routes_memories.py:264",
+        "source": "core/framework/server/routes_memories.py:331",
         "kind": "api"
+      },
+      {
+        "method": "GET",
+        "path": "/api/memories/history",
+        "path_shape": "/api/memories/history",
+        "handler": "handle_memory_history",
+        "source": "core/framework/server/routes_memories.py:333",
+        "kind": "api",
+        "served_by_alias": ""
+      },
+      {
+        "method": "POST",
+        "path": "/api/memories/restore",
+        "path_shape": "/api/memories/restore",
+        "handler": "handle_restore_memory",
+        "source": "core/framework/server/routes_memories.py:334",
+        "kind": "api",
+        "served_by_alias": ""
+      },
+      {
+        "method": "GET",
+        "path": "/api/memories/retired",
+        "path_shape": "/api/memories/retired",
+        "handler": "handle_retired_memories",
+        "source": "core/framework/server/routes_memories.py:335",
+        "kind": "api",
+        "served_by_alias": ""
       },
       {
         "method": "POST",
@@ -1768,7 +1813,7 @@
   },
   "go": {
     "version": "1.0.26-go.1",
-    "commit": "e702559a631424313374b56659621d74d9965bb6",
+    "commit": "265d93d17ab9ad62520ce05b841ecbfc42439ae7",
     "source_root": "go_hive/go-hive/internal/server",
     "route_count": 220,
     "routes": [
@@ -3547,15 +3592,15 @@
     "unresolved": []
   },
   "summary": {
-    "reference_routes": 217,
+    "reference_routes": 222,
     "target_routes": 220,
-    "python_routes": 217,
+    "python_routes": 222,
     "go_routes": 220,
-    "missing_in_target": 2,
-    "missing_in_target_effective": 0,
+    "missing_in_target": 7,
+    "missing_in_target_effective": 5,
     "missing_in_target_served_by_alias": 2,
-    "missing_in_go": 2,
-    "missing_in_go_effective": 0,
+    "missing_in_go": 7,
+    "missing_in_go_effective": 5,
     "missing_in_go_served_by_alias": 2,
     "extra_in_target": 5,
     "extra_in_target_api": 5,
@@ -3566,6 +3611,51 @@
     "method_mismatch": 1
   },
   "missing_in_target": [
+    {
+      "method": "GET",
+      "path": "/api/config/memory",
+      "path_shape": "/api/config/memory",
+      "handler": "handle_get_memory_settings",
+      "source": "core/framework/server/routes_config.py:1493",
+      "kind": "api",
+      "served_by_alias": ""
+    },
+    {
+      "method": "PUT",
+      "path": "/api/config/memory",
+      "path_shape": "/api/config/memory",
+      "handler": "handle_update_memory_settings",
+      "source": "core/framework/server/routes_config.py:1494",
+      "kind": "api",
+      "served_by_alias": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/memories/history",
+      "path_shape": "/api/memories/history",
+      "handler": "handle_memory_history",
+      "source": "core/framework/server/routes_memories.py:333",
+      "kind": "api",
+      "served_by_alias": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/memories/restore",
+      "path_shape": "/api/memories/restore",
+      "handler": "handle_restore_memory",
+      "source": "core/framework/server/routes_memories.py:334",
+      "kind": "api",
+      "served_by_alias": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/memories/retired",
+      "path_shape": "/api/memories/retired",
+      "handler": "handle_retired_memories",
+      "source": "core/framework/server/routes_memories.py:335",
+      "kind": "api",
+      "served_by_alias": ""
+    },
     {
       "method": "DELETE",
       "path": "/api/sessions/history/{session_id}",
@@ -3585,7 +3675,53 @@
       "served_by_alias": "DELETE /api/sessions/{first}/{second}"
     }
   ],
-  "missing_in_target_effective": [],
+  "missing_in_target_effective": [
+    {
+      "method": "GET",
+      "path": "/api/config/memory",
+      "path_shape": "/api/config/memory",
+      "handler": "handle_get_memory_settings",
+      "source": "core/framework/server/routes_config.py:1493",
+      "kind": "api",
+      "served_by_alias": ""
+    },
+    {
+      "method": "PUT",
+      "path": "/api/config/memory",
+      "path_shape": "/api/config/memory",
+      "handler": "handle_update_memory_settings",
+      "source": "core/framework/server/routes_config.py:1494",
+      "kind": "api",
+      "served_by_alias": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/memories/history",
+      "path_shape": "/api/memories/history",
+      "handler": "handle_memory_history",
+      "source": "core/framework/server/routes_memories.py:333",
+      "kind": "api",
+      "served_by_alias": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/memories/restore",
+      "path_shape": "/api/memories/restore",
+      "handler": "handle_restore_memory",
+      "source": "core/framework/server/routes_memories.py:334",
+      "kind": "api",
+      "served_by_alias": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/memories/retired",
+      "path_shape": "/api/memories/retired",
+      "handler": "handle_retired_memories",
+      "source": "core/framework/server/routes_memories.py:335",
+      "kind": "api",
+      "served_by_alias": ""
+    }
+  ],
   "missing_in_target_served_by_alias": [
     {
       "method": "DELETE",
@@ -3675,6 +3811,51 @@
     }
   ],
   "missing_in_go": [
+    {
+      "method": "GET",
+      "path": "/api/config/memory",
+      "path_shape": "/api/config/memory",
+      "handler": "handle_get_memory_settings",
+      "source": "core/framework/server/routes_config.py:1493",
+      "kind": "api",
+      "served_by_alias": ""
+    },
+    {
+      "method": "PUT",
+      "path": "/api/config/memory",
+      "path_shape": "/api/config/memory",
+      "handler": "handle_update_memory_settings",
+      "source": "core/framework/server/routes_config.py:1494",
+      "kind": "api",
+      "served_by_alias": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/memories/history",
+      "path_shape": "/api/memories/history",
+      "handler": "handle_memory_history",
+      "source": "core/framework/server/routes_memories.py:333",
+      "kind": "api",
+      "served_by_alias": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/memories/restore",
+      "path_shape": "/api/memories/restore",
+      "handler": "handle_restore_memory",
+      "source": "core/framework/server/routes_memories.py:334",
+      "kind": "api",
+      "served_by_alias": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/memories/retired",
+      "path_shape": "/api/memories/retired",
+      "handler": "handle_retired_memories",
+      "source": "core/framework/server/routes_memories.py:335",
+      "kind": "api",
+      "served_by_alias": ""
+    },
     {
       "method": "DELETE",
       "path": "/api/sessions/history/{session_id}",

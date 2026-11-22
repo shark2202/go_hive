@@ -1,13 +1,13 @@
 # 环境变量与 configuration.json 契约差异（Python 基准 → go_hive）
 
-- reference: `python@bd5041862d5df219a029b190141dda3db8c7eeab`（Hive 1.0.14）
+- reference: `python@bd5041862d5df219a029b190141dda3db8c7eeab`（Hive 1.0.15）
 - target: `go_hive@bd5041862d5df219a029b190141dda3db8c7eeab`（1.0.26-go.1）
 - 生成器：`go_hive/scripts/freeze_env_config_contract.py`（确定性；`--check` 可重放）
 - 机器可读：`go_hive/contracts/env-vars.json`、`go_hive/contracts/config-keys.json`
 
 ## 0. 结论摘要
 
-- 环境变量清单以已发布的审计（`go_hive/docs/env-surface-audit.json` @ 622cc236）为基线，本次按同一口径独立复算：Python **89** / Go **118** / 共有 **83**；Python 独有 **6**，Go 独有 **35**。复算与「本车道期望」一致。与发布审计基线（Python 89 / Go 96 / 共有 66 / Python 独有 23 / Go 独有 30）相比，差额来自 16 个名字由 Python 独有转为共有：`HIVE_MAX_ITER`、`HIVE_SPLIT_WORKER_EVENTS` 由本车道新增 Go 读取点，`HIVE_AGENT_NAME`、`HIVE_COMPACTION_DEBUG`、`HIVE_ENABLE_LLM_LOGS`、`HIVE_HISTORY_READ_WORKERS`、`HIVE_NO_FILE_LOG`、`HIVE_PLAYBOOK_FAST_GRACE`、`HIVE_RESOURCE_CRIT_AVAIL_FRAC`、`HIVE_RESOURCE_CRIT_RENDERERS`、`HIVE_RESOURCE_HISTORY`、`HIVE_RESOURCE_INTERVAL_S`、`HIVE_RESOURCE_WARN_AVAIL_FRAC`、`HIVE_RESOURCE_WARN_RENDERERS`、`HIVE_SENTINEL_LOG`、`HIVE_TRACKER_WORKER_TOOL_CALLS` 在审计提交之后、本车道之前已进入 Go 树；Go 独有清单 30→35（`HIVE_PYTHON` 新增、`HIVE_NETWORK_SCANNERS` 移除，另有审计后进入 Go 树的开发/评估变量）。
+- 环境变量清单以已发布的审计（`go_hive/docs/env-surface-audit.json` @ 622cc236）为基线，本次按同一口径独立复算：Python **90** / Go **118** / 共有 **83**；Python 独有 **7**，Go 独有 **35**。**复算与期望不一致，见验证块。**与发布审计基线（Python 89 / Go 96 / 共有 66 / Python 独有 23 / Go 独有 30）相比，差额来自 16 个名字由 Python 独有转为共有：`HIVE_MAX_ITER`、`HIVE_SPLIT_WORKER_EVENTS` 由本车道新增 Go 读取点，`HIVE_AGENT_NAME`、`HIVE_COMPACTION_DEBUG`、`HIVE_ENABLE_LLM_LOGS`、`HIVE_HISTORY_READ_WORKERS`、`HIVE_NO_FILE_LOG`、`HIVE_PLAYBOOK_FAST_GRACE`、`HIVE_RESOURCE_CRIT_AVAIL_FRAC`、`HIVE_RESOURCE_CRIT_RENDERERS`、`HIVE_RESOURCE_HISTORY`、`HIVE_RESOURCE_INTERVAL_S`、`HIVE_RESOURCE_WARN_AVAIL_FRAC`、`HIVE_RESOURCE_WARN_RENDERERS`、`HIVE_SENTINEL_LOG`、`HIVE_TRACKER_WORKER_TOOL_CALLS` 在审计提交之后、本车道之前已进入 Go 树；Go 独有清单 30→35（`HIVE_PYTHON` 新增、`HIVE_NETWORK_SCANNERS` 移除，另有审计后进入 Go 树的开发/评估变量）。
 - configuration.json：**135** 个键 / **21** 个 section；其中 `aligned` 126，`go_partial` 4，`python_only` 0，`go_only` 4，`unread` 1。
 - 本车道（config-verbatim）把主槽位 `llm.*` 的消费键接进运行时：会话构建统一走 `MainSlotProvider`（键序 = endpoint → api_keys 池 → literal → claude/codex/kimi/antigravity 订阅 → 凭据库 → `api_key_env_var` → provider env；`MainSlotAPIBase` 复刻订阅端点与 openrouter 默认；`extra_body`/`num_ctx`/订阅请求头随 provider 构建下发），`llm.max_tokens` 预算 queen 回合、`llm.max_context_tokens` 参与 queen 窗口的主槽位回退，`llm.api_keys` 以 `llm.KeyPool` 轮转并在 429 时停键；kimi 订阅运行时接通（`~/.kimi/config.toml` token + `https://api.kimi.com/coding`）。
 - 模型槽位状态收敛：`queen_llm.*`（8）、`worker_llm.*`（10）、`vision_fallback.*`（7）全部转 `aligned`（逐键读取点与热切换矩阵见 §2 与 `docs/configuration.md` §3.8）；`worker_llm.max_tokens` 增加读取点 `WorkerMaxTokens`（与上游 `get_worker_max_tokens` 同为无调用点）；`channels.<name>.enabled` 由 `python_only` 变为 `go_partial`：字段按上游形状读取、写入时保留、GET /api/channels 形状不变，启用时 serve 启动打印「无渠道宿主、不会运行」的告警。
@@ -20,10 +20,10 @@
 
 | 项 | 本次复算 | 本车道期望 | 发布审计基线 | 判定 |
 |---|---|---|---|---|
-| Python | 89 | 89 | 89 | ✅ |
+| Python | 90 | 89 | 89 → 90 | ❌ |
 | Go | 118 | 118 | 96 → 118 | ✅ |
 | 共有 | 83 | 83 | 66 → 83 | ✅ |
-| Python 独有 | 6 | 6 | 23 → 6 | ✅ |
+| Python 独有 | 7 | 6 | 23 → 7 | ❌ |
 | Go 独有 | 35 | 35 | 30 → 35 | ✅ |
 
 > `env-vars.json` 逐个名字给出两侧的读取点/默认值，并标注 `audit_membership`；只出现在字面量里、没有读取点的名字标为 `literal_only`，避免把 MCP env 字段名或注释当成读取面。
@@ -102,14 +102,14 @@
 | `llm.model` | string | null | — | `core/framework/config.py:285` | `go_hive/go-hive/internal/server/llm_config.go:344` (+1) | aligned |
 | `llm.api_key` | string | null | — | `core/framework/config.py:784` | `go_hive/go-hive/internal/server/llm_config.go:431` (+1) | aligned |
 | `llm.api_keys` | list[string] | null | — | `core/framework/config.py:728` (+1) | `go_hive/go-hive/internal/server/llm_config.go:423` (+4) | aligned |
-| `llm.api_base` | string | null | — | `core/framework/config.py:1362` | `go_hive/go-hive/internal/server/llm_config.go:405` (+1) | aligned |
+| `llm.api_base` | string | null | — | `core/framework/config.py:1409` | `go_hive/go-hive/internal/server/llm_config.go:405` (+1) | aligned |
 | `llm.api_key_env_var` | string | null | name read from the file | `core/framework/config.py:852` | `go_hive/go-hive/internal/server/llm_config.go:458` (+1) | aligned |
 | `llm.max_tokens` | int | 8192 | — | `core/framework/config.py:584` | `go_hive/go-hive/internal/server/llm_config.go:399` (+2) | aligned |
 | `llm.max_context_tokens` | int | 32000 | — | `core/framework/config.py:574` | `go_hive/go-hive/internal/server/llm_config.go:400` (+1) | aligned |
 | `llm.aux_max_tokens` | int | min(8192, max_tokens) | — | `core/framework/config.py:700` | `go_hive/go-hive/internal/server/config_slots.go:461` | aligned |
 | `llm.endpoint` | string (endpoint name) | null | — | `core/framework/config.py:341` | `go_hive/go-hive/internal/server/llm_config.go:417` (+1) | aligned |
 | `llm.extra_body` | object | null | — | `core/framework/config.py:642` | `go_hive/go-hive/internal/llm/request_shape.go:180` (+1) | aligned |
-| `llm.num_ctx` | int | 16384 | — | `core/framework/config.py:1411` | `go_hive/go-hive/internal/llm/request_shape.go:178` (+1) | aligned |
+| `llm.num_ctx` | int | 16384 | — | `core/framework/config.py:1458` | `go_hive/go-hive/internal/llm/request_shape.go:178` (+1) | aligned |
 | `llm.use_claude_code_subscription` | bool | false | — | `core/framework/config.py:790` | `go_hive/go-hive/internal/llm/request_shape.go:158` (+1) | aligned |
 | `llm.use_codex_subscription` | bool | false | — | `core/framework/config.py:802` | `go_hive/go-hive/internal/llm/request_shape.go:163` (+1) | aligned |
 | `llm.use_kimi_code_subscription` | bool | false | — | `core/framework/config.py:814` | `go_hive/go-hive/internal/server/llm_config.go:80` (+2) | aligned |
@@ -140,7 +140,7 @@
 
 | 键 | 类型 | 默认 | env 覆盖 | Python 读取点 | Go 读取点 | 状态 |
 |---|---|---|---|---|---|---|
-| `loop.max_tool_result_chars` | int | 30000 | — | `core/framework/config.py:714` | `go_hive/go-hive/internal/agentloop/loop_config.go:152` (+1) | aligned |
+| `loop.max_tool_result_chars` | int | 30000 | — | `core/framework/config.py:714` | `go_hive/go-hive/internal/agentloop/loop_config.go:169` (+1) | aligned |
 
 - `loop.max_tool_result_chars`：both read the JSON int and fall back to the call site's value (30_000 global default). Wired: hiveconf.MaxToolResultChars applies to the queen chat loop (chatLoopConfig) and to each colony worker loop (BuildWorkerLoopConfig), so a pinned threshold moves the spillover point.
 
@@ -162,9 +162,9 @@
 
 | 键 | 类型 | 默认 | env 覆盖 | Python 读取点 | Go 读取点 | 状态 |
 |---|---|---|---|---|---|---|
-| `memory_reflection.every_turns` | int >= 1 | 6 | — | `core/framework/config.py:1023` | `go_hive/go-hive/internal/server/chat_memory_wiring.go:293` | aligned |
-| `memory_reflection.long_every` | int >= 1 | 4 | — | `core/framework/config.py:1025` | `go_hive/go-hive/internal/server/chat_memory_wiring.go:294` | aligned |
-| `memory_reflection.model` | "main" \| "worker" | main | — | `core/framework/config.py:1041` | `go_hive/go-hive/internal/server/chat_memory_wiring.go:295` | aligned |
+| `memory_reflection.every_turns` | int >= 1 | 6 | — | `core/framework/config.py:1027` | `go_hive/go-hive/internal/server/chat_memory_wiring.go:293` | aligned |
+| `memory_reflection.long_every` | int >= 1 | 4 | — | `core/framework/config.py:1029` | `go_hive/go-hive/internal/server/chat_memory_wiring.go:294` | aligned |
+| `memory_reflection.model` | "main" \| "worker" | main | — | `core/framework/config.py:1045` | `go_hive/go-hive/internal/server/chat_memory_wiring.go:295` | aligned |
 
 - `memory_reflection.every_turns`：int (bool rejected), >=1; invalid keeps 6.
 - `memory_reflection.long_every`：same validation as every_turns.
@@ -190,7 +190,7 @@
 
 | 键 | 类型 | 默认 | env 覆盖 | Python 读取点 | Go 读取点 | 状态 |
 |---|---|---|---|---|---|---|
-| `provider_library.<name>` | object (slot-shaped) | {} | — | `core/framework/server/routes_config.py:1224` | `go_hive/go-hive/internal/server/provider_library.go:65` | aligned |
+| `provider_library.<name>` | object (slot-shaped) | {} | — | `core/framework/server/routes_config.py:1294` | `go_hive/go-hive/internal/server/provider_library.go:65` | aligned |
 
 - `provider_library.<name>`：named saved slots; applying copies the object into a role slot, no indirection. Non-object entries ignored.
 
@@ -220,27 +220,27 @@
 
 | 键 | 类型 | 默认 | env 覆盖 | Python 读取点 | Go 读取点 | 状态 |
 |---|---|---|---|---|---|---|
-| `queen_mail.enabled` | bool | false | — | `core/framework/config.py:1127` | `go_hive/go-hive/internal/queenmail/config.go:120` | aligned |
-| `queen_mail.queens` | list[string] | null | — | `core/framework/config.py:1128` | `go_hive/go-hive/internal/queenmail/config.go:122` | aligned |
-| `queen_mail.daily_limit` | int >= 1 | 100 | — | `core/framework/config.py:1100` | `go_hive/go-hive/internal/queenmail/config.go:134` | aligned |
-| `queen_mail.max_depth` | int >= 1 | 8 | — | `core/framework/config.py:1102` | `go_hive/go-hive/internal/queenmail/config.go:135` | aligned |
-| `queen_mail.max_parallel_turns` | int >= 1 | 2 | — | `core/framework/config.py:1106` | `go_hive/go-hive/internal/queenmail/config.go:136` | aligned |
-| `queen_mail.claude_code.<id>.name` | string | id | — | `core/framework/config.py:1162` | `go_hive/go-hive/internal/queenmail/config.go:157` | aligned |
-| `queen_mail.claude_code.<id>.title` | string | Claude Code | — | `core/framework/config.py:1163` | `go_hive/go-hive/internal/queenmail/config.go:158` | aligned |
-| `queen_mail.claude_code.<id>.command` | string \| list[string] | ["claude"] | — | `core/framework/config.py:1156` | `go_hive/go-hive/internal/queenmail/config.go:159` | aligned |
-| `queen_mail.claude_code.<id>.auth` | "api_key" \| "subscription" | api_key | — | `core/framework/config.py:1165` | `go_hive/go-hive/internal/queenmail/config.go:160` | aligned |
-| `queen_mail.claude_code.<id>.api_key` | string | null | — | `core/framework/config.py:1166` | `go_hive/go-hive/internal/queenmail/config.go:161` | aligned |
-| `queen_mail.claude_code.<id>.api_base` | string | null | — | `core/framework/config.py:1167` | `go_hive/go-hive/internal/queenmail/config.go:162` | aligned |
-| `queen_mail.claude_code.<id>.config_dir` | string | HIVE_HOME/claude_code/<id>/config | — | `core/framework/config.py:1168` | `go_hive/go-hive/internal/queenmail/config.go:163` | aligned |
-| `queen_mail.claude_code.<id>.cwd` | string | HIVE_HOME/claude_code/<id>/workspace | — | `core/framework/config.py:1169` | `go_hive/go-hive/internal/queenmail/config.go:164` | aligned |
-| `queen_mail.claude_code.<id>.permission_mode` | string | default | — | `core/framework/config.py:1170` | `go_hive/go-hive/internal/queenmail/config.go:165` | aligned |
-| `queen_mail.claude_code.<id>.allowed_tools` | list[string] | [] | — | `core/framework/config.py:1171` | `go_hive/go-hive/internal/queenmail/config.go:166` | aligned |
-| `queen_mail.claude_code.<id>.disallowed_tools` | list[string] | [] | — | `core/framework/config.py:1172` | `go_hive/go-hive/internal/queenmail/config.go:167` | aligned |
-| `queen_mail.claude_code.<id>.add_dirs` | list[string] | [] | — | `core/framework/config.py:1173` | `go_hive/go-hive/internal/queenmail/config.go:168` | aligned |
-| `queen_mail.claude_code.<id>.model` | string | null | — | `core/framework/config.py:1174` | `go_hive/go-hive/internal/queenmail/config.go:169` | aligned |
-| `queen_mail.claude_code.<id>.timeout_minutes` | int >= 1 | 30 | — | `core/framework/config.py:1082` | `go_hive/go-hive/internal/queenmail/config.go:170` | aligned |
-| `queen_mail.claude_code.<id>.system_prompt` | string | null | — | `core/framework/config.py:1176` | `go_hive/go-hive/internal/queenmail/config.go:171` | aligned |
-| `queen_mail.claude_code.<id>.env` | object str->str | {} | — | `core/framework/config.py:1177` | `go_hive/go-hive/internal/queenmail/config.go:172` | aligned |
+| `queen_mail.enabled` | bool | false | — | `core/framework/config.py:1174` | `go_hive/go-hive/internal/queenmail/config.go:120` | aligned |
+| `queen_mail.queens` | list[string] | null | — | `core/framework/config.py:1175` | `go_hive/go-hive/internal/queenmail/config.go:122` | aligned |
+| `queen_mail.daily_limit` | int >= 1 | 100 | — | `core/framework/config.py:1147` | `go_hive/go-hive/internal/queenmail/config.go:134` | aligned |
+| `queen_mail.max_depth` | int >= 1 | 8 | — | `core/framework/config.py:1149` | `go_hive/go-hive/internal/queenmail/config.go:135` | aligned |
+| `queen_mail.max_parallel_turns` | int >= 1 | 2 | — | `core/framework/config.py:1153` | `go_hive/go-hive/internal/queenmail/config.go:136` | aligned |
+| `queen_mail.claude_code.<id>.name` | string | id | — | `core/framework/config.py:1209` | `go_hive/go-hive/internal/queenmail/config.go:157` | aligned |
+| `queen_mail.claude_code.<id>.title` | string | Claude Code | — | `core/framework/config.py:1210` | `go_hive/go-hive/internal/queenmail/config.go:158` | aligned |
+| `queen_mail.claude_code.<id>.command` | string \| list[string] | ["claude"] | — | `core/framework/config.py:1203` | `go_hive/go-hive/internal/queenmail/config.go:159` | aligned |
+| `queen_mail.claude_code.<id>.auth` | "api_key" \| "subscription" | api_key | — | `core/framework/config.py:1212` | `go_hive/go-hive/internal/queenmail/config.go:160` | aligned |
+| `queen_mail.claude_code.<id>.api_key` | string | null | — | `core/framework/config.py:1213` | `go_hive/go-hive/internal/queenmail/config.go:161` | aligned |
+| `queen_mail.claude_code.<id>.api_base` | string | null | — | `core/framework/config.py:1214` | `go_hive/go-hive/internal/queenmail/config.go:162` | aligned |
+| `queen_mail.claude_code.<id>.config_dir` | string | HIVE_HOME/claude_code/<id>/config | — | `core/framework/config.py:1215` | `go_hive/go-hive/internal/queenmail/config.go:163` | aligned |
+| `queen_mail.claude_code.<id>.cwd` | string | HIVE_HOME/claude_code/<id>/workspace | — | `core/framework/config.py:1216` | `go_hive/go-hive/internal/queenmail/config.go:164` | aligned |
+| `queen_mail.claude_code.<id>.permission_mode` | string | default | — | `core/framework/config.py:1217` | `go_hive/go-hive/internal/queenmail/config.go:165` | aligned |
+| `queen_mail.claude_code.<id>.allowed_tools` | list[string] | [] | — | `core/framework/config.py:1218` | `go_hive/go-hive/internal/queenmail/config.go:166` | aligned |
+| `queen_mail.claude_code.<id>.disallowed_tools` | list[string] | [] | — | `core/framework/config.py:1219` | `go_hive/go-hive/internal/queenmail/config.go:167` | aligned |
+| `queen_mail.claude_code.<id>.add_dirs` | list[string] | [] | — | `core/framework/config.py:1220` | `go_hive/go-hive/internal/queenmail/config.go:168` | aligned |
+| `queen_mail.claude_code.<id>.model` | string | null | — | `core/framework/config.py:1221` | `go_hive/go-hive/internal/queenmail/config.go:169` | aligned |
+| `queen_mail.claude_code.<id>.timeout_minutes` | int >= 1 | 30 | — | `core/framework/config.py:1129` | `go_hive/go-hive/internal/queenmail/config.go:170` | aligned |
+| `queen_mail.claude_code.<id>.system_prompt` | string | null | — | `core/framework/config.py:1223` | `go_hive/go-hive/internal/queenmail/config.go:171` | aligned |
+| `queen_mail.claude_code.<id>.env` | object str->str | {} | — | `core/framework/config.py:1224` | `go_hive/go-hive/internal/queenmail/config.go:172` | aligned |
 
 - `queen_mail.enabled`：only JSON true enables it; 1/"true" do not.
 - `queen_mail.queens`：absent -> every queen; non-list -> every queen; empty entries dropped.
@@ -276,21 +276,21 @@
 
 | 键 | 类型 | 默认 | env 覆盖 | Python 读取点 | Go 读取点 | 状态 |
 |---|---|---|---|---|---|---|
-| `retention.enabled` | bool | true | HIVE_RETENTION_ENABLED | `core/framework/config.py:1455` | `go_hive/go-hive/internal/maintenance/config.go:33` | aligned |
-| `retention.mode` | "archive" \| "delete" | archive | HIVE_RETENTION_MODE | `core/framework/config.py:1456` | `go_hive/go-hive/internal/maintenance/config.go:34` | aligned |
-| `retention.archive_dir` | string | HIVE_HOME/archive | HIVE_RETENTION_ARCHIVE_DIR | `core/framework/config.py:1457` | `go_hive/go-hive/internal/maintenance/config.go:35` | aligned |
-| `retention.event_logs_days` | int | 7 | HIVE_RETENTION_EVENT_LOGS_DAYS | `core/framework/config.py:1459` | `go_hive/go-hive/internal/maintenance/config.go:36` | aligned |
-| `retention.llm_logs_days` | int | 7 | HIVE_RETENTION_LLM_LOGS_DAYS | `core/framework/config.py:1460` | `go_hive/go-hive/internal/maintenance/config.go:37` | aligned |
-| `retention.compaction_log_days` | int | 7 | HIVE_RETENTION_COMPACTION_LOG_DAYS | `core/framework/config.py:1461` | `go_hive/go-hive/internal/maintenance/config.go:38` | aligned |
-| `retention.tool_artifacts_days` | int | 14 | HIVE_RETENTION_TOOL_ARTIFACTS_DAYS | `core/framework/config.py:1462` | `go_hive/go-hive/internal/maintenance/config.go:39` | aligned |
-| `retention.rotated_logs_days` | int | 30 | HIVE_RETENTION_ROTATED_LOGS_DAYS | `core/framework/config.py:1463` | `go_hive/go-hive/internal/maintenance/config.go:40` | aligned |
-| `retention.worker_deep_clean_days` | int | 14 | HIVE_RETENTION_WORKER_DEEP_CLEAN_DAYS | `core/framework/config.py:1465` | `go_hive/go-hive/internal/maintenance/config.go:41` | aligned |
-| `retention.queen_hygiene_days` | int | 30 | HIVE_RETENTION_QUEEN_HYGIENE_DAYS | `core/framework/config.py:1467` | `go_hive/go-hive/internal/maintenance/config.go:42` | aligned |
-| `retention.events_rewrite_min_bytes` | int | 1000000 | HIVE_RETENTION_EVENTS_REWRITE_MIN_BYTES | `core/framework/config.py:1468` | `go_hive/go-hive/internal/maintenance/config.go:43` | aligned |
-| `retention.active_grace_hours` | int | 48 | HIVE_RETENTION_ACTIVE_GRACE_HOURS | `core/framework/config.py:1470` | `go_hive/go-hive/internal/maintenance/config.go:44` | aligned |
-| `retention.io_sleep_ms` | int | 10 | HIVE_RETENTION_IO_SLEEP_MS | `core/framework/config.py:1471` | `go_hive/go-hive/internal/maintenance/config.go:45` | aligned |
-| `retention.batch_size` | int | 200 | HIVE_RETENTION_BATCH_SIZE | `core/framework/config.py:1472` | `go_hive/go-hive/internal/maintenance/config.go:46` | aligned |
-| `retention.junk_min_bytes` | int | 50000000 | HIVE_RETENTION_JUNK_MIN_BYTES | `core/framework/config.py:1473` | `go_hive/go-hive/internal/maintenance/config.go:47` | aligned |
+| `retention.enabled` | bool | true | HIVE_RETENTION_ENABLED | `core/framework/config.py:1502` | `go_hive/go-hive/internal/maintenance/config.go:33` | aligned |
+| `retention.mode` | "archive" \| "delete" | archive | HIVE_RETENTION_MODE | `core/framework/config.py:1503` | `go_hive/go-hive/internal/maintenance/config.go:34` | aligned |
+| `retention.archive_dir` | string | HIVE_HOME/archive | HIVE_RETENTION_ARCHIVE_DIR | `core/framework/config.py:1504` | `go_hive/go-hive/internal/maintenance/config.go:35` | aligned |
+| `retention.event_logs_days` | int | 7 | HIVE_RETENTION_EVENT_LOGS_DAYS | `core/framework/config.py:1506` | `go_hive/go-hive/internal/maintenance/config.go:36` | aligned |
+| `retention.llm_logs_days` | int | 7 | HIVE_RETENTION_LLM_LOGS_DAYS | `core/framework/config.py:1507` | `go_hive/go-hive/internal/maintenance/config.go:37` | aligned |
+| `retention.compaction_log_days` | int | 7 | HIVE_RETENTION_COMPACTION_LOG_DAYS | `core/framework/config.py:1508` | `go_hive/go-hive/internal/maintenance/config.go:38` | aligned |
+| `retention.tool_artifacts_days` | int | 14 | HIVE_RETENTION_TOOL_ARTIFACTS_DAYS | `core/framework/config.py:1509` | `go_hive/go-hive/internal/maintenance/config.go:39` | aligned |
+| `retention.rotated_logs_days` | int | 30 | HIVE_RETENTION_ROTATED_LOGS_DAYS | `core/framework/config.py:1510` | `go_hive/go-hive/internal/maintenance/config.go:40` | aligned |
+| `retention.worker_deep_clean_days` | int | 14 | HIVE_RETENTION_WORKER_DEEP_CLEAN_DAYS | `core/framework/config.py:1512` | `go_hive/go-hive/internal/maintenance/config.go:41` | aligned |
+| `retention.queen_hygiene_days` | int | 30 | HIVE_RETENTION_QUEEN_HYGIENE_DAYS | `core/framework/config.py:1514` | `go_hive/go-hive/internal/maintenance/config.go:42` | aligned |
+| `retention.events_rewrite_min_bytes` | int | 1000000 | HIVE_RETENTION_EVENTS_REWRITE_MIN_BYTES | `core/framework/config.py:1515` | `go_hive/go-hive/internal/maintenance/config.go:43` | aligned |
+| `retention.active_grace_hours` | int | 48 | HIVE_RETENTION_ACTIVE_GRACE_HOURS | `core/framework/config.py:1517` | `go_hive/go-hive/internal/maintenance/config.go:44` | aligned |
+| `retention.io_sleep_ms` | int | 10 | HIVE_RETENTION_IO_SLEEP_MS | `core/framework/config.py:1518` | `go_hive/go-hive/internal/maintenance/config.go:45` | aligned |
+| `retention.batch_size` | int | 200 | HIVE_RETENTION_BATCH_SIZE | `core/framework/config.py:1519` | `go_hive/go-hive/internal/maintenance/config.go:46` | aligned |
+| `retention.junk_min_bytes` | int | 50000000 | HIVE_RETENTION_JUNK_MIN_BYTES | `core/framework/config.py:1520` | `go_hive/go-hive/internal/maintenance/config.go:47` | aligned |
 
 - `retention.enabled`：file: exact bool only; env: (0,false,no,'') false. Same on both sides.
 - `retention.mode`：neither side validates the enum; an unknown string is kept (janitor treats non-delete as archive on both sides).
@@ -324,25 +324,25 @@
 
 | 键 | 类型 | 默认 | env 覆盖 | Python 读取点 | Go 读取点 | 状态 |
 |---|---|---|---|---|---|---|
-| `soul.queens.<id>.enabled` | bool | true when the entry exists | — | `core/framework/config.py:1251` | `go_hive/go-hive/internal/soul/config.go:164` | aligned |
-| `soul.queens.<id>.mode` | "review" \| "auto" | review | — | `core/framework/config.py:1281` | `go_hive/go-hive/internal/soul/config.go:231` | aligned |
-| `soul.queens.<id>.hour` | int 0..23 | 4 | — | `core/framework/config.py:1282` | `go_hive/go-hive/internal/soul/config.go:218` | aligned |
-| `soul.queens.<id>.model` | "queen" \| "worker" | queen | — | `core/framework/config.py:1283` | `go_hive/go-hive/internal/soul/config.go:234` | aligned |
-| `soul.queens.<id>.max_edits` | int >= 1 | 5 | — | `core/framework/config.py:1284` | `go_hive/go-hive/internal/soul/config.go:220` | aligned |
-| `soul.queens.<id>.bootstrap_edits` | int >= 1 | 30 | — | `core/framework/config.py:1285` | `go_hive/go-hive/internal/soul/config.go:221` | aligned |
-| `soul.queens.<id>.include_titles` | list[string] | [] | — | `core/framework/config.py:1286` | `go_hive/go-hive/internal/soul/config.go:222` | aligned |
-| `soul.queens.<id>.exclude_titles` | list[string] | [] | — | `core/framework/config.py:1287` | `go_hive/go-hive/internal/soul/config.go:223` | aligned |
-| `soul.queens.<id>.sources.file` | string | null | — | `core/framework/config.py:1288` | `go_hive/go-hive/internal/soul/config.go:241` | aligned |
-| `soul.queens.<id>.sources.keys` | list[string] | [] | — | `core/framework/config.py:1289` | `go_hive/go-hive/internal/soul/config.go:256` | aligned |
-| `soul.queens.<id>.bootstrap_memories` | list[string] | [] | — | `core/framework/config.py:1290` | `go_hive/go-hive/internal/soul/config.go:225` | aligned |
-| `soul.queens.<id>.sections[].key` | string | default section list | — | `core/framework/config.py:1270` | `go_hive/go-hive/internal/soul/config.go:187` | aligned |
-| `soul.queens.<id>.sections[].title` | string | null | — | `core/framework/config.py:1271` | `go_hive/go-hive/internal/soul/config.go:188` | aligned |
-| `soul.queens.<id>.sections[].limit` | int >= 1 | 400 | — | `core/framework/config.py:1272` | `go_hive/go-hive/internal/soul/config.go:195` | aligned |
-| `soul.queens.<id>.sections[].max_age_days` | int >= 1 | null | — | `core/framework/config.py:1273` | `go_hive/go-hive/internal/soul/config.go:198` | aligned |
-| `soul.queens.<id>.sections[].evidence` | int >= 1 | 1 | — | `core/framework/config.py:1274` | `go_hive/go-hive/internal/soul/config.go:196` | aligned |
-| `soul.queens.<id>.header` | string | built-in header | — | `core/framework/config.py:1292` | `go_hive/go-hive/internal/soul/config.go:245` | aligned |
-| `soul.queens.<id>.session_chars` | int >= 1 | 12000 | — | `core/framework/config.py:1293` | `go_hive/go-hive/internal/soul/config.go:228` | aligned |
-| `soul.queens.<id>.message_chars` | int >= 1 | 400 | — | `core/framework/config.py:1294` | `go_hive/go-hive/internal/soul/config.go:229` | aligned |
+| `soul.queens.<id>.enabled` | bool | true when the entry exists | — | `core/framework/config.py:1298` | `go_hive/go-hive/internal/soul/config.go:164` | aligned |
+| `soul.queens.<id>.mode` | "review" \| "auto" | review | — | `core/framework/config.py:1328` | `go_hive/go-hive/internal/soul/config.go:231` | aligned |
+| `soul.queens.<id>.hour` | int 0..23 | 4 | — | `core/framework/config.py:1329` | `go_hive/go-hive/internal/soul/config.go:218` | aligned |
+| `soul.queens.<id>.model` | "queen" \| "worker" | queen | — | `core/framework/config.py:1330` | `go_hive/go-hive/internal/soul/config.go:234` | aligned |
+| `soul.queens.<id>.max_edits` | int >= 1 | 5 | — | `core/framework/config.py:1331` | `go_hive/go-hive/internal/soul/config.go:220` | aligned |
+| `soul.queens.<id>.bootstrap_edits` | int >= 1 | 30 | — | `core/framework/config.py:1332` | `go_hive/go-hive/internal/soul/config.go:221` | aligned |
+| `soul.queens.<id>.include_titles` | list[string] | [] | — | `core/framework/config.py:1333` | `go_hive/go-hive/internal/soul/config.go:222` | aligned |
+| `soul.queens.<id>.exclude_titles` | list[string] | [] | — | `core/framework/config.py:1334` | `go_hive/go-hive/internal/soul/config.go:223` | aligned |
+| `soul.queens.<id>.sources.file` | string | null | — | `core/framework/config.py:1335` | `go_hive/go-hive/internal/soul/config.go:241` | aligned |
+| `soul.queens.<id>.sources.keys` | list[string] | [] | — | `core/framework/config.py:1336` | `go_hive/go-hive/internal/soul/config.go:256` | aligned |
+| `soul.queens.<id>.bootstrap_memories` | list[string] | [] | — | `core/framework/config.py:1337` | `go_hive/go-hive/internal/soul/config.go:225` | aligned |
+| `soul.queens.<id>.sections[].key` | string | default section list | — | `core/framework/config.py:1317` | `go_hive/go-hive/internal/soul/config.go:187` | aligned |
+| `soul.queens.<id>.sections[].title` | string | null | — | `core/framework/config.py:1318` | `go_hive/go-hive/internal/soul/config.go:188` | aligned |
+| `soul.queens.<id>.sections[].limit` | int >= 1 | 400 | — | `core/framework/config.py:1319` | `go_hive/go-hive/internal/soul/config.go:195` | aligned |
+| `soul.queens.<id>.sections[].max_age_days` | int >= 1 | null | — | `core/framework/config.py:1320` | `go_hive/go-hive/internal/soul/config.go:198` | aligned |
+| `soul.queens.<id>.sections[].evidence` | int >= 1 | 1 | — | `core/framework/config.py:1321` | `go_hive/go-hive/internal/soul/config.go:196` | aligned |
+| `soul.queens.<id>.header` | string | built-in header | — | `core/framework/config.py:1339` | `go_hive/go-hive/internal/soul/config.go:245` | aligned |
+| `soul.queens.<id>.session_chars` | int >= 1 | 12000 | — | `core/framework/config.py:1340` | `go_hive/go-hive/internal/soul/config.go:228` | aligned |
+| `soul.queens.<id>.message_chars` | int >= 1 | 400 | — | `core/framework/config.py:1341` | `go_hive/go-hive/internal/soul/config.go:229` | aligned |
 
 - `soul.queens.<id>.enabled`：only JSON false disables; an absent entry means no soul.
 - `soul.queens.<id>.mode`：other values keep review.
@@ -371,9 +371,9 @@
 | `adaptive_tool_budget` | bool | true | HIVE_ADAPTIVE_TOOL_BUDGET | `core/framework/config.py:963` (+1) | `go_hive/go-hive/internal/server/config_features.go:47` (+1) | aligned |
 | `email_senders` | bool | false | HIVE_EMAIL_SENDERS | `core/framework/config.py:992` (+1) | `go_hive/go-hive/internal/server/config_features.go:55` (+1) | aligned |
 | `stall_check` | bool | false | HIVE_STALL_CHECK | `core/framework/config.py:1009` (+1) | `go_hive/go-hive/internal/server/hive_config.go:21` (+1) | aligned |
-| `memory_timeline` | bool | false | HIVE_MEMORY_TIMELINE | `core/framework/config.py:1310` (+1) | `go_hive/go-hive/internal/server/config_features.go:63` (+1) | aligned |
+| `memory_timeline` | bool | false | HIVE_MEMORY_TIMELINE | `core/framework/config.py:1357` (+1) | `go_hive/go-hive/internal/server/config_features.go:63` (+1) | aligned |
 | `gcu_enabled` | bool | true | — | `core/framework/config.py:945` | `go_hive/go-hive/internal/cli/browser_supervisor.go:118` | aligned |
-| `gcu_viewport_scale` | number (0.1-1.0) | 0.8 | — | `core/framework/config.py:1344` | `go_hive/go-hive/internal/server/hive_config.go:77` | aligned |
+| `gcu_viewport_scale` | number (0.1-1.0) | 0.8 | — | `core/framework/config.py:1391` | `go_hive/go-hive/internal/server/hive_config.go:77` | aligned |
 | `created_at` | string (ISO time) | null | — | `quickstart.sh:1048` | — | unread |
 | `external_skills` | list[string] | [] | — | `core/framework/skills/discovery.py:149` | `go_hive/go-hive/internal/skills/discovery.go:218` | aligned |
 | `rate_limits` | object (dotted platform.action.window) | built-in table | HIVE_RATE_<PLATFORM>_<ACTION>_<WINDOW> | `core/framework/rate_limiter.py:30` | `go_hive/go-hive/internal/ratelimit/rate_limiter.go:123` | aligned |
@@ -400,11 +400,11 @@
 
 | 键 | 类型 | 默认 | env 覆盖 | Python 读取点 | Go 读取点 | 状态 |
 |---|---|---|---|---|---|---|
-| `user_profile.displayName` | string | "" | — | `core/framework/server/routes_config.py:681` | `go_hive/go-hive/internal/server/profile.go:128` | aligned |
-| `user_profile.about` | string | "" | — | `core/framework/server/routes_config.py:682` | `go_hive/go-hive/internal/server/profile.go:148` | aligned |
-| `user_profile.theme` | "" \| "light" \| "dark" | "" | — | `core/framework/server/routes_config.py:683` | `go_hive/go-hive/internal/server/profile.go:150` | aligned |
-| `user_profile.density` | "" \| "spacious" \| "compact" | "" | — | `core/framework/server/routes_config.py:684` | `go_hive/go-hive/internal/server/profile.go:152` | aligned |
-| `user_profile.prompt_library_sort` | object {my,community} | null | — | `core/framework/server/routes_config.py:685` | `go_hive/go-hive/internal/server/profile.go:128` | aligned |
+| `user_profile.displayName` | string | "" | — | `core/framework/server/routes_config.py:682` | `go_hive/go-hive/internal/server/profile.go:128` | aligned |
+| `user_profile.about` | string | "" | — | `core/framework/server/routes_config.py:683` | `go_hive/go-hive/internal/server/profile.go:148` | aligned |
+| `user_profile.theme` | "" \| "light" \| "dark" | "" | — | `core/framework/server/routes_config.py:684` | `go_hive/go-hive/internal/server/profile.go:150` | aligned |
+| `user_profile.density` | "" \| "spacious" \| "compact" | "" | — | `core/framework/server/routes_config.py:685` | `go_hive/go-hive/internal/server/profile.go:152` | aligned |
+| `user_profile.prompt_library_sort` | object {my,community} | null | — | `core/framework/server/routes_config.py:686` | `go_hive/go-hive/internal/server/profile.go:128` | aligned |
 
 - `user_profile.displayName`：GET returns "" for missing; PUT trims. Go's ProfileResponse 500s on a non-object user_profile exactly like upstream's AttributeError path.
 - `user_profile.about`：same trim; max length enforced by both (profile.go mirrors routes_config).

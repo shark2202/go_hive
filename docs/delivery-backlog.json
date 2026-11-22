@@ -327,6 +327,41 @@
     "hours": 3,
     "done": true,
     "note": "DONE 2026-11-22：13 用例冻结（mcp_namespace_parity_test.go）+ docs/mcp-namespace-residuals.md；折叠字符集属冻结契约不修，长名上限双侧缺位。"
+   },
+   {
+    "id": "memory-notes-1.0.15-parity",
+    "label": "上游 1.0.15「Notes in Time」memory notes 特性移植（notes 先于回答到达；log.jsonl 历史/恢复；用户自有 notes；note 年龄=最后确认日；memory_reflection worker 模型；recall 索引化 30ms/3s 上限；HIVE_MEMORY_RECALL、memory_recall/memory_reflection 配置；routes /api/memories* /api/config/memory）",
+    "hours": 12,
+    "done": false,
+    "note": "2026-11-22 引入（origin/main 6703b434 合并后实测）：新增 py 2 文件（memory_reminders.py、queen/memory_log.py）+ queen_memory_v2/recall_selector/reflection_agent/agent_loop 修改 + 前端 Settings→Memory；Go 侧缺失 5 条有效路由。"
+   },
+   {
+    "id": "memory-recall-index-1.0.15",
+    "label": "recall 索引化（per-queen index，首条消息后台建索引，删除安全）+ 3s 上限",
+    "hours": 3,
+    "done": false,
+    "note": "上游 1.0.15 changed 项；与 memory-notes 同族，实现时一并做。"
+   },
+   {
+    "id": "long-wait-and-parallel-tools-1.0.15",
+    "label": "长等待不耗模型回合（terminal/worker 等待最长 10 分钟、每秒检查、新消息结束等待）+ 非 Anthropic 模型并行工具调用（拒绝则去掉再问）",
+    "hours": 4,
+    "done": false,
+    "note": "上游 1.0.15 changed 项；需先验证 Go 现状（playbook 静默守护 900s 已有雏形），差异逐条登记。"
+   },
+   {
+    "id": "frontend-vendor-1.0.15",
+    "label": "前端 vendor 同步 1.0.15（MemorySettingsSection、memory-library 历史/恢复、config/memories API 客户端、SettingsModal）",
+    "hours": 3,
+    "done": false,
+    "note": "上游 7 个前端文件变更；vendor 必须用原版 React 应用。"
+   },
+   {
+    "id": "longmemeval-e2e-1.0.15-sync",
+    "label": "e2e longmemeval 测试同步 1.0.15（memory notes 可构建、测试基线跟进）",
+    "hours": 1,
+    "done": false,
+    "note": "core/tests/e2e/longmemeval.py + test_longmemeval.py 变更。"
    }
   ]
  }
