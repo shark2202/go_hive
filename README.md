@@ -1,7 +1,7 @@
 # Go Hive · OpenHive 的纯 Go 重写
 
 > Go 模块：`github.com/aden-hive/hive-go`
-> 上游参考：`aden-hive` / `aden-tools` 1.0.14（提交 `c6c2cdcf`），Python 代码在 `/Users/mac/hive/core`
+> 上游参考：`aden-hive` / `aden-tools` **1.0.15**（提交 `6703b434`），Python 代码在 `/Users/mac/hive/core`
 > 状态快照：2026-11-18（P0 可运行切片集成后；`make ci` 退出码 0）
 > 文档语言：简体中文
 

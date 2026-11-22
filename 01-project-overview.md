@@ -85,7 +85,7 @@ hive/
 │   ├── hive/                 # 公开导出面（187 行）
 │   ├── frontend/             # React Dashboard
 │   ├── tests/                # 跨模块集成/端到端/live 测试
-│   └── pyproject.toml        # aden-hive 1.0.14
+│   └── pyproject.toml        # aden-hive 1.0.15
 ├── tools/                    # aden-tools：工具与集成库（96k 行）
 │   ├── src/aden_tools/tools/ # 104 个集成
 │   ├── src/terminal_tools/   # shell / ripgrep / 后台任务

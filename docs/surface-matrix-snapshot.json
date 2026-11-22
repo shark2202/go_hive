@@ -1,15 +1,15 @@
 {
-  "generated_at": "2026-11-22 00:56 CST",
-  "commit": "428b47bb",
+  "generated_at": "2026-11-22 16:03 CST",
+  "commit": "95e01de6",
   "versions": {
-    "python": "1.0.14",
+    "python": "1.0.15",
     "go": "1.0.26-go.1"
   },
   "repo": "/Users/mac/hive",
   "routes": {
-    "go_total": 220,
-    "python_total": 216,
-    "exact": 213,
+    "go_total": 225,
+    "python_total": 221,
+    "exact": 218,
     "python_only": [
       "DELETE /api/sessions/history/{session_id}",
       "DELETE /api/sessions/{session_id}/colony",
@@ -26,14 +26,14 @@
     ],
     "skills_routes_exact": 17,
     "skills_routes_total": 17,
-    "config_routes_exact": 20,
-    "config_routes_total": 20
+    "config_routes_exact": 22,
+    "config_routes_total": 22
   },
   "frontend": {
-    "shared_paths": 1106,
+    "shared_paths": 1109,
     "go_only": 10,
     "python_only": 0,
-    "content_diff": 62
+    "content_diff": 63
   },
   "tools": {
     "modules": "103 / 103",
@@ -45,7 +45,7 @@
     "actions": 865
   },
   "audit": {
-    "generated_at": "2026-11-22T00:56:03+08:00",
+    "generated_at": "2026-11-22T16:03:04+08:00",
     "frontend_missing": 0,
     "python_missing": 0,
     "python_pending": 0,
@@ -220,7 +220,7 @@
         "diff": 0
       }
     ],
-    "python_start_s": 8.38,
-    "go_start_s": 0.26
+    "python_start_s": 2.07,
+    "go_start_s": 0.27
   }
 }

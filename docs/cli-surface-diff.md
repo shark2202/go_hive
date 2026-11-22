@@ -126,6 +126,6 @@
 ## 高风险待办（未改，附估算）
 
 - 【低风险/错误路径，非本车道】`hive-browser` 的「桥未连接」错误面仍是两条路：Python 走 `framework/…` 的 BrowserError → 无 `--json` 时 `ok: False`/`error: …` 打到 **stdout**（exit 2），Go 打 `hive-browser: the Hive browser extension isn't connected …` 到 **stderr**（exit 2）。属浏览器错误信封车道，解析形状已对齐；修法：把 not_connected 统一到 gcu 的 `errors.run` 输出（文本走 stderr 前缀 `error:`、`--json` 走 envelope）≈ 2–4 小时。
-- 【既定口径】`hive --version`：Python 1.0.14 / Go 1.0.26-go.1，两侧版本号独立演进，不进契约、不阻断。
+- 【既定口径】`hive --version`：Python 1.0.15 / Go 1.0.26-go.1，两侧版本号独立演进，不进契约、不阻断。
 - 【既有文案，非本车道】`hive-browser help <topic>` 的未知主题错误信息保留 Go 措辞（`hive-browser: no such command … — run hive-browser help for the full list`）；上游是未捕获 `BrowserError` traceback（exit 1），退出码一致、形状不同，文案差异不在 help 面。
 - 【机制差异，无法逐字】argparse 的折行宽度取 `shutil.get_terminal_size()`（`COLUMNS` → tty → 80，均减 2），Go 的 `internal/arghelp` 已按同一规则实现并在 COLUMNS=80/100 下逐字节一致；无 tty 且无 `COLUMNS` 时两侧同样回落 80，故此差异只在「有 tty 且窗口宽不同」的交互场景出现，不属可冻结契约。

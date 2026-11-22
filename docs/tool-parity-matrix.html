@@ -49,7 +49,7 @@ ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin
 </style></head><body><div class="wrap">
 <header><div class="eyebrow">Hive · Tool Traceability</div><h1>Hive ↔ go_hive <span>工具追踪矩阵</span></h1>
 <p class="lede">把上游 Hive 的工具面与 go_hive 已注册工具逐项对齐：<b>103 个集成模块 / 865 个 action</b>、浏览器桥、核心会话工具、Queen/Colony 工具与动态 MCP。每一行都给出上游来源、Go 对应、缺口和状态；未实现/未验证不写成可用。</p>
-<div class="meta"><span>生成：<b>2026-11-22 00:56 CST</b></span><span>Go HEAD：<b>428b47bb</b></span><span>来源：<b>上游 @mcp.tool 扫描 + Go session catalogue dump + PARITY.md</b></span></div>
+<div class="meta"><span>生成：<b>2026-11-22 16:03 CST</b></span><span>Go HEAD：<b>95e01de6</b></span><span>来源：<b>上游 @mcp.tool 扫描 + Go session catalogue dump + PARITY.md</b></span></div>
 <div class="toc"><a href="#summary">总览</a><a href="#integrations">集成矩阵</a><a href="#core">核心工具</a><a href="#skills">Skills</a><a href="#browser">Browser Bridge</a><a href="#queen">Queen/Colony</a><a href="#gaps">缺口与边界</a></div></header>
 
 <section id="summary"><h2><span class="num">00</span>总览</h2><div class="grid g4">
@@ -59,7 +59,7 @@ ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin
 <div class="card"><div class="k">浏览器工具</div><div class="v">22 / 22 active</div><div class="d">33 个上游定义；serve 自动拉起 bridge 子进程 + hive-browser CLI + control RPC 14831；真实 Chrome 已跑通；模型经 terminal 调 CLI（与上游同款）</div></div></div>
 <div class="callout info"><b>Skill 面：</b>3 个 agent 工具（<code>write_skill</code>/<code>skill_view</code>/<code>list_skills</code>）+ <b>20 个内置 Skill</b>（12 默认 + 8 preset）；矩阵主体是集成工具，Skill 单独见 §02B。<br><b>口径：</b>“已实现”= Go 代码路径存在且被测试覆盖；<b>不等于</b>真实第三方 API 已验证。需要凭据的模块统一按“未验证”看待。Browser Bridge 已用真实 Chrome 跑通 19 步 E2E（残余形状差异见 §03）。</div>
 <!-- TOOLS:START -->
-<div class="callout info"><b>自动核对：</b>刷新 2026-11-22 00:56 CST · HEAD <code>428b47bb</code> · 上游实测 <b>103 模块 / 865 action</b>（AST 扫描 <code>tools/src/aden_tools/tools/*</code>）· 与正文卡片 <span class="pill ok">一致</span>。Go 侧数字（集成 action 863 / 865、默认会话 143、browser 22/22）由正文人工维护，Go 变更后需同步；此块由 <code>refresh_surface_matrix.py</code> 定时重写。</div>
+<div class="callout info"><b>自动核对：</b>刷新 2026-11-22 16:03 CST · HEAD <code>95e01de6</code> · 上游实测 <b>103 模块 / 865 action</b>（AST 扫描 <code>tools/src/aden_tools/tools/*</code>）· 与正文卡片 <span class="pill ok">一致</span>。Go 侧数字（集成 action 863 / 865、默认会话 143、browser 22/22）由正文人工维护，Go 变更后需同步；此块由 <code>refresh_surface_matrix.py</code> 定时重写。</div>
 <!-- TOOLS:END -->
 <div class="callout"><b>契约审计：</b>name / desc / input / output 与内置 Skill 的逐字一致性见 <a href="tool-consistency-audit.html">tool-consistency-audit.html</a>（2026-11-20：Skill 20/20 逐字一致；工具契约未达标，P0 缺陷 3 类）。</div>
 </section>
@@ -937,7 +937,7 @@ ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin
 <div class="callout"><b>结论：</b>集成模块/action 覆盖接近完整（103/103、863/865）；file_ops、Queen lifecycle、Browser active 面与 Claude Code queen 运行器已补齐并有真实验证。Soul 每日反思与手动 reflect 已接通；冷会话开幕事件、Browser notify/面板、技能 live reload、附件多模态均已在 2026-11-20 补齐，LongMemEval harness 已实现但真实数据集/judge 因无外网未验证（fixture 管线 PASS，无分数）；仍存的明确缺口是 LongMemEval 真实跑分、81 个第三方凭据模块、Windows 实机与少量 CLI/schema 形状差异。此页是追踪矩阵，不是“全部可用”的证明。</div>
 </section>
 
-<footer>生成：2026-11-22 00:56 CST · 数据：上游 <code>tools/src/aden_tools/tools/*</code> 的 103 个模块、<code>tools/src/gcu/browser/tools/*</code> 的 33 个定义、Go session catalogue 的 143 个默认工具、<code>go_hive/browserbridge/PARITY.md</code>。状态口径见页首。</footer>
+<footer>生成：2026-11-22 16:03 CST · 数据：上游 <code>tools/src/aden_tools/tools/*</code> 的 103 个模块、<code>tools/src/gcu/browser/tools/*</code> 的 33 个定义、Go session catalogue 的 143 个默认工具、<code>go_hive/browserbridge/PARITY.md</code>。状态口径见页首。</footer>
 </div>
 <script>
 document.getElementById('filter').addEventListener('input', function(e){

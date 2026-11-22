@@ -30,7 +30,7 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 </style></head><body><div class="wrap">
 <header><div class="eyebrow">go_hive · Interfaces &amp; Invariants</div><h1>模块/组件 <span>接口不变量</span></h1>
 <p class="lede">进程边界上的协议、进程内的 Go 接口、磁盘与线上格式——凡是<b>跨模块依赖</b>的东西都登记为不变量（INV-xx），每条有单一事实源和校验方式。改接口必须同时改代码、测试和本页；<b>本页不是介绍，是维护契约</b>。</p>
-<div class="meta"><span>生成：<b>2026-11-22 00:56 CST</b></span><span>Python hive：<b>1.0.14</b></span><span>Go hive：<b>1.0.26-go.1</b></span><span>Go HEAD：<b>428b47bb</b></span><span>自动校验：<b>refresh_surface_matrix.py（每日 9:00）</b></span></div>
+<div class="meta"><span>生成：<b>2026-11-22 16:03 CST</b></span><span>Python hive：<b>1.0.15</b></span><span>Go hive：<b>1.0.26-go.1</b></span><span>Go HEAD：<b>95e01de6</b></span><span>自动校验：<b>refresh_surface_matrix.py（每日 9:00）</b></span></div>
 <div class="toc"><a href="#how">怎么用</a><a href="#boundary">进程边界</a><a href="#internal">进程内接口</a><a href="#invariants">不变量清单</a><a href="#maintain">维护流程</a><a href="#auto">自动校验</a><a href="#refs">相关文档</a></div></header>
 
 <section id="how"><h2><span class="num">00</span>怎么用这份文档</h2>
@@ -138,9 +138,9 @@ python3 go_hive/scripts/wiring_check.py</pre></li>
 <section id="auto"><h2><span class="num">05</span>自动校验快照</h2>
 <!-- INTERFACES:START -->
 <div class="tablewrap"><table><thead><tr><th style="width:34%">校验项</th><th>最近一次自动校验值</th></tr></thead><tbody>
-<tr><td>刷新时间 / HEAD</td><td>2026-11-22 00:56 CST · <code>428b47bb</code></td></tr>
-<tr><td>路由注册 / 完全一致</td><td>Go 220 · Python 216 · 完全一致 213</td></tr>
-<tr><td>skills / config 路由</td><td>skills 17/17 · config 20/20</td></tr>
+<tr><td>刷新时间 / HEAD</td><td>2026-11-22 16:03 CST · <code>95e01de6</code></td></tr>
+<tr><td>路由注册 / 完全一致</td><td>Go 225 · Python 221 · 完全一致 218</td></tr>
+<tr><td>skills / config 路由</td><td>skills 17/17 · config 22/22</td></tr>
 <tr><td>事件类型常量</td><td>77 个（<code>internal/eventbus/event_type.go</code>）</td></tr>
 <tr><td>MCP transport 枚举</td><td>4 种（<code>docs/mcp-registry/index.schema.json</code>）</td></tr>
 <tr><td>工具面</td><td>模块 103 / 103 · action 863 / 865 · 默认会话 143</td></tr>
@@ -151,8 +151,8 @@ python3 go_hive/scripts/wiring_check.py</pre></li>
 </section>
 
 <section id="refs"><h2><span class="num">06</span>相关文档</h2>
-<div class="callout info"><a href="alignment-dimensions.html">对齐维度矩阵</a>（范围视角）· <a href="surface-tracking-matrix.html">外观对齐矩阵</a>（接口外形 + 自动快照）· <a href="tool-parity-matrix.html">工具追踪矩阵</a> · <a href="browser-bridge.html">Browser Bridge 协议</a> · <a href="platform-support.html">平台支持矩阵</a> · <a href="storage-compat.html">HIVE_HOME 存储兼容矩阵</a> · <a href="hive-inbox.html">Hive Inbox 协议与流程</a> · <a href="stall-check.html">judge 槽与 stall check</a> · <a href="terminal-tools.html">终端工具清单</a> · <a href="file-ops.html">文件工具清单</a> · <a href="environment-variables.html">环境变量依赖</a> · <a href="cli-surface.html">CLI 对外面（入口 / 命令 / 参数）</a> · <a href="hive-cred.html">hive-cred 凭据 CLI</a> · <a href="skill-discovery.html">技能发现扫描面（Skill Discovery）</a> · <a href="hive-package-atlas.html">Hive 包结构与架构地图（Package Atlas）</a> · <a href="hive-core-designs.html">Hive 核心设计调研（Queen/Worker/Colony/Reminder/Memory/Judge）</a> · <a href="claude-code-queen-model.html">Claude Code Queen 关系模型（与 Hive queen / colony / worker）</a> · <a href="acp-queen-spec.html">ACP Queen 需求说明书（详细版）</a> · <a href="agent-runner-protocol.html">Agent Runner 协议与适配规范（Codex/OpenCode/pi/Hermes/ACP 草案）</a> · <a href="tool-consistency-audit.html">工具契约审计</a> · <a href="mcp-crosscheck.md">MCP 双跑核对（Python ↔ Go）</a> · <a href="mcp-registry/README.md">MCP registry 运行时契约</a> · <code>docs/mcp-registry/*.schema.json</code> · <code>go_hive/browserbridge/PARITY.md</code> · <code>docs/support-matrix.md</code>。</div>
+<div class="callout info"><a href="alignment-dimensions.html">对齐维度矩阵</a>（范围视角）· <a href="surface-tracking-matrix.html">外观对齐矩阵</a>（接口外形 + 自动快照）· <a href="tool-parity-matrix.html">工具追踪矩阵</a> · <a href="browser-bridge.html">Browser Bridge 协议</a> · <a href="platform-support.html">平台支持矩阵</a> · <a href="storage-compat.html">HIVE_HOME 存储兼容矩阵</a> · <a href="hive-inbox.html">Hive Inbox 协议与流程</a> · <a href="stall-check.html">judge 槽与 stall check</a> · <a href="terminal-tools.html">终端工具清单</a> · <a href="file-ops.html">文件工具清单</a> · <a href="environment-variables.html">环境变量依赖</a> · <a href="cli-surface.html">CLI 对外面（入口 / 命令 / 参数）</a> · <a href="hive-cred.html">hive-cred 凭据 CLI</a> · <a href="skill-discovery.html">技能发现扫描面（Skill Discovery）</a> · <a href="hive-package-atlas.html">Hive 包结构与架构地图（Package Atlas）</a> · <a href="hive-concepts-inventory.html">Hive 概念清单（18 原语 / 50 机制）</a> · <a href="event-bus.html">Event Bus 事件总线（77 类型 / 发布管线 / 消费方）</a> · <a href="hive-core-designs.html">Hive 核心设计调研（Queen/Worker/Colony/Reminder/Memory/Judge）</a> · <a href="claude-code-queen-model.html">Claude Code Queen 关系模型（与 Hive queen / colony / worker）</a> · <a href="acp-queen-spec.html">ACP Queen 需求说明书（详细版）</a> · <a href="agent-runner-protocol.html">Agent Runner 协议与适配规范（Codex/OpenCode/pi/Hermes/ACP 草案）</a> · <a href="tool-consistency-audit.html">工具契约审计</a> · <a href="mcp-crosscheck.md">MCP 双跑核对（Python ↔ Go）</a> · <a href="mcp-registry/README.md">MCP registry 运行时契约</a> · <code>docs/mcp-registry/*.schema.json</code> · <code>go_hive/browserbridge/PARITY.md</code> · <code>docs/support-matrix.md</code>。</div>
 </section>
 
-<footer>生成：2026-11-22 00:56 CST · 快照：Go HEAD <code>428b47bb</code> · 不变量编号不复用；新增接口必须新增 INV 行 · 本页由人维护，自动校验区块由 <code>refresh_surface_matrix.py</code> 重写。</footer>
+<footer>生成：2026-11-22 16:03 CST · 快照：Go HEAD <code>95e01de6</code> · 不变量编号不复用；新增接口必须新增 INV 行 · 本页由人维护，自动校验区块由 <code>refresh_surface_matrix.py</code> 重写。</footer>
 </div></body></html>
