@@ -66,21 +66,104 @@ Item-by-item comparison with the Go port:
 
 | Step | Upstream (measured, file:line) | Go (`go_hive/go-hive`) | Verdict |
 |---|---|---|---|
-| Order at turn start | cached block drained **after** the user message enters the conversation (E1) | user message committed in `runTurn` (`chat_runtime.go:908-920`), then `injectRecall` (`:945`) → `deliverCachedRecall` (`:1182`) | aligned |
-| Pick timing | model call runs as a background task, never awaited by the turn (`queen_orchestrator.py:1338`; probe H) | `go r.refreshRecallCache` (`chat_runtime.go:1203-1214`); `TestChatRuntimeBackgroundRecallNeverBlocksTheTurn` | aligned |
-| What the current turn sees | only the cached block (from the prior message, or the seed) — never the pick for its own message | `deliverCachedRecall` reads `recallCache` only (`:1182-1197`); the fresh pick writes `recallCache` (`:1216-1225`) | aligned, same-turn continuation caveat in residuals |
-| Where the fresh block goes | `phase_state._cached_*` → `_inject_recall_if_changed` → `_passive_injections` → next drain (E3: absent from every request of the producing turn, delivered with the next message) | `recallCache` → next turn's `deliverCachedRecall` (same ordering; `TestChatRuntimeBackgroundRecallLandsWithTheNextMessage`) | aligned |
-| Dedupe | `_last_injected_recall`, unchanged block not repeated (`queen_orchestrator.py:1296-1298`) | `lastRecall` (`chat_runtime.go:1186-1190`); `TestChatRuntimeBackgroundRecallReinjectsOnlyOnChange` | aligned |
-| Empty message | no pick (`_refresh_recall_cache` guard `:1249`); the cached block is still delivered because the immediate delivery runs before the refresh | `refreshRecallCache` returns on `query == ""` (`:1217`); `deliverCachedRecall` already ran; `TestChatRuntimeBackgroundRecallEmptyMessageKeepsTheCache` | aligned |
+| Order at turn start | cached block drained **after** the user message enters the conversation (E1) | user message committed in `runTurn` (`chat_runtime.go:928-955`), then `injectRecall` (`:956`) → `deliverCachedRecall` (`:1200`) | aligned |
+| Pick timing | model call runs as a background task, never awaited by the turn (`queen_orchestrator.py:1338`; probe H) | `go r.refreshRecallCache` (`chat_runtime.go:1236-1240`); `TestChatRuntimeBackgroundRecallNeverBlocksTheTurn` | aligned |
+| What the current turn sees | only the cached block (from the prior message, or the seed) — never the pick for its own message | `deliverCachedRecall` reads the two cached fields only (`:1200-1212`); the fresh pick writes them (`:1249-1255`) | aligned, same-turn continuation caveat in residuals |
+| Where the fresh block goes | `phase_state._cached_*` → `_inject_recall_if_changed` → `_passive_injections` → next drain (E3: absent from every request of the producing turn, delivered with the next message) | `recallGlobalCache`/`recallQueenCache` → next turn's `deliverCachedRecall` (same ordering; `TestChatRuntimeBackgroundRecallLandsWithTheNextMessage`) | aligned |
+| Dedupe | `_last_injected_recall`, unchanged block not repeated (`queen_orchestrator.py:1296-1298`) | `lastRecall` (`chat_runtime.go:1204-1207`); `TestChatRuntimeBackgroundRecallReinjectsOnlyOnChange` | aligned |
+| Empty message | no pick (`_refresh_recall_cache` guard `:1249`); the cached block is still delivered because the immediate delivery runs before the refresh | `refreshRecallCache` returns on `query == ""` (`:1250`); `deliverCachedRecall` already ran; `TestChatRuntimeBackgroundRecallEmptyMessageKeepsTheCache` | aligned |
 | Pick timeout | none in the selector: a 0.6s pick takes 0.6s inside `build_scoped_recall_blocks` (probe F2). The only cap is the 3s session-start seed (F3) | none; `BuildScopedRecallBlocks` uses the session context, no extra deadline | aligned (no cap on either side) |
-| Pick scope concurrency | both scopes in flight via `asyncio.gather` (`recall_selector.py:247-250`; probe F1: two 0.15s picks finish in < 0.28s) | sequential, global then queen (`internal/memory/recall.go:205-216`) | residual (latency only) |
-| Session-start seed | global scope only, up to 5 profile pins, `asyncio.wait_for(..., 3.0)` (`queen_orchestrator.py:1461-1479`; probe F3: a 5s pick is cancelled at ~3s and the cache stays empty; F4: seed keeps 5 pins, refresh keeps 3) | not ported | residual |
+| Pick scope concurrency | both scopes in flight via `asyncio.gather` (`recall_selector.py:247-250`; probe F1: two 0.15s picks finish in < 0.28s) | both scopes in flight: one goroutine per scope, `sync.WaitGroup`, blocks kept in scope order (`internal/memory/recall.go::BuildScopedRecallBlocks`); `TestBuildScopedRecallBlocksRunsScopesConcurrently` | aligned (measured below) |
+| Session-start seed | global scope only, up to 5 profile pins, `asyncio.wait_for(..., 3.0)` at session_start (`queen_orchestrator.py:1461-1479`; probe S1-S9/F3/F4) | `ChatRuntime.seedRecall` (`chat_runtime.go`), called from `runTurn` for a fresh session's first message; global scope, `SelectMemories(..., maxResults 5)`, 3s context, silent failure | aligned (see "Session-start seed" below for the bounded differences) |
 | Failure behaviour | `select_memories` returns the profile pins on any error (`recall_selector.py:167-173`); `_refresh_recall_cache` still assigns the (possibly empty) result | `SelectMemories` returns pins on error; `refreshRecallCache` assigns the joined result | aligned |
 
 The observable contract now matches upstream's documented one: *"the same pick,
 made while she answers, so it often arrives a message late"*
 (`config.py:1066`, `docs/configuration.md`). The first message of a cold session
 carries no recall (nothing is cached yet); its pick rides the second message.
+The session-start seed does not change that: it warms the cache *after* the
+first message's own delivery, so it only surfaces when that message's refresh is
+slow or empty.
+
+## Session-start seed
+
+Upstream's queen identity hook runs one warm pick at `session_start` when the
+session was created with an initial message (`trigger = ctx.trigger or ""` at
+`queen_orchestrator.py:1378`; the loop passes `initial_message` — agent_loop
+`:1554`): global scope only, `select_memories(trigger, llm, global_dir)` with the
+selector's default `max_results=5`, awaited at most 3s. A timeout leaves the
+cache unchanged ("will retry on first turn"); a fast failure still seeds the
+profile pins the selector returns.
+
+Go port: `ChatRuntime.runTurn` computes `firstSessionMessage` before any
+conversation write (`request.clientInput && r.conv.MessageCount() == 0` — the
+create-session initial-prompt turn) and, after `injectRecall` has delivered the
+(empty) cache and started the normal pick, calls `seedRecall(message)` in
+background mode only. `seedRecall` is the selector call with `maxResults 5`
+against `globalMemoryDir`, bounded by a 3s context, and it leaves both cache
+fields untouched when the context ends (upstream's `wait_for` cancels the
+coroutine before the assignment).
+
+The cache is now two fields (`recallGlobalCache` / `recallQueenCache`) rendered
+by `joinRecallBlocks`, mirroring `phase_state._cached_global_recall_block` /
+`_cached_queen_recall_block` + `render_recall_block`: the seed writes the global
+field only, so a seed that lands after the first refresh replaces the global
+block and keeps the queen block, exactly as upstream's race does.
+
+Differences from upstream (all bounded):
+
+- The seed query is the first message as Go records it; upstream queries the
+  assembled initial message, i.e. `"user_request: <prompt>"` (probe S9).
+- The trigger gate is "fresh session's first message" (empty conversation at
+  turn start). Upstream also seeds a *resumed* session created with an
+  initial prompt; Go does not (its conversation already has history, so
+  `MessageCount() == 0` is false), and the cache stays cold until the first
+  refresh. A resume without a prompt seeds on neither side.
+- A session that starts with the message-less opening turn (no initial prompt)
+  seeds nothing, matching upstream's empty trigger.
+- The seed blocks the turn goroutine for up to 3s before the first model call
+  (upstream awaits the same hook), but it runs after the first message's
+  delivery, so message 1 itself stays unseeded on both sides.
+
+## Two-scope pick concurrency (measured)
+
+Both scope picks are model calls, so a serial selector doubles the wall time of
+the "wait"-mode pick (the one the user waits on before she answers). Upstream
+runs them at once with `asyncio.gather` (`recall_selector.py:247-250`; probe F1:
+two 0.15s picks finish in 0.153s). Go now does the same: one goroutine per
+scope, a `sync.WaitGroup` join, and each result written to its own variable so
+the returned `(global, queen)` order is fixed by scope, not by completion order
+(at most two goroutines; the bound is structural, not configurable).
+
+Measurement (this tree, 2026-11-22): real `BuildScopedRecallBlocks` through the
+real `llm.NewHTTPProvider` HTTP transport against a loopback OpenAI-compatible
+endpoint that delays each pick by the stated amount; memory dirs hold 4 notes
+per scope; 5 runs per row, medians; an in-flight tracker proves the shapes
+(serial max-inflight 1, concurrent max-inflight 2, 20 requests per row).
+
+| Per-pick latency | Serial (2 calls) | Concurrent (2 calls) | Gap |
+|---|---|---|---|
+| 0 ms (loopback floor) | 0.43 ms | 0.28 ms | 0.15 ms |
+| 30 ms | 65.1 ms | 32.7 ms | 32.4 ms |
+| 150 ms | 305.5 ms | 153.2 ms | 152.3 ms |
+| 300 ms | 605.8 ms | 302.9 ms | 303.0 ms |
+
+The gap is one pick's latency: serial is `t_global + t_queen`, concurrent is
+`max(t_global, t_queen)`, so the fixed orchestration overhead cancels (0.15 ms
+at the loopback floor). Any real pick slower than 50 ms — every hosted model
+call, and any local model doing more than a trivial decode — puts the saving
+above the 50 ms bar; the registration of this issue was therefore closed by
+making the call shape match upstream rather than by a latency exemption.
+
+No new raciness: the `llm.Completer` contract is already used concurrently in
+production (colony workers run in goroutines and share one completer,
+`colony/runtime.go::buildContext`), `ProviderSlot` snapshots the live transport
+under an RWMutex (`llm/hotswap.go`), `Provider` is immutable after construction
+with mutex-guarded `KeyPool` and `CallLimiter`, and `http.Client` is safe for
+concurrent use. The two `SelectMemories` calls touch only local state and file
+reads, and the pick has no prescribed request order (results are identical
+either way). `go test -race -count=5 ./internal/memory/ ./internal/server/`
+covers both sides.
 
 ## Recall index
 
@@ -120,10 +203,22 @@ Go reader for `HIVE_MEMORY_RECALL`). `freeze_env_config_contract.py --check` is 
   generated by `go_hive/scripts/background_recall_probe.py`. Reality-checks the
   `_recall_on_user_input` sequence piece by piece (E1-E4 loop drain, F1-F5 pick
   timing/seed, H publish-await) and records the measured line numbers (G).
+- Session-start seed probe (25/25 cases): `docs/e2e-assets/memory-notes-1015/recall-seed-probe.json`,
+  generated by `go_hive/scripts/recall_seed_probe.py`. Runs the real
+  `select_memories` / `format_recall_injection` / `QueenPhaseState.render_recall_block`
+  / `_build_initial_message` in-process and measures: global-only scope (S1),
+  the 5-pick cap with relevance first (S2), the 3s timeout leaving the cache
+  unchanged (S3, 3.0s), a fast error still seeding the pins (S4, 0.0s), the
+  mode gate matrix (S5/S6), an empty directory (S7), the global-field-only
+  write (S8), and the seed's trigger string (S9), plus the seed anchors (A).
 - Go tests (upstream test names as parity anchors):
   - `internal/agentloop/memory_reminders_test.go` — all four `memory_reminders.py`
     sources' cases ported (`test_index_*`, `test_wait_*`) plus the no-model-call invariant.
   - `internal/memory/notes_test.go` — `test_index_lists_each_scopes_notes` + scan order.
+  - `internal/memory/memory_test.go` — `TestBuildScopedRecallBlocksRunsScopesConcurrently`
+    pins the `asyncio.gather` shape (a barrier completer that only releases once
+    both scopes are in flight; the old serial code times out) and the
+    scope-ordered blocks when the queen pick finishes first.
   - `internal/memory/recall_config_test.go` — the config/env matrix.
   - `internal/memory/recall_index_test.go` — per-owner index, deletion rebuild,
     incremental refresh, cold-build deadline, whole-store coverage (206 sessions).
@@ -131,6 +226,11 @@ Go reader for `HIVE_MEMORY_RECALL`). `freeze_env_config_contract.py --check` is 
     sources, index listing without a model call, wait pick before the answer, and
     the five background cases (mode gate, next-message delivery, non-blocking
     pick, empty message, change-only re-injection).
+  - `internal/server/chat_recall_seed_test.go` — the session-start seed:
+    global-only 5-cap pick, the 3s timeout keeping the cache, index/wait
+    silence, the seed surfacing while the first refresh stalls (and the
+    refresh replacing it when it lands), and no seed on a message-less
+    opening turn.
   - `internal/server/chat_runtime_test.go` — scoped recall content on the turn
     that receives the cached block (`TestChatRuntimeInjectsQueenScopedRecallReminder`,
     `TestChatRuntimeRecallIsScopedToItsQueen`), both delivered on message 2.
@@ -143,17 +243,15 @@ Go reader for `HIVE_MEMORY_RECALL`). `freeze_env_config_contract.py --check` is 
   `len(user)*2 + len(reply)` characters while the Go scorer sums term counts
   (`past_conversations.go`). This lane feeds both the indexed and scan paths the
   same Go lengths, so no result moved; aligning the metric is a separate change.
-- `background` session-start seeding is not ported: upstream warms the cache once
-  at queen start when the session was created with an initial prompt — global
-  scope only, up to 5 profile pins, `asyncio.wait_for(..., 3.0)`
-  (`queen_orchestrator.py:1461-1479`; probe F3/F4). Its delivery is
-  race-dependent even upstream (the seed only surfaces when the concurrent
-  refresh has not replaced it). Go starts cold: the first completed refresh is
-  the first delivery. The effect is limited to a slow or failed first refresh.
-- The two scope picks are sequential in Go (`internal/memory/recall.go:205-216`)
-  while upstream runs them concurrently (`recall_selector.py:247-250`; probe F1).
-  Result sets are identical; on the background path the extra latency is off the
-  turn, on the wait path it counts against `wait_seconds`.
+- `background` session-start seeding is ported (see "Session-start seed"); its
+  two bounded differences are the seed query string and the absence of a seed on
+  a resumed session that was created with an initial prompt. Delivery remains
+  race-dependent on both sides (the refresh can replace the seed before it is
+  ever delivered), which is the upstream behaviour.
+- The two scope picks run concurrently on both sides: Go uses one goroutine per
+  scope with the blocks kept in scope order
+  (`internal/memory/recall.go::BuildScopedRecallBlocks`), matching
+  `recall_selector.py:247-250` (probe F1: two 0.15s picks finish under 0.28s).
 - Delivery happens at the next client turn's start. Upstream drains at every
   outer-loop iteration (`agent_loop.py:1860`), so a rare same-turn continuation
   path (judge RETRY, ask_user re-entry) can deliver the pick one model call

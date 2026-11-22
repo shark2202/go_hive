@@ -138,19 +138,17 @@ func (r *ChatRuntime) memoryRecallForMessage(text string) string {
 	if r == nil || r.globalMemoryDir == "" || text == "" {
 		return ""
 	}
-	block := r.recallBlockForQuery(text)
-	r.recallMu.Lock()
-	r.recallCache = block
-	r.recallMu.Unlock()
-	return block
+	globalBlock, queenBlock := r.recallBlocksForQuery(text)
+	r.storeRecallBlocks(globalBlock, queenBlock)
+	return joinRecallBlocks(globalBlock, queenBlock)
 }
 
-// recallBlockForQuery picks memories for a query and joins the scopes.
+// recallBlocksForQuery picks memories for a query, one pair as upstream's
+// build_scoped_recall_blocks returns them: global block, then queen block.
 //
 // Parity: framework/agents/queen/recall_selector.py::build_scoped_recall_blocks
-// and framework/tools/queen_lifecycle_tools.py::render_recall_block
-func (r *ChatRuntime) recallBlockForQuery(query string) string {
-	globalBlock, queenBlock := memory.BuildScopedRecallBlocks(
+func (r *ChatRuntime) recallBlocksForQuery(query string) (string, string) {
+	return memory.BuildScopedRecallBlocks(
 		r.ctx,
 		query,
 		r.deps.LLM,
@@ -161,14 +159,6 @@ func (r *ChatRuntime) recallBlockForQuery(query string) string {
 		3,
 		llm.AuxMaxTokens(),
 	)
-	parts := make([]string, 0, 2)
-	if globalBlock != "" {
-		parts = append(parts, globalBlock)
-	}
-	if queenBlock != "" {
-		parts = append(parts, queenBlock)
-	}
-	return strings.Join(parts, "\n\n")
 }
 
 // turnContextRuntime is the hive home's started turn-context packages. A serve

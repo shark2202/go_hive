@@ -1,0 +1,418 @@
+{
+ "total": 25,
+ "passed": 25,
+ "failed": 0,
+ "cases": [
+  {
+   "case": "S1.seed_scope_global_only",
+   "subject": "the seed's pick sees only the global scope and renders a Global Memories block",
+   "expected": {
+    "selected": [
+     "tea.md"
+    ],
+    "queen_note_in_manifest": false,
+    "label": "--- Global Memories ---"
+   },
+   "observed": {
+    "selected": [
+     "tea.md"
+    ],
+    "queen_note_in_manifest": false,
+    "queen_note_in_block": false,
+    "label_present": true,
+    "call_shape": {
+     "system_is_select_prompt": true,
+     "response_format": {
+      "type": "json_object"
+     }
+    }
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "S2.seed_cap_max_results",
+   "subject": "seed default max_results=5: relevance first then pins (scan order, newest first), a 6-name pick capped at 5, pins alone 5",
+   "expected": {
+    "with_pick[0]": "tea.md (the model's pick ranks first)",
+    "with_pick_len": 5,
+    "with_pick[1:]": "profile pins in scan order",
+    "capped_len": 5,
+    "pinned_only": 5
+   },
+   "observed": {
+    "with_pick": [
+     "tea.md",
+     "char6.md",
+     "char5.md",
+     "char4.md",
+     "char3.md"
+    ],
+    "with_pick_len": 5,
+    "capped": [
+     "tea.md",
+     "char0.md",
+     "char1.md",
+     "char2.md",
+     "char3.md"
+    ],
+    "capped_len": 5,
+    "pinned_only": [
+     "char6.md",
+     "char5.md",
+     "char4.md",
+     "char3.md",
+     "char2.md"
+    ],
+    "pinned_only_len": 5
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "S3.seed_timeout",
+   "subject": "a 5s seed pick is cancelled at ~3s: TimeoutError, nothing written, cache unchanged",
+   "expected": {
+    "outcome": "TimeoutError",
+    "elapsed_s ~= 3.0": true,
+    "cache": {}
+   },
+   "observed": {
+    "outcome": "TimeoutError",
+    "elapsed_s": 3.0,
+    "cache": {}
+   },
+   "pass": true,
+   "note": "the except only logs 'will retry on first turn'; the first turn's refresh is the retry"
+  },
+  {
+   "case": "S4.seed_error_returns_pins",
+   "subject": "a fast selector error is swallowed inside select_memories: it returns the up-to-5 profile pins",
+   "expected": {
+    "selected_len": 5,
+    "elapsed < 3s": true
+   },
+   "observed": {
+    "selected": [
+     "char6.md",
+     "char5.md",
+     "char4.md",
+     "char3.md",
+     "char2.md"
+    ],
+    "elapsed_under_1s": true
+   },
+   "pass": true,
+   "note": "only a timeout leaves the cache unwritten; an error still seeds the pins"
+  },
+  {
+   "case": "S5.seed_mode_gate",
+   "subject": "only background seeds; index/wait never reach the seed; a bogus env value falls back to index",
+   "expected": {
+    "index": {
+     "mode": "index",
+     "seeds_with_trigger": false
+    },
+    "wait": {
+     "mode": "wait",
+     "seeds_with_trigger": false
+    },
+    "background": {
+     "mode": "background",
+     "seeds_with_trigger": true
+    }
+   },
+   "observed": {
+    "index": {
+     "mode": "index",
+     "seeds_with_trigger": false
+    },
+    "wait": {
+     "mode": "wait",
+     "seeds_with_trigger": false
+    },
+    "background": {
+     "mode": "background",
+     "seeds_with_trigger": true
+    },
+    "bogus": {
+     "mode": "index",
+     "seeds_with_trigger": false
+    },
+    "(unset)": {
+     "mode": "index",
+     "seeds_with_trigger": false
+    }
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "S6.seed_needs_a_trigger",
+   "subject": "an empty trigger (fresh session with no initial prompt) skips the seed even in background mode",
+   "expected": {
+    "seeds": false
+   },
+   "observed": {
+    "mode": "background",
+    "seeds": false
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "S7.seed_empty_dir",
+   "subject": "an empty global directory short-circuits before any model call; the seed writes an empty block",
+   "expected": {
+    "calls": 0,
+    "selected": [],
+    "block": ""
+   },
+   "observed": {
+    "calls": 0,
+    "selected": [],
+    "block": ""
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "S8.seed_writes_global_field_only",
+   "subject": "the seed assignment touches only _cached_global_recall_block; render_recall_block joins global then queen",
+   "expected": {
+    "before": "GLOBAL-REFRESH\n\nQUEEN-REFRESH",
+    "after_starts_with_seed": true,
+    "queen_kept": true
+   },
+   "observed": {
+    "before": "GLOBAL-REFRESH\n\nQUEEN-REFRESH",
+    "after_starts_with_seed": true,
+    "queen_kept": true,
+    "join": "\n\n"
+   },
+   "pass": true,
+   "note": "a seed landing after the first refresh replaces the global block only, as upstream"
+  },
+  {
+   "case": "S9.trigger_is_the_initial_message",
+   "subject": "_build_initial_message assembles the trigger from input_data; a fresh session with no prompt yields \"\"",
+   "expected": {
+    "with_prompt": "user_request: what tea do I like?",
+    "without_prompt": ""
+   },
+   "observed": {
+    "with_prompt": "user_request: what tea do I like?",
+    "without_prompt": ""
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "A.anchors",
+   "subject": "core/framework/server/queen_orchestrator.py::# Seed recall cache so the first turn has relevant memories\\.",
+   "expected": "at least one anchored line (multi-match recorded for the doc)",
+   "observed": {
+    "file": "core/framework/server/queen_orchestrator.py",
+    "lines": [
+     1456
+    ]
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "A.anchors",
+   "subject": "core/framework/server/queen_orchestrator.py::if trigger and get_memory_recall_config\\(\\)\\.mode == \"background\"",
+   "expected": "at least one anchored line (multi-match recorded for the doc)",
+   "observed": {
+    "file": "core/framework/server/queen_orchestrator.py",
+    "lines": [
+     1461
+    ]
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "A.anchors",
+   "subject": "core/framework/server/queen_orchestrator.py::select_memories\\(trigger, _session_llm, mem_dir\\)",
+   "expected": "at least one anchored line (multi-match recorded for the doc)",
+   "observed": {
+    "file": "core/framework/server/queen_orchestrator.py",
+    "lines": [
+     1472
+    ]
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "A.anchors",
+   "subject": "core/framework/server/queen_orchestrator.py::timeout=3\\.0,",
+   "expected": "at least one anchored line (multi-match recorded for the doc)",
+   "observed": {
+    "file": "core/framework/server/queen_orchestrator.py",
+    "lines": [
+     1473
+    ]
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "A.anchors",
+   "subject": "core/framework/server/queen_orchestrator.py::phase_state\\._cached_global_recall_block = format_recall_injection\\(selected, mem_dir\\)",
+   "expected": "at least one anchored line (multi-match recorded for the doc)",
+   "observed": {
+    "file": "core/framework/server/queen_orchestrator.py",
+    "lines": [
+     1475
+    ]
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "A.anchors",
+   "subject": "core/framework/server/queen_orchestrator.py::except TimeoutError:",
+   "expected": "at least one anchored line (multi-match recorded for the doc)",
+   "observed": {
+    "file": "core/framework/server/queen_orchestrator.py",
+    "lines": [
+     1476
+    ]
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "A.anchors",
+   "subject": "core/framework/server/queen_orchestrator.py::recall: initial seeding timed out, will retry on first turn",
+   "expected": "at least one anchored line (multi-match recorded for the doc)",
+   "observed": {
+    "file": "core/framework/server/queen_orchestrator.py",
+    "lines": [
+     1477
+    ]
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "A.anchors",
+   "subject": "core/framework/server/queen_orchestrator.py::trigger = ctx\\.trigger or \\\"\\\"",
+   "expected": "at least one anchored line (multi-match recorded for the doc)",
+   "observed": {
+    "file": "core/framework/server/queen_orchestrator.py",
+    "lines": [
+     1378
+    ]
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "A.anchors",
+   "subject": "core/framework/agent_loop/agent_loop.py::await self\\._run_hooks\\(\"session_start\", conversation, trigger=initial_message\\)",
+   "expected": "at least one anchored line (multi-match recorded for the doc)",
+   "observed": {
+    "file": "core/framework/agent_loop/agent_loop.py",
+    "lines": [
+     1554
+    ]
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "A.anchors",
+   "subject": "core/framework/agent_loop/agent_loop.py::def _build_initial_message",
+   "expected": "at least one anchored line (multi-match recorded for the doc)",
+   "observed": {
+    "file": "core/framework/agent_loop/agent_loop.py",
+    "lines": [
+     6293
+    ]
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "A.anchors",
+   "subject": "core/framework/tools/queen_lifecycle_tools.py::_cached_global_recall_block: str = \\\"\\\"",
+   "expected": "at least one anchored line (multi-match recorded for the doc)",
+   "observed": {
+    "file": "core/framework/tools/queen_lifecycle_tools.py",
+    "lines": [
+     180
+    ]
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "A.anchors",
+   "subject": "core/framework/tools/queen_lifecycle_tools.py::def render_recall_block",
+   "expected": "at least one anchored line (multi-match recorded for the doc)",
+   "observed": {
+    "file": "core/framework/tools/queen_lifecycle_tools.py",
+    "lines": [
+     447
+    ]
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "A.anchors",
+   "subject": "core/framework/agents/queen/recall_selector.py::max_results: int = 5,",
+   "expected": "at least one anchored line (multi-match recorded for the doc)",
+   "observed": {
+    "file": "core/framework/agents/queen/recall_selector.py",
+    "lines": [
+     71
+    ]
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "A.anchors",
+   "subject": "core/framework/agents/queen/recall_selector.py::pinned = \\[f\\.filename for f in files if \\(f\\.type or \\\"\\\"\\)\\.lower\\(\\) == \\\"profile\\\"\\]\\[:max_results\\]",
+   "expected": "at least one anchored line (multi-match recorded for the doc)",
+   "observed": {
+    "file": "core/framework/agents/queen/recall_selector.py",
+    "lines": [
+     89
+    ]
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "A.anchors",
+   "subject": "core/framework/agents/queen/recall_selector.py::result = list\\(dict\\.fromkeys\\(\\[\\*normalized, \\*pinned\\]\\)\\)\\[:max_results\\]",
+   "expected": "at least one anchored line (multi-match recorded for the doc)",
+   "observed": {
+    "file": "core/framework/agents/queen/recall_selector.py",
+    "lines": [
+     148
+    ]
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "A.anchors",
+   "subject": "the seed runs inside the session_start hook the loop fires with the initial message",
+   "expected": "hook line < seed line; session_start hook fires before the first model call",
+   "observed": {
+    "identity_hook_line": 1368,
+    "seed_block_line": 1456,
+    "session_start_run_hooks_line": 1554
+   },
+   "pass": true,
+   "note": "hook at queen_orchestrator; loop call site in agent_loop.py"
+  }
+ ]
+}

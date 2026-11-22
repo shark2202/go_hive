@@ -225,7 +225,7 @@ func TestChatRuntimeBackgroundRecallEmptyMessageKeepsTheCache(t *testing.T) {
 	runtime := newMemoryNotesChatRuntime(t, home, model)
 
 	runtime.recallMu.Lock()
-	runtime.recallCache = "--- Global Memories ---\n\n### tea.md\n\nAva drinks pu-erh.\n\n--- End Global Memories ---"
+	runtime.recallGlobalCache = "--- Global Memories ---\n\n### tea.md\n\nAva drinks pu-erh.\n\n--- End Global Memories ---"
 	runtime.recallMu.Unlock()
 	calls := model.callCount()
 
@@ -251,7 +251,7 @@ func TestChatRuntimeBackgroundRecallReinjectsOnlyOnChange(t *testing.T) {
 
 	stamp := "2026-11-22 10:00 CST"
 	runtime.recallMu.Lock()
-	runtime.recallCache = "first block"
+	runtime.recallGlobalCache = "first block"
 	runtime.recallMu.Unlock()
 	runtime.injectRecall("", stamp)
 	runtime.injectRecall("", stamp)
@@ -260,7 +260,7 @@ func TestChatRuntimeBackgroundRecallReinjectsOnlyOnChange(t *testing.T) {
 	}
 
 	runtime.recallMu.Lock()
-	runtime.recallCache = "second block"
+	runtime.recallGlobalCache = "second block"
 	runtime.recallMu.Unlock()
 	runtime.injectRecall("", stamp)
 	if runtime.conv.MessageCount() != 2 {
@@ -273,7 +273,7 @@ func waitForChatRecallCache(t *testing.T, runtime *ChatRuntime, timeout time.Dur
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
 		runtime.recallMu.Lock()
-		cached := runtime.recallCache
+		cached := joinRecallBlocks(runtime.recallGlobalCache, runtime.recallQueenCache)
 		runtime.recallMu.Unlock()
 		if cached != "" {
 			return true
@@ -301,6 +301,12 @@ type gatedChatLLM struct {
 }
 
 func (g *gatedChatLLM) ModelName() string { return "gated-chat" }
+
+func (g *gatedChatLLM) callCount() int {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return g.calls
+}
 
 func (g *gatedChatLLM) AComplete(ctx context.Context, _ llm.CompletionRequest) (llm.Completion, error) {
 	g.mu.Lock()

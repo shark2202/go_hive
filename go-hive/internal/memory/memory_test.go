@@ -3,6 +3,7 @@ package memory
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -347,6 +348,87 @@ func TestBuildScopedRecallBlocksEmptyScope(t *testing.T) {
 	}
 	if len(fake.calls()) != 1 {
 		t.Fatalf("LLM calls = %d", len(fake.calls()))
+	}
+}
+
+// scopeBarrierCompleter answers a recall pick only after both scopes' picks
+// are in flight: a serial caller times out, a concurrent caller is released at
+// once. It also answers the global pick last, so a result mapping that followed
+// completion order (instead of scope) would put the blocks in the wrong place.
+type scopeBarrierCompleter struct {
+	mu        sync.Mutex
+	arrived   map[string]bool
+	released  chan struct{}
+	once      sync.Once
+	timedOut_ bool
+}
+
+func (c *scopeBarrierCompleter) AComplete(_ context.Context, req llm.CompletionRequest) (llm.Completion, error) {
+	text := ""
+	for _, message := range req.Messages {
+		text += message.Content
+	}
+	scope, selected := "global", "global-note.md"
+	if strings.Contains(text, "queen-note.md") {
+		scope, selected = "queen", "queen-note.md"
+	}
+	c.mu.Lock()
+	c.arrived[scope] = true
+	both := c.arrived["global"] && c.arrived["queen"]
+	c.mu.Unlock()
+	if both {
+		c.once.Do(func() { close(c.released) })
+	}
+	select {
+	case <-c.released:
+	case <-time.After(2 * time.Second):
+		c.mu.Lock()
+		c.timedOut_ = true
+		c.mu.Unlock()
+		return llm.Completion{}, errors.New("scope picks did not overlap")
+	}
+	if scope == "global" {
+		time.Sleep(20 * time.Millisecond)
+	}
+	payload, err := json.Marshal(map[string]any{"selected_memories": []string{selected}})
+	if err != nil {
+		return llm.Completion{}, err
+	}
+	return llm.Completion{Content: string(payload), Model: "barrier"}, nil
+}
+
+func (c *scopeBarrierCompleter) timedOut() bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.timedOut_
+}
+
+// TestBuildScopedRecallBlocksRunsScopesConcurrently pins the two-scope pick to
+// upstream's asyncio.gather shape: neither scope may complete before the other
+// starts, and the returned (global, queen) order is fixed by scope, not by
+// whichever pick finished first.
+//
+// Parity: core/framework/agents/queen/recall_selector.py::build_scoped_recall_blocks
+func TestBuildScopedRecallBlocksRunsScopesConcurrently(t *testing.T) {
+	root := t.TempDir()
+	globalDir, queenDir := filepath.Join(root, "global"), filepath.Join(root, "queen")
+	mkdirAll(t, globalDir)
+	mkdirAll(t, queenDir)
+	writeFile(t, filepath.Join(globalDir, "global-note.md"), "---\nname: g\n---\nglobal body")
+	writeFile(t, filepath.Join(queenDir, "queen-note.md"), "---\nname: q\n---\nqueen body")
+
+	barrier := &scopeBarrierCompleter{arrived: map[string]bool{}, released: make(chan struct{})}
+	globalBlock, queenBlock := BuildScopedRecallBlocks(
+		context.Background(), "do both scopes overlap?", barrier, globalDir, queenDir, "queen_x", 3, 3, 1000,
+	)
+	if barrier.timedOut() {
+		t.Fatal("scope picks did not overlap: one pick finished before the other started")
+	}
+	if !strings.Contains(globalBlock, "--- Global Memories ---") || !strings.Contains(globalBlock, "global body") {
+		t.Fatalf("global block = %q, want the global note", globalBlock)
+	}
+	if !strings.Contains(queenBlock, "--- Queen Memories: queen_x ---") || !strings.Contains(queenBlock, "queen body") {
+		t.Fatalf("queen block = %q, want the queen note", queenBlock)
 	}
 }
 

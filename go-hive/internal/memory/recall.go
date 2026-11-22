@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/aden-hive/hive-go/internal/llm"
@@ -202,12 +203,39 @@ func BuildScopedRecallBlocks(
 	if queenMaxResults <= 0 {
 		queenMaxResults = 3
 	}
-	globalSelected := SelectMemories(ctx, query, completer, globalDir, globalMaxResults, maxTokens)
+
+	// Each scope pick is a model call and the caller may be waiting on both
+	// (the "wait" recall mode), so run them at once like upstream's
+	// asyncio.gather. Each goroutine owns its result, so the returned
+	// (global, queen) order is fixed no matter which pick finishes first.
+	// At most two goroutines: one per scope. The completer contract already
+	// allows concurrent calls (colony workers share one completer).
+	//
+	// Parity: framework/agents/queen/recall_selector.py::build_scoped_recall_blocks (asyncio.gather)
+	var (
+		wg             sync.WaitGroup
+		globalSelected []string
+		queenSelected  []string
+	)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		globalSelected = SelectMemories(ctx, query, completer, globalDir, globalMaxResults, maxTokens)
+	}()
+	hasQueen := queenDir != ""
+	if hasQueen {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			queenSelected = SelectMemories(ctx, query, completer, queenDir, queenMaxResults, maxTokens)
+		}()
+	}
+	wg.Wait()
+
 	globalBlock := FormatRecallInjection(globalSelected, globalDir, "Global Memories")
 
 	queenBlock := ""
-	if queenDir != "" {
-		queenSelected := SelectMemories(ctx, query, completer, queenDir, queenMaxResults, maxTokens)
+	if hasQueen {
 		queenLabel := "Queen Memories"
 		if queenID != "" {
 			queenLabel = "Queen Memories: " + queenID

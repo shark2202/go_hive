@@ -247,11 +247,16 @@ type ChatRuntime struct {
 	// lastRecall is the block injected last turn; recall is re-injected only
 	// when its content changes (same guard as the upstream _last_injected_recall).
 	lastRecall string
-	// recallMu guards recallCache, the pick left for the next turn's delivery.
-	// The pick runs off the turn goroutine (upstream's _bg_refresh task) and
-	// only the turn goroutine reads the cache, so this lock is the handoff.
-	recallMu    sync.Mutex
-	recallCache string
+	// recallMu guards the two cached scope blocks left for the next turn's
+	// delivery. They stay separate as upstream keeps them
+	// (phase_state._cached_global_recall_block / _cached_queen_recall_block):
+	// the session-start seed writes the global field only, so a seed landing
+	// after the first refresh cannot drop the queen block. The pick runs off
+	// the turn goroutine (upstream's _bg_refresh task) and only the turn
+	// goroutine reads the cache, so this lock is the handoff.
+	recallMu          sync.Mutex
+	recallGlobalCache string
+	recallQueenCache  string
 	// timelineEnabled is set when the memory_timeline feature is on for this
 	// home; timelineAfterTurn then extracts new user turns in the background.
 	timelineEnabled bool
@@ -825,6 +830,12 @@ func (r *ChatRuntime) runTurn(request chatTurnRequest) {
 		return
 	}
 	message := request.message
+	// The session-start recall seed fires on the first message of a fresh
+	// session (the create-session initial prompt) — the string the upstream
+	// session_start hook receives as its trigger. The check must precede the
+	// SESSION_START reminder write below, which already makes the
+	// conversation non-empty.
+	firstSessionMessage := request.clientInput && r.conv.MessageCount() == 0
 	if request.reminderWake {
 		message = "Reminder"
 	}
@@ -943,6 +954,13 @@ func (r *ChatRuntime) runTurn(request chatTurnRequest) {
 	// consume (or re-query) the queen's memory. Reminders still ride along.
 	if request.clientInput {
 		r.injectRecall(message, stamp)
+		if firstSessionMessage {
+			// The session's first message also runs the seed, the way the
+			// upstream session_start hook does before the first model call.
+			// It lands after the delivery above, so message 1 itself stays
+			// unseeded.
+			r.seedRecall(message)
+		}
 	}
 	result, err := r.loop.ExecuteTurn(r.ctx, r.agentCtx, r.conv, r.toolsForTurn())
 	if err != nil {
@@ -1181,7 +1199,7 @@ func (r *ChatRuntime) injectRecall(query, stamp string) {
 // Parity: core/framework/server/queen_orchestrator.py::_inject_recall_if_changed
 func (r *ChatRuntime) deliverCachedRecall(stamp string) {
 	r.recallMu.Lock()
-	block := r.recallCache
+	block := joinRecallBlocks(r.recallGlobalCache, r.recallQueenCache)
 	r.recallMu.Unlock()
 	if block == "" || block == r.lastRecall {
 		return
@@ -1191,6 +1209,21 @@ func (r *ChatRuntime) deliverCachedRecall(stamp string) {
 	// Recall is context, never a reason to fail a turn: a write error leaves
 	// the conversation as it was and the turn runs without the reminder.
 	_, _ = r.conv.AddUserMessage("["+stamp+"] [External event] "+reminder, agentloop.UserMessageOptions{})
+}
+
+// joinRecallBlocks renders the two cached scope blocks as one deliverable
+// block: global first, then queen, blank line between, empty scopes skipped.
+//
+// Parity: core/framework/tools/queen_lifecycle_tools.py::QueenPhaseState.render_recall_block
+func joinRecallBlocks(global, queen string) string {
+	parts := make([]string, 0, 2)
+	if global != "" {
+		parts = append(parts, global)
+	}
+	if queen != "" {
+		parts = append(parts, queen)
+	}
+	return strings.Join(parts, "\n\n")
 }
 
 // pickRecallInBackground runs the pick off the turn goroutine, mirroring
@@ -1207,19 +1240,70 @@ func (r *ChatRuntime) pickRecallInBackground(query string) {
 	go r.refreshRecallCache(query)
 }
 
-// refreshRecallCache picks the scoped recall blocks for query and stores the
-// joined result as the deliverable cache. The empty-query guard mirrors
-// upstream _refresh_recall_cache (`if not query`): an empty message makes no
-// pick call, and any cached block is still delivered at the next drain.
+// refreshRecallCache picks the scoped recall blocks for query and stores them
+// as the deliverable cache. The empty-query guard mirrors upstream
+// _refresh_recall_cache (`if not query`): an empty message makes no pick call,
+// and any cached block is still delivered at the next drain.
 //
 // Parity: core/framework/server/queen_orchestrator.py::_refresh_recall_cache
 func (r *ChatRuntime) refreshRecallCache(query string) {
 	if r == nil || query == "" {
 		return
 	}
-	block := r.recallBlockForQuery(query)
+	globalBlock, queenBlock := r.recallBlocksForQuery(query)
+	r.storeRecallBlocks(globalBlock, queenBlock)
+}
+
+// storeRecallBlocks hands a picked (global, queen) pair to the next turn.
+func (r *ChatRuntime) storeRecallBlocks(global, queen string) {
 	r.recallMu.Lock()
-	r.recallCache = block
+	r.recallGlobalCache = global
+	r.recallQueenCache = queen
+	r.recallMu.Unlock()
+}
+
+// recallSeedTimeout bounds the session-start seed pick. Upstream awaits
+// select_memories inside asyncio.wait_for(..., 3.0) before the first model
+// call, so a slow model never delays the first turn past three seconds.
+const recallSeedTimeout = 3 * time.Second
+
+// seedRecall warms the global recall cache on a session's first message,
+// mirroring the seed the upstream identity hook runs at session_start
+// (queen_orchestrator.py:1461-1479) with the session's initial message as its
+// trigger: global scope only, up to 5 picks (the selector's default — the
+// per-scope refresh uses 3), a 3s wait, and silent failure. It runs on the
+// turn goroutine after the first message's own delivery and before the model
+// call, the same place upstream awaits its session_start hook: the first
+// message itself carries no recall, and the seed surfaces on a later message
+// when the first message's refresh is slow or empty — its upstream effect too.
+//
+// Parity: core/framework/server/queen_orchestrator.py::_queen_identity_hook
+func (r *ChatRuntime) seedRecall(query string) {
+	r.seedRecallWithin(query, recallSeedTimeout)
+}
+
+// seedRecallWithin is seedRecall with the timeout injected for tests.
+func (r *ChatRuntime) seedRecallWithin(query string, timeout time.Duration) {
+	if r == nil || r.globalMemoryDir == "" || query == "" {
+		return
+	}
+	if r.memoryRecallSettings().Mode != memory.MemoryRecallBackground {
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.ctx, timeout)
+	defer cancel()
+	selected := memory.SelectMemories(ctx, query, r.deps.LLM, r.globalMemoryDir, 5, llm.AuxMaxTokens())
+	// Upstream's wait_for cancels the whole pick, so on timeout nothing is
+	// written and the cache keeps what it had (TimeoutError branch). SelectMemories
+	// would return its profile pins on a context error, so the cancellation is
+	// checked here before the seed stores anything.
+	if ctx.Err() != nil {
+		return
+	}
+	// Upstream assigns whatever format_recall_injection returned, "" included.
+	block := memory.FormatRecallInjection(selected, r.globalMemoryDir, "Global Memories")
+	r.recallMu.Lock()
+	r.recallGlobalCache = block
 	r.recallMu.Unlock()
 }
 
