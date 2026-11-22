@@ -1,0 +1,18 @@
+2026-11-22 18:18:34 [sentinel] manager starting (0 open escalations)
+2026-11-22 18:18:34 turn context "probe" is installed but off: set turn_context.probe.enabled in configuration.json
+2026-11-22 18:18:34 runtime-resources verdict init->ok | avail=NoneMB renderers=21 chrome_rss=2557MB hive_rss=32MB workers=<nil> | 
+2026-11-22 18:18:35 [access] GET /api/health -> 200 (0ms)
+2026-11-22 18:18:35 credentials: Generated new encryption key. To persist credentials across restarts, set HIVE_CREDENTIAL_KEY
+2026-11-22 18:18:35 credentials: Generated new encryption key. To persist credentials across restarts, set HIVE_CREDENTIAL_KEY
+2026-11-22 18:18:35 [sentinel] applies_to: is_queen_stream=true colony_id="" opted_in=false (stream_id="session_20261122_181835_4de3fe1e") — sentinel SKIPS this stream
+2026-11-22 18:18:35 [access] POST /api/sessions -> 201 (51ms)
+2026-11-22 18:18:35 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/industry-quick-scan-skill/SKILL.md' | Why: Skill name 'industry-quick-scan' doesn't match directory 'industry-quick-scan-skill'. | Fix: Rename the directory to 'industry-quick-scan' or set name to 'industry-quick-scan-skill'.
+2026-11-22 18:18:35 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/nuwa-skill/SKILL.md' | Why: Skill name 'huashu-nuwa' doesn't match directory 'nuwa-skill'. | Fix: Rename the directory to 'huashu-nuwa' or set name to 'nuwa-skill'.
+2026-11-22 18:18:35 skill_startup name=hive.writing-hive-skills scope=framework status=loaded
+2026-11-22 18:18:35 skill_startup name=hive.browser-automation scope=framework status=loaded
+2026-11-22 18:18:35 skill_startup name=hive.pdf scope=framework status=loaded
+2026-11-22 18:18:35 Default skills active: hive.writing-hive-skills, hive.browser-automation, hive.pdf
+2026-11-22 18:18:35 Skills: 3 default (3 active, 0 disabled, 0 error)
+2026-11-22 18:18:35 Skill system ready: catalog=28862 chars
+2026-11-22 18:18:35 [access] POST /api/sessions/session_20261122_181835_4de3fe1e/chat -> 200 (4ms)
+2026-11-22 18:18:38 stall check: p=0.90 >= 0.50, reminding the queen to do the work she talked about

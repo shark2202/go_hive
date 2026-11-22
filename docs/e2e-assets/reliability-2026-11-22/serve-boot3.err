@@ -1,0 +1,285 @@
+2026-11-22 18:19:03 [sentinel] manager starting (0 open escalations)
+2026-11-22 18:19:03 turn context "probe" is installed but off: set turn_context.probe.enabled in configuration.json
+2026-11-22 18:19:03 runtime-resources verdict init->ok | avail=NoneMB renderers=21 chrome_rss=2582MB hive_rss=33MB workers=<nil> | 
+2026-11-22 18:19:04 [access] GET /api/health -> 200 (0ms)
+2026-11-22 18:19:04 credentials: Generated new encryption key. To persist credentials across restarts, set HIVE_CREDENTIAL_KEY
+2026-11-22 18:19:04 credentials: Generated new encryption key. To persist credentials across restarts, set HIVE_CREDENTIAL_KEY
+2026-11-22 18:19:04 [sentinel] applies_to: is_queen_stream=true colony_id="" opted_in=false (stream_id="session_20261122_181856_1e1eaa7b") — sentinel SKIPS this stream
+2026-11-22 18:19:04 [access] POST /api/sessions -> 201 (9ms)
+2026-11-22 18:19:04 [access] GET /api/sessions/session_20261122_181856_1e1eaa7b/snapshot -> 200 (0ms)
+2026-11-22 18:19:04 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/industry-quick-scan-skill/SKILL.md' | Why: Skill name 'industry-quick-scan' doesn't match directory 'industry-quick-scan-skill'. | Fix: Rename the directory to 'industry-quick-scan' or set name to 'industry-quick-scan-skill'.
+2026-11-22 18:19:04 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/nuwa-skill/SKILL.md' | Why: Skill name 'huashu-nuwa' doesn't match directory 'nuwa-skill'. | Fix: Rename the directory to 'huashu-nuwa' or set name to 'nuwa-skill'.
+2026-11-22 18:19:04 skill_startup name=hive.writing-hive-skills scope=framework status=loaded
+2026-11-22 18:19:04 skill_startup name=hive.browser-automation scope=framework status=loaded
+2026-11-22 18:19:04 skill_startup name=hive.pdf scope=framework status=loaded
+2026-11-22 18:19:04 Default skills active: hive.writing-hive-skills, hive.browser-automation, hive.pdf
+2026-11-22 18:19:04 Skills: 3 default (3 active, 0 disabled, 0 error)
+2026-11-22 18:19:04 Skill system ready: catalog=28874 chars
+2026-11-22 18:19:04 [access] POST /api/sessions/session_20261122_181856_1e1eaa7b/chat -> 200 (15ms)
+2026-11-22 18:19:09 stall check: p=0.71 >= 0.50, reminding the queen to do the work she talked about
+2026-11-22 18:19:09 credentials: Generated new encryption key. To persist credentials across restarts, set HIVE_CREDENTIAL_KEY
+2026-11-22 18:19:09 credentials: Generated new encryption key. To persist credentials across restarts, set HIVE_CREDENTIAL_KEY
+2026-11-22 18:19:09 [sentinel] applies_to: is_queen_stream=true colony_id="" opted_in=false (stream_id="session_20261122_181909_34986e0e") — sentinel SKIPS this stream
+2026-11-22 18:19:09 [access] POST /api/sessions -> 201 (32ms)
+2026-11-22 18:19:09 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/industry-quick-scan-skill/SKILL.md' | Why: Skill name 'industry-quick-scan' doesn't match directory 'industry-quick-scan-skill'. | Fix: Rename the directory to 'industry-quick-scan' or set name to 'industry-quick-scan-skill'.
+2026-11-22 18:19:09 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/nuwa-skill/SKILL.md' | Why: Skill name 'huashu-nuwa' doesn't match directory 'nuwa-skill'. | Fix: Rename the directory to 'huashu-nuwa' or set name to 'nuwa-skill'.
+2026-11-22 18:19:09 skill_startup name=hive.writing-hive-skills scope=framework status=loaded
+2026-11-22 18:19:09 skill_startup name=hive.browser-automation scope=framework status=loaded
+2026-11-22 18:19:09 skill_startup name=hive.pdf scope=framework status=loaded
+2026-11-22 18:19:09 Default skills active: hive.writing-hive-skills, hive.browser-automation, hive.pdf
+2026-11-22 18:19:09 Skills: 3 default (3 active, 0 disabled, 0 error)
+2026-11-22 18:19:09 Skill system ready: catalog=28874 chars
+2026-11-22 18:19:10 credentials: Generated new encryption key. To persist credentials across restarts, set HIVE_CREDENTIAL_KEY
+2026-11-22 18:19:10 credentials: Generated new encryption key. To persist credentials across restarts, set HIVE_CREDENTIAL_KEY
+2026-11-22 18:19:10 [sentinel] applies_to: is_queen_stream=true colony_id="" opted_in=false (stream_id="session_20261122_181910_30f2ffc6") — sentinel SKIPS this stream
+2026-11-22 18:19:10 [access] POST /api/sessions -> 201 (38ms)
+2026-11-22 18:19:10 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/industry-quick-scan-skill/SKILL.md' | Why: Skill name 'industry-quick-scan' doesn't match directory 'industry-quick-scan-skill'. | Fix: Rename the directory to 'industry-quick-scan' or set name to 'industry-quick-scan-skill'.
+2026-11-22 18:19:10 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/nuwa-skill/SKILL.md' | Why: Skill name 'huashu-nuwa' doesn't match directory 'nuwa-skill'. | Fix: Rename the directory to 'huashu-nuwa' or set name to 'nuwa-skill'.
+2026-11-22 18:19:10 skill_startup name=hive.writing-hive-skills scope=framework status=loaded
+2026-11-22 18:19:10 skill_startup name=hive.browser-automation scope=framework status=loaded
+2026-11-22 18:19:10 skill_startup name=hive.pdf scope=framework status=loaded
+2026-11-22 18:19:10 Default skills active: hive.writing-hive-skills, hive.browser-automation, hive.pdf
+2026-11-22 18:19:10 Skills: 3 default (3 active, 0 disabled, 0 error)
+2026-11-22 18:19:10 Skill system ready: catalog=28874 chars
+2026-11-22 18:19:11 credentials: Generated new encryption key. To persist credentials across restarts, set HIVE_CREDENTIAL_KEY
+2026-11-22 18:19:11 credentials: Generated new encryption key. To persist credentials across restarts, set HIVE_CREDENTIAL_KEY
+2026-11-22 18:19:11 [sentinel] applies_to: is_queen_stream=true colony_id="" opted_in=false (stream_id="session_20261122_181911_430409a0") — sentinel SKIPS this stream
+2026-11-22 18:19:11 [access] POST /api/sessions -> 201 (44ms)
+2026-11-22 18:19:11 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/industry-quick-scan-skill/SKILL.md' | Why: Skill name 'industry-quick-scan' doesn't match directory 'industry-quick-scan-skill'. | Fix: Rename the directory to 'industry-quick-scan' or set name to 'industry-quick-scan-skill'.
+2026-11-22 18:19:11 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/nuwa-skill/SKILL.md' | Why: Skill name 'huashu-nuwa' doesn't match directory 'nuwa-skill'. | Fix: Rename the directory to 'huashu-nuwa' or set name to 'nuwa-skill'.
+2026-11-22 18:19:11 skill_startup name=hive.writing-hive-skills scope=framework status=loaded
+2026-11-22 18:19:11 skill_startup name=hive.browser-automation scope=framework status=loaded
+2026-11-22 18:19:11 skill_startup name=hive.pdf scope=framework status=loaded
+2026-11-22 18:19:11 Default skills active: hive.writing-hive-skills, hive.browser-automation, hive.pdf
+2026-11-22 18:19:11 Skills: 3 default (3 active, 0 disabled, 0 error)
+2026-11-22 18:19:11 Skill system ready: catalog=28874 chars
+2026-11-22 18:19:12 credentials: Generated new encryption key. To persist credentials across restarts, set HIVE_CREDENTIAL_KEY
+2026-11-22 18:19:12 credentials: Generated new encryption key. To persist credentials across restarts, set HIVE_CREDENTIAL_KEY
+2026-11-22 18:19:12 [sentinel] applies_to: is_queen_stream=true colony_id="" opted_in=false (stream_id="session_20261122_181912_229b0a0d") — sentinel SKIPS this stream
+2026-11-22 18:19:12 [access] POST /api/sessions -> 201 (35ms)
+2026-11-22 18:19:12 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/industry-quick-scan-skill/SKILL.md' | Why: Skill name 'industry-quick-scan' doesn't match directory 'industry-quick-scan-skill'. | Fix: Rename the directory to 'industry-quick-scan' or set name to 'industry-quick-scan-skill'.
+2026-11-22 18:19:12 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/nuwa-skill/SKILL.md' | Why: Skill name 'huashu-nuwa' doesn't match directory 'nuwa-skill'. | Fix: Rename the directory to 'huashu-nuwa' or set name to 'nuwa-skill'.
+2026-11-22 18:19:12 skill_startup name=hive.writing-hive-skills scope=framework status=loaded
+2026-11-22 18:19:12 skill_startup name=hive.browser-automation scope=framework status=loaded
+2026-11-22 18:19:12 skill_startup name=hive.pdf scope=framework status=loaded
+2026-11-22 18:19:12 Default skills active: hive.writing-hive-skills, hive.browser-automation, hive.pdf
+2026-11-22 18:19:12 Skills: 3 default (3 active, 0 disabled, 0 error)
+2026-11-22 18:19:12 Skill system ready: catalog=28874 chars
+2026-11-22 18:19:13 credentials: Generated new encryption key. To persist credentials across restarts, set HIVE_CREDENTIAL_KEY
+2026-11-22 18:19:13 credentials: Generated new encryption key. To persist credentials across restarts, set HIVE_CREDENTIAL_KEY
+2026-11-22 18:19:13 [sentinel] applies_to: is_queen_stream=true colony_id="" opted_in=false (stream_id="session_20261122_181913_e2b89e39") — sentinel SKIPS this stream
+2026-11-22 18:19:13 [access] POST /api/sessions -> 201 (40ms)
+2026-11-22 18:19:13 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/industry-quick-scan-skill/SKILL.md' | Why: Skill name 'industry-quick-scan' doesn't match directory 'industry-quick-scan-skill'. | Fix: Rename the directory to 'industry-quick-scan' or set name to 'industry-quick-scan-skill'.
+2026-11-22 18:19:13 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/nuwa-skill/SKILL.md' | Why: Skill name 'huashu-nuwa' doesn't match directory 'nuwa-skill'. | Fix: Rename the directory to 'huashu-nuwa' or set name to 'nuwa-skill'.
+2026-11-22 18:19:13 skill_startup name=hive.writing-hive-skills scope=framework status=loaded
+2026-11-22 18:19:13 skill_startup name=hive.browser-automation scope=framework status=loaded
+2026-11-22 18:19:13 skill_startup name=hive.pdf scope=framework status=loaded
+2026-11-22 18:19:13 Default skills active: hive.writing-hive-skills, hive.browser-automation, hive.pdf
+2026-11-22 18:19:13 Skills: 3 default (3 active, 0 disabled, 0 error)
+2026-11-22 18:19:13 Skill system ready: catalog=28874 chars
+2026-11-22 18:19:14 credentials: Generated new encryption key. To persist credentials across restarts, set HIVE_CREDENTIAL_KEY
+2026-11-22 18:19:14 credentials: Generated new encryption key. To persist credentials across restarts, set HIVE_CREDENTIAL_KEY
+2026-11-22 18:19:14 [sentinel] applies_to: is_queen_stream=true colony_id="" opted_in=false (stream_id="session_20261122_181914_50021b25") — sentinel SKIPS this stream
+2026-11-22 18:19:14 [access] POST /api/sessions -> 201 (38ms)
+2026-11-22 18:19:14 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/industry-quick-scan-skill/SKILL.md' | Why: Skill name 'industry-quick-scan' doesn't match directory 'industry-quick-scan-skill'. | Fix: Rename the directory to 'industry-quick-scan' or set name to 'industry-quick-scan-skill'.
+2026-11-22 18:19:14 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/nuwa-skill/SKILL.md' | Why: Skill name 'huashu-nuwa' doesn't match directory 'nuwa-skill'. | Fix: Rename the directory to 'huashu-nuwa' or set name to 'nuwa-skill'.
+2026-11-22 18:19:14 skill_startup name=hive.writing-hive-skills scope=framework status=loaded
+2026-11-22 18:19:14 skill_startup name=hive.browser-automation scope=framework status=loaded
+2026-11-22 18:19:14 skill_startup name=hive.pdf scope=framework status=loaded
+2026-11-22 18:19:14 Default skills active: hive.writing-hive-skills, hive.browser-automation, hive.pdf
+2026-11-22 18:19:14 Skills: 3 default (3 active, 0 disabled, 0 error)
+2026-11-22 18:19:14 Skill system ready: catalog=28874 chars
+2026-11-22 18:19:14 credentials: Generated new encryption key. To persist credentials across restarts, set HIVE_CREDENTIAL_KEY
+2026-11-22 18:19:14 credentials: Generated new encryption key. To persist credentials across restarts, set HIVE_CREDENTIAL_KEY
+2026-11-22 18:19:14 [sentinel] applies_to: is_queen_stream=true colony_id="" opted_in=false (stream_id="session_20261122_181914_c6673b8d") — sentinel SKIPS this stream
+2026-11-22 18:19:14 [access] POST /api/sessions -> 201 (33ms)
+2026-11-22 18:19:14 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/industry-quick-scan-skill/SKILL.md' | Why: Skill name 'industry-quick-scan' doesn't match directory 'industry-quick-scan-skill'. | Fix: Rename the directory to 'industry-quick-scan' or set name to 'industry-quick-scan-skill'.
+2026-11-22 18:19:14 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/nuwa-skill/SKILL.md' | Why: Skill name 'huashu-nuwa' doesn't match directory 'nuwa-skill'. | Fix: Rename the directory to 'huashu-nuwa' or set name to 'nuwa-skill'.
+2026-11-22 18:19:14 skill_startup name=hive.writing-hive-skills scope=framework status=loaded
+2026-11-22 18:19:14 skill_startup name=hive.browser-automation scope=framework status=loaded
+2026-11-22 18:19:14 skill_startup name=hive.pdf scope=framework status=loaded
+2026-11-22 18:19:14 Default skills active: hive.writing-hive-skills, hive.browser-automation, hive.pdf
+2026-11-22 18:19:14 Skills: 3 default (3 active, 0 disabled, 0 error)
+2026-11-22 18:19:14 Skill system ready: catalog=28874 chars
+2026-11-22 18:19:14 [idle_nudge] gate=silent_park — clean stopping point (turn_done), suppressed (idle=1s)
+2026-11-22 18:19:14 [idle_nudge] gate=silent_park — clean stopping point (turn_done), suppressed (idle=1s)
+2026-11-22 18:19:15 credentials: Generated new encryption key. To persist credentials across restarts, set HIVE_CREDENTIAL_KEY
+2026-11-22 18:19:15 credentials: Generated new encryption key. To persist credentials across restarts, set HIVE_CREDENTIAL_KEY
+2026-11-22 18:19:15 [sentinel] applies_to: is_queen_stream=true colony_id="" opted_in=false (stream_id="session_20261122_181915_c4505da0") — sentinel SKIPS this stream
+2026-11-22 18:19:15 [access] POST /api/sessions -> 201 (37ms)
+2026-11-22 18:19:15 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/industry-quick-scan-skill/SKILL.md' | Why: Skill name 'industry-quick-scan' doesn't match directory 'industry-quick-scan-skill'. | Fix: Rename the directory to 'industry-quick-scan' or set name to 'industry-quick-scan-skill'.
+2026-11-22 18:19:15 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/nuwa-skill/SKILL.md' | Why: Skill name 'huashu-nuwa' doesn't match directory 'nuwa-skill'. | Fix: Rename the directory to 'huashu-nuwa' or set name to 'nuwa-skill'.
+2026-11-22 18:19:15 skill_startup name=hive.writing-hive-skills scope=framework status=loaded
+2026-11-22 18:19:15 skill_startup name=hive.browser-automation scope=framework status=loaded
+2026-11-22 18:19:15 skill_startup name=hive.pdf scope=framework status=loaded
+2026-11-22 18:19:15 Default skills active: hive.writing-hive-skills, hive.browser-automation, hive.pdf
+2026-11-22 18:19:15 Skills: 3 default (3 active, 0 disabled, 0 error)
+2026-11-22 18:19:15 Skill system ready: catalog=28874 chars
+2026-11-22 18:19:16 credentials: Generated new encryption key. To persist credentials across restarts, set HIVE_CREDENTIAL_KEY
+2026-11-22 18:19:16 credentials: Generated new encryption key. To persist credentials across restarts, set HIVE_CREDENTIAL_KEY
+2026-11-22 18:19:16 credentials: Generated new encryption key. To persist credentials across restarts, set HIVE_CREDENTIAL_KEY
+2026-11-22 18:19:16 credentials: Generated new encryption key. To persist credentials across restarts, set HIVE_CREDENTIAL_KEY
+2026-11-22 18:19:16 [sentinel] applies_to: is_queen_stream=true colony_id="" opted_in=false (stream_id="session_20261122_181916_b1048723") — sentinel SKIPS this stream
+2026-11-22 18:19:16 [access] POST /api/sessions -> 201 (41ms)
+2026-11-22 18:19:16 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/industry-quick-scan-skill/SKILL.md' | Why: Skill name 'industry-quick-scan' doesn't match directory 'industry-quick-scan-skill'. | Fix: Rename the directory to 'industry-quick-scan' or set name to 'industry-quick-scan-skill'.
+2026-11-22 18:19:16 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/nuwa-skill/SKILL.md' | Why: Skill name 'huashu-nuwa' doesn't match directory 'nuwa-skill'. | Fix: Rename the directory to 'huashu-nuwa' or set name to 'nuwa-skill'.
+2026-11-22 18:19:16 skill_startup name=hive.writing-hive-skills scope=framework status=loaded
+2026-11-22 18:19:16 skill_startup name=hive.browser-automation scope=framework status=loaded
+2026-11-22 18:19:16 skill_startup name=hive.pdf scope=framework status=loaded
+2026-11-22 18:19:16 Default skills active: hive.writing-hive-skills, hive.browser-automation, hive.pdf
+2026-11-22 18:19:16 Skills: 3 default (3 active, 0 disabled, 0 error)
+2026-11-22 18:19:16 Skill system ready: catalog=28874 chars
+2026-11-22 18:19:16 credentials: Generated new encryption key. To persist credentials across restarts, set HIVE_CREDENTIAL_KEY
+2026-11-22 18:19:16 credentials: Generated new encryption key. To persist credentials across restarts, set HIVE_CREDENTIAL_KEY
+2026-11-22 18:19:16 [sentinel] applies_to: is_queen_stream=true colony_id="" opted_in=false (stream_id="session_20261122_181916_5986e258") — sentinel SKIPS this stream
+2026-11-22 18:19:16 [access] POST /api/sessions -> 201 (33ms)
+2026-11-22 18:19:16 [idle_nudge] gate=silent_park — clean stopping point (turn_done), suppressed (idle=3s)
+2026-11-22 18:19:16 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/industry-quick-scan-skill/SKILL.md' | Why: Skill name 'industry-quick-scan' doesn't match directory 'industry-quick-scan-skill'. | Fix: Rename the directory to 'industry-quick-scan' or set name to 'industry-quick-scan-skill'.
+2026-11-22 18:19:16 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/nuwa-skill/SKILL.md' | Why: Skill name 'huashu-nuwa' doesn't match directory 'nuwa-skill'. | Fix: Rename the directory to 'huashu-nuwa' or set name to 'nuwa-skill'.
+2026-11-22 18:19:16 skill_startup name=hive.writing-hive-skills scope=framework status=loaded
+2026-11-22 18:19:16 skill_startup name=hive.browser-automation scope=framework status=loaded
+2026-11-22 18:19:16 skill_startup name=hive.pdf scope=framework status=loaded
+2026-11-22 18:19:16 Default skills active: hive.writing-hive-skills, hive.browser-automation, hive.pdf
+2026-11-22 18:19:16 Skills: 3 default (3 active, 0 disabled, 0 error)
+2026-11-22 18:19:16 Skill system ready: catalog=28874 chars
+2026-11-22 18:19:19 [idle_nudge] gate=silent_park — clean stopping point (turn_done), suppressed (idle=4s)
+2026-11-22 18:19:19 [access] GET /api/health -> 200 (0ms)
+2026-11-22 18:19:19 [access] POST /api/sessions/session_20261122_181910_30f2ffc6/chat -> 200 (8ms)
+2026-11-22 18:19:19 [access] POST /api/sessions/session_20261122_181911_430409a0/chat -> 200 (8ms)
+2026-11-22 18:19:19 [access] POST /api/sessions/session_20261122_181909_34986e0e/chat -> 200 (12ms)
+2026-11-22 18:19:19 [idle_nudge] gate=silent_park — clean stopping point (turn_done), suppressed (idle=4s)
+2026-11-22 18:19:20 [idle_nudge] gate=silent_park — clean stopping point (turn_done), suppressed (idle=3s)
+2026-11-22 18:19:20 [idle_nudge] gate=silent_park — clean stopping point (turn_done), suppressed (idle=0s)
+2026-11-22 18:19:20 stall check: p=0.34 < 0.50, turn is fine
+2026-11-22 18:19:21 stall check: p=0.17 < 0.50, turn is fine
+2026-11-22 18:19:21 [access] POST /api/sessions/session_20261122_181910_30f2ffc6/chat -> 200 (5ms)
+2026-11-22 18:19:21 [access] POST /api/sessions/session_20261122_181909_34986e0e/chat -> 200 (5ms)
+2026-11-22 18:19:21 [idle_nudge] gate=silent_park — clean stopping point (turn_done), suppressed (idle=1s)
+2026-11-22 18:19:21 stall check: p=0.33 < 0.50, turn is fine
+2026-11-22 18:19:21 [idle_nudge] gate=silent_park — clean stopping point (turn_done), suppressed (idle=2s)
+2026-11-22 18:19:21 [idle_nudge] gate=silent_park — clean stopping point (turn_done), suppressed (idle=0s)
+2026-11-22 18:19:22 [idle_nudge] gate=silent_park — clean stopping point (turn_done), suppressed (idle=4s)
+2026-11-22 18:19:22 [access] POST /api/sessions/session_20261122_181911_430409a0/chat -> 200 (4ms)
+2026-11-22 18:19:22 stall check: p=0.13 < 0.50, turn is fine
+2026-11-22 18:19:22 [access] POST /api/sessions/session_20261122_181909_34986e0e/chat -> 200 (5ms)
+2026-11-22 18:19:23 stall check: p=0.19 < 0.50, turn is fine
+2026-11-22 18:19:23 [idle_nudge] gate=silent_park — clean stopping point (turn_done), suppressed (idle=2s)
+2026-11-22 18:19:23 stall check: p=0.18 < 0.50, turn is fine
+2026-11-22 18:19:23 [access] POST /api/sessions/session_20261122_181910_30f2ffc6/chat -> 200 (5ms)
+2026-11-22 18:19:23 [access] POST /api/sessions/session_20261122_181911_430409a0/chat -> 200 (8ms)
+2026-11-22 18:19:23 stall check: p=0.22 < 0.50, turn is fine
+2026-11-22 18:19:24 [access] POST /api/sessions/session_20261122_181909_34986e0e/chat -> 200 (5ms)
+2026-11-22 18:19:24 [access] GET /api/health -> 200 (0ms)
+2026-11-22 18:19:24 stall check: p=0.26 < 0.50, turn is fine
+2026-11-22 18:19:25 [access] POST /api/sessions/session_20261122_181910_30f2ffc6/chat -> 200 (6ms)
+2026-11-22 18:19:26 stall check: p=0.31 < 0.50, turn is fine
+2026-11-22 18:19:26 [access] POST /api/sessions/session_20261122_181911_430409a0/chat -> 200 (5ms)
+2026-11-22 18:19:27 stall check: p=0.16 < 0.50, turn is fine
+2026-11-22 18:19:27 stall check: p=0.18 < 0.50, turn is fine
+2026-11-22 18:19:28 [access] POST /api/sessions/session_20261122_181909_34986e0e/chat -> 200 (5ms)
+2026-11-22 18:19:28 [access] POST /api/sessions/session_20261122_181910_30f2ffc6/chat -> 200 (9ms)
+2026-11-22 18:19:29 stall check: p=0.21 < 0.50, turn is fine
+2026-11-22 18:19:29 [access] GET /api/health -> 200 (0ms)
+2026-11-22 18:19:29 [access] POST /api/sessions/session_20261122_181911_430409a0/chat -> 200 (5ms)
+2026-11-22 18:19:30 stall check: p=0.14 < 0.50, turn is fine
+2026-11-22 18:19:31 stall check: p=0.21 < 0.50, turn is fine
+2026-11-22 18:19:31 [access] POST /api/sessions/session_20261122_181913_e2b89e39/chat -> 200 (5ms)
+2026-11-22 18:19:31 [access] POST /api/sessions/session_20261122_181912_229b0a0d/chat -> 200 (5ms)
+2026-11-22 18:19:32 stall check: p=0.23 < 0.50, turn is fine
+2026-11-22 18:19:32 [access] POST /api/sessions/session_20261122_181914_50021b25/chat -> 200 (5ms)
+2026-11-22 18:19:32 stall check: p=0.06 < 0.50, turn is fine
+2026-11-22 18:19:33 [access] POST /api/sessions/session_20261122_181912_229b0a0d/chat -> 200 (4ms)
+2026-11-22 18:19:33 [idle_nudge] gate=silent_park — clean stopping point (turn_done), suppressed (idle=0s)
+2026-11-22 18:19:33 stall check: p=0.64 >= 0.50, reminding the queen to do the work she talked about
+2026-11-22 18:19:33 stall check: p=0.14 < 0.50, turn is fine
+2026-11-22 18:19:33 [access] POST /api/sessions/session_20261122_181913_e2b89e39/chat -> 200 (6ms)
+2026-11-22 18:19:33 [access] POST /api/sessions/session_20261122_181914_50021b25/chat -> 200 (10ms)
+2026-11-22 18:19:33 stall check: p=0.12 < 0.50, turn is fine
+2026-11-22 18:19:34 [access] POST /api/sessions/session_20261122_181912_229b0a0d/chat -> 200 (5ms)
+2026-11-22 18:19:34 [access] GET /api/health -> 200 (0ms)
+2026-11-22 18:19:34 [idle_nudge] gate=silent_park — clean stopping point (turn_done), suppressed (idle=4s)
+2026-11-22 18:19:34 stall check: p=0.58 >= 0.50, reminding the queen to do the work she talked about
+2026-11-22 18:19:35 stall check: p=0.23 < 0.50, turn is fine
+2026-11-22 18:19:35 stall check: p=0.13 < 0.50, turn is fine
+2026-11-22 18:19:35 [access] POST /api/sessions/session_20261122_181912_229b0a0d/chat -> 200 (4ms)
+2026-11-22 18:19:35 [access] POST /api/sessions/session_20261122_181913_e2b89e39/chat -> 200 (5ms)
+2026-11-22 18:19:35 [access] POST /api/sessions/session_20261122_181914_50021b25/chat -> 200 (6ms)
+2026-11-22 18:19:35 [idle_nudge] gate=silent_park — clean stopping point (turn_done), suppressed (idle=5s)
+2026-11-22 18:19:36 stall check: p=0.16 < 0.50, turn is fine
+2026-11-22 18:19:36 stall check: p=0.56 >= 0.50, reminding the queen to do the work she talked about
+2026-11-22 18:19:36 [access] POST /api/sessions/session_20261122_181912_229b0a0d/chat -> 200 (6ms)
+2026-11-22 18:19:36 [idle_nudge] gate=silent_park — clean stopping point (turn_done), suppressed (idle=5s)
+2026-11-22 18:19:37 stall check: p=0.21 < 0.50, turn is fine
+2026-11-22 18:19:37 [access] POST /api/sessions/session_20261122_181914_50021b25/chat -> 200 (4ms)
+2026-11-22 18:19:38 stall check: p=0.16 < 0.50, turn is fine
+2026-11-22 18:19:38 [access] POST /api/sessions/session_20261122_181913_e2b89e39/chat -> 200 (5ms)
+2026-11-22 18:19:39 [access] POST /api/sessions/session_20261122_181914_c6673b8d/chat -> 200 (6ms)
+2026-11-22 18:19:39 [access] GET /api/health -> 200 (0ms)
+2026-11-22 18:19:39 stall check: p=0.15 < 0.50, turn is fine
+2026-11-22 18:19:40 [access] POST /api/sessions/session_20261122_181914_50021b25/chat -> 200 (6ms)
+2026-11-22 18:19:41 stall check: p=0.09 < 0.50, turn is fine
+2026-11-22 18:19:41 stall check: p=0.50 < 0.50, turn is fine
+2026-11-22 18:19:41 [access] POST /api/sessions/session_20261122_181914_c6673b8d/chat -> 200 (3ms)
+2026-11-22 18:19:41 [idle_nudge] gate=silent_park — clean stopping point (turn_done), suppressed (idle=3s)
+2026-11-22 18:19:42 stall check: p=0.17 < 0.50, turn is fine
+2026-11-22 18:19:42 stall check: p=0.14 < 0.50, turn is fine
+2026-11-22 18:19:42 [access] POST /api/sessions/session_20261122_181915_c4505da0/chat -> 200 (4ms)
+2026-11-22 18:19:42 [access] POST /api/sessions/session_20261122_181914_c6673b8d/chat -> 200 (5ms)
+2026-11-22 18:19:43 [access] POST /api/sessions/session_20261122_181913_e2b89e39/chat -> 200 (4ms)
+2026-11-22 18:19:44 [idle_nudge] gate=silent_park — clean stopping point (turn_done), suppressed (idle=2s)
+2026-11-22 18:19:44 stall check: p=0.09 < 0.50, turn is fine
+2026-11-22 18:19:44 [access] GET /api/health -> 200 (0ms)
+2026-11-22 18:19:44 [access] POST /api/sessions/session_20261122_181915_c4505da0/chat -> 200 (6ms)
+2026-11-22 18:19:45 stall check: p=0.22 < 0.50, turn is fine
+2026-11-22 18:19:46 [access] POST /api/sessions/session_20261122_181914_c6673b8d/chat -> 200 (5ms)
+2026-11-22 18:19:46 stall check: p=0.19 < 0.50, turn is fine
+2026-11-22 18:19:46 stall check: p=0.15 < 0.50, turn is fine
+2026-11-22 18:19:46 [access] POST /api/sessions/session_20261122_181915_c4505da0/chat -> 200 (5ms)
+2026-11-22 18:19:47 [access] POST /api/sessions/session_20261122_181916_b1048723/chat -> 200 (5ms)
+2026-11-22 18:19:47 stall check: p=0.22 < 0.50, turn is fine
+2026-11-22 18:19:47 stall check: p=0.22 < 0.50, turn is fine
+2026-11-22 18:19:48 stall check: p=0.15 < 0.50, turn is fine
+2026-11-22 18:19:48 [idle_nudge] gate=silent_park — clean stopping point (turn_done), suppressed (idle=2s)
+2026-11-22 18:19:48 [access] POST /api/sessions/session_20261122_181915_c4505da0/chat -> 200 (5ms)
+2026-11-22 18:19:48 [access] POST /api/sessions/session_20261122_181916_b1048723/chat -> 200 (4ms)
+2026-11-22 18:19:48 [access] POST /api/sessions/session_20261122_181914_c6673b8d/chat -> 200 (8ms)
+2026-11-22 18:19:49 [access] GET /api/health -> 200 (0ms)
+2026-11-22 18:19:50 stall check: p=0.19 < 0.50, turn is fine
+2026-11-22 18:19:50 stall check: p=0.11 < 0.50, turn is fine
+2026-11-22 18:19:50 [access] POST /api/sessions/session_20261122_181916_b1048723/chat -> 200 (5ms)
+2026-11-22 18:19:50 [access] POST /api/sessions/session_20261122_181916_5986e258/chat -> 200 (6ms)
+2026-11-22 18:19:51 stall check: p=0.17 < 0.50, turn is fine
+2026-11-22 18:19:51 stall check: p=0.23 < 0.50, turn is fine
+2026-11-22 18:19:51 [access] POST /api/sessions/session_20261122_181915_c4505da0/chat -> 200 (5ms)
+2026-11-22 18:19:51 [idle_nudge] gate=silent_park — clean stopping point (turn_done), suppressed (idle=0s)
+2026-11-22 18:19:51 [access] POST /api/sessions/session_20261122_181916_b1048723/chat -> 200 (4ms)
+2026-11-22 18:19:52 stall check: p=0.17 < 0.50, turn is fine
+2026-11-22 18:19:52 stall check: p=0.10 < 0.50, turn is fine
+2026-11-22 18:19:53 [access] POST /api/sessions/session_20261122_181916_5986e258/chat -> 200 (6ms)
+2026-11-22 18:19:53 stall check: p=0.12 < 0.50, turn is fine
+2026-11-22 18:19:53 stall check: p=0.14 < 0.50, turn is fine
+2026-11-22 18:19:54 [access] POST /api/sessions/session_20261122_181916_b1048723/chat -> 200 (5ms)
+2026-11-22 18:19:54 [access] POST /api/sessions/session_20261122_181916_5986e258/chat -> 200 (5ms)
+2026-11-22 18:19:54 [idle_nudge] gate=silent_park — clean stopping point (turn_done), suppressed (idle=4s)
+2026-11-22 18:19:54 [access] GET /api/health -> 200 (0ms)
+2026-11-22 18:19:54 stall check: p=0.14 < 0.50, turn is fine
+2026-11-22 18:19:55 [idle_nudge] gate=silent_park — clean stopping point (turn_done), suppressed (idle=3s)
+2026-11-22 18:19:56 stall check: p=0.20 < 0.50, turn is fine
+2026-11-22 18:19:56 [access] POST /api/sessions/session_20261122_181916_5986e258/chat -> 200 (6ms)
+2026-11-22 18:19:56 [idle_nudge] gate=silent_park — clean stopping point (turn_done), suppressed (idle=2s)
+2026-11-22 18:19:58 stall check: p=0.14 < 0.50, turn is fine
+2026-11-22 18:19:58 [access] POST /api/sessions/session_20261122_181916_5986e258/chat -> 200 (4ms)
+2026-11-22 18:19:59 stall check: p=0.18 < 0.50, turn is fine
+2026-11-22 18:19:59 [access] GET /api/health -> 200 (0ms)
+2026-11-22 18:20:01 [idle_nudge] gate=silent_park — clean stopping point (turn_done), suppressed (idle=2s)
+2026-11-22 18:20:01 [access] GET /api/sessions/session_20261122_181911_430409a0/events?types=execution_started,execution_completed,execution_failed,client_input_received,client_input_committed,tool_call_started,tool_call_completed,client_input_requested -> 200 (43636ms) SLOW
+2026-11-22 18:20:01 [access] GET /api/sessions/session_20261122_181909_34986e0e/events?types=execution_started,execution_completed,execution_failed,client_input_received,client_input_committed,tool_call_started,tool_call_completed,client_input_requested -> 200 (43640ms) SLOW
+2026-11-22 18:20:01 [access] GET /api/sessions/session_20261122_181913_e2b89e39/events?types=execution_started,execution_completed,execution_failed,client_input_received,client_input_committed,tool_call_started,tool_call_completed,client_input_requested -> 200 (43637ms) SLOW
+2026-11-22 18:20:01 [access] GET /api/sessions/session_20261122_181915_c4505da0/events?types=execution_started,execution_completed,execution_failed,client_input_received,client_input_committed,tool_call_started,tool_call_completed,client_input_requested -> 200 (43636ms) SLOW
+2026-11-22 18:20:01 [access] GET /api/sessions/session_20261122_181916_b1048723/events?types=execution_started,execution_completed,execution_failed,client_input_received,client_input_committed,tool_call_started,tool_call_completed,client_input_requested -> 200 (43635ms) SLOW
+2026-11-22 18:20:01 [access] GET /api/sessions/session_20261122_181912_229b0a0d/events?types=execution_started,execution_completed,execution_failed,client_input_received,client_input_committed,tool_call_started,tool_call_completed,client_input_requested -> 200 (43635ms) SLOW
+2026-11-22 18:20:01 [access] GET /api/sessions/session_20261122_181916_5986e258/events?types=execution_started,execution_completed,execution_failed,client_input_received,client_input_committed,tool_call_started,tool_call_completed,client_input_requested -> 200 (43635ms) SLOW
+2026-11-22 18:20:01 [access] GET /api/sessions/session_20261122_181910_30f2ffc6/events?types=execution_started,execution_completed,execution_failed,client_input_received,client_input_committed,tool_call_started,tool_call_completed,client_input_requested -> 200 (43640ms) SLOW
+2026-11-22 18:20:01 [access] GET /api/sessions/session_20261122_181914_50021b25/events?types=execution_started,execution_completed,execution_failed,client_input_received,client_input_committed,tool_call_started,tool_call_completed,client_input_requested -> 200 (43635ms) SLOW
+2026-11-22 18:20:01 [access] GET /api/sessions/session_20261122_181914_c6673b8d/events?types=execution_started,execution_completed,execution_failed,client_input_received,client_input_committed,tool_call_started,tool_call_completed,client_input_requested -> 200 (43635ms) SLOW
+2026-11-22 18:20:05 [access] GET /api/health -> 200 (0ms)

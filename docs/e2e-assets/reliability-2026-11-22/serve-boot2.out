@@ -1,0 +1,9 @@
+tracker_db: ensured 1 colony tracker DB(s) at startup
+Browser bridge: reusing the instance on 127.0.0.1:14830
+
+Hive API server running on http://127.0.0.1:8803
+Health:     http://127.0.0.1:8803/api/health
+Sessions:   0 colony, 0 queen-only
+
+Press Ctrl+C to stop
+Browser bridge: control connected on 127.0.0.1:14831

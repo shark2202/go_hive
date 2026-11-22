@@ -1,0 +1,1 @@
+{"counts": {"client_input_committed": 1, "client_input_received": 1, "execution_completed": 0, "execution_failed": 0, "execution_started": 1, "tool_call_completed": 2, "tool_call_started": 3}, "dangling": ["call_00_g4136qvyar275vfqmh7wfzft"], "done": true, "in_flight": true, "marker": true, "mode": "hard", "waited_s": 16.1}

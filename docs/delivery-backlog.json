@@ -385,6 +385,20 @@
     "hours": 1,
     "done": true,
     "note": "DONE 2026-11-22（lane title-llm）：上游 _title_llm 规则实跑确认（test_session_titles.py 8 passed + 选槽探针：未配置回退会话模型、读取时机=订阅时一次）；Go 新增 TitleTriggerLLM（internal/server/session_titles.go），两处 SubscribeTitleTrigger 接线改走 worker_llm 槽（loader.go:627、loader_preloaded_session.go:275）；新增 TestTitleTriggerLLMTakesTheWorkerSlotWhenConfigured（回退/worker 槽/读取时机）。结论与证据落 docs/session-titles-parity.md；工具面 sha 与基线一致（refactor-freeze wave15-base 通过，差异属既有 allowlist）。"
+   },
+   {
+    "id": "cold-resume-midturn-guard",
+    "label": "上游 cold-resume mid-turn guard：崩溃时写 cold_interrupted（Go 该 park reason 无生产者，resume 写 turn_done）",
+    "hours": 2,
+    "done": false,
+    "note": "reliability lane 观察（非阻断）：上游 queen_orchestrator cold-interrupt 路径；需实跑上游确认字段后对齐。"
+   },
+   {
+    "id": "resume-snapshot-first-frame",
+    "label": "resume 后 /snapshot 与 SSE 首帧空态（即使 cursor=ask_user）",
+    "hours": 2,
+    "done": false,
+    "note": "reliability lane 观察：不影响恢复正确性；只影响 UI 首帧展示，需对齐或登记为展示差异。"
    }
   ]
  }

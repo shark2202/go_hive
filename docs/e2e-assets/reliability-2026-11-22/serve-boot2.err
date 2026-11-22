@@ -1,0 +1,35 @@
+2026-11-22 18:18:52 [sentinel] manager starting (0 open escalations)
+2026-11-22 18:18:52 turn context "probe" is installed but off: set turn_context.probe.enabled in configuration.json
+2026-11-22 18:18:52 runtime-resources verdict init->ok | avail=NoneMB renderers=21 chrome_rss=2320MB hive_rss=32MB workers=<nil> | 
+2026-11-22 18:18:53 [access] GET /api/health -> 200 (0ms)
+2026-11-22 18:18:53 [access] GET /api/sessions/history -> 200 (7ms)
+2026-11-22 18:18:53 credentials: Generated new encryption key. To persist credentials across restarts, set HIVE_CREDENTIAL_KEY
+2026-11-22 18:18:53 credentials: Generated new encryption key. To persist credentials across restarts, set HIVE_CREDENTIAL_KEY
+2026-11-22 18:18:53 [sentinel] applies_to: is_queen_stream=true colony_id="" opted_in=false (stream_id="session_20261122_181835_4de3fe1e") — sentinel SKIPS this stream
+2026-11-22 18:18:53 [access] POST /api/sessions -> 201 (9ms)
+2026-11-22 18:18:53 [access] GET /api/sessions/session_20261122_181835_4de3fe1e/snapshot -> 200 (0ms)
+2026-11-22 18:18:54 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/industry-quick-scan-skill/SKILL.md' | Why: Skill name 'industry-quick-scan' doesn't match directory 'industry-quick-scan-skill'. | Fix: Rename the directory to 'industry-quick-scan' or set name to 'industry-quick-scan-skill'.
+2026-11-22 18:18:54 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/nuwa-skill/SKILL.md' | Why: Skill name 'huashu-nuwa' doesn't match directory 'nuwa-skill'. | Fix: Rename the directory to 'huashu-nuwa' or set name to 'nuwa-skill'.
+2026-11-22 18:18:54 skill_startup name=hive.writing-hive-skills scope=framework status=loaded
+2026-11-22 18:18:54 skill_startup name=hive.browser-automation scope=framework status=loaded
+2026-11-22 18:18:54 skill_startup name=hive.pdf scope=framework status=loaded
+2026-11-22 18:18:54 Default skills active: hive.writing-hive-skills, hive.browser-automation, hive.pdf
+2026-11-22 18:18:54 Skills: 3 default (3 active, 0 disabled, 0 error)
+2026-11-22 18:18:54 Skill system ready: catalog=28874 chars
+2026-11-22 18:18:54 [access] POST /api/sessions/session_20261122_181835_4de3fe1e/chat -> 200 (16ms)
+2026-11-22 18:18:56 stall check: p=0.35 < 0.50, turn is fine
+2026-11-22 18:18:56 credentials: Generated new encryption key. To persist credentials across restarts, set HIVE_CREDENTIAL_KEY
+2026-11-22 18:18:56 credentials: Generated new encryption key. To persist credentials across restarts, set HIVE_CREDENTIAL_KEY
+2026-11-22 18:18:56 [sentinel] applies_to: is_queen_stream=true colony_id="" opted_in=false (stream_id="session_20261122_181856_1e1eaa7b") — sentinel SKIPS this stream
+2026-11-22 18:18:56 [access] POST /api/sessions -> 201 (33ms)
+2026-11-22 18:18:56 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/industry-quick-scan-skill/SKILL.md' | Why: Skill name 'industry-quick-scan' doesn't match directory 'industry-quick-scan-skill'. | Fix: Rename the directory to 'industry-quick-scan' or set name to 'industry-quick-scan-skill'.
+2026-11-22 18:18:56 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/nuwa-skill/SKILL.md' | Why: Skill name 'huashu-nuwa' doesn't match directory 'nuwa-skill'. | Fix: Rename the directory to 'huashu-nuwa' or set name to 'nuwa-skill'.
+2026-11-22 18:18:56 skill_startup name=hive.writing-hive-skills scope=framework status=loaded
+2026-11-22 18:18:56 skill_startup name=hive.browser-automation scope=framework status=loaded
+2026-11-22 18:18:56 skill_startup name=hive.pdf scope=framework status=loaded
+2026-11-22 18:18:56 Default skills active: hive.writing-hive-skills, hive.browser-automation, hive.pdf
+2026-11-22 18:18:56 Skills: 3 default (3 active, 0 disabled, 0 error)
+2026-11-22 18:18:56 Skill system ready: catalog=28874 chars
+2026-11-22 18:18:56 [access] POST /api/sessions/session_20261122_181856_1e1eaa7b/chat -> 200 (4ms)
+2026-11-22 18:18:58 [idle_nudge] gate=silent_park — clean stopping point (turn_done), suppressed (idle=2s)
+2026-11-22 18:19:00 stall check: p=0.82 >= 0.50, reminding the queen to do the work she talked about

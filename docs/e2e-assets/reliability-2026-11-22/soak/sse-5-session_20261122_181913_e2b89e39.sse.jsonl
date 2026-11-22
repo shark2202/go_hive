@@ -1,0 +1,84 @@
+data: {"colony_id":null,"correlation_id":null,"data":{"activity":null,"awaiting_input":false,"current_execution_id":null,"current_tool_calls":[],"interrupt_cause":null,"interrupted":false,"is_executing":false,"last_event_at":"2026-11-22T18:19:16.113875","last_event_seq":null,"last_queen_event_at":"2026-11-22T18:19:16.113875","park_reason":null,"pending_questions":null,"queen_busy_reason":null,"snapshot_seq":15},"execution_id":null,"node_id":"queen","seq":0,"stream_id":"queen","timestamp":"2026-11-22T18:19:18.255831","type":"session_snapshot"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"tool_index":1,"tool_input":{"query":"inventory"},"tool_name":"search_tools","tool_use_id":"call_00_wny49s43suus8kkc0pgsd5mw"},"execution_id":"session_20261122_181913_e2b89e39","node_id":"queen","seq":6,"stream_id":"queen","timestamp":"2026-11-22T18:19:16.053186","type":"tool_call_started"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"tool_index":2,"tool_input":{},"tool_name":"get_account_info","tool_use_id":"call_01_4deafllwxu28n7378rhfjm00"},"execution_id":"session_20261122_181913_e2b89e39","node_id":"queen","seq":7,"stream_id":"queen","timestamp":"2026-11-22T18:19:16.057663","type":"tool_call_started"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"is_error":false,"result":"{\"disabled\":[],\"loaded\":[\"ask_user\",\"attach_file\",\"browser_setup\",\"collect_result\",\"credentials\",\"get_account_info\",\"get_current_time\",\"image_generate\",\"pdf_read\",\"search_messages\",\"search_tools\",\"sentinel_setup\",\"suggest_colony\",\"task_create\",\"task_get\",\"task_list\",\"task_update\",\"terminal_exec\",\"terminal_glob\",\"terminal_job_logs\",\"terminal_job_manage\",\"terminal_output_get\",\"terminal_rg\",\"write_skill\"],\"note\":\"Current session configuration only. Loaded tools are callable; searchable tools need loading; disabled tools are excluded by the allowlist; unavailable tools are configured but not registered. This does not verify credentials or service connectivity.\",\"searchable\":[\"browser_activate_tab\",\"browser_close\",\"browser_console\",\"browser_dialog_respond\",\"browser_evaluate\",\"browser_get_text\",\"browser_html\",\"browser_interact\",\"browser_navigate\",\"browser_open\",\"browser_reload\",\"browser_resize\",\"browser_screenshot\",\"browser_script\",\"browser_select\",\"browser_shadow_query\",\"browser_snapshot\",\"browser_status\",\"browser_stop\",\"browser_tabs\",\"browser_upload\",\"chart_render\",\"credential_status\",\"csv_append\",\"csv_info\",\"csv_read\",\"csv_write\",\"dns_security_scan\",\"edit_file\",\"excel_append\",\"excel_info\",\"excel_read\",\"excel_search\",\"excel_sheet_list\",\"excel_write\",\"get_playbook_status\",\"get_worker_health_summary\",\"get_worker_status\",\"http_headers_scan\",\"inject_message\",\"list_browser_profiles\",\"list_playbook_runs\",\"list_skills\",\"list_triggers\",\"list_worker_questions\",\"port_scan\",\"read_file\",\"remove_trigger\",\"reply_to_worker\",\"risk_score\",\"run_playbook\",\"run_worker\",\"search_files\",\"search_wikipedia\",\"set_trigger\",\"skill_view\",\"ssl_tls_scan\",\"stop_playbook\",\"stop_worker\",\"subdomain_enumerate\",\"tech_stack_detect\",\"terminal_job_start\",\"terminal_pty_close\",\"terminal_pty_open\",\"terminal_pty_run\",\"tracker_query\",\"tracker_register_writable\",\"tracker_sql\",\"tracker_upsert\",\"update_worker_profile\",\"web_scrape\",\"web_search\",\"write_file\"],\"unavailable\":[]}","tool_index":1,"tool_name":"search_tools","tool_use_id":"call_00_wny49s43suus8kkc0pgsd5mw"},"execution_id":"session_20261122_181913_e2b89e39","node_id":"queen","seq":8,"stream_id":"queen","timestamp":"2026-11-22T18:19:16.079013","type":"tool_call_completed"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"is_error":false,"result":"{\"accounts\": [], \"count\": 0}","tool_index":2,"tool_name":"get_account_info","tool_use_id":"call_01_4deafllwxu28n7378rhfjm00"},"execution_id":"session_20261122_181913_e2b89e39","node_id":"queen","seq":10,"stream_id":"queen","timestamp":"2026-11-22T18:19:16.094306","type":"tool_call_completed"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"park_reason":"turn_done"},"execution_id":"session_20261122_181913_e2b89e39","node_id":"queen","seq":183,"stream_id":"queen","timestamp":"2026-11-22T18:19:20.785514","type":"client_input_requested"}
+
+data: {"colony_id":null,"correlation_id":"d773f786ca38b7aa9f1e2af18f980470","data":{"content":"Reply with exactly: SOAK-5-R1. No tools. No extra words.","image_count":0},"execution_id":"session_20261122_181913_e2b89e39","node_id":"queen","seq":185,"stream_id":"queen","timestamp":"2026-11-22T18:19:31.187156","type":"client_input_received"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"input":{"message":"Reply with exactly: SOAK-5-R1. No tools. No extra words."}},"execution_id":"32d49e7dc28c5847037bbb687aabccb0","node_id":null,"seq":186,"stream_id":"queen","timestamp":"2026-11-22T18:19:31.191877","type":"execution_started"}
+
+data: {"colony_id":null,"correlation_id":"d773f786ca38b7aa9f1e2af18f980470","data":{"seq":6},"execution_id":"32d49e7dc28c5847037bbb687aabccb0","node_id":"queen","seq":190,"stream_id":"queen","timestamp":"2026-11-22T18:19:31.280964","type":"client_input_committed"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"park_reason":"turn_done"},"execution_id":"32d49e7dc28c5847037bbb687aabccb0","node_id":"queen","seq":196,"stream_id":"queen","timestamp":"2026-11-22T18:19:33.009726","type":"client_input_requested"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"output":{"status":"completed"}},"execution_id":"32d49e7dc28c5847037bbb687aabccb0","node_id":null,"seq":198,"stream_id":"queen","timestamp":"2026-11-22T18:19:33.019727","type":"execution_completed"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"input":{"message":"\u003csystem-reminder\u003e\nYour last reply talked about work to do now (announced or promised it, or agreed to a change the user asked for), but you ended the turn without calling any tool to do it, so nothing was done. If it should be done, call the tools now. If not, carry on. Don't mention this reminder.\n\u003c/system-reminder\u003e"}},"execution_id":"2c6576d29c90e9e29a79a3bc1ce55e48","node_id":null,"seq":199,"stream_id":"queen","timestamp":"2026-11-22T18:19:33.122357","type":"execution_started"}
+
+data: {"colony_id":null,"correlation_id":"61a8584ccbd7bbc0f6c0b3a6cebf2afb","data":{"content":"Reply with exactly: SOAK-5-R2. No tools. No extra words.","image_count":0},"execution_id":"session_20261122_181913_e2b89e39","node_id":"queen","seq":205,"stream_id":"queen","timestamp":"2026-11-22T18:19:33.423741","type":"client_input_received"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"park_reason":"turn_done"},"execution_id":"2c6576d29c90e9e29a79a3bc1ce55e48","node_id":"queen","seq":211,"stream_id":"queen","timestamp":"2026-11-22T18:19:34.584919","type":"client_input_requested"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"output":{"status":"completed"}},"execution_id":"2c6576d29c90e9e29a79a3bc1ce55e48","node_id":null,"seq":213,"stream_id":"queen","timestamp":"2026-11-22T18:19:34.592704","type":"execution_completed"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"input":{"message":"Reply with exactly: SOAK-5-R2. No tools. No extra words."}},"execution_id":"eb1e0d1c26e127916e02f1c7200f04dc","node_id":null,"seq":214,"stream_id":"queen","timestamp":"2026-11-22T18:19:34.604021","type":"execution_started"}
+
+data: {"colony_id":null,"correlation_id":"61a8584ccbd7bbc0f6c0b3a6cebf2afb","data":{"seq":11},"execution_id":"eb1e0d1c26e127916e02f1c7200f04dc","node_id":"queen","seq":218,"stream_id":"queen","timestamp":"2026-11-22T18:19:34.643929","type":"client_input_committed"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"park_reason":"turn_done"},"execution_id":"eb1e0d1c26e127916e02f1c7200f04dc","node_id":"queen","seq":224,"stream_id":"queen","timestamp":"2026-11-22T18:19:35.391083","type":"client_input_requested"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"output":{"status":"completed"}},"execution_id":"eb1e0d1c26e127916e02f1c7200f04dc","node_id":null,"seq":226,"stream_id":"queen","timestamp":"2026-11-22T18:19:35.397801","type":"execution_completed"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"input":{"message":"\u003csystem-reminder\u003e\nYour last reply talked about work to do now (announced or promised it, or agreed to a change the user asked for), but you ended the turn without calling any tool to do it, so nothing was done. If it should be done, call the tools now. If not, carry on. Don't mention this reminder.\n\u003c/system-reminder\u003e"}},"execution_id":"2485879fd6478c134cbd43197e874bee","node_id":null,"seq":227,"stream_id":"queen","timestamp":"2026-11-22T18:19:35.417424","type":"execution_started"}
+
+data: {"colony_id":null,"correlation_id":"9ac23545e04f4606dac8cd058e54fbc0","data":{"content":"Reply with exactly: SOAK-5-R3. No tools. No extra words.","image_count":0},"execution_id":"session_20261122_181913_e2b89e39","node_id":"queen","seq":233,"stream_id":"queen","timestamp":"2026-11-22T18:19:35.656766","type":"client_input_received"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"park_reason":"turn_done"},"execution_id":"2485879fd6478c134cbd43197e874bee","node_id":"queen","seq":266,"stream_id":"queen","timestamp":"2026-11-22T18:19:36.496146","type":"client_input_requested"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"output":{"status":"completed"}},"execution_id":"2485879fd6478c134cbd43197e874bee","node_id":null,"seq":268,"stream_id":"queen","timestamp":"2026-11-22T18:19:36.503195","type":"execution_completed"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"input":{"message":"Reply with exactly: SOAK-5-R3. No tools. No extra words."}},"execution_id":"08b4ae65127df0d943ff597325a9532a","node_id":null,"seq":269,"stream_id":"queen","timestamp":"2026-11-22T18:19:36.518134","type":"execution_started"}
+
+data: {"colony_id":null,"correlation_id":"9ac23545e04f4606dac8cd058e54fbc0","data":{"seq":17},"execution_id":"08b4ae65127df0d943ff597325a9532a","node_id":"queen","seq":273,"stream_id":"queen","timestamp":"2026-11-22T18:19:36.563397","type":"client_input_committed"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"park_reason":"turn_done"},"execution_id":"08b4ae65127df0d943ff597325a9532a","node_id":"queen","seq":279,"stream_id":"queen","timestamp":"2026-11-22T18:19:38.236023","type":"client_input_requested"}
+
+: heartbeat
+
+data: {"colony_id":null,"correlation_id":null,"data":{"output":{"status":"completed"}},"execution_id":"08b4ae65127df0d943ff597325a9532a","node_id":null,"seq":281,"stream_id":"queen","timestamp":"2026-11-22T18:19:38.245059","type":"execution_completed"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"input":{"message":"\u003csystem-reminder\u003e\nYour last reply talked about work to do now (announced or promised it, or agreed to a change the user asked for), but you ended the turn without calling any tool to do it, so nothing was done. If it should be done, call the tools now. If not, carry on. Don't mention this reminder.\n\u003c/system-reminder\u003e"}},"execution_id":"417a566882ff97915dd81ad214d24082","node_id":null,"seq":282,"stream_id":"queen","timestamp":"2026-11-22T18:19:38.260834","type":"execution_started"}
+
+data: {"colony_id":null,"correlation_id":"1513c0fe3c77055a5df8115e0724fba1","data":{"content":"Reply with exactly: SOAK-5-R4. No tools. No extra words.","image_count":0},"execution_id":"session_20261122_181913_e2b89e39","node_id":"queen","seq":288,"stream_id":"queen","timestamp":"2026-11-22T18:19:38.886804","type":"client_input_received"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"park_reason":"turn_done"},"execution_id":"417a566882ff97915dd81ad214d24082","node_id":"queen","seq":301,"stream_id":"queen","timestamp":"2026-11-22T18:19:41.271357","type":"client_input_requested"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"output":{"status":"completed"}},"execution_id":"417a566882ff97915dd81ad214d24082","node_id":null,"seq":303,"stream_id":"queen","timestamp":"2026-11-22T18:19:41.279550","type":"execution_completed"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"input":{"message":"Reply with exactly: SOAK-5-R4. No tools. No extra words."}},"execution_id":"5ab7d1ab6bd9324d863a583f9233a167","node_id":null,"seq":304,"stream_id":"queen","timestamp":"2026-11-22T18:19:41.294207","type":"execution_started"}
+
+data: {"colony_id":null,"correlation_id":"1513c0fe3c77055a5df8115e0724fba1","data":{"seq":22},"execution_id":"5ab7d1ab6bd9324d863a583f9233a167","node_id":"queen","seq":308,"stream_id":"queen","timestamp":"2026-11-22T18:19:41.345922","type":"client_input_committed"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"park_reason":"turn_done"},"execution_id":"5ab7d1ab6bd9324d863a583f9233a167","node_id":"queen","seq":314,"stream_id":"queen","timestamp":"2026-11-22T18:19:43.450619","type":"client_input_requested"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"output":{"status":"completed"}},"execution_id":"5ab7d1ab6bd9324d863a583f9233a167","node_id":null,"seq":316,"stream_id":"queen","timestamp":"2026-11-22T18:19:43.457607","type":"execution_completed"}
+
+data: {"colony_id":null,"correlation_id":"7d8fab37a3c82e61f4136ebe64c0af3f","data":{"content":"Reply with exactly: SOAK-5-R5. No tools. No extra words.","image_count":0},"execution_id":"session_20261122_181913_e2b89e39","node_id":"queen","seq":317,"stream_id":"queen","timestamp":"2026-11-22T18:19:43.633476","type":"client_input_received"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"input":{"message":"Reply with exactly: SOAK-5-R5. No tools. No extra words."}},"execution_id":"64f95d778b7837c98abc66a655768a8a","node_id":null,"seq":318,"stream_id":"queen","timestamp":"2026-11-22T18:19:43.637085","type":"execution_started"}
+
+data: {"colony_id":null,"correlation_id":"7d8fab37a3c82e61f4136ebe64c0af3f","data":{"seq":25},"execution_id":"64f95d778b7837c98abc66a655768a8a","node_id":"queen","seq":322,"stream_id":"queen","timestamp":"2026-11-22T18:19:43.682129","type":"client_input_committed"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"park_reason":"turn_done"},"execution_id":"64f95d778b7837c98abc66a655768a8a","node_id":"queen","seq":328,"stream_id":"queen","timestamp":"2026-11-22T18:19:46.577608","type":"client_input_requested"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"output":{"status":"completed"}},"execution_id":"64f95d778b7837c98abc66a655768a8a","node_id":null,"seq":330,"stream_id":"queen","timestamp":"2026-11-22T18:19:46.584630","type":"execution_completed"}
+
+: heartbeat
+

@@ -1,0 +1,1 @@
+{"next_seq":7,"park_reason":"ask_user","parked_at":"2026-11-22T10:19:04.669672Z","pending_input":{"credential_form":null,"emit_client_request":true,"questions":[{"id":"widget_color","prompt":"What color should the widget be? Answer with one word."}],"reason":"ask_user"}}

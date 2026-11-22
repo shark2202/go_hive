@@ -1,0 +1,58 @@
+data: {"colony_id":null,"correlation_id":null,"data":{"activity":"awaiting_user","awaiting_input":true,"current_execution_id":null,"current_tool_calls":[],"interrupt_cause":null,"interrupted":false,"is_executing":false,"last_event_at":"2026-11-22T18:19:16.177418","last_event_seq":61,"last_queen_event_at":"2026-11-22T18:19:16.177418","park_reason":"turn_done","pending_questions":null,"queen_busy_reason":"awaiting_input","snapshot_seq":62},"execution_id":null,"node_id":"queen","seq":0,"stream_id":"queen","timestamp":"2026-11-22T18:19:18.252808","type":"session_snapshot"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"park_reason":"turn_done"},"execution_id":"session_20261122_181910_30f2ffc6","node_id":"queen","seq":61,"stream_id":"queen","timestamp":"2026-11-22T18:19:16.173622","type":"client_input_requested"}
+
+data: {"colony_id":null,"correlation_id":"7de4b03e9ed359c48ab408cb27f262e7","data":{"content":"Reply with exactly: SOAK-2-R1. No tools. No extra words.","image_count":0},"execution_id":"session_20261122_181910_30f2ffc6","node_id":"queen","seq":63,"stream_id":"queen","timestamp":"2026-11-22T18:19:19.394632","type":"client_input_received"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"input":{"message":"Reply with exactly: SOAK-2-R1. No tools. No extra words."}},"execution_id":"ff011f26e6c681d8e6a6f82be14ea376","node_id":null,"seq":64,"stream_id":"queen","timestamp":"2026-11-22T18:19:19.402902","type":"execution_started"}
+
+data: {"colony_id":null,"correlation_id":"7de4b03e9ed359c48ab408cb27f262e7","data":{"seq":3},"execution_id":"ff011f26e6c681d8e6a6f82be14ea376","node_id":"queen","seq":68,"stream_id":"queen","timestamp":"2026-11-22T18:19:19.513596","type":"client_input_committed"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"park_reason":"turn_done"},"execution_id":"ff011f26e6c681d8e6a6f82be14ea376","node_id":"queen","seq":74,"stream_id":"queen","timestamp":"2026-11-22T18:19:20.590372","type":"client_input_requested"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"output":{"status":"completed"}},"execution_id":"ff011f26e6c681d8e6a6f82be14ea376","node_id":null,"seq":76,"stream_id":"queen","timestamp":"2026-11-22T18:19:20.596888","type":"execution_completed"}
+
+data: {"colony_id":null,"correlation_id":"cda897d5ef433dbc3faca9725464599b","data":{"content":"Reply with exactly: SOAK-2-R2. No tools. No extra words.","image_count":0},"execution_id":"session_20261122_181910_30f2ffc6","node_id":"queen","seq":77,"stream_id":"queen","timestamp":"2026-11-22T18:19:21.135902","type":"client_input_received"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"input":{"message":"Reply with exactly: SOAK-2-R2. No tools. No extra words."}},"execution_id":"8ef6a0a2274d76670b7f1ffd3b8691e9","node_id":null,"seq":78,"stream_id":"queen","timestamp":"2026-11-22T18:19:21.140558","type":"execution_started"}
+
+data: {"colony_id":null,"correlation_id":"cda897d5ef433dbc3faca9725464599b","data":{"seq":6},"execution_id":"8ef6a0a2274d76670b7f1ffd3b8691e9","node_id":"queen","seq":82,"stream_id":"queen","timestamp":"2026-11-22T18:19:21.221386","type":"client_input_committed"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"park_reason":"turn_done"},"execution_id":"8ef6a0a2274d76670b7f1ffd3b8691e9","node_id":"queen","seq":88,"stream_id":"queen","timestamp":"2026-11-22T18:19:23.051577","type":"client_input_requested"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"output":{"status":"completed"}},"execution_id":"8ef6a0a2274d76670b7f1ffd3b8691e9","node_id":null,"seq":90,"stream_id":"queen","timestamp":"2026-11-22T18:19:23.058495","type":"execution_completed"}
+
+data: {"colony_id":null,"correlation_id":"d2d4de225e5d4d055f96d71af6d166b2","data":{"content":"Reply with exactly: SOAK-2-R3. No tools. No extra words.","image_count":0},"execution_id":"session_20261122_181910_30f2ffc6","node_id":"queen","seq":92,"stream_id":"queen","timestamp":"2026-11-22T18:19:23.394267","type":"client_input_received"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"input":{"message":"Reply with exactly: SOAK-2-R3. No tools. No extra words."}},"execution_id":"24f768e0587db17924d738f86ef6bc14","node_id":null,"seq":93,"stream_id":"queen","timestamp":"2026-11-22T18:19:23.398820","type":"execution_started"}
+
+data: {"colony_id":null,"correlation_id":"d2d4de225e5d4d055f96d71af6d166b2","data":{"seq":9},"execution_id":"24f768e0587db17924d738f86ef6bc14","node_id":"queen","seq":97,"stream_id":"queen","timestamp":"2026-11-22T18:19:23.447427","type":"client_input_committed"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"park_reason":"turn_done"},"execution_id":"24f768e0587db17924d738f86ef6bc14","node_id":"queen","seq":103,"stream_id":"queen","timestamp":"2026-11-22T18:19:24.655368","type":"client_input_requested"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"output":{"status":"completed"}},"execution_id":"24f768e0587db17924d738f86ef6bc14","node_id":null,"seq":105,"stream_id":"queen","timestamp":"2026-11-22T18:19:24.663413","type":"execution_completed"}
+
+data: {"colony_id":null,"correlation_id":"8d5300729746199746154c6982fb598f","data":{"content":"Reply with exactly: SOAK-2-R4. No tools. No extra words.","image_count":0},"execution_id":"session_20261122_181910_30f2ffc6","node_id":"queen","seq":106,"stream_id":"queen","timestamp":"2026-11-22T18:19:25.126610","type":"client_input_received"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"input":{"message":"Reply with exactly: SOAK-2-R4. No tools. No extra words."}},"execution_id":"89c86c8bac373f59000a9668b9703274","node_id":null,"seq":107,"stream_id":"queen","timestamp":"2026-11-22T18:19:25.132675","type":"execution_started"}
+
+data: {"colony_id":null,"correlation_id":"8d5300729746199746154c6982fb598f","data":{"seq":12},"execution_id":"89c86c8bac373f59000a9668b9703274","node_id":"queen","seq":111,"stream_id":"queen","timestamp":"2026-11-22T18:19:25.174341","type":"client_input_committed"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"park_reason":"turn_done"},"execution_id":"89c86c8bac373f59000a9668b9703274","node_id":"queen","seq":117,"stream_id":"queen","timestamp":"2026-11-22T18:19:27.809276","type":"client_input_requested"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"output":{"status":"completed"}},"execution_id":"89c86c8bac373f59000a9668b9703274","node_id":null,"seq":119,"stream_id":"queen","timestamp":"2026-11-22T18:19:27.824250","type":"execution_completed"}
+
+data: {"colony_id":null,"correlation_id":"1d4b3ee3c3f471ef1be68287f3e51597","data":{"content":"Reply with exactly: SOAK-2-R5. No tools. No extra words.","image_count":0},"execution_id":"session_20261122_181910_30f2ffc6","node_id":"queen","seq":120,"stream_id":"queen","timestamp":"2026-11-22T18:19:28.360796","type":"client_input_received"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"input":{"message":"Reply with exactly: SOAK-2-R5. No tools. No extra words."}},"execution_id":"9b7ace000fc5a52cac3e00582fa72242","node_id":null,"seq":121,"stream_id":"queen","timestamp":"2026-11-22T18:19:28.370227","type":"execution_started"}
+
+data: {"colony_id":null,"correlation_id":"1d4b3ee3c3f471ef1be68287f3e51597","data":{"seq":16},"execution_id":"9b7ace000fc5a52cac3e00582fa72242","node_id":"queen","seq":125,"stream_id":"queen","timestamp":"2026-11-22T18:19:28.455307","type":"client_input_committed"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"park_reason":"turn_done"},"execution_id":"9b7ace000fc5a52cac3e00582fa72242","node_id":"queen","seq":131,"stream_id":"queen","timestamp":"2026-11-22T18:19:30.941363","type":"client_input_requested"}
+
+data: {"colony_id":null,"correlation_id":null,"data":{"output":{"status":"completed"}},"execution_id":"9b7ace000fc5a52cac3e00582fa72242","node_id":null,"seq":133,"stream_id":"queen","timestamp":"2026-11-22T18:19:30.948347","type":"execution_completed"}
+
+: heartbeat
+
+: heartbeat
+

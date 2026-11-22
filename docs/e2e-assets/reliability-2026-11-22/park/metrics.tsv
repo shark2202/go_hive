@@ -1,0 +1,6 @@
+session_id	session_20261122_181856_1e1eaa7b
+question	What color should the widget be? Answer with one word.
+pending_before	{'credential_form': None, 'emit_client_request': True, 'questions': [{'id': 'widget_color', 'prompt': 'What color should the widget be? Answer with one word.'}], 'reason': 'ask_user'}
+post_resume_snapshot_park	
+answer_reply	Blue it is. That's the whole job you gave me, so there's nothing else running behind it.  When you want to put that widget somewhere real, tell me what it does and who it's for, and I'll start with whether the people who touch it come back a second time.
+reason_after_answer	turn_done
