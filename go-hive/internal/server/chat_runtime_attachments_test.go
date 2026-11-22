@@ -53,6 +53,12 @@ func (f *attachmentChatLLM) lastRequest(t *testing.T) llm.CompletionRequest {
 	return f.requests[len(f.requests)-1]
 }
 
+func (f *attachmentChatLLM) requestCount() int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return len(f.requests)
+}
+
 // attachmentRuntime builds a chat runtime whose tool returns provider-neutral
 // content blocks, mirroring what sessionToolCatalogue.ExecuteBlocks provides
 // for attach_file.

@@ -383,12 +383,12 @@ func (r *ChatRuntime) takeRelayCatalogBlock() string {
 // recordRelayedClientTurn appends a relayed user turn to the transcript. It
 // runs on the runtime's queue goroutine (the conversation's only writer), so a
 // relayed message never races a running turn.
-func (r *ChatRuntime) recordRelayedClientTurn(message string) {
+func (r *ChatRuntime) recordRelayedClientTurn(message string, images []map[string]any) {
 	if r == nil || r.conv == nil {
 		return
 	}
 	stamp := time.Now().Format("2006-01-02 15:04 MST")
-	if _, err := r.conv.AddUserMessage("["+stamp+"] "+message, agentloop.UserMessageOptions{IsClientInput: true}); err != nil {
+	if _, err := r.conv.AddUserMessage("["+stamp+"] "+message, agentloop.UserMessageOptions{IsClientInput: true, ImageContent: images}); err != nil {
 		log.Printf("chat runtime %s: relayed user turn not recorded: %v", r.sessionID, err)
 	}
 }

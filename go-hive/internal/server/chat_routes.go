@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -100,6 +101,10 @@ func handleSessionChat(w http.ResponseWriter, r *http.Request, deps ChatRouteDep
 
 	var body struct {
 		Message string `json:"message"`
+		// DisplayMessage only affects the UI echo (and the CLIENT_INPUT_RECEIVED
+		// event); the queen always receives the full prepared message.
+		DisplayMessage *string          `json:"display_message"`
+		Images         []map[string]any `json:"images"`
 	}
 	if err := decodeChatBody(r, &body); err != nil {
 		if errors.Is(err, io.EOF) {
@@ -109,7 +114,17 @@ func handleSessionChat(w http.ResponseWriter, r *http.Request, deps ChatRouteDep
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "Invalid JSON body"})
 		return
 	}
-	if strings.TrimSpace(body.Message) == "" {
+
+	// Save the attachments into the session and shape what the queen sees
+	// before validating emptiness: a message may legitimately be just an
+	// image, and upstream runs the same prepare first.
+	message, images, savedImagePaths, err := prepareChatInput(session, body.Message, body.Images)
+	if err != nil {
+		log.Printf("chat route: prepare attachments failed: %v", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": internalServerError})
+		return
+	}
+	if strings.TrimSpace(message) == "" && len(images) == 0 {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "message is required"})
 		return
 	}
@@ -125,9 +140,13 @@ func handleSessionChat(w http.ResponseWriter, r *http.Request, deps ChatRouteDep
 	// observe the message ahead of the model's first stream event. The
 	// correlation id rides into the runtime so the commit boundary carries the
 	// same id, as upstream's deliver_to_queen → inject_event pair does.
-	correlationID := publishClientInputReceived(session, body.Message)
+	echo := message
+	if body.DisplayMessage != nil {
+		echo = *body.DisplayMessage
+	}
+	correlationID := publishClientInputReceived(session, echo, len(images), savedImagePaths)
 
-	if err := session.Chat.DeliverClientInput(body.Message, correlationID); err != nil {
+	if err := session.Chat.DeliverClientInputWithImages(message, images, correlationID); err != nil {
 		if errors.Is(err, ErrChatRuntimeClosed) {
 			writeJSON(w, http.StatusServiceUnavailable, map[string]any{
 				"error": "Session chat runtime is closed",
@@ -141,9 +160,10 @@ func handleSessionChat(w http.ResponseWriter, r *http.Request, deps ChatRouteDep
 }
 
 // publishClientInputReceived mirrors the upstream CLIENT_INPUT_RECEIVED emit,
-// which carries the echo the composer reconciles against. It returns the
-// correlation id so the runtime's CLIENT_INPUT_COMMITTED carries the same one.
-func publishClientInputReceived(session *Session, message string) string {
+// which carries the echo the composer reconciles against, the true attachment
+// count and the saved attachment paths. It returns the correlation id so the
+// runtime's CLIENT_INPUT_COMMITTED carries the same one.
+func publishClientInputReceived(session *Session, message string, imageCount int, imagePaths []string) string {
 	if session == nil || session.EventBus == nil {
 		return ""
 	}
@@ -154,7 +174,13 @@ func publishClientInputReceived(session *Session, message string) string {
 	event.NodeID = &nodeID
 	event.ExecutionID = &executionID
 	event.CorrelationID = &correlationID
-	event.Data = map[string]any{"content": message, "image_count": 0}
+	data := map[string]any{"content": message, "image_count": imageCount}
+	if len(imagePaths) > 0 {
+		// Paths to saved attachment files (relative to session dir) so the
+		// frontend can reconstruct images on replay.
+		data["image_paths"] = imagePaths
+	}
+	event.Data = data
 	session.EventBus.Publish(event)
 	return correlationID
 }

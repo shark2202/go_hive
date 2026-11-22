@@ -1,0 +1,17 @@
+{
+  "agent_path": "",
+  "colony_id": null,
+  "colony_spawned": false,
+  "description": "",
+  "goal": "",
+  "has_worker": false,
+  "loaded_at": 1795360496.736651,
+  "node_count": 0,
+  "queen_id": "queen_technology",
+  "queen_name": "Elon Musk",
+  "queen_phase": "independent",
+  "queen_supports_images": true,
+  "session_id": "session_20261122_231456_e209de66",
+  "spawned_colony_id": null,
+  "uptime_seconds": 0
+}

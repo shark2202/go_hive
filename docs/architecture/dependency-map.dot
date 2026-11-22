@@ -300,6 +300,7 @@ digraph go_hive {
   "internal/server" -> "internal/storage";
   "internal/server" -> "internal/tasks";
   "internal/server" -> "internal/tools";
+  "internal/server" -> "internal/tools/integrations/pdf";
   "internal/server" -> "internal/tracker";
   "internal/server" -> "internal/triggers";
   "internal/session" -> "internal/atomicfs";

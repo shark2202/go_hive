@@ -1,0 +1,82 @@
+{
+  "lane": "chat-images",
+  "feature": "POST /api/sessions/{id}/chat images/display_message attachment input",
+  "model": {
+    "provider": "openai",
+    "model": "deepseek-flash-1017",
+    "api_base": "https://token.tokenbroad.com/v1",
+    "api_key_env_var": "BROADTOKEN_API_KEY"
+  },
+  "session_id": "session_20261122_231456_e209de66",
+  "fixture": {
+    "path": "docs/e2e-assets/vision-caption/fixture/screenshot.png",
+    "sha256": "49ec90f62b7161b72c52b495d30ffd43141462d1cf8041e360984735678a05b3",
+    "bytes": 24154
+  },
+  "ground_truth": {
+    "header": "Acme Admin",
+    "title": "Create invoice",
+    "amount": "1,280.00 USD",
+    "buttons": [
+      "Find",
+      "Cancel",
+      "Submit"
+    ],
+    "customer": "Northwind Traders"
+  },
+  "variants": {
+    "hive_attachment_ref": {
+      "request": "03-chat-hive-ref.request.json",
+      "response": "03-chat-hive-ref.response.json",
+      "reply": "(1) Header text: Acme Admin\n(2) Page title: Create invoice\n(3) Amount due: 1,280.00 USD\n(4) Button labels: Search customers (placeholder), Find, Cancel, Submit",
+      "needles": [
+        "Acme Admin",
+        "Create invoice",
+        "1,280.00 USD",
+        "Find",
+        "Cancel",
+        "Submit"
+      ]
+    },
+    "data_uri": {
+      "request": "06-chat-data-uri.request.json",
+      "response": "06-chat-data-uri.response.json",
+      "reply": "Customer: Northwind Traders · Page title: Create invoice",
+      "needles": [
+        "Northwind Traders",
+        "Create invoice"
+      ]
+    }
+  },
+  "checks": {
+    "hive_ref_reply_contains_ground_truth": {
+      "Acme Admin": true,
+      "Create invoice": true,
+      "1,280.00 USD": true,
+      "Find": true,
+      "Cancel": true,
+      "Submit": true
+    },
+    "data_uri_reply_contains_ground_truth": {
+      "Northwind Traders": true,
+      "Create invoice": true
+    },
+    "hive_ref_user_message_carried_image_block": true,
+    "data_uri_user_message_carried_image_block": true,
+    "data_uri_saved_bytes_equal_fixture": true,
+    "saved_attachment_mode_0600": true
+  },
+  "checks_all_pass": true,
+  "repro": {
+    "build": "go build -o hive ./cmd/hive",
+    "home": "temp HIVE_HOME with the user's configuration.json (judge section removed); BROADTOKEN_API_KEY sourced from ~/.hive-go/env",
+    "serve": "hive serve -p 8789 --host 127.0.0.1",
+    "steps": [
+      "POST /api/sessions {queen_name:queen_technology}",
+      "POST /api/sessions/{id}/upload-attachment (screenshot.png)",
+      "POST /api/sessions/{id}/chat {message, display_message, images:[{type:image_url,image_url:{url:hive-attachment://data/attachments/screenshot.png}}]}",
+      "poll conversations/parts for the assistant reply",
+      "POST /api/sessions/{id}/chat with the same image as a data: URI"
+    ]
+  }
+}

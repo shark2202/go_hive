@@ -1,0 +1,32 @@
+12:2026-11-22 23:14:48 [access] GET /api/sessions -> 200 (0ms)
+16:2026-11-22 23:14:56 [access] POST /api/sessions -> 201 (42ms)
+25:2026-11-22 23:14:56 [access] POST /api/sessions/session_20261122_231456_e209de66/upload-attachment -> 200 (3ms)
+27:2026-11-22 23:15:07 [access] POST /api/sessions/session_20261122_231456_e209de66/chat -> 200 (7ms)
+29:2026-11-22 23:15:25 [access] GET /api/sessions/session_20261122_231456_e209de66/events/history?limit=200 -> 200 (1ms)
+30:2026-11-22 23:15:36 [access] POST /api/sessions/session_20261122_231456_e209de66/chat -> 200 (5ms)
+32:2026-11-22 23:15:57 [access] GET /api/sessions/session_20261122_231456_e209de66/events/history?limit=200 -> 200 (1ms)
+2026-11-22 23:14:43 [sentinel] manager starting (0 open escalations)
+Browser bridge: reusing the instance on 127.0.0.1:14830
+2026-11-22 23:14:43 turn context "probe" is installed but off: set turn_context.probe.enabled in configuration.json
+
+Hive API server running on http://127.0.0.1:8789
+Health:     http://127.0.0.1:8789/api/health
+Sessions:   0 colony, 0 queen-only
+
+Press Ctrl+C to stop
+Browser bridge: control connected on 127.0.0.1:14831
+2026-11-22 23:14:43 runtime-resources verdict init->ok | avail=NoneMB renderers=11 chrome_rss=1004MB hive_rss=30MB workers=<nil> | 
+2026-11-22 23:14:56 credentials: Generated new encryption key. To persist credentials across restarts, set HIVE_CREDENTIAL_KEY
+2026-11-22 23:14:56 credentials: Generated new encryption key. To persist credentials across restarts, set HIVE_CREDENTIAL_KEY
+2026-11-22 23:14:56 [sentinel] applies_to: is_queen_stream=true colony_id="" opted_in=false (stream_id="session_20261122_231456_e209de66") — sentinel SKIPS this stream
+2026-11-22 23:14:56 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/industry-quick-scan-skill/SKILL.md' | Why: Skill name 'industry-quick-scan' doesn't match directory 'industry-quick-scan-skill'. | Fix: Rename the directory to 'industry-quick-scan' or set name to 'industry-quick-scan-skill'.
+2026-11-22 23:14:56 [SKILL_NAME_MISMATCH] What failed: Name mismatch in '/Users/mac/.agents/skills/nuwa-skill/SKILL.md' | Why: Skill name 'huashu-nuwa' doesn't match directory 'nuwa-skill'. | Fix: Rename the directory to 'huashu-nuwa' or set name to 'nuwa-skill'.
+2026-11-22 23:14:56 skill_startup name=hive.writing-hive-skills scope=framework status=loaded
+2026-11-22 23:14:56 skill_startup name=hive.browser-automation scope=framework status=loaded
+2026-11-22 23:14:56 skill_startup name=hive.pdf scope=framework status=loaded
+2026-11-22 23:14:56 Default skills active: hive.writing-hive-skills, hive.browser-automation, hive.pdf
+2026-11-22 23:14:56 Skills: 3 default (3 active, 0 disabled, 0 error)
+2026-11-22 23:14:56 Skill system ready: catalog=28874 chars
+2026-11-22 23:15:01 [idle_nudge] gate=silent_park — clean stopping point (turn_done), suppressed (idle=1s)
+2026-11-22 23:15:11 [idle_nudge] gate=silent_park — clean stopping point (turn_done), suppressed (idle=2s)
+2026-11-22 23:15:41 [idle_nudge] gate=silent_park — clean stopping point (turn_done), suppressed (idle=3s)

@@ -366,13 +366,22 @@ func withStoredAttachment(root *os.Root, rel string, read func(io.Reader) string
 }
 
 func csvPreview(content io.Reader, originalName string) string {
+	text, _ := csvPreviewCounted(content, originalName)
+	return text
+}
+
+// csvPreviewCounted is csvPreview plus the parsed data-row count, which the
+// chat attachment listing needs for its meta string.
+//
+// Parity: framework/server/routes_execution.py::prepare_queen_input (_parse_csv)
+func csvPreviewCounted(content io.Reader, originalName string) (string, int) {
 	reader := csv.NewReader(bufio.NewReader(content))
 	reader.FieldsPerRecord = -1
 	reader.LazyQuotes = true
 
 	header, err := reader.Read()
 	if err != nil {
-		return ""
+		return "", 0
 	}
 
 	dataRows := make([][]string, 0, 200)
@@ -382,7 +391,7 @@ func csvPreview(content io.Reader, originalName string) string {
 			break
 		}
 		if err != nil {
-			return ""
+			return "", 0
 		}
 		dataRows = append(dataRows, row)
 	}
@@ -393,7 +402,7 @@ func csvPreview(content io.Reader, originalName string) string {
 			break
 		}
 		if err != nil {
-			return ""
+			return "", 0
 		}
 		rest++
 	}
@@ -414,7 +423,7 @@ func csvPreview(content io.Reader, originalName string) string {
 	if rowCount > 200 {
 		lines = append(lines, fmt.Sprintf("... (%d more rows truncated)", rowCount-200))
 	}
-	return strings.Join(lines, "\n")
+	return strings.Join(lines, "\n"), rowCount
 }
 
 func textPreview(content io.Reader) string {

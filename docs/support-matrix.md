@@ -62,6 +62,7 @@
 | Browser 工具 / `hive-browser` | 已实现 | 2026-11-20 实测：真实 Chrome + 仓库内 1.7.4 扩展，`hive serve` 自动拉起并守护 `browserbridge` 子进程；`hive-browser status/open/page text/evaluate/interact/snapshot/screenshot/tab` 真实驱动成功（`go_hive/scripts/e2e_browser_host.sh` 全绿，含 control RPC 14831 断言与裸桥空闲退出断言）；无扩展时 `status`/`setup` 退出 2。见 `docs/browser-host.md`。control RPC / `client_hello(owner_pid)` / 30s 空闲退出 / notify 注入 / 3 条面板代理已对齐 |
 | React dashboard | 已内嵌（发布包） | `release.sh` 默认以 `-tags embed_ui` 构建；实测发布包 `/`、`/sessions`（深链）、`/favicon.png` 均 200。源码树不附带 `frontend/dist`，需 `embed_ui.sh` 现场构建 |
 | 附件多模态（`attach_file`） | 已实现 | 图片/PDF 以真实内容块进入模型请求（OpenAI `image_url`/`file`，Anthropic `image`/`document`）；provider 不支持时显式 not-delivered，不静默丢。未验证真实视觉模型读图、5MB 以上图片缩放，见 §2.5 |
+| 用户发图（chat images） | 已实现 | `POST /api/sessions/{id}/chat` 的 `images`/`display_message` 已贯通：附件落 `data/attachments`（0600，同名按时间戳消歧）、`data:` URI 与 `hive-attachment://`（解析后必须在 `queen_dir` 内，拒绝穿越/符号链接逃逸）；图片 `image_url`、PDF `file` 块 + ≤200 页文本抽取（>10MB 仅路径指针）、CSV 前 200 行、文本内联（>256KB 只内联 8KiB 头）、未知二进制路径指针，消息尾部附 `[Attachments]` 块；`CLIENT_INPUT_RECEIVED.image_count` 为真实数量，`display_message` 只影响 UI 回显。2026-11-22 真实模型（`openai/deepseek-flash-1017`）E2E：`hive-attachment://` 与 `data:` URI 两条路径均正确读出截图里的 Acme Admin / Create invoice / 1,280.00 USD / Find / Cancel / Submit 与 Northwind Traders，证据 `docs/e2e-assets/chat-image-real/`（`summary.json` 断言全过） |
 | Janitor | 部分 | `hive janitor status` 实测；`run --execute` 未执行 |
 | `hive-cred` | 已实现 | 实测 `browse` / `inspect` |
 | MCP 注册表与 CLI | 部分 | 14 个子命令注册；未对真实 MCP server 验证 |

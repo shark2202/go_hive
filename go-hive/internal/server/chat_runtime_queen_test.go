@@ -204,7 +204,7 @@ func TestChatRuntimeAnswerResumesFromAskUserPark(t *testing.T) {
 	// finishes on the ordinary turn_done state instead of asking again. The
 	// chat route publishes the user echo before delivering; mirror that so the
 	// snapshot resolves the outstanding question as it does in a live session.
-	publishClientInputReceived(NewSession(runtime.sessionID, bus), "Ship it")
+	publishClientInputReceived(NewSession(runtime.sessionID, bus), "Ship it", 0, nil)
 	if err := runtime.Deliver("Ship it"); err != nil {
 		t.Fatalf("Deliver answer: %v", err)
 	}

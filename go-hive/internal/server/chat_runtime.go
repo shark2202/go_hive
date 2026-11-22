@@ -207,6 +207,10 @@ type chatTurnRequest struct {
 	// client_input_committed, which carries the same id so listeners can tell
 	// which message was committed where.
 	correlationID string
+	// images carries the user message's prepared content blocks (image_url /
+	// file) into the transcript, mirroring upstream's
+	// inject_event(..., image_content=...) payload.
+	images []map[string]any
 }
 
 // ChatRuntime is the per-session queen: one AgentLoop, one conversation, one
@@ -576,11 +580,22 @@ func (r *ChatRuntime) Deliver(message string) error {
 	return r.enqueueTurn(chatTurnRequest{message: message, clientInput: true})
 }
 
-// DeliverClientInput is Deliver for the HTTP chat route: the correlation id
-// the handler published on CLIENT_INPUT_RECEIVED rides the turn so the
-// committed boundary can carry the same id, as upstream's deliver_to_queen →
-// _drain_injection_queue pair does.
+// DeliverClientInput is DeliverClientInputWithImages without attachments; it
+// stays the seam every text-only caller (queen mail, sentinel resume, trigger
+// runtimes) already uses.
 func (r *ChatRuntime) DeliverClientInput(message, correlationID string) error {
+	return r.DeliverClientInputWithImages(message, nil, correlationID)
+}
+
+// DeliverClientInputWithImages is Deliver for the HTTP chat route: the
+// correlation id the handler published on CLIENT_INPUT_RECEIVED rides the
+// turn so the committed boundary can carry the same id, as upstream's
+// deliver_to_queen → _drain_injection_queue pair does. The images are the
+// prepared user content blocks; they join the transcript turn so the model
+// request carries them.
+//
+// Parity: framework/agent_loop/agent_loop.py::inject_event (image_content)
+func (r *ChatRuntime) DeliverClientInputWithImages(message string, images []map[string]any, correlationID string) error {
 	if r == nil {
 		return ErrChatRuntimeNoLLM
 	}
@@ -589,10 +604,10 @@ func (r *ChatRuntime) DeliverClientInput(message, correlationID string) error {
 		if block := r.takeRelayCatalogBlock(); block != "" {
 			recorded = block + "\n\n" + message
 		}
-		_ = r.enqueueTurn(chatTurnRequest{message: recorded, clientInput: true, recordOnly: true, correlationID: correlationID})
+		_ = r.enqueueTurn(chatTurnRequest{message: recorded, clientInput: true, recordOnly: true, correlationID: correlationID, images: images})
 		return nil
 	}
-	return r.enqueueTurn(chatTurnRequest{message: message, clientInput: true, correlationID: correlationID})
+	return r.enqueueTurn(chatTurnRequest{message: message, clientInput: true, correlationID: correlationID, images: images})
 }
 
 // InjectQueenMail queues a letter or reply from another queen: it enters as a
@@ -838,7 +853,7 @@ func (r *ChatRuntime) runTurn(request chatTurnRequest) {
 			r.recordExternalTurn(request.message)
 			return
 		}
-		r.recordRelayedClientTurn(request.message)
+		r.recordRelayedClientTurn(request.message, request.images)
 		return
 	}
 	message := request.message
@@ -940,6 +955,7 @@ func (r *ChatRuntime) runTurn(request chatTurnRequest) {
 		committedMessage, err := r.conv.AddUserMessage(stamped, agentloop.UserMessageOptions{
 			IsClientInput: request.clientInput,
 			IsTrigger:     request.trigger != nil,
+			ImageContent:  request.images,
 		})
 		if err != nil {
 			emitter.executionFailed(err, agentloop.ParkReasonUnknown)

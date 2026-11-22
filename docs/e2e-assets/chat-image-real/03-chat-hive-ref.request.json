@@ -1,0 +1,12 @@
+{
+  "message": "Read the screenshot image attached to this message. Answer with these facts exactly as shown, and nothing else: (1) the header text, (2) the page title, (3) the amount due, (4) the visible button labels. Do not use any tools.",
+  "display_message": "[image] screenshot.png — what does this invoice screen say?",
+  "images": [
+    {
+      "type": "image_url",
+      "image_url": {
+        "url": "hive-attachment://data/attachments/screenshot.png"
+      }
+    }
+  ]
+}

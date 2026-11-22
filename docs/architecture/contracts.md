@@ -615,7 +615,7 @@
 | GET | `/api/sessions/{session_id}` | `handleGetLiveSession` | `internal/server/routes_sessions.go:75` |
 | GET | `/api/sessions/{session_id}/attachment/{filename}` | `handleSessionAttachment` | `internal/server/routes_sessions.go:90` |
 | POST | `/api/sessions/{session_id}/cancel-queen` | `handleCancelQueen` | `internal/server/routes_execution.go:55` |
-| POST | `/api/sessions/{session_id}/chat` | `handleSessionChat` | `internal/server/chat_routes.go:33` |
+| POST | `/api/sessions/{session_id}/chat` | `handleSessionChat` | `internal/server/chat_routes.go:34` |
 | POST | `/api/sessions/{session_id}/colony` | `handleLoadColony` | `internal/server/routes_sessions.go:114` |
 | POST | `/api/sessions/{session_id}/colony/resolve_missed` | `handleResolveMissedTriggers` | `internal/server/routes_sessions.go:120` |
 | GET | `/api/sessions/{session_id}/colony/skills` | `handleListColonySkills` | `internal/server/routes_colony_workers.go:652` |
@@ -623,7 +623,7 @@
 | POST | `/api/sessions/{session_id}/compact-and-fork` | `handleCompactAndFork` | `internal/server/routes_execution.go:64` |
 | POST | `/api/sessions/{session_id}/credential-form` | `routes.handleCredentialForm` | `internal/server/routes_credentials.go:94` |
 | POST | `/api/sessions/{session_id}/dismiss-colony-pivot` | `handleDismissColonyPivot` | `internal/server/routes_sessions.go:117` |
-| GET | `/api/sessions/{session_id}/events` | `handleSessionEventsStream` | `internal/server/chat_routes.go:36` |
+| GET | `/api/sessions/{session_id}/events` | `handleSessionEventsStream` | `internal/server/chat_routes.go:37` |
 | GET | `/api/sessions/{session_id}/events/history` | `handleSessionEventsHistory` | `internal/server/routes_sessions.go:123` |
 | POST | `/api/sessions/{session_id}/fork` | `handleForkSession` | `internal/server/routes_sessions.go:129` |
 | GET | `/api/sessions/{session_id}/live_tools` | `handleSessionLiveTools` | `internal/server/routes_sessions.go:81` |

@@ -16,7 +16,7 @@
 | 能力层（`capability`） | 34 | 可被循环调用的能力：工具、集成、LLM 传输、记忆、技能、soul、凭据、出站消息。 |
 | 基础层（`foundation`） | 16 | 无业务语义的底座：事件总线、文件存储、schema、原子写、目录布局、限速、质量门禁。 |
 
-共 87 个包、233 条包间 import 边。
+共 87 个包、234 条包间 import 边。
 
 ## 模块表
 
@@ -40,7 +40,7 @@
 | `internal/toolgolden` | harness | 工具结果文本的规范化，用于两侧运行时对照。 | 0 | 0 |  |
 | `internal/cli` | assembly | 装配根：解析命令与配置，构造 home、ToolRegistry、MCP runtime、ChatRuntime、ColonyRuntime，并注册 serve/chat/queen/colony/session/skill/mcp/janitor 子命令。 | 32 | 4 |  |
 | `internal/runtimehealth` | transport | 进程与宿主机资源健康快照，供 /api/health/resources 使用。 | 0 | 1 |  |
-| `internal/server` | transport | HTTP/SSE 传输层：路由注册、会话管理、ChatRuntime 的 turn 队列、colony/tracker/sentinel 适配器与事件桥。 | 37 | 2 |  |
+| `internal/server` | transport | HTTP/SSE 传输层：路由注册、会话管理、ChatRuntime 的 turn 队列、colony/tracker/sentinel 适配器与事件桥。 | 38 | 2 |  |
 | `internal/server/uiembed` | transport | embed_ui 构建标签下的前端静态资源；未带标签时返回空，让服务端回退到磁盘目录。 | 0 | 1 |  |
 | `internal/agents` | orchestration | Agent 规格与发现：读取 agents 目录、worker 元数据与能力描述。 | 2 | 3 |  |
 | `internal/claudecode` | orchestration | Claude Code queen 运行时：会话记录与收件箱、claude -p 回合、转录读取与进程树管理。 | 3 | 1 |  |
@@ -88,7 +88,7 @@
 | `internal/tools/integrations/excel` | capability | Excel 领域子包（结构试点）：工具目录、OOXML 读写与 6 个 action 实现；只 import integrationkit。 | 1 | 1 |  |
 | `internal/tools/integrations/gworkspace` | capability | Google Workspace 领域子包（P3 第十一个领域子包）：Google Sheets / Docs / Gmail / Calendar 的目录、39 个 action 实现、账号别名与 OAuth2 刷新 helper；只 import integrationkit。 | 1 | 1 |  |
 | `internal/tools/integrations/infra` | capability | 基础设施自动化领域子包（第七个领域子包）：Terraform / PagerDuty / Prometheus / Kafka / n8n / Tines 的目录、32 个 action 实现与共享 helper；只 import integrationkit。 | 1 | 1 |  |
-| `internal/tools/integrations/pdf` | capability | PDF 读取领域子包（第十个领域子包）：pdf_read 工具目录、单 action 实现与从零实现的解析栈（xref/流解码/词法/文本抽取/字体编码）；只 import integrationkit。 | 1 | 1 |  |
+| `internal/tools/integrations/pdf` | capability | PDF 读取领域子包（第十个领域子包）：pdf_read 工具目录、单 action 实现与从零实现的解析栈（xref/流解码/词法/文本抽取/字体编码）；只 import integrationkit。 | 1 | 2 |  |
 | `internal/tools/integrations/schedchat` | capability | 调度/聊天领域子包（第九个领域子包）：Brevo / Cal.com / Calendly / Discord / Mattermost 的目录、40 个 action 实现与共享 helper；只 import integrationkit。 | 1 | 1 |  |
 | `internal/tools/integrations/social` | capability | 社交媒体领域子包（第四个领域子包）：YouTube / Reddit / Twitter-X / Twilio / Pushover 的目录、36 个 action 实现与共享 helper；只 import integrationkit。 | 1 | 1 |  |
 | `internal/tools/integrations/webintel` | capability | Web-intelligence 领域子包（第八个领域子包）：SimilarWeb / News / Google Maps 的目录、42 个 action 实现与共享 helper；只 import integrationkit。 | 1 | 1 |  |
