@@ -33,9 +33,9 @@
 | 门禁 | 通过标准 | 当前（实测） |
 |---|---|---|
 | 九道 make 门禁 | 全 0 | **全绿**（wave-66，含 govulncheck 0 OSV） |
-| parity | 0 缺注解 | **5,722/5,722** |
+| parity | 0 缺注解 | **5,816/5,816** |
 | parity refs | 0 missing | 全解析 |
-| compat-check | 12/12 | **12/12**（C12：273 条 = 218 ported / 27 partial / 9 oos / 19 unported（triage 修正 11 假标 + coercion 接线 + GA sidecar 迁移升级）） |
+| compat-check | 12/12 | **12/12**（C12：273 条 = 220 ported / 27 partial / 9 oos / 17 unported（triage + coercion + sentinel/antigravity/GA 三 lane 并集）） |
 | QC | 9/9 | **9/9** |
 | arch | 7 生成物一致 | **82 包 / 219 边 / 8 层 / 1 info** |
 | govulncheck | 0 OSV | **0（go1.26.11，同 scanner/DB 23→0）** |
@@ -50,6 +50,7 @@
 - **特性**：`docs/e2e-assets/`（dashboard-memory-1015 5 截图 · installer-verify Docker · reliability 27/27 · longmemeval 60q/200q · memory-notes 探针）
 - **迁移**：`dist/slots/*/compat.json`（v1/v2/v3）· `docs/exports-baseline-decision.md`
 - **性能**：`docs/perf-recall-15k.md`（15k 轮：冷建 388.5ms、warm p50 **12.7ms**（perf-opt 9.7×，p95 13.5ms）、索引 7.05MB、RSS +12%）
+- **逐项核查（全量）**：`docs/consistency-audit.md`（18 原语 + 273 模块全列 + 104 集成分级 + 契约表面 8 层 + 50 机制；JSON 版供重算/diff；生成器 `scripts/gen_consistency_audit.py`）
 
 ## 6. 与 Python 上游的关系
 

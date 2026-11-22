@@ -1,0 +1,89 @@
+# browser-final-parity dual-run
+
+## Panel routes (upstream handler in-process vs Go e2e dump)
+
+upstream_tabs = {"available": true, "count": 2, "discarded_count": 0, "hive_group_count": 0, "live_count": 2, "tabs": [{"active": false, "audible": false, "discarded": false, "groupId": 777, "id": 101, "isHiveGroup": false, "pinned": false, "title": "Example", "url": "https://example.com/", "windowId": null}, {"active": false, "audible": false, "discarded": false, "groupId": null, "id": 102, "isHiveGroup": false, "pinned": false, "title": "Other", "url": "https://other.example/", "windowId": null}]}
+go_contexts = {"available": true, "contexts": [{"active_tab_id": 101, "group_id": 777, "name": "e2e-profile", "profile": "e2e-profile", "tab_count": 1}], "count": 1}
+go_tabs = {"available": true, "count": 2, "discarded_count": 0, "hive_group_count": 0, "live_count": 2, "tabs": [{"active": false, "audible": false, "discarded": false, "groupId": 777, "id": 101, "isHiveGroup": false, "pinned": false, "title": "Example", "url": "https://example.com/", "windowId": null}, {"active": false, "audible": false, "discarded": false, "groupId": null, "id": 102, "isHiveGroup": false, "pinned": false, "title": "Other", "url": "https://other.example/", "windowId": null}]}
+
+PANEL: MATCH
+
+## CLI validation conditions (upstream handlers in-process vs hive-browser binary, no extension)
+
+- evaluate (no --js)
+    upstream exit=6 [BrowserError] evaluate requires JavaScript via --js (inline, @file, or -)
+    go       exit=6 stderr='error: evaluate requires JavaScript via --js (inline, @file, or -)'
+- evaluate --js ''
+    upstream exit=6 [BrowserError] evaluate requires JavaScript via --js (inline, @file, or -)
+    go       exit=6 stderr='error: evaluate requires JavaScript via --js (inline, @file, or -)'
+- evaluate --js '   '
+    upstream exit=6 [BrowserError] evaluate requires JavaScript via --js (inline, @file, or -)
+    go       exit=6 stderr='error: evaluate requires JavaScript via --js (inline, @file, or -)'
+- evaluate --js @missing
+    upstream exit=6 [BrowserError] could not read /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T/browser-final-parity-skkmsswg/missing.js: [Errno 2] No such file or directory: '/var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T/browser-final-parity-skkmsswg/missing.js'
+    go       exit=6 stderr='error: could not read /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T/browser-final-parity-skkmsswg/missing.js: open /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T/browser-final-parity-skkmsswg/missing.js: no such file or directory'
+- evaluate --js @empty
+    upstream exit=6 [BrowserError] evaluate requires JavaScript via --js (inline, @file, or -)
+    go       exit=6 stderr='error: evaluate requires JavaScript via --js (inline, @file, or -)'
+- evaluate --js - (empty stdin)
+    upstream exit=6 [BrowserError] evaluate requires JavaScript via --js (inline, @file, or -)
+    go       exit=6 stderr='error: evaluate requires JavaScript via --js (inline, @file, or -)'
+- evaluate inline (no bridge)
+    upstream exit=2 [result] {}
+    go       exit=2 stderr="hive-browser: the Hive browser extension isn't connected\nstart the bridge with `hive serve` (or `browserbridge`) and retry"
+- evaluate ' @missing' (leading space)
+    upstream exit=2 [result] {}
+    go       exit=2 stderr="hive-browser: the Hive browser extension isn't connected\nstart the bridge with `hive serve` (or `browserbridge`) and retry"
+- script (no --skill)
+    upstream exit=6 [BrowserError] --skill is required (scripts are scoped to a skill dir). For ad-hoc JavaScript, use: hive-browser evaluate --js '<code>'
+    go       exit=6 stderr="error: --skill is required (scripts are scoped to a skill dir). For ad-hoc JavaScript, use: hive-browser evaluate --js '<code>'"
+- script --skill ''
+    upstream exit=6 [BrowserError] --skill is required (scripts are scoped to a skill dir). For ad-hoc JavaScript, use: hive-browser evaluate --js '<code>'
+    go       exit=6 stderr="error: --skill is required (scripts are scoped to a skill dir). For ad-hoc JavaScript, use: hive-browser evaluate --js '<code>'"
+- script (no --script)
+    upstream exit=6 [BrowserError] --script is required (a script file under <skill>/scripts/)
+    go       exit=6 stderr='error: --script is required (a script file under <skill>/scripts/)'
+- script --skill '   '
+    upstream exit=2 [result] {}
+    go       exit=2 stderr='hive-browser: browser bridge not reachable at http://127.0.0.1:50554: Post "http://127.0.0.1:50554/command": dial tcp 127.0.0.1:50554: connect: connection refused\nstart the bridge with `hive serve` (or `browserbridge`) and retry'
+- script --args not-json
+    upstream exit=6 [BrowserError] --args must be valid JSON: Expecting value: line 1 column 1 (char 0)
+    go       exit=6 stderr="error: --args must be valid JSON: invalid character 'o' in literal null (expecting 'u')"
+- script --args '   '
+    upstream exit=6 [BrowserError] --args must be valid JSON: Expecting value: line 1 column 4 (char 3)
+    go       exit=6 stderr='error: --args must be valid JSON: unexpected end of JSON input'
+- script --args '[1]'
+    upstream exit=6 [BrowserError] --args must be a JSON object (dict)
+    go       exit=6 stderr='error: --args must be a JSON object (dict)'
+- script --args null
+    upstream exit=6 [BrowserError] --args must be a JSON object (dict)
+    go       exit=6 stderr='error: --args must be a JSON object (dict)'
+- script --args ' - '
+    upstream exit=6 [BrowserError] --args must be valid JSON: Expecting value: line 1 column 2 (char 1)
+    go       exit=6 stderr="error: --args must be valid JSON: invalid character ' ' in numeric literal"
+- script --args @empty
+    upstream exit=2 [result] {}
+    go       exit=2 stderr='hive-browser: browser bridge not reachable at http://127.0.0.1:50554: Post "http://127.0.0.1:50554/command": dial tcp 127.0.0.1:50554: connect: connection refused\nstart the bridge with `hive serve` (or `browserbridge`) and retry'
+- script --args - (empty stdin)
+    upstream exit=2 [result] {}
+    go       exit=2 stderr='hive-browser: browser bridge not reachable at http://127.0.0.1:50554: Post "http://127.0.0.1:50554/command": dial tcp 127.0.0.1:50554: connect: connection refused\nstart the bridge with `hive serve` (or `browserbridge`) and retry'
+- script --timeout-s soon (no --skill)
+    upstream exit=2 [argparse] usage: hive-browser script [-h] [--json] [--skill SKILL] [--script SCRIPT]
+                           [--args JSON|@file|-] [--timeout-s TIMEOUT_S]
+                           [--tab TAB] [--browser-profile BROWSER_PROFILE]
+hive-browser script: error: argument --timeout-s: invalid float value: 'soon'
+    go       exit=2 stderr='hive-browser: --timeout-s: "soon" is not a number'
+- script --browser-profile Nope
+    upstream exit=6 [BrowserError] unknown browser profile 'Nope'. connected: ['Work']
+    go       exit=6 stderr="error: unknown browser profile 'Nope'. connected: ['Work']"
+- script --browser-profile '   '
+    upstream exit=6 [BrowserError] unknown browser profile '   '. connected: ['Work']
+    go       exit=6 stderr="error: unknown browser profile '   '. connected: ['Work']"
+- script --browser-profile Work
+    upstream exit=0 [result] {"skill": "x", "script": "y", "args": {}, "timeout_s": 60.0, "tab_id": null, "profile": null, "profile_display_name": null, "browser_profile": "Work"}
+    go       exit=0 stderr=''
+- script --browser-profile default
+    upstream exit=0 [result] {"skill": "x", "script": "y", "args": {}, "timeout_s": 60.0, "tab_id": null, "profile": null, "profile_display_name": null, "browser_profile": "default"}
+    go       exit=0 stderr=''
+
+CLI: MATCH

@@ -1,0 +1,69 @@
+{
+  "contexts": {
+    "available": true,
+    "contexts": [
+      {
+        "active_tab_id": 101,
+        "group_id": 777,
+        "name": "e2e-profile",
+        "profile": "e2e-profile",
+        "tab_count": 1
+      }
+    ],
+    "count": 1
+  },
+  "status": {
+    "bridge": true,
+    "connected": true,
+    "connections": [
+      {
+        "connected_since_ms": 862,
+        "extension_id": "e2e-fake-extension",
+        "in_flight": 0,
+        "is_default": true,
+        "label": "e2e-profile",
+        "last_pong_age_ms": 862,
+        "protocol_version": 6,
+        "tabs": 2,
+        "version": "0.0.0-e2e"
+      }
+    ],
+    "extension_version": "0.0.0-e2e",
+    "health": "healthy",
+    "last_pong_age_ms": 862,
+    "uptime_ms": 968
+  },
+  "tabs": {
+    "available": true,
+    "count": 2,
+    "discarded_count": 0,
+    "hive_group_count": 0,
+    "live_count": 2,
+    "tabs": [
+      {
+        "active": false,
+        "audible": false,
+        "discarded": false,
+        "groupId": 777,
+        "id": 101,
+        "isHiveGroup": false,
+        "pinned": false,
+        "title": "Example",
+        "url": "https://example.com/",
+        "windowId": null
+      },
+      {
+        "active": false,
+        "audible": false,
+        "discarded": false,
+        "groupId": null,
+        "id": 102,
+        "isHiveGroup": false,
+        "pinned": false,
+        "title": "Other",
+        "url": "https://other.example/",
+        "windowId": null
+      }
+    ]
+  }
+}

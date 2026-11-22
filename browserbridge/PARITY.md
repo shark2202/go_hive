@@ -565,9 +565,13 @@ concurrent `_cdp` calls through control RPC 14831. Raw output:
   (`docs/fixtures/browser-residuals/status-bind-error.json`).
 
 Not changed by this round: the Skia-vs-PIL JPEG byte difference and the dpr>1
-annotation width (quantified in `docs/fixtures/browser-return-contract/`), and
-the `isHiveGroup` value-level difference (upstream reads a key that its own row
-does not carry; see `docs/browser-bridge.html` §04 note). Closed by the
-transport/lifecycle round (R16–R20, 2026-11-21): the WS-layer keepalive, the
-legacy 9230 status listener, CLI auto-ensure, the `bad_request` exit-code
-classification, and the parent-death default.
+annotation width (quantified in `docs/fixtures/browser-return-contract/`).
+Closed by the transport/lifecycle round (R16–R20, 2026-11-21): the WS-layer
+keepalive, the legacy 9230 status listener, CLI auto-ensure, the `bad_request`
+exit-code classification, and the parent-death default. Closed by the
+final-parity round (2026-11-22): the `isHiveGroup` value level (the panel route
+now emits upstream's always-false / count-0 outcome, not the code's intended
+enrichment) and the evaluate/script exit-6 conditions (Go now mirrors
+`cmd_evaluate` / `cmd_script`). Handler-vs-binary dual-run evidence for both:
+`docs/fixtures/browser-final-parity/dual-run.txt`
+(`uv run --offline --project core python go_hive/scripts/e2e_browser_final_parity.py`).

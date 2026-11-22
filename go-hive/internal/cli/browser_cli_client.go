@@ -180,8 +180,9 @@ func classifyBrowserResult(result map[string]any) int {
 // carries a code, but the code is not a licence to invent exit codes —
 // `bad_request` used to map to 6 while upstream, classifying the same text,
 // lands on 1. The bad_request family therefore defers to the text taxonomy
-// here, and 6 stays reserved for the CLI's own prechecks (evaluate/script/type
-// argument validation), which run before any bridge round-trip.
+// here, and 6 stays reserved for the CLI's own prechecks, whose conditions
+// mirror the upstream handlers (evaluate/script cmd_* validation, the Go-only
+// legacy `type` verb) and run before any bridge round-trip.
 func classifyBrowserError(code, message string) int {
 	low := strings.ToLower(message)
 	byText := classifyBrowserResult(map[string]any{"ok": false, "error": message})

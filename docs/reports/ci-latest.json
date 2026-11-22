@@ -1,9 +1,9 @@
 {
- "wave": 70,
- "at": "2026-11-22 20:35",
- "head": "d4d9a1f9",
+ "wave": 71,
+ "at": "2026-11-22 21:40",
+ "head": "3bea069f",
  "ci": 0,
  "qc": 0,
  "publish": 0,
- "note": "C6 routes 重导出后"
+ "note": "sentinel-setup+antigravity+ga-migration 三 lane 合并后"
 }

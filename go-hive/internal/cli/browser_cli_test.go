@@ -53,6 +53,17 @@ func fakeBridge(t *testing.T, response map[string]any) (*httptest.Server, func()
 			_ = json.NewEncoder(w).Encode(map[string]any{"ok": true, "status": "ok", "connected": true, "connections": 1})
 			return
 		}
+		if r.URL.Path == "/status" && r.Method == http.MethodGet {
+			// --browser-profile validation (nav.py::validate_browser_profile)
+			// reads the connected labels from the bridge status.
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"bridge": "running", "connected": true,
+				"profiles":    []string{"Work"},
+				"connections": []map[string]any{{"label": "Work"}},
+			})
+			return
+		}
 		if r.URL.Path != "/command" || r.Method != http.MethodPost {
 			http.NotFound(w, r)
 			return
@@ -296,19 +307,38 @@ func TestBrowserCLIUsageErrors(t *testing.T) {
 	}
 }
 
-// TestBrowserCLIBadArgs pins the Go-internal validations that stay on exit 6
-// (upstream has no argparse equivalent: evaluate/script handler checks, the
-// Go-only `type` verb).
+// TestBrowserCLIBadArgs pins the exact inputs that exit 6. Each case mirrors
+// the upstream handler's own validation condition (not an argparse one):
 //
-// Parity: tools/src/gcu/errors.py::EXIT_VALIDATION
+//   - evaluate: cmd_evaluate rejects a missing/blank payload AFTER resolving
+//     --js (read_arg_value), so @emptyfile and empty stdin are exit 6;
+//   - script: cmd_script rejects a missing --skill/--script on the raw value
+//     and a non-empty --args payload that is not a JSON object (whitespace
+//     included — json.loads("   ") raises upstream too);
+//   - type: a Go-only legacy verb, kept callable by name (upstream has no CLI
+//     verb; its browser_type tool requires `text`, the condition mirrored).
+//
+// Parity: tools/src/gcu/cli_commands/evaluate.py::cmd_evaluate,
+// tools/src/gcu/cli_commands/script.py::cmd_script,
+// tools/src/gcu/errors.py::EXIT_VALIDATION
 func TestBrowserCLIBadArgs(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HIVE_HOME", home)
 	server, last := fakeBridge(t, nil)
+	empty := filepath.Join(home, "empty.js")
+	if err := os.WriteFile(empty, nil, 0o644); err != nil {
+		t.Fatalf("write empty fixture: %v", err)
+	}
 	cases := [][]string{
 		{"evaluate"},
+		{"evaluate", "--js", ""},
+		{"evaluate", "--js", "   "},
+		{"evaluate", "--js", "@" + filepath.Join(home, "missing.js")},
+		{"evaluate", "--js", "@" + empty},
 		{"script", "--skill", "x"},
 		{"script", "--skill", "x", "--script", "y", "--args", "not-json"},
+		{"script", "--skill", "x", "--script", "y", "--args", "   "},
+		{"script", "--skill", "x", "--script", "y", "--args", "[1]"},
 		{"type", "#i"},
 	}
 	for _, argv := range cases {
@@ -320,6 +350,168 @@ func TestBrowserCLIBadArgs(t *testing.T) {
 		if got := last(); got.Type != "" {
 			t.Fatalf("%v: must not reach the bridge, but sent %q", argv, got.Type)
 		}
+	}
+}
+
+// TestBrowserCLIEvaluateResolutionMatchesUpstream pins cmd_evaluate's argument
+// resolution details that the exit code alone cannot show: "--script" aliases
+// "--js" with LAST-one-wins (one argparse dest), the resolved payload is what
+// gets the blank check (@emptyfile / empty stdin -> exit 6 with the upstream
+// message), and a file-style value is only a file when "@" starts the RAW
+// value (leading space stays inline source).
+//
+// Parity: tools/src/gcu/cli_commands/evaluate.py::cmd_evaluate;
+// tools/src/gcu/cli_commands/script.py::read_arg_value
+func TestBrowserCLIEvaluateResolutionMatchesUpstream(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HIVE_HOME", home)
+	server, last := fakeBridge(t, nil)
+
+	// --script is the same dest as --js upstream: the last flag wins.
+	_, stderr, code := runBrowser(t, home, "evaluate", "--script", "first", "--js", "second", "--tab", "7", "--bridge", server.URL)
+	if code != browserExitOK {
+		t.Fatalf("--script then --js: exit = %d (stderr: %s)", code, stderr)
+	}
+	if got, _ := last().Params["script"].(string); got != "second" {
+		t.Fatalf("--script then --js sent %q, want %q", got, "second")
+	}
+	_, stderr, code = runBrowser(t, home, "evaluate", "--js", "first", "--script", "second", "--tab", "7", "--bridge", server.URL)
+	if code != browserExitOK {
+		t.Fatalf("--js then --script: exit = %d (stderr: %s)", code, stderr)
+	}
+	if got, _ := last().Params["script"].(string); got != "second" {
+		t.Fatalf("--js then --script sent %q, want %q", got, "second")
+	}
+
+	// A leading space keeps "@path" inline (upstream matches on the raw value).
+	inline := " @" + filepath.Join(home, "missing.js")
+	_, stderr, code = runBrowser(t, home, "evaluate", "--js", inline, "--tab", "7", "--bridge", server.URL)
+	if code != browserExitOK {
+		t.Fatalf("leading-space @path: exit = %d (stderr: %s)", code, stderr)
+	}
+	if got, _ := last().Params["script"].(string); got != inline {
+		t.Fatalf("leading-space @path sent %q, want %q", got, inline)
+	}
+
+	// Empty resolved payloads are exit 6: an empty @file and empty stdin.
+	empty := filepath.Join(home, "empty.js")
+	if err := os.WriteFile(empty, nil, 0o644); err != nil {
+		t.Fatalf("write empty fixture: %v", err)
+	}
+	var stdout, stderr2 bytes.Buffer
+	code = runBrowserCLI([]string{"evaluate", "--js", "@" + empty, "--bridge", server.URL}, &stdout, &stderr2, strings.NewReader(""))
+	if code != browserExitBadArgs || !strings.Contains(stderr2.String(), "error: evaluate requires JavaScript") {
+		t.Fatalf("empty @file: exit = %d, stderr = %q", code, stderr2.String())
+	}
+	stdout.Reset()
+	stderr2.Reset()
+	code = runBrowserCLI([]string{"evaluate", "--js", "-", "--bridge", server.URL}, &stdout, &stderr2, strings.NewReader(""))
+	if code != browserExitBadArgs || !strings.Contains(stderr2.String(), "error: evaluate requires JavaScript") {
+		t.Fatalf("empty stdin: exit = %d, stderr = %q", code, stderr2.String())
+	}
+
+	// A missing @file keeps upstream's "could not read <path>" wording and 6.
+	_, stderr, code = runBrowser(t, home, "evaluate", "--js", "@"+filepath.Join(home, "missing.js"), "--bridge", server.URL)
+	if code != browserExitBadArgs || !strings.Contains(stderr, "error: could not read ") {
+		t.Fatalf("missing @file: exit = %d, stderr = %q", code, stderr)
+	}
+}
+
+// TestBrowserCLIScriptResolutionMatchesUpstream pins the script-side value
+// semantics: --skill/--script are checked on the RAW value (whitespace-only
+// passes and is forwarded), an EMPTY resolved --args payload is "no args" (so
+// @emptyfile / empty stdin pass and omit the key), whitespace-only --args is a
+// JSON error like json.loads("   "), and a bad --timeout-s is exit 2 even when
+// --skill is missing (argparse converts before the handler runs).
+//
+// Parity: tools/src/gcu/cli_commands/script.py::cmd_script
+func TestBrowserCLIScriptResolutionMatchesUpstream(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HIVE_HOME", home)
+	server, last := fakeBridge(t, nil)
+	empty := filepath.Join(home, "empty.json")
+	if err := os.WriteFile(empty, nil, 0o644); err != nil {
+		t.Fatalf("write empty fixture: %v", err)
+	}
+
+	// Whitespace-only skill passes upstream's `if not args.skill` and is sent.
+	_, stderr, code := runBrowser(t, home, "script", "--skill", "   ", "--script", "y", "--bridge", server.URL)
+	if code != browserExitOK {
+		t.Fatalf("blank skill: exit = %d (stderr: %s)", code, stderr)
+	}
+	if got, _ := last().Params["skill"].(string); got != "   " {
+		t.Fatalf("blank skill sent %q, want %q", got, "   ")
+	}
+
+	// Empty resolved --args is skipped exactly like upstream's `if args_raw:`.
+	_, stderr, code = runBrowser(t, home, "script", "--skill", "x", "--script", "y", "--args", "@"+empty, "--bridge", server.URL)
+	if code != browserExitOK {
+		t.Fatalf("--args @empty: exit = %d (stderr: %s)", code, stderr)
+	}
+	if _, present := last().Params["args"]; present {
+		t.Fatalf("--args @empty sent an args payload: %#v", last().Params)
+	}
+	var stdout, stderr2 bytes.Buffer
+	code = runBrowserCLI([]string{"script", "--skill", "x", "--script", "y", "--args", "-", "--bridge", server.URL},
+		&stdout, &stderr2, strings.NewReader(""))
+	if code != browserExitOK {
+		t.Fatalf("empty stdin --args: exit = %d (stderr: %s)", code, stderr2.String())
+	}
+	if _, present := last().Params["args"]; present {
+		t.Fatalf("empty stdin --args sent a payload: %#v", last().Params)
+	}
+
+	// Whitespace-only --args is non-empty (upstream json.loads raises) -> 6.
+	_, stderr, code = runBrowser(t, home, "script", "--skill", "x", "--script", "y", "--args", "   ", "--bridge", server.URL)
+	if code != browserExitBadArgs || !strings.Contains(stderr, "error: --args must be valid JSON") {
+		t.Fatalf("blank --args: exit = %d, stderr = %q", code, stderr)
+	}
+
+	// argparse converts --timeout-s before cmd_script, so this is exit 2
+	// (usage) even though --skill is missing.
+	_, stderr, code = runBrowser(t, home, "script", "--timeout-s", "soon", "--bridge", server.URL)
+	if code != browserExitUsage {
+		t.Fatalf("bad --timeout-s without --skill: exit = %d, want %d (stderr: %s)", code, browserExitUsage, stderr)
+	}
+}
+
+// TestBrowserCLIScriptProfileValidationMatchesUpstream pins
+// nav.py::validate_browser_profile as invoked by cmd_script: "default" is
+// never validated, an unknown label exits 6 with upstream's message, and an
+// empty profile enumeration (dead bridge / older bridge) must NOT reject.
+//
+// Parity: tools/src/gcu/cli_commands/nav.py::validate_browser_profile
+func TestBrowserCLIScriptProfileValidationMatchesUpstream(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HIVE_HOME", home)
+	server, last := fakeBridge(t, nil)
+
+	_, stderr, code := runBrowser(t, home, "script", "--skill", "x", "--script", "y", "--browser-profile", "Nope", "--bridge", server.URL)
+	if code != browserExitBadArgs || !strings.Contains(stderr, "error: unknown browser profile 'Nope'. connected: ['Work']") {
+		t.Fatalf("unknown profile: exit = %d, stderr = %q", code, stderr)
+	}
+	if got := last(); got.Type != "" {
+		t.Fatalf("unknown profile must not reach the bridge, sent %q", got.Type)
+	}
+
+	_, stderr, code = runBrowser(t, home, "script", "--skill", "x", "--script", "y", "--browser-profile", "Work", "--bridge", server.URL)
+	if code != browserExitOK {
+		t.Fatalf("known profile: exit = %d (stderr: %s)", code, stderr)
+	}
+	if got, _ := last().Params["browser_profile"].(string); got != "Work" {
+		t.Fatalf("known profile sent %q", got)
+	}
+
+	_, stderr, code = runBrowser(t, home, "script", "--skill", "x", "--script", "y", "--browser-profile", "default", "--bridge", server.URL)
+	if code != browserExitOK {
+		t.Fatalf("default profile: exit = %d (stderr: %s)", code, stderr)
+	}
+
+	// No labels to validate against (dead bridge): the check must not guess.
+	_, stderr, code = runBrowser(t, home, "script", "--skill", "x", "--script", "y",
+		"--browser-profile", "Nope", "--bridge", closedBridgeURL(t))
+	if code != browserExitNotConnected {
+		t.Fatalf("dead bridge + unknown profile: exit = %d, want %d (stderr: %s)", code, browserExitNotConnected, stderr)
 	}
 }
 

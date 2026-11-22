@@ -1,0 +1,2242 @@
+{
+  "schema": "consistency-audit/v1",
+  "generated_at": "2026-11-22T21:45:06",
+  "head": "80c82a08",
+  "snapshot": "wave-71 @ 3bea069f",
+  "primitives": [
+    {
+      "name": "Loop",
+      "status": "✅",
+      "evidence": "agentloop 执行核：回合/工具/超时/judge/coercion；5,816 测试；SSE 42/42"
+    },
+    {
+      "name": "Colony",
+      "status": "✅",
+      "evidence": "colony runtime：spawn/kill/report/escalation；崩溃恢复 7/7"
+    },
+    {
+      "name": "Queen",
+      "status": "✅+登记",
+      "evidence": "prompt 21,584B 逐字；13 人格；模型槽；标题 LLM 槽；pin 语义登记"
+    },
+    {
+      "name": "Worker",
+      "status": "✅",
+      "evidence": "worker.json 工具面 / 升级 / stall→failed / 转录 resume"
+    },
+    {
+      "name": "Plan",
+      "status": "✅",
+      "evidence": "loop 内规划；长任务计划（chat-app）修复"
+    },
+    {
+      "name": "Tracker",
+      "status": "✅",
+      "evidence": "schema v3 两侧；C5 PASS；queen DDL/worker 门控"
+    },
+    {
+      "name": "EventBus",
+      "status": "✅+登记",
+      "evidence": "77/77 事件；SSE 42/42；events.jsonl append-only；异步派发登记"
+    },
+    {
+      "name": "ReminderHub",
+      "status": "✅",
+      "evidence": "15 source 矩阵；reminders-coverage §7 残余登记"
+    },
+    {
+      "name": "Skill",
+      "status": "✅",
+      "evidence": "25 内置文件逐字节；双 scope；端点实测"
+    },
+    {
+      "name": "Playbook",
+      "status": "✅",
+      "evidence": "Python .play.py 120/120；真实 LLM E2E 19/19；900s 守护登记"
+    },
+    {
+      "name": "Trigger",
+      "status": "✅",
+      "evidence": "timer 真机注入；triggers.json 双跑 0 差异"
+    },
+    {
+      "name": "Sentinel",
+      "status": "✅ 运行时+🔧工具",
+      "evidence": "三通道/停车/索引；sentinel_setup 工具已移植（真实投递未验证）"
+    },
+    {
+      "name": "Memory",
+      "status": "✅+登记",
+      "evidence": "v2 + notes 全族；recall 12.7ms；JSON 索引 vs SQLite 登记"
+    },
+    {
+      "name": "Soul",
+      "status": "✅",
+      "evidence": "每日反思；反向依赖消除"
+    },
+    {
+      "name": "Tools",
+      "status": "✅+登记",
+      "evidence": "desc 47/47；schema raw 25/47；输出 golden 12 例外"
+    },
+    {
+      "name": "MCP",
+      "status": "✅+登记",
+      "evidence": "协议面双跑；D3 别名层；真实外部 server 未验证"
+    },
+    {
+      "name": "Credentials",
+      "status": "✅+登记",
+      "evidence": "store/keys/health/cli/check-agent；oauth2 4 模块 + aden/client 未移植"
+    },
+    {
+      "name": "Budgets",
+      "status": "✅",
+      "evidence": "grace/hard/lifetime 门限（budget_cap 测试）"
+    }
+  ],
+  "modules": {
+    "total": 273,
+    "by_status": {
+      "out_of_scope": 9,
+      "partial": 27,
+      "ported": 220,
+      "unported": 17
+    },
+    "items": [
+      {
+        "path": "core/framework/__init__.py",
+        "status": "partial",
+        "go": null,
+        "basis": "python: core/framework/__init__.py:31 _EXPORTS（顶层四类惰性 re-export，import 循环规避）; Go 导出面顶替：AgentLoop=go_hive/go-hive/internal/agentloop/loop.go、ColonyRuntime=go_hive/go-hive/internal/colony/runtime.go、AgentLoader=go_hive/go-hive/internal/agents/agent_spec.go；DecisionTracker 无 Go 实现（见 tracker/decision_tracker.py 条目，真缺口）"
+      },
+      {
+        "path": "core/framework/__main__.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/cmd/hive/main.go",
+        "basis": "go_hive/go-hive/cmd/hive/main.go:10 func main（// Parity: framework/cli.py::main；与 pyproject console script `hive = framework.cli:main` 同一入口）; caller package main 入口"
+      },
+      {
+        "path": "core/framework/agent_loop/__init__.py",
+        "status": "partial",
+        "go": null,
+        "basis": "python: core/framework/agent_loop/__init__.py:8 类型 re-export 与 :17 __getattr__（AgentLoop/LoopConfig 懒导出）; Go 导出面顶替：go_hive/go-hive/internal/agentloop/types.go + loop.go（AgentContext/AgentSpec/LoopConfig 均有 Go 导出）"
+      },
+      {
+        "path": "core/framework/agent_loop/active_workers_reminder.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/agentloop/active_workers_reminder.go",
+        "basis": "go_hive/go-hive/internal/agentloop/active_workers_reminder.go:8 // Parity: framework/agent_loop/active_workers_reminder.py; caller go_hive/go-hive/internal/agentloop/reminder_hub.go:89"
+      },
+      {
+        "path": "core/framework/agent_loop/agent_loop.py",
+        "status": "partial",
+        "go": "go_hive/go-hive/internal/agentloop/loop.go",
+        "basis": "go_hive/go-hive/internal/agentloop/loop.go:74 // Parity: framework/agent_loop/agent_loop.py AgentLoop (the subset covering ...) —— Go 自述只覆盖子集; 150 处 Parity 注解分散在 internal/agentloop/ 多文件"
+      },
+      {
+        "path": "core/framework/agent_loop/colony_parallel_nudge.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/agentloop/colony_parallel_nudge.go",
+        "basis": "go_hive/go-hive/internal/agentloop/colony_parallel_nudge.go:1 (同域同名对应); caller go_hive/go-hive/internal/agentloop/reminder_hub.go:89"
+      },
+      {
+        "path": "core/framework/agent_loop/colony_worker_snapshot_reminder.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/agentloop/colony_worker_snapshot_reminder.go",
+        "basis": "go_hive/go-hive/internal/agentloop/colony_worker_snapshot_reminder.go:14 // Parity: framework/agent_loop/colony_worker_snapshot_reminder.py; caller go_hive/go-hive/internal/agentloop/reminder_hub.go:89"
+      },
+      {
+        "path": "core/framework/agent_loop/conversation.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/llm/llm.go",
+        "basis": "go_hive/go-hive/internal/llm/llm.go:37 // Parity: framework/agent_loop/conversation.py::Message.to_llm_dict; caller go_hive/go-hive/internal/agentloop/llm_compact.go:70"
+      },
+      {
+        "path": "core/framework/agent_loop/idle_nudge.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/agentloop/idle_nudge.go",
+        "basis": "go_hive/go-hive/internal/agentloop/idle_nudge.go:3 // Parity: framework/agent_loop/idle_nudge.py; caller go_hive/go-hive/internal/agentloop/reminder_hub.go:89"
+      },
+      {
+        "path": "core/framework/agent_loop/internals/compaction.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/agentloop/compaction.go",
+        "basis": "go_hive/go-hive/internal/agentloop/compaction.go:10 // Parity: framework/agent_loop/internals/compaction.py; caller go_hive/go-hive/internal/agentloop/loop.go:363"
+      },
+      {
+        "path": "core/framework/agent_loop/internals/credential_tool.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/chat_credential_park.go",
+        "basis": "go_hive/go-hive/internal/server/chat_credential_park.go:19 // Parity: framework/agent_loop/internals/credential_tool.py::validate_collect_input; caller go_hive/go-hive/internal/server/routes_credentials_form.go:72"
+      },
+      {
+        "path": "core/framework/agent_loop/internals/cursor_persistence.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/chat_park.go",
+        "basis": "go_hive/go-hive/internal/server/chat_park.go:29 // Parity: framework/agent_loop/internals/cursor_persistence.py::write_cursor; caller go_hive/go-hive/internal/server/chat_runtime.go:549"
+      },
+      {
+        "path": "core/framework/agent_loop/internals/event_publishing.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/chat_turn_emitter.go",
+        "basis": "go_hive/go-hive/internal/server/chat_turn_emitter.go:28 // Parity: framework/agent_loop/internals/event_publishing.py; caller go_hive/go-hive/internal/server/chat_runtime.go:871"
+      },
+      {
+        "path": "core/framework/agent_loop/internals/judge_pipeline.py",
+        "status": "partial",
+        "go": "go_hive/go-hive/internal/agentloop/judge.go",
+        "basis": "go_hive/go-hive/internal/agentloop/judge.go:39 // Parity: judge_pipeline.py::judge_turn 与 judge.go:80,90；但只看 criteria：go_hive/go-hive/internal/agentloop/judge.go:108-124 shouldJudge 在 SuccessCriteria 为空时不触发，缺 Python Level 2 implicit judge（missing output keys -> RETRY）"
+      },
+      {
+        "path": "core/framework/agent_loop/internals/sentinel_tool.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/sentinel/sentinel_tool.go",
+        "basis": "go_hive/go-hive/internal/sentinel/sentinel_tool.go:24 // Parity: framework/agent_loop/internals/sentinel_tool.py; caller go_hive/go-hive/internal/cli/sentinel_setup_tool.go:31"
+      },
+      {
+        "path": "core/framework/agent_loop/internals/stall_detector.py",
+        "status": "partial",
+        "go": "go_hive/go-hive/internal/agentloop/doom_loop.go",
+        "basis": "python: core/framework/agent_loop/internals/stall_detector.py:11 ngram_similarity / :33 is_stalled（n-gram 相似度失速判定，Go 无对应）; go_hive/go-hive/internal/agentloop/doom_loop.go:48 ToolCallFingerprint / :61 DoomLoopDetector（同任务不同规则：确定性连续指纹，注释自报 Parity-exempt）"
+      },
+      {
+        "path": "core/framework/agent_loop/internals/synthetic_tools.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/agentloop/synthetic_tools.go",
+        "basis": "go_hive/go-hive/internal/agentloop/synthetic_tools.go:12 // Parity: framework/agent_loop/internals/synthetic_tools.py; caller go_hive/go-hive/internal/agentloop/loop.go:978"
+      },
+      {
+        "path": "core/framework/agent_loop/internals/tool_input_coercer.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/agentloop/tool_coercion_wire.go",
+        "basis": "python: core/framework/agent_loop/internals/tool_input_coercer.py:51 def coerce_tool_input（agent_loop.py:4805 派发前调用）; go_hive/go-hive/internal/tools/coerce.go:12 CoerceToolInput 全量移植; go_hive/go-hive/internal/agentloop/tool_coercion_wire.go coerceToolCallInputs 由 go_hive/go-hive/internal/agentloop/loop.go ExecuteTurn 调用（与上游同点位：parse 后、grace/预算门与 tool_started 之前；records/vision intent 读 healed 值）"
+      },
+      {
+        "path": "core/framework/agent_loop/internals/tool_result_handler.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/agentloop/judge.go",
+        "basis": "go_hive/go-hive/internal/agentloop/judge.go:250 // Parity: framework/agent_loop/internals/tool_result_handler.py::is_transient_error; caller go_hive/go-hive/internal/colony/runtime.go:1264"
+      },
+      {
+        "path": "core/framework/agent_loop/internals/types.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/agentloop/types.go",
+        "basis": "go_hive/go-hive/internal/agentloop/types.go:13 // Parity: framework/agent_loop/internals/types.py::TriggerEvent; caller go_hive/go-hive/internal/agentloop/dynamic_tools.go:24"
+      },
+      {
+        "path": "core/framework/agent_loop/internals/vision_fallback.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/visionfallback/visionfallback.go",
+        "basis": "go_hive/go-hive/internal/visionfallback/visionfallback.go:15 // Parity: framework/agent_loop/internals/vision_fallback.py; caller go_hive/go-hive/internal/agentloop/vision_caption.go:23"
+      },
+      {
+        "path": "core/framework/agent_loop/memory_reminders.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/agentloop/memory_reminders.go",
+        "basis": "go_hive/go-hive/internal/agentloop/memory_reminders.go:19 // Parity: framework/agent_loop/memory_reminders.py; caller go_hive/go-hive/internal/agentloop/reminder_hub.go:89"
+      },
+      {
+        "path": "core/framework/agent_loop/past_conversations_reminder.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/chat_memory_wiring.go",
+        "basis": "go_hive/go-hive/internal/server/chat_memory_wiring.go:152 // Parity: framework/agent_loop/past_conversations_reminder.py::PastConversationsReminderSource; caller go_hive/go-hive/internal/server/chat_runtime.go:500"
+      },
+      {
+        "path": "core/framework/agent_loop/prompting.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/agentloop/prompting.go",
+        "basis": "go_hive/go-hive/internal/agentloop/prompting.go:11 // Parity: framework/agent_loop/prompting.py; caller go_hive/go-hive/internal/cli/colony_worker_definition.go:58"
+      },
+      {
+        "path": "core/framework/agent_loop/reminders.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/agentloop/reminders.go",
+        "basis": "go_hive/go-hive/internal/agentloop/reminders.go:3 // Parity: framework/agent_loop/reminders.py; caller go_hive/go-hive/internal/agentloop/active_workers_reminder.go:49"
+      },
+      {
+        "path": "core/framework/agent_loop/stream_stall.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/agentloop/stream_stall.go",
+        "basis": "go_hive/go-hive/internal/agentloop/stream_stall.go:3 // Parity: framework/agent_loop/stream_stall.py; caller go_hive/go-hive/internal/agentloop/reminder_hub.go:89"
+      },
+      {
+        "path": "core/framework/agent_loop/tool_skill_reminders.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/agentloop/tool_skill_reminders.go",
+        "basis": "go_hive/go-hive/internal/agentloop/tool_skill_reminders.go:1 (同域同名对应); caller go_hive/go-hive/internal/agentloop/reminder_hub.go:89"
+      },
+      {
+        "path": "core/framework/agent_loop/tracker_snapshot_reminder.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/agentloop/tracker_snapshot_reminder.go",
+        "basis": "go_hive/go-hive/internal/agentloop/tracker_snapshot_reminder.go:16 // Parity: framework/agent_loop/tracker_snapshot_reminder.py::TrackerSnapshotReminderSource; caller go_hive/go-hive/internal/agentloop/reminder_hub.go:89"
+      },
+      {
+        "path": "core/framework/agent_loop/turn_context_reminder.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/agentloop/turn_context_reminder.go",
+        "basis": "go_hive/go-hive/internal/agentloop/turn_context_reminder.go:3 // Parity: framework/agent_loop/turn_context_reminder.py; caller go_hive/go-hive/internal/agentloop/reminder_hub.go:89"
+      },
+      {
+        "path": "core/framework/agent_loop/types.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/agentloop/reminders.go",
+        "basis": "go_hive/go-hive/internal/agentloop/reminders.go:68 // Parity: framework/agent_loop/types.py; caller go_hive/go-hive/internal/agentloop/active_workers_reminder.go:49"
+      },
+      {
+        "path": "core/framework/agent_loop/visible_error.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/agentloop/visible_error.go",
+        "basis": "go_hive/go-hive/internal/agentloop/visible_error.go:3 // Parity: framework/agent_loop/visible_error.py; caller go_hive/go-hive/internal/server/stall_check.go:147"
+      },
+      {
+        "path": "core/framework/agents/__init__.py",
+        "status": "partial",
+        "go": null,
+        "basis": "python: core/framework/agents/__init__.py:8 list_framework_agents（列框架内 agent 目录；全库无运行时调用方）; Go 框架 agent 面由 go_hive/go-hive/internal/queen（identity/static_prompt/queen_defaults）+ colony worker 定义内嵌，不扫目录枚举"
+      },
+      {
+        "path": "core/framework/agents/discovery.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/agents/discovery.go",
+        "basis": "go_hive/go-hive/internal/agents/discovery.go:3 // Parity: framework/agents/discovery.py::discover_agents; caller go_hive/go-hive/internal/server/routes_agents.go:84"
+      },
+      {
+        "path": "core/framework/agents/queen/__init__.py",
+        "status": "partial",
+        "go": null,
+        "basis": "python: core/framework/agents/queen/__init__.py:3 从 .agent/.config re-export（queen_goal/queen_loop_config/RuntimeConfig/metadata）; Go 导出面顶替：go_hive/go-hive/internal/queen/identity.go + colony/worker_definition.go"
+      },
+      {
+        "path": "core/framework/agents/queen/agent.py",
+        "status": "partial",
+        "go": "go_hive/go-hive/internal/agentloop/loop_config.go",
+        "basis": "python: core/framework/agents/queen/agent.py:11 queen_goal / :20 queen_loop_config / :31 queen_colony_loop_config（colony 相位 budget 50 ×10=500）; python: core/framework/server/queen_orchestrator.py:1509 effective_phase 选择两套; go_hive/go-hive/internal/agentloop/loop_config.go:123 DefaultLoopConfig（queen profile：budget 30 / hard 50 / ctx 180_000，注释自述为审计缺口修复）"
+      },
+      {
+        "path": "core/framework/agents/queen/config.py",
+        "status": "partial",
+        "go": null,
+        "basis": "python: core/framework/agents/queen/config.py:7 _load_preferred_model（configuration.json llm 段，回退 anthropic/claude-sonnet-5-5）; go_hive/go-hive/internal/pipeline/stage_llm_provider.go:15 defaultPreferredModel（同回退，Parity: framework/config.py::get_preferred_model）; RuntimeConfig/AgentMetadata（:25/:37）无运行时调用方（仅包内 re-export）"
+      },
+      {
+        "path": "core/framework/agents/queen/memory_log.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/memory/memory_log.go",
+        "basis": "go_hive/go-hive/internal/memory/memory_log.go:21 // Parity: framework/agents/queen/memory_log.py; caller go_hive/go-hive/internal/server/routes_memories_extra.go:284"
+      },
+      {
+        "path": "core/framework/agents/queen/nodes/__init__.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/queen_lifecycle_tools.go",
+        "basis": "go_hive/go-hive/internal/server/queen_lifecycle_tools.go:390 // Parity: framework/agents/queen/nodes/__init__.py::_QUEEN_COLONY_TOOLS; caller go_hive/go-hive/internal/cli/loader.go:582"
+      },
+      {
+        "path": "core/framework/agents/queen/queen_memory_v2.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/memory/memory.go",
+        "basis": "go_hive/go-hive/internal/memory/memory.go:145 ScanMemoryFiles / :40 ParseFrontmatter / :196 SlugifyMemoryName / :204 AllocateMemoryFilename（GlobalMemoryDir/ColonyMemoryDir/QueenMemoryDir/AgentMemoryDir/BuildMemoryDocument 逐一对应）; caller go_hive/go-hive/internal/memory/recall.go:40"
+      },
+      {
+        "path": "core/framework/agents/queen/queen_profiles.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/routes_queens.go",
+        "basis": "go_hive/go-hive/internal/server/routes_queens.go:4 // Parity: framework/agents/queen/queen_profiles.py; caller go_hive/go-hive/internal/server/app.go:282"
+      },
+      {
+        "path": "core/framework/agents/queen/queen_tools_config.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/routes_queens_tools.go",
+        "basis": "go_hive/go-hive/internal/server/routes_queens_tools.go:4 // Parity: framework/agents/queen/queen_tools_config.py; caller go_hive/go-hive/internal/server/app.go:288"
+      },
+      {
+        "path": "core/framework/agents/queen/queen_tools_defaults.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/tools/category_additions.go",
+        "basis": "go_hive/go-hive/internal/tools/category_additions.go:5 // Parity: framework/agents/queen/queen_tools_defaults.py::_CATEGORY_ADDITIONS; caller go_hive/go-hive/internal/server/routes_queens_tools.go:385"
+      },
+      {
+        "path": "core/framework/agents/queen/recall_selector.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/memory/recall.go",
+        "basis": "go_hive/go-hive/internal/memory/recall.go:133 // Parity: framework/agents/queen/recall_selector.py::_format_relative_age; caller go_hive/go-hive/internal/server/chat_reminders.go:151"
+      },
+      {
+        "path": "core/framework/agents/queen/reflection_agent.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/memory/reflection.go",
+        "basis": "go_hive/go-hive/internal/memory/reflection.go:240 // Parity: framework/agents/queen/reflection_agent.py::_execute_tool; caller go_hive/go-hive/internal/longmemeval/notes.go:89"
+      },
+      {
+        "path": "core/framework/agents/queen/soul.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/chat_runtime_colony.go",
+        "basis": "go_hive/go-hive/internal/server/chat_runtime_colony.go:220 // Parity: framework/agents/queen/soul.py::prompt_for; caller go_hive/go-hive/internal/server/chat_runtime.go:518"
+      },
+      {
+        "path": "core/framework/agents/queen/soul_probes.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/soul/probes.go",
+        "basis": "go_hive/go-hive/internal/soul/probes.go:3 // Parity: framework/agents/queen/soul_probes.py; caller go_hive/go-hive/internal/server/routes_soul_probe.go:116"
+      },
+      {
+        "path": "core/framework/agents/queen/soul_reflection.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/soul/reflection.go",
+        "basis": "go_hive/go-hive/internal/soul/reflection.go:3 // Parity: framework/agents/queen/soul_reflection.py; caller go_hive/go-hive/internal/server/routes_credentials_soul.go:414"
+      },
+      {
+        "path": "core/framework/agents/queen/timeline.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/chat_memory_wiring.go",
+        "basis": "go_hive/go-hive/internal/server/chat_memory_wiring.go:187 // Parity: framework/agents/queen/timeline.py::subscribe_timeline_triggers; caller go_hive/go-hive/internal/server/chat_runtime.go:500"
+      },
+      {
+        "path": "core/framework/agents/queen/tools_ga_migration.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/tools_ga_migration.go",
+        "basis": "go_hive/go-hive/internal/server/tools_ga_migration.go:5 // Parity: framework/agents/queen/tools_ga_migration.py::run_ga_tool_migration; caller go_hive/go-hive/internal/cli/tools_ga_migration.go:20"
+      },
+      {
+        "path": "core/framework/agents/queen/worker_definition.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/colony/worker_definition.go",
+        "basis": "go_hive/go-hive/internal/colony/worker_definition.go:117 (共享符号 buildinputdata); caller go_hive/go-hive/internal/cli/colony_worker_definition.go:58"
+      },
+      {
+        "path": "core/framework/cli.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/cli/cli.go",
+        "basis": "go_hive/go-hive/internal/cli/cli.go:3 // Parity: framework/cli.py::main; caller go_hive/go-hive/internal/cli/browser_cli.go:196"
+      },
+      {
+        "path": "core/framework/cloud_sync_hooks.py",
+        "status": "partial",
+        "go": "go_hive/go-hive/internal/server/routes_queens.go",
+        "basis": "go_hive/go-hive/internal/server/routes_queens.go:52 SchedulePush 注记（mirrors framework.cloud_sync_hooks.schedule_push）/ :83 带 nil 检查的调用点; python: core/framework/cloud_sync_hooks.py:20 def schedule_push; 全库无生产代码给 SchedulePush 赋值——cloud sync reconciler 未移植，调用点齐、执行器缺位"
+      },
+      {
+        "path": "core/framework/config.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/config_slots.go",
+        "basis": "go_hive/go-hive/internal/server/config_slots.go:12 // Parity: framework/config.py::get_queen_llm_section; caller go_hive/go-hive/internal/server/main_slot.go:52"
+      },
+      {
+        "path": "core/framework/credentials/__init__.py",
+        "status": "partial",
+        "go": null,
+        "basis": "python: core/framework/credentials/__init__.py:43 起整包 re-export（store/models/provider/storage/template/validation/setup/aden/local）; Go 导出面顶替：go_hive/go-hive/internal/credentials/ 包（store.go/models.go/provider.go/storage.go/template.go/keys.go）"
+      },
+      {
+        "path": "core/framework/credentials/aden/client.py",
+        "status": "unported",
+        "go": null,
+        "basis": "python: core/framework/credentials/aden/client.py AdenCredentialClient（list_integrations/request_refresh）→ Go 无对应（grep AdenCredentialClient = 0）; /api/credentials/resync 生产 hook 已接线为本地默认 go_hive/go-hive/internal/server/routes_credentials.go:194 resyncLocalCredentials（重读密钥 + store→env 桥），Aden 云端 token 拉取仍缺"
+      },
+      {
+        "path": "core/framework/credentials/aden/provider.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/credentials/provider.go",
+        "basis": "go_hive/go-hive/internal/credentials/provider.go:1 (同域同名对应); caller go_hive/go-hive/internal/credentials/store.go:105"
+      },
+      {
+        "path": "core/framework/credentials/aden/storage.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/credentials/storage.go",
+        "basis": "go_hive/go-hive/internal/credentials/storage.go:1 (同域同名对应); caller go_hive/go-hive/internal/credentials/store.go:308"
+      },
+      {
+        "path": "core/framework/credentials/catalog.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/credentials/catalog.go",
+        "basis": "go_hive/go-hive/internal/credentials/catalog.go:3 // Parity: framework/credentials/catalog.py; caller go_hive/go-hive/internal/credentials/adapter.go:120"
+      },
+      {
+        "path": "core/framework/credentials/cli.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/cli/cred.go",
+        "basis": "go_hive/go-hive/internal/cli/cred.go:3 // Parity: framework/credentials/cli.py; caller go_hive/go-hive/cmd/hive-cred/main.go:11"
+      },
+      {
+        "path": "core/framework/credentials/key_storage.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/credentials/keys.go",
+        "basis": "go_hive/go-hive/internal/credentials/keys.go:27 LoadCredentialKey / :62 persistKeyIfMissingOrStale / :105 GenerateAndSaveCredentialKey / :116 LoadAdenAPIKey; caller go_hive/go-hive/internal/server/routes_credentials.go:98"
+      },
+      {
+        "path": "core/framework/credentials/local/models.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/credentials/models.go",
+        "basis": "go_hive/go-hive/internal/credentials/models.go:1 (同域同名对应); caller go_hive/go-hive/internal/credentials/catalog.go:99"
+      },
+      {
+        "path": "core/framework/credentials/local/registry.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/credentials/local.go",
+        "basis": "go_hive/go-hive/internal/credentials/local.go:3 // Parity: framework/credentials/local/registry.py; caller go_hive/go-hive/internal/cli/session_tools_credentials.go:164"
+      },
+      {
+        "path": "core/framework/credentials/models.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/credentials/models.go",
+        "basis": "go_hive/go-hive/internal/credentials/models.go:1 (同域同名对应); caller go_hive/go-hive/internal/credentials/catalog.go:99"
+      },
+      {
+        "path": "core/framework/credentials/oauth2/base_provider.py",
+        "status": "unported",
+        "go": null,
+        "basis": "scan: 域映射(credentials->credentials) + 同 basename + // Parity: 注解均未找到 Go 对应文件"
+      },
+      {
+        "path": "core/framework/credentials/oauth2/hubspot_provider.py",
+        "status": "unported",
+        "go": null,
+        "basis": "scan: 域映射(credentials->credentials) + 同 basename + // Parity: 注解均未找到 Go 对应文件"
+      },
+      {
+        "path": "core/framework/credentials/oauth2/lifecycle.py",
+        "status": "unported",
+        "go": null,
+        "basis": "scan: 域映射(credentials->credentials) + 同 basename + // Parity: 注解均未找到 Go 对应文件"
+      },
+      {
+        "path": "core/framework/credentials/oauth2/provider.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/credentials/provider.go",
+        "basis": "go_hive/go-hive/internal/credentials/provider.go:1 (同域同名对应); caller go_hive/go-hive/internal/credentials/store.go:105"
+      },
+      {
+        "path": "core/framework/credentials/oauth2/zoho_provider.py",
+        "status": "unported",
+        "go": null,
+        "basis": "scan: 域映射(credentials->credentials) + 同 basename + // Parity: 注解均未找到 Go 对应文件"
+      },
+      {
+        "path": "core/framework/credentials/provider.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/credentials/provider.go",
+        "basis": "go_hive/go-hive/internal/credentials/provider.go:1 (同域同名对应); caller go_hive/go-hive/internal/credentials/store.go:105"
+      },
+      {
+        "path": "core/framework/credentials/resolve.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/credentials/resolve.go",
+        "basis": "go_hive/go-hive/internal/credentials/resolve.go:3 // Parity: framework/credentials/resolve.py; caller go_hive/go-hive/e2e/cmd/storagecompat/main.go:283"
+      },
+      {
+        "path": "core/framework/credentials/setup.py",
+        "status": "partial",
+        "go": "go_hive/go-hive/internal/credentials/agent_nodes.go",
+        "basis": "python: core/framework/credentials/setup.py:531 def load_agent_nodes -> go_hive/go-hive/internal/credentials/agent_nodes.go:39 LoadAgentNodes（agent.json 严格解析 + agent.py 分支按 Go 无解释器归零）; worker 配置回退（Go 扩展）go_hive/go-hive/internal/server/routes_credentials_check.go:156 checkAgentNodes; caller go_hive/go-hive/internal/server/routes_agents.go:264 handleCheckAgent; CredentialSetupSession/MissingCredential/run_credential_setup_cli 无 Go 对应（会话级 credential-form 为 Go 侧独立面）"
+      },
+      {
+        "path": "core/framework/credentials/storage.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/credentials/storage.go",
+        "basis": "go_hive/go-hive/internal/credentials/storage.go:1 (同域同名对应); caller go_hive/go-hive/internal/credentials/store.go:308"
+      },
+      {
+        "path": "core/framework/credentials/store.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/credentials/store.go",
+        "basis": "go_hive/go-hive/internal/credentials/store.go:1 (同域同名对应); caller go_hive/go-hive/internal/server/routes_credentials.go:198"
+      },
+      {
+        "path": "core/framework/credentials/template.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/credentials/template.go",
+        "basis": "go_hive/go-hive/internal/credentials/template.go:1 (同域同名对应); caller go_hive/go-hive/internal/credentials/store.go:67"
+      },
+      {
+        "path": "core/framework/credentials/validation.py",
+        "status": "partial",
+        "go": "go_hive/go-hive/internal/credentials/agent_validation.go",
+        "basis": "python: core/framework/credentials/validation.py:16 ensure_credential_key_env -> go_hive/go-hive/internal/credentials/bootstrap.go:25 EnsureCredentialKeyEnv（caller go_hive/go-hive/internal/server/routes_credentials_check.go:62 checkAgentCredentialRequirements，已接线）; python: :343 validate_agent_credentials / :304 compute_unavailable_tools / CredentialStatus -> go_hive/go-hive/internal/credentials/agent_validation.go:123 ValidateAgentCredentials / :491 ComputeUnavailableTools / AgentCredentialStatus; python: _presync_aden_tokens -> 无 Go 对应（Aden 客户端未移植，见 aden/client.py 条目）; check-agent 路由已实装：go_hive/go-hive/internal/server/routes_agents.go:264 handleCheckAgent -> server/routes_credentials_check.go（此前 500 占位）; 健康检查 ~42 个 checker -> go_hive/go-hive/internal/credentials/health_check.go:80 CheckCredentialHealth"
+      },
+      {
+        "path": "core/framework/debugger/cli.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/cli/debugger.go",
+        "basis": "go_hive/go-hive/internal/cli/debugger.go:3 // Parity: framework/debugger/cli.py; caller go_hive/go-hive/internal/cli/cli.go:333"
+      },
+      {
+        "path": "core/framework/global_db/cli.py",
+        "status": "unported",
+        "go": null,
+        "basis": "scan: 域映射(global_db->globaldb) + 同 basename + // Parity: 注解均未找到 Go 对应文件"
+      },
+      {
+        "path": "core/framework/global_db/client.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/globaldb/client.go",
+        "basis": "go_hive/go-hive/internal/globaldb/client.go:1 (同域同名对应); caller go_hive/go-hive/internal/server/routes_colony_workers.go:59"
+      },
+      {
+        "path": "core/framework/global_db/count_cache.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/globaldb/count_cache.go",
+        "basis": "go_hive/go-hive/internal/globaldb/count_cache.go:1 (同域同名对应); caller go_hive/go-hive/internal/server/routes_colony_workers_global.go:162"
+      },
+      {
+        "path": "core/framework/global_db/grid_query.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/globaldb/grid_query.go",
+        "basis": "go_hive/go-hive/internal/globaldb/grid_query.go:1 (同域同名对应); caller go_hive/go-hive/internal/server/routes_colony_workers_global.go:322"
+      },
+      {
+        "path": "core/framework/host/__init__.py",
+        "status": "partial",
+        "go": null,
+        "basis": "python: core/framework/host/__init__.py:31 _EXPORTS（ColonyRuntime/EventBus/Worker 懒 re-export）; Go 导出面顶替：go_hive/go-hive/internal/colony/runtime.go + internal/eventbus/bus.go + internal/colony/worker.go"
+      },
+      {
+        "path": "core/framework/host/agent_host.py",
+        "status": "out_of_scope",
+        "go": null,
+        "basis": "python call chain: core/framework/host/agent_host.py:73 (class AgentHost) -> core/framework/host/execution_manager.py:25 (图 host 组合根，构造 GraphSpec 并跑图); go_hive/go-hive/internal/agents/agent_spec.go:9 // Go loader 自述：Python loader 最后构造 AgentLoader/GraphSpec，本端口停在这层之前，Go colony host 取 AgentSpec+Goal 而非图对象; Go 侧是新建组合根 go_hive/go-hive/internal/host/host.go:3 (Host composes a colony runtime with its event bus and run registry)，非图 host 移植"
+      },
+      {
+        "path": "core/framework/host/colony_binding.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/tracker/binding.go",
+        "basis": "go_hive/go-hive/internal/tracker/binding.go:9 // Parity: framework/host/colony_binding.py::ColonyBinding.from_dict; caller go_hive/go-hive/internal/colony/tracker.go:73"
+      },
+      {
+        "path": "core/framework/host/colony_db.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/colony/colony_db.go",
+        "basis": "go_hive/go-hive/internal/colony/colony_db.go:59 (共享符号 connect); caller go_hive/go-hive/e2e/cmd/storagecompat/main.go:701"
+      },
+      {
+        "path": "core/framework/host/colony_metadata.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/routes_colonies.go",
+        "basis": "go_hive/go-hive/internal/server/routes_colonies.go:139 // Parity: framework/host/colony_metadata.py::load_colony_metadata; caller go_hive/go-hive/internal/server/app.go:273"
+      },
+      {
+        "path": "core/framework/host/colony_runtime.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/colony/runtime.go",
+        "basis": "go_hive/go-hive/internal/colony/runtime.go:3 // Parity: framework/host/colony_runtime.py; caller go_hive/go-hive/internal/colony/adaptive_budget.go:50"
+      },
+      {
+        "path": "core/framework/host/colony_tools_config.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/e2e_compat_exports.go",
+        "basis": "go_hive/go-hive/internal/server/e2e_compat_exports.go:12 // Parity: framework/host/colony_tools_config.py::load_colony_tools_config; caller go_hive/go-hive/e2e/cmd/storagecompat/main.go:997"
+      },
+      {
+        "path": "core/framework/host/event_bus.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/eventbus/bus.go",
+        "basis": "go_hive/go-hive/internal/eventbus/bus.go:3 // Parity: framework/host/event_bus.py; caller go_hive/go-hive/internal/server/chat_runtime.go:776"
+      },
+      {
+        "path": "core/framework/host/event_log.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/eventbus/event_log.go",
+        "basis": "go_hive/go-hive/internal/eventbus/event_log.go:3 // Parity: framework/host/event_log.py; caller go_hive/go-hive/internal/cli/loader.go:339"
+      },
+      {
+        "path": "core/framework/host/events_policy.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/eventbus/events_policy.go",
+        "basis": "go_hive/go-hive/internal/eventbus/events_policy.go:25 (共享符号 isfanoutworkerstream); caller go_hive/go-hive/internal/server/chat_routes.go:216"
+      },
+      {
+        "path": "core/framework/host/execution_manager.py",
+        "status": "partial",
+        "go": "go_hive/go-hive/internal/server/chat_turn_emitter.go",
+        "basis": "go_hive/go-hive/internal/server/chat_turn_emitter.go:29 // Parity: framework/host/execution_manager.py::_run_execution（只移植了 chat turn 事件片段）; python 侧 _run_execution 由图引擎调用: core/framework/orchestrator/orchestrator.py:1230"
+      },
+      {
+        "path": "core/framework/host/isolation.py",
+        "status": "partial",
+        "go": "go_hive/go-hive/internal/schemas/agent_config.go",
+        "basis": "go_hive/go-hive/internal/schemas/agent_config.go:242 IsolationLevel string（EntryPointConfig/SessionState 落盘字段，默认 shared，Go 不做枚举校验）; python: core/framework/host/isolation.py:6 class IsolationLevel（isolated/shared/synchronized 三值 + 图宿主缓冲语义）"
+      },
+      {
+        "path": "core/framework/host/outcome_aggregator.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/colony/goal_outcome.go",
+        "basis": "go_hive/go-hive/internal/colony/goal_outcome.go:18 // Parity: framework/host/outcome_aggregator.py::OutcomeAggregator.evaluate_goal_progress; caller go_hive/go-hive/internal/colony/runtime.go:1303"
+      },
+      {
+        "path": "core/framework/host/playbook/runner.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/playbook/runner.go",
+        "basis": "go_hive/go-hive/internal/playbook/runner.go:37 (共享符号 deadletter); caller go_hive/go-hive/internal/playbook/python.go:487"
+      },
+      {
+        "path": "core/framework/host/runtime_health.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/runtimehealth/runtime_health.go",
+        "basis": "go_hive/go-hive/internal/runtimehealth/runtime_health.go:3 // Parity: framework/host/runtime_health.py; caller go_hive/go-hive/internal/server/routes_session_live.go:58"
+      },
+      {
+        "path": "core/framework/host/runtime_resources.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/resources/mem_darwin.go",
+        "basis": "go_hive/go-hive/internal/resources/mem_darwin.go:9 // Parity: framework/host/runtime_resources.py::ResourceMonitor.sample; caller go_hive/go-hive/internal/server/routes_app_extra.go:16"
+      },
+      {
+        "path": "core/framework/host/shared_state.py",
+        "status": "out_of_scope",
+        "go": null,
+        "basis": "python call chain: core/framework/host/execution_manager.py:966 (self._state_manager.cleanup_execution，唯一生产调用方=图宿主) -> core/framework/host/shared_state.py:37 SharedBufferManager（模块自述 stub：shared state removed in colony refactor）; go_hive/go-hive/internal/agents/agent_spec.go:9 // Go loader 自述：Python loader 最后构造 AgentLoader/GraphSpec，本端口停在这层之前，Go colony host 取 AgentSpec+Goal 而非图对象"
+      },
+      {
+        "path": "core/framework/host/stream_runtime.py",
+        "status": "unported",
+        "go": null,
+        "basis": "scan: 域映射(host->host) + 同 basename + // Parity: 注解均未找到 Go 对应文件"
+      },
+      {
+        "path": "core/framework/host/tracker_db.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/tracker/tracker.go",
+        "basis": "go_hive/go-hive/internal/tracker/tracker.go:3 // Parity: framework/host/tracker_db.py::ensure_tracker_db; caller go_hive/go-hive/internal/tracker/tools.go:171"
+      },
+      {
+        "path": "core/framework/host/triggers.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/triggers/triggers.go",
+        "basis": "go_hive/go-hive/internal/triggers/triggers.go:84 // Parity: framework/host/triggers.py::_missed_for_cron; caller go_hive/go-hive/internal/server/routes_session_detail.go:228"
+      },
+      {
+        "path": "core/framework/host/webhook_server.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/webhook_server.go",
+        "basis": "go_hive/go-hive/internal/server/webhook_server.go:3 // Parity: framework/host/webhook_server.py::WebhookServer; caller go_hive/go-hive/internal/server/trigger_runtime.go:67"
+      },
+      {
+        "path": "core/framework/host/worker.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/colony/worker.go",
+        "basis": "go_hive/go-hive/internal/colony/worker.go:3 // Parity: framework/host/worker.py; caller go_hive/go-hive/internal/colony/adaptive_budget.go:117"
+      },
+      {
+        "path": "core/framework/host/worker_profiles.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/routes_colonies_profiles.go",
+        "basis": "go_hive/go-hive/internal/server/routes_colonies_profiles.go:6 // Parity: framework/host/worker_profiles.py::list_worker_profiles; caller go_hive/go-hive/internal/server/chat_routes.go:215"
+      },
+      {
+        "path": "core/framework/llm/__init__.py",
+        "status": "partial",
+        "go": null,
+        "basis": "python: core/framework/llm/__init__.py:3 provider/stream 事件 re-export（含 Anthropic/LiteLLM/Mock 可选导入）; Go 导出面顶替：go_hive/go-hive/internal/llm/（provider.go、stream_events.go、anthropic.go、mock.go）"
+      },
+      {
+        "path": "core/framework/llm/anthropic.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/llm/anthropic.go",
+        "basis": "go_hive/go-hive/internal/llm/anthropic.go:50 // Parity: framework/llm/anthropic.py::AnthropicProvider.__init__; caller go_hive/go-hive/internal/agentloop/llm_compact.go:69"
+      },
+      {
+        "path": "core/framework/llm/antigravity.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/llm/antigravity.go",
+        "basis": "go_hive/go-hive/internal/llm/antigravity.go:16 // Parity: framework/llm/antigravity.py; caller go_hive/go-hive/internal/agentloop/llm_compact.go:69"
+      },
+      {
+        "path": "core/framework/llm/capabilities.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/llm/capabilities.go",
+        "basis": "go_hive/go-hive/internal/llm/capabilities.go:1 (同域同名对应); caller go_hive/go-hive/internal/agentloop/media_blocks.go:36"
+      },
+      {
+        "path": "core/framework/llm/endpoints.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/llm/endpoints.go",
+        "basis": "go_hive/go-hive/internal/llm/endpoints.go:1 (同域同名对应); caller go_hive/go-hive/internal/cli/session_tools_credentials.go:51"
+      },
+      {
+        "path": "core/framework/llm/key_check.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/llm/keycheck.go",
+        "basis": "go_hive/go-hive/internal/llm/keycheck.go:491 CheckKey / :292 checkAnthropic / :339 checkOpenRouter / :467 checkGemini（含 openrouter 名称序列相似度建议）; caller go_hive/go-hive/internal/server/routes_credentials.go:628"
+      },
+      {
+        "path": "core/framework/llm/key_pool.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/llm/keypool.go",
+        "basis": "go_hive/go-hive/internal/llm/keypool.go:16 KeyPool / :9 KeyHealth / :24 NewKeyPool / :70 MarkRateLimited; caller go_hive/go-hive/internal/pipeline/stage_llm_provider.go:154（另 stream_openai.go:64、server/main_slot.go:268）"
+      },
+      {
+        "path": "core/framework/llm/litellm.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/llm/stream_openai.go",
+        "basis": "go_hive/go-hive/internal/llm/stream_openai.go:16 // Parity: framework/llm/litellm.py::LiteLLMProvider.stream; caller go_hive/go-hive/internal/server/chat_stream.go:279"
+      },
+      {
+        "path": "core/framework/llm/mock.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/llm/mock.go",
+        "basis": "go_hive/go-hive/internal/llm/mock.go:1 (同域同名对应); caller go_hive/go-hive/internal/agentloop/llm_compact.go:69"
+      },
+      {
+        "path": "core/framework/llm/model_catalog.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/llm/catalog.go",
+        "basis": "go_hive/go-hive/internal/llm/catalog.go:495 LoadModelCatalog / :18 ModelCatalogError / :28 ModelEntry（校验/默认模型/查找逐函数对应，数据文件 model_catalog.json 同源）; caller go_hive/go-hive/internal/server/app.go:455"
+      },
+      {
+        "path": "core/framework/llm/provider.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/agentloop/loop.go",
+        "basis": "go_hive/go-hive/internal/agentloop/loop.go:17 // Parity: framework/llm/provider.py; caller go_hive/go-hive/internal/agentloop/context_limits.go:14"
+      },
+      {
+        "path": "core/framework/llm/stream_events.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/llm/stream_events.go",
+        "basis": "go_hive/go-hive/internal/llm/stream_events.go:1 (同域同名对应); caller go_hive/go-hive/internal/llm/mock.go:150"
+      },
+      {
+        "path": "core/framework/loader/agent_loader.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/agents/agent_spec.go",
+        "basis": "go_hive/go-hive/internal/agents/agent_spec.go:3 // Parity: framework/loader/agent_loader.py::AgentLoader.load; caller go_hive/go-hive/internal/cli/loader_colony_host.go:68"
+      },
+      {
+        "path": "core/framework/loader/cli.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/cli/loader.go",
+        "basis": "go_hive/go-hive/internal/cli/loader.go:3 // Parity: framework/loader/cli.py; caller go_hive/go-hive/internal/cli/session_tools_harness_groups.go:227"
+      },
+      {
+        "path": "core/framework/loader/mcp_cli.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/cli/loader.go",
+        "basis": "go_hive/go-hive/internal/cli/loader.go:621 // Parity: framework/loader/mcp_cli.py::registry_cli_servers_prompt; caller go_hive/go-hive/internal/cli/session_tools_harness_groups.go:227"
+      },
+      {
+        "path": "core/framework/loader/mcp_client.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/tools/mcp_client.go",
+        "basis": "go_hive/go-hive/internal/tools/mcp_client.go:95 (共享符号 mcpclient); caller go_hive/go-hive/internal/tools/mcp_registry.go:620"
+      },
+      {
+        "path": "core/framework/loader/mcp_connection_manager.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/tools/mcp_connection_manager.go",
+        "basis": "go_hive/go-hive/internal/tools/mcp_connection_manager.go:68 var _ MCPConnectionManager = (*MCPClientPool)(nil)（Go 类型改名 MCPClientPool，接口保留 Python 类名）；caller go_hive/go-hive/internal/cli/mcp_loader.go:57"
+      },
+      {
+        "path": "core/framework/loader/mcp_errors.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/mcpregistry/errors.go",
+        "basis": "go_hive/go-hive/internal/mcpregistry/errors.go:6 全部 7 个 MCP_* error code / :15 Error(struct: Code/What/Why/Fix)（消息格式同上游 [CODE] What failed/Why/Fix）; caller go_hive/go-hive/internal/mcpregistry/registry.go:484 installError"
+      },
+      {
+        "path": "core/framework/loader/mcp_registry.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/tools/mcp_registry.go",
+        "basis": "go_hive/go-hive/internal/server/routes_mcp.go:39 (MCPRegistryAPI is the seam onto framework/loader/mcp_registry.py's MCPRegistry); 数据面 go_hive/go-hive/internal/tools/mcp_registry.go:17 MCPServerSpec / :39 ServerResolution / :46 RegisterMCPServerOptions; caller go_hive/go-hive/internal/cli/mcp_loader.go:104"
+      },
+      {
+        "path": "core/framework/loader/mcp_registry_cli.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/cli/cli.go",
+        "basis": "go_hive/go-hive/internal/cli/cli.go:340 // Parity: framework/loader/mcp_registry_cli.py::register_mcp_commands; caller go_hive/go-hive/internal/cli/browser_cli.go:196"
+      },
+      {
+        "path": "core/framework/loader/preload_validation.py",
+        "status": "out_of_scope",
+        "go": null,
+        "basis": "python call chain: core/framework/loader/agent_loader.py:1230 (run_preload_validation，图 loader 唯一入口) -> core/framework/loader/preload_validation.py:38 validate_graph_structure（GraphSpec.validate + GCU subagent-only 检查）; go_hive/go-hive/internal/agents/agent_spec.go:9 // Go loader 自述：Python loader 最后构造 AgentLoader/GraphSpec，本端口停在这层之前，Go colony host 取 AgentSpec+Goal 而非图对象"
+      },
+      {
+        "path": "core/framework/loader/tool_registry.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/cli/loader_gate_snapshot.go",
+        "basis": "go_hive/go-hive/internal/cli/loader_gate_snapshot.go:12 // Parity: framework/loader/tool_registry.py::ToolRegistry._compute_mcp_gate_cred_snapshot; caller go_hive/go-hive/internal/cli/queen_tool_library.go:74"
+      },
+      {
+        "path": "core/framework/maintenance/archive.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/maintenance/archive.go",
+        "basis": "go_hive/go-hive/internal/maintenance/archive.go:3 // Parity: framework/maintenance/archive.py; caller go_hive/go-hive/internal/maintenance/archive.go:1 (package main entry)"
+      },
+      {
+        "path": "core/framework/maintenance/cli.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/cli/janitor.go",
+        "basis": "go_hive/go-hive/internal/cli/janitor.go:3 // Parity: framework/maintenance/cli.py; caller go_hive/go-hive/internal/cli/cli.go:335"
+      },
+      {
+        "path": "core/framework/maintenance/janitor.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/maintenance/janitor.go",
+        "basis": "go_hive/go-hive/internal/maintenance/janitor.go:3 // Parity: framework/maintenance/janitor.py; caller go_hive/go-hive/internal/maintenance/janitor.go:1 (package main entry)"
+      },
+      {
+        "path": "core/framework/maintenance/retention.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/maintenance/retention.go",
+        "basis": "go_hive/go-hive/internal/maintenance/retention.go:3 // Parity: framework/maintenance/retention.py; caller go_hive/go-hive/internal/maintenance/retention.go:1 (package main entry)"
+      },
+      {
+        "path": "core/framework/observability/logging.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/logging/logging.go",
+        "basis": "go_hive/go-hive/internal/logging/logging.go:3 // Parity: framework/observability/logging.py; caller go_hive/go-hive/internal/sentinel/logging.go:92"
+      },
+      {
+        "path": "core/framework/orchestrator/__init__.py",
+        "status": "partial",
+        "go": null,
+        "basis": "python: core/framework/orchestrator/__init__.py:7 __getattr__（图类型 GraphContext/EdgeSpec/NodeSpec/NodeWorker 与 Goal re-export）; 图类型属 out_of_scope 家族（见各自 CURATED 条目）；Goal 由 internal/schemas/goal.go 承载"
+      },
+      {
+        "path": "core/framework/orchestrator/checkpoint_config.py",
+        "status": "out_of_scope",
+        "go": null,
+        "basis": "python call chain: core/framework/orchestrator/checkpoint_config.py:9 (class CheckpointConfig) <- core/framework/host/execution_manager.py:24 / agent_host.py:23 / orchestrator.py:22 (图检查点策略); go_hive/go-hive/internal/agents/agent_spec.go:9 // Go loader 自述：Python loader 最后构造 AgentLoader/GraphSpec，本端口停在这层之前，Go colony host 取 AgentSpec+Goal 而非图对象"
+      },
+      {
+        "path": "core/framework/orchestrator/context.py",
+        "status": "out_of_scope",
+        "go": null,
+        "basis": "python call chain: core/framework/orchestrator/context.py:40 (class GraphContext) <- core/framework/orchestrator/node_worker.py:22 / orchestrator.py:23 (GraphContext 只在图引擎内); go_hive/go-hive/internal/agents/agent_spec.go:9 // Go loader 自述：Python loader 最后构造 AgentLoader/GraphSpec，本端口停在这层之前，Go colony host 取 AgentSpec+Goal 而非图对象"
+      },
+      {
+        "path": "core/framework/orchestrator/conversation_judge.py",
+        "status": "partial",
+        "go": "go_hive/go-hive/internal/agentloop/llm_judge.go",
+        "basis": "python call chain: core/framework/orchestrator/conversation_judge.py:33 <- core/framework/agent_loop/internals/judge_pipeline.py:128 (唯一调用方, Level 2b); Go 用 go_hive/go-hive/internal/agentloop/llm_judge.go:21 (Parity: framework/testing/llm_judge.py) 顶替 Level-2 角色"
+      },
+      {
+        "path": "core/framework/orchestrator/edge.py",
+        "status": "out_of_scope",
+        "go": null,
+        "basis": "python call chain: core/framework/orchestrator/edge.py:33 <- core/framework/host/execution_manager.py:31 (GraphSpec/NodeSpec 由图 host 构造); go_hive/go-hive/internal/agents/agent_spec.go:9 // Go loader 自述：Python loader 最后构造 AgentLoader/GraphSpec，本端口停在这层之前，Go colony host 取 AgentSpec+Goal 而非图对象"
+      },
+      {
+        "path": "core/framework/orchestrator/files.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/pipeline/stage_mcp_registry.go",
+        "basis": "go_hive/go-hive/internal/pipeline/stage_mcp_registry.go:16 // Parity: framework/orchestrator/files.py::FILES_MCP_SERVER_NAME; caller go_hive/go-hive/internal/pipeline/runner.go:65"
+      },
+      {
+        "path": "core/framework/orchestrator/goal.py",
+        "status": "partial",
+        "go": "go_hive/go-hive/internal/schemas/goal.go",
+        "basis": "python: core/framework/orchestrator/goal.py:49 weight 允许 0 / :186 context 插入序 / :110 id 必填，Go 只有一份 go_hive/go-hive/internal/schemas/goal.go:54,186,237"
+      },
+      {
+        "path": "core/framework/orchestrator/node.py",
+        "status": "partial",
+        "go": "go_hive/go-hive/internal/agentloop/message.go",
+        "basis": "go_hive/go-hive/internal/agentloop/message.go:355 (find_json_object 已移植) 但 NodeSpec/NodeContext/节点语义无 Go 对应; python: core/framework/orchestrator/node.py:33 find_json_object <- core/framework/agent_loop/conversation.py:439"
+      },
+      {
+        "path": "core/framework/orchestrator/node_worker.py",
+        "status": "out_of_scope",
+        "go": null,
+        "basis": "python call chain: core/framework/orchestrator/node_worker.py:22 <- core/framework/orchestrator/orchestrator.py:1230 (唯一调用方=图引擎); go_hive/go-hive/internal/agents/agent_spec.go:9 // Go loader 自述：Python loader 最后构造 AgentLoader/GraphSpec，本端口停在这层之前，Go colony host 取 AgentSpec+Goal 而非图对象"
+      },
+      {
+        "path": "core/framework/orchestrator/orchestrator.py",
+        "status": "out_of_scope",
+        "go": null,
+        "basis": "python call chain: core/framework/host/execution_manager.py:25 -> core/framework/orchestrator/orchestrator.py:115 (class Orchestrator, 图执行引擎, 仅被 graph host 引用); go_hive/go-hive/internal/agents/agent_spec.go:9 // Go loader 自述：Python loader 最后构造 AgentLoader/GraphSpec，本端口停在这层之前，Go colony host 取 AgentSpec+Goal 而非图对象; Go internal/orchestrator 只有 buffer/safe_eval/validator，无图执行器"
+      },
+      {
+        "path": "core/framework/orchestrator/prompting.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/queen/static_prompt.go",
+        "basis": "go_hive/go-hive/internal/queen/static_prompt.go:141 // Parity: framework/orchestrator/prompting.py::build_credentials_summary; caller go_hive/go-hive/internal/server/chat_queen_static.go:30"
+      },
+      {
+        "path": "core/framework/orchestrator/safe_eval.py",
+        "status": "partial",
+        "go": "go_hive/go-hive/internal/orchestrator/safe_eval.go",
+        "basis": "go_hive/go-hive/internal/orchestrator/safe_eval.go:21 (ValueError/NameError/... 与 python 异常类对应) 但 internal/orchestrator 包从任何 package main 不可达（仅包内自引用），无生产调用方"
+      },
+      {
+        "path": "core/framework/orchestrator/validator.py",
+        "status": "partial",
+        "go": "go_hive/go-hive/internal/orchestrator/validator.go",
+        "basis": "go_hive/go-hive/internal/orchestrator/validator.go:24 (OutputValidator/ValidateAll 对应 python validator.py:27) 但包不可达 main，无生产调用方"
+      },
+      {
+        "path": "core/framework/pipeline/registry.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/pipeline/registry.go",
+        "basis": "go_hive/go-hive/internal/pipeline/registry.go:22 // Parity: framework/pipeline/registry.py::register; caller go_hive/go-hive/internal/colony/trigger.go:130"
+      },
+      {
+        "path": "core/framework/pipeline/runner.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/pipeline/runner.go",
+        "basis": "go_hive/go-hive/internal/pipeline/runner.go:16 // Parity: framework/pipeline/runner.py::PipelineRunner; caller go_hive/go-hive/internal/colony/trigger.go:152"
+      },
+      {
+        "path": "core/framework/pipeline/stage.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/pipeline/stage.go",
+        "basis": "go_hive/go-hive/internal/pipeline/stage.go:10 // Parity: framework/pipeline/stage.py; caller go_hive/go-hive/internal/pipeline/runner.go:90"
+      },
+      {
+        "path": "core/framework/pipeline/stages/cost_guard.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/pipeline/stage_cost_guard.go",
+        "basis": "go_hive/go-hive/internal/pipeline/stage_cost_guard.go:12 // Parity: framework/pipeline/stages/cost_guard.py::CostGuardStage; caller go_hive/go-hive/internal/pipeline/builtins.go:15"
+      },
+      {
+        "path": "core/framework/pipeline/stages/credential_resolver.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/pipeline/stage_credential_resolver.go",
+        "basis": "go_hive/go-hive/internal/pipeline/stage_credential_resolver.go:26 // Parity: framework/pipeline/stages/credential_resolver.py::CredentialResolverStage; caller go_hive/go-hive/internal/colony/trigger.go:177"
+      },
+      {
+        "path": "core/framework/pipeline/stages/input_validation.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/pipeline/stage_input_validation.go",
+        "basis": "go_hive/go-hive/internal/pipeline/stage_input_validation.go:14 // Parity: framework/pipeline/stages/input_validation.py::InputValidationStage; caller go_hive/go-hive/internal/pipeline/builtins.go:13"
+      },
+      {
+        "path": "core/framework/pipeline/stages/llm_provider.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/pipeline/stage_llm_provider.go",
+        "basis": "go_hive/go-hive/internal/pipeline/stage_llm_provider.go:25 // Parity: framework/pipeline/stages/llm_provider.py::LlmProviderStage; caller go_hive/go-hive/internal/pipeline/runner.go:65"
+      },
+      {
+        "path": "core/framework/pipeline/stages/mcp_registry.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/pipeline/stage_mcp_registry.go",
+        "basis": "go_hive/go-hive/internal/pipeline/stage_mcp_registry.go:36 // Parity: framework/pipeline/stages/mcp_registry.py::McpRegistryStage; caller go_hive/go-hive/internal/pipeline/runner.go:65"
+      },
+      {
+        "path": "core/framework/pipeline/stages/rate_limit.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/pipeline/stage_rate_limit.go",
+        "basis": "go_hive/go-hive/internal/pipeline/stage_rate_limit.go:16 // Parity: framework/pipeline/stages/rate_limit.py::RateLimitStage; caller go_hive/go-hive/internal/pipeline/builtins.go:14"
+      },
+      {
+        "path": "core/framework/pipeline/stages/skill_registry.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/pipeline/stage_skill_registry.go",
+        "basis": "go_hive/go-hive/internal/pipeline/stage_skill_registry.go:19 // Parity: framework/pipeline/stages/skill_registry.py::SkillRegistryStage; caller go_hive/go-hive/internal/pipeline/runner.go:65"
+      },
+      {
+        "path": "core/framework/rate_limiter.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/ratelimit/rate_limiter.go",
+        "basis": "go_hive/go-hive/internal/ratelimit/rate_limiter.go:130 (共享符号 clamp); caller go_hive/go-hive/internal/server/config_meta.go:129"
+      },
+      {
+        "path": "core/framework/schemas/agent_config.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/schemas/agent_config.go",
+        "basis": "go_hive/go-hive/internal/schemas/agent_config.go:1 (同域同名对应); caller go_hive/go-hive/internal/colony/runtime.go:1343"
+      },
+      {
+        "path": "core/framework/schemas/checkpoint.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/schemas/checkpoint.go",
+        "basis": "go_hive/go-hive/internal/schemas/checkpoint.go:1 (同域同名对应); caller go_hive/go-hive/internal/storage/checkpoint_store.go:118"
+      },
+      {
+        "path": "core/framework/schemas/decision.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/schemas/decision.go",
+        "basis": "go_hive/go-hive/internal/schemas/decision.go:1 (同域同名对应); caller go_hive/go-hive/internal/schemas/run.go:126"
+      },
+      {
+        "path": "core/framework/schemas/goal.py",
+        "status": "partial",
+        "go": "go_hive/go-hive/internal/schemas/goal.go",
+        "basis": "go_hive/go-hive/internal/schemas/goal.go:54 (Marshal 把 weight=0 改写成 1.0，python schemas/goal.py:31 允许 weight=0); goal.go:186 (context 键排序，python schemas/goal.py:111 保持插入序); goal.go:237 (Unmarshal 不校验 id，python schemas/goal.py:54 id 必填); go_hive/go-hive/internal/agentloop/goal_eval.go:141 (// Parity-exempt: Goal.is_success)"
+      },
+      {
+        "path": "core/framework/schemas/run.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/schemas/run.go",
+        "basis": "go_hive/go-hive/internal/schemas/run.go:1 (同域同名对应); caller go_hive/go-hive/internal/schemas/session_state.go:454"
+      },
+      {
+        "path": "core/framework/schemas/session_state.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/schemas/session_state.go",
+        "basis": "go_hive/go-hive/internal/schemas/session_state.go:1 (同域同名对应); caller go_hive/go-hive/e2e/cmd/storagecompat/main.go:121"
+      },
+      {
+        "path": "core/framework/sentinel/classifier.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/sentinel/classifier.go",
+        "basis": "go_hive/go-hive/internal/sentinel/classifier.go:13 // Parity: framework/sentinel/classifier.py; caller go_hive/go-hive/internal/sentinel/escalation_source.go:64"
+      },
+      {
+        "path": "core/framework/sentinel/escalation_source.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/sentinel/escalation_source.go",
+        "basis": "go_hive/go-hive/internal/sentinel/escalation_source.go:20 // Parity: framework/sentinel/escalation_source.py; caller go_hive/go-hive/internal/server/chat_runtime.go:295"
+      },
+      {
+        "path": "core/framework/sentinel/listeners.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/sentinel/listeners.go",
+        "basis": "go_hive/go-hive/internal/sentinel/listeners.go:15 // Parity: framework/sentinel/listeners.py; caller go_hive/go-hive/internal/sentinel/manager.go:762"
+      },
+      {
+        "path": "core/framework/sentinel/manager.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/sentinel/manager.go",
+        "basis": "go_hive/go-hive/internal/sentinel/manager.go:14 // Parity: framework/sentinel/manager.py; caller go_hive/go-hive/internal/server/sentinel_runtime.go:176"
+      },
+      {
+        "path": "core/framework/sentinel/notifier.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/sentinel/notifier.go",
+        "basis": "go_hive/go-hive/internal/sentinel/notifier.go:12 // Parity: framework/sentinel/notifier.py; caller go_hive/go-hive/internal/sentinel/escalation_source.go:374"
+      },
+      {
+        "path": "core/framework/sentinel/runtime_identity.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/sentinel/runtime_identity.go",
+        "basis": "go_hive/go-hive/internal/sentinel/runtime_identity.go:16 // Parity: framework/sentinel/runtime_identity.py; caller go_hive/go-hive/internal/sentinel/store.go:67"
+      },
+      {
+        "path": "core/framework/sentinel/store.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/sentinel/store.go",
+        "basis": "go_hive/go-hive/internal/sentinel/store.go:18 // Parity: framework/sentinel/store.py; caller go_hive/go-hive/internal/sentinel/escalation_source.go:161"
+      },
+      {
+        "path": "core/framework/sentinel/token.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/sentinel/token.go",
+        "basis": "go_hive/go-hive/internal/sentinel/token.go:15 // Parity: framework/sentinel/token.py; caller go_hive/go-hive/internal/sentinel/manager.go:635"
+      },
+      {
+        "path": "core/framework/server/_session_report.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/sessionreport/session_report.go",
+        "basis": "go_hive/go-hive/internal/sessionreport/session_report.go:3 // Parity: framework/server/_session_report.py; caller go_hive/go-hive/internal/server/routes_session_report.go:72"
+      },
+      {
+        "path": "core/framework/server/app.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/app.go",
+        "basis": "go_hive/go-hive/internal/server/app.go:3 // Parity: framework/server/app.py::create_app; caller go_hive/go-hive/internal/cli/loader.go:354"
+      },
+      {
+        "path": "core/framework/server/boot_status.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/boot_status.go",
+        "basis": "go_hive/go-hive/internal/server/boot_status.go:3 // Parity: framework/server/boot_status.py; caller go_hive/go-hive/internal/server/app.go:417"
+      },
+      {
+        "path": "core/framework/server/channels.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/adapters_qmail.go",
+        "basis": "go_hive/go-hive/internal/server/adapters_qmail.go:309 // Parity: framework/server/channels.py::_merge_meta; caller go_hive/go-hive/internal/server/routes_queens_mail.go:24"
+      },
+      {
+        "path": "core/framework/server/claude_code_queens.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/claude_code_queens.go",
+        "basis": "go_hive/go-hive/internal/server/claude_code_queens.go:90 // Parity: framework/server/claude_code_queens.py::ClaudeCodeQueens.conversations; caller go_hive/go-hive/internal/server/app.go:328"
+      },
+      {
+        "path": "core/framework/server/compaction_status.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/compaction_status.go",
+        "basis": "go_hive/go-hive/internal/server/compaction_status.go:3 // Parity: framework/server/compaction_status.py; caller go_hive/go-hive/internal/cli/browser_supervisor.go:71"
+      },
+      {
+        "path": "core/framework/server/judge.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/judge.go",
+        "basis": "go_hive/go-hive/internal/server/judge.go:21,24,36,64 // Parity: framework/server/judge.py::PROTOCOLS/slot/ask/typesafe"
+      },
+      {
+        "path": "core/framework/server/queen_mail.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/adapters_qmail.go",
+        "basis": "go_hive/go-hive/internal/server/adapters_qmail.go:3 // Parity: framework/server/queen_mail.py::QueenMail; caller go_hive/go-hive/internal/server/routes_queens_mail.go:24"
+      },
+      {
+        "path": "core/framework/server/queen_mail_mcp.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/queenmail/mcp_stdio.go",
+        "basis": "go_hive/go-hive/internal/queenmail/mcp_stdio.go:3 // Parity: framework/server/queen_mail_mcp.py; caller go_hive/go-hive/internal/cli/queen_mail_mcp.go:29"
+      },
+      {
+        "path": "core/framework/server/queen_models.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/cli/loader_model_slots.go",
+        "basis": "go_hive/go-hive/internal/cli/loader_model_slots.go:21 // Parity: framework/server/queen_models.py::build; caller go_hive/go-hive/internal/cli/loader.go:557"
+      },
+      {
+        "path": "core/framework/server/queen_orchestrator.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/queen_orchestrator.go",
+        "basis": "go_hive/go-hive/internal/server/queen_orchestrator.go:3 // Parity: framework/server/queen_orchestrator.py::install_worker_escalation_routing; caller go_hive/go-hive/internal/server/session_chat_colony.go:52"
+      },
+      {
+        "path": "core/framework/server/routes_claude_code_queens.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/routes_queens_claude_code.go",
+        "basis": "go_hive/go-hive/internal/server/routes_queens_claude_code.go:3 // Parity: framework/server/routes_claude_code_queens.py::register_routes; caller go_hive/go-hive/internal/server/claude_code_queens.go:25"
+      },
+      {
+        "path": "core/framework/server/routes_colonies.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/routes_colonies.go",
+        "basis": "go_hive/go-hive/internal/server/routes_colonies.go:3 // Parity: framework/server/routes_colonies.py::handle_delete_colony; caller go_hive/go-hive/internal/server/app.go:273"
+      },
+      {
+        "path": "core/framework/server/routes_colony_tools.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/routes_colony_tools.go",
+        "basis": "go_hive/go-hive/internal/server/routes_colony_tools.go:3 // Parity: framework/server/routes_colony_tools.py::handle_get_tools; caller go_hive/go-hive/internal/server/app.go:278"
+      },
+      {
+        "path": "core/framework/server/routes_colony_workers.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/routes_colony_workers.go",
+        "basis": "go_hive/go-hive/internal/server/routes_colony_workers.go:3 // Parity: framework/server/routes_colony_workers.py::register_routes; caller go_hive/go-hive/internal/server/adapters_colony.go:82"
+      },
+      {
+        "path": "core/framework/server/routes_config.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/routes_config.go",
+        "basis": "go_hive/go-hive/internal/server/routes_config.go:3 // Parity: framework/server/routes_config.py::register_routes; caller go_hive/go-hive/internal/server/app.go:56"
+      },
+      {
+        "path": "core/framework/server/routes_credentials.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/routes_credentials.go",
+        "basis": "go_hive/go-hive/internal/server/routes_credentials.go:3 // Parity: framework/server/routes_credentials.py::register_routes; caller go_hive/go-hive/internal/server/app.go:209"
+      },
+      {
+        "path": "core/framework/server/routes_events.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/routes_events.go",
+        "basis": "go_hive/go-hive/internal/server/routes_events.go:3 // Parity: framework/server/routes_events.py::handle_global_events; caller go_hive/go-hive/internal/server/app.go:231"
+      },
+      {
+        "path": "core/framework/server/routes_execution.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/routes_execution.go",
+        "basis": "go_hive/go-hive/internal/server/routes_execution.go:3 // Parity: framework/server/routes_execution.py::handle_queen_context; caller go_hive/go-hive/e2e/cmd/storagecompat/main.go:283"
+      },
+      {
+        "path": "core/framework/server/routes_logs.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/routes_runtime_logs.go",
+        "basis": "go_hive/go-hive/internal/server/routes_runtime_logs.go:3 // Parity: framework/server/routes_logs.py::handle_runtime_logs; caller go_hive/go-hive/internal/cli/loader_soul_probe.go:25"
+      },
+      {
+        "path": "core/framework/server/routes_maintenance.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/routes_maintenance.go",
+        "basis": "go_hive/go-hive/internal/server/routes_maintenance.go:3 // Parity: framework/server/routes_maintenance.py::register_routes; caller go_hive/go-hive/internal/server/app.go:226"
+      },
+      {
+        "path": "core/framework/server/routes_mcp.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/routes_mcp.go",
+        "basis": "go_hive/go-hive/internal/server/routes_mcp.go:3 // Parity: framework/server/routes_mcp.py::register_routes; caller go_hive/go-hive/internal/server/app.go:225"
+      },
+      {
+        "path": "core/framework/server/routes_memories.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/routes_memories_extra.go",
+        "basis": "go_hive/go-hive/internal/server/routes_memories_extra.go:3 // Parity: framework/server/routes_memories.py; caller go_hive/go-hive/internal/server/app.go:223"
+      },
+      {
+        "path": "core/framework/server/routes_messages.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/routes_messages_extra.go",
+        "basis": "go_hive/go-hive/internal/server/routes_messages_extra.go:3 // Parity: framework/server/routes_messages.py; caller go_hive/go-hive/internal/cli/loader_session_queen.go:82"
+      },
+      {
+        "path": "core/framework/server/routes_models.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/routes_models.go",
+        "basis": "go_hive/go-hive/internal/server/routes_models.go:3 // Parity: framework/server/routes_models.py::handle_overview; caller go_hive/go-hive/internal/server/app.go:234"
+      },
+      {
+        "path": "core/framework/server/routes_prompts.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/routes_prompts_extra.go",
+        "basis": "go_hive/go-hive/internal/server/routes_prompts_extra.go:3 // Parity: framework/server/routes_prompts.py; caller go_hive/go-hive/internal/server/app.go:222"
+      },
+      {
+        "path": "core/framework/server/routes_queen_tools.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/routes_queens_tools.go",
+        "basis": "go_hive/go-hive/internal/server/routes_queens_tools.go:3 // Parity: framework/server/routes_queen_tools.py::register_routes; caller go_hive/go-hive/internal/server/app.go:288"
+      },
+      {
+        "path": "core/framework/server/routes_queens.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/routes_queens.go",
+        "basis": "go_hive/go-hive/internal/server/routes_queens.go:3 // Parity: framework/server/routes_queens.py::register_routes; caller go_hive/go-hive/internal/server/app.go:282"
+      },
+      {
+        "path": "core/framework/server/routes_sentinel.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/routes_sentinel.go",
+        "basis": "go_hive/go-hive/internal/server/routes_sentinel.go:3 // Parity: framework/server/routes_sentinel.py::register_routes; caller go_hive/go-hive/internal/server/app.go:263"
+      },
+      {
+        "path": "core/framework/server/routes_sessions.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/routes_sessions.go",
+        "basis": "go_hive/go-hive/internal/server/routes_sessions.go:3 // Parity: framework/server/routes_sessions.py::handle_list_live_sessions; caller go_hive/go-hive/internal/server/app.go:187"
+      },
+      {
+        "path": "core/framework/server/routes_skills.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/routes_skills.go",
+        "basis": "go_hive/go-hive/internal/server/routes_skills.go:3 // Parity: framework/server/routes_skills.py::register_routes; caller go_hive/go-hive/internal/server/app.go:303"
+      },
+      {
+        "path": "core/framework/server/routes_soul.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/routes_credentials_soul.go",
+        "basis": "go_hive/go-hive/internal/server/routes_credentials_soul.go:3 // Parity: framework/server/routes_soul.py::register_routes; caller go_hive/go-hive/internal/server/app.go:214"
+      },
+      {
+        "path": "core/framework/server/routes_tasks.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/routes_tasks.go",
+        "basis": "go_hive/go-hive/internal/server/routes_tasks.go:3 // Parity: framework/server/routes_tasks.py::register_routes; caller go_hive/go-hive/internal/server/app.go:235"
+      },
+      {
+        "path": "core/framework/server/routes_workers.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/routes_workers.go",
+        "basis": "go_hive/go-hive/internal/server/routes_workers.go:3 // Parity: framework/server/routes_workers.py::handle_live_workers_stream; caller go_hive/go-hive/internal/server/adapters_colony.go:51"
+      },
+      {
+        "path": "core/framework/server/session_fork.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/session/fork.go",
+        "basis": "go_hive/go-hive/internal/session/fork.go:3 // Parity: framework/server/session_fork.py; caller go_hive/go-hive/internal/server/routes_session_fork.go:53"
+      },
+      {
+        "path": "core/framework/server/session_manager.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/session.go",
+        "basis": "go_hive/go-hive/internal/server/session.go:3 // Parity: framework/server/session_manager.py; caller go_hive/go-hive/internal/server/queen_lifecycle_triggers.go:114"
+      },
+      {
+        "path": "core/framework/server/session_titles.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/session_titles.go",
+        "basis": "go_hive/go-hive/internal/server/session_titles.go:3 // Parity: framework/server/session_titles.py; caller go_hive/go-hive/internal/cli/browser_supervisor.go:556"
+      },
+      {
+        "path": "core/framework/server/sse.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/routes_events.go",
+        "basis": "go_hive/go-hive/internal/server/routes_events.go:5 // Parity: framework/server/sse.py::SSEResponse.send_event; caller go_hive/go-hive/internal/server/app.go:231"
+      },
+      {
+        "path": "core/framework/server/stall_check.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/stall_check.go",
+        "basis": "go_hive/go-hive/internal/server/stall_check.go:3 // Parity: framework/server/stall_check.py; caller go_hive/go-hive/internal/cli/browser_supervisor.go:556"
+      },
+      {
+        "path": "core/framework/server/streamtoken_refresh.py",
+        "status": "out_of_scope",
+        "go": null,
+        "basis": "python call chain: core/framework/server/app.py:1072 (app.on_startup.append(start_streamtoken_refresh), import 于 :1070) -> core/framework/server/streamtoken_refresh.py 循环仅在 HIVE_CLOUD_BASE 模式启动（app.py:243-246），端点 app.py:166、阈值 app.py:75、sleep app.py:82-83；失败旁路 tools/src/aden_tools/llm/litellm.py:2001-2021；host 未移植的 go 锚点: go_hive/go-hive/internal/server/app.go:151 (func NewApp) —— Go 启动装配无 streamToken 刷新钩子，grep streamtoken|refresh-stream-token 0 命中（含测试），云端面只消费 env 凭据"
+      },
+      {
+        "path": "core/framework/server/turn_context.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/turn_context.go",
+        "basis": "go_hive/go-hive/internal/server/turn_context.go:24 // Parity: framework/server/turn_context.py; caller go_hive/go-hive/internal/cli/loader_colony_host.go:103"
+      },
+      {
+        "path": "core/framework/skills/catalog.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/skills/catalog.go",
+        "basis": "go_hive/go-hive/internal/skills/catalog.go:1 (同域同名对应); caller go_hive/go-hive/internal/colony/runtime.go:789"
+      },
+      {
+        "path": "core/framework/skills/cli.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/cli/skill.go",
+        "basis": "go_hive/go-hive/internal/cli/skill.go:3 // Parity: framework/skills/cli.py; caller go_hive/go-hive/internal/cli/loader.go:1225"
+      },
+      {
+        "path": "core/framework/skills/config.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/skills/config.go",
+        "basis": "go_hive/go-hive/internal/skills/config.go:1 (同域同名对应); caller go_hive/go-hive/internal/skills/defaults.go:192"
+      },
+      {
+        "path": "core/framework/skills/defaults.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/skills/defaults.go",
+        "basis": "go_hive/go-hive/internal/skills/defaults.go:1 (同域同名对应); caller go_hive/go-hive/internal/skills/manager.go:39"
+      },
+      {
+        "path": "core/framework/skills/discovery.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/skills/discovery.go",
+        "basis": "go_hive/go-hive/internal/skills/discovery.go:3 // Parity: framework/skills/discovery.py::SkillDiscovery; caller go_hive/go-hive/internal/cli/cli.go:89"
+      },
+      {
+        "path": "core/framework/skills/install_requests.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/skills/install_requests.go",
+        "basis": "go_hive/go-hive/internal/skills/install_requests.go:1 (同域同名对应); caller go_hive/go-hive/internal/skills/agent_tools.go:324"
+      },
+      {
+        "path": "core/framework/skills/installer.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/skills/installer.go",
+        "basis": "go_hive/go-hive/internal/skills/installer.go:1 (同域同名对应); caller go_hive/go-hive/internal/cli/cli.go:88"
+      },
+      {
+        "path": "core/framework/skills/live_reload.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/cli/loader_reminders.go",
+        "basis": "go_hive/go-hive/internal/cli/loader_reminders.go:18 // Parity: framework/skills/live_reload.py::ManagerReloadAdapter; caller go_hive/go-hive/internal/cli/loader.go:603"
+      },
+      {
+        "path": "core/framework/skills/manager.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/skills/manager.go",
+        "basis": "go_hive/go-hive/internal/skills/manager.go:1 (同域同名对应); caller go_hive/go-hive/internal/pipeline/stage_skill_registry.go:83"
+      },
+      {
+        "path": "core/framework/skills/models.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/skills/models.go",
+        "basis": "go_hive/go-hive/internal/skills/models.go:1 (同域同名对应); caller go_hive/go-hive/internal/agentloop/prompting.go:12"
+      },
+      {
+        "path": "core/framework/skills/overrides.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/skills/overrides.go",
+        "basis": "go_hive/go-hive/internal/skills/overrides.go:1 (同域同名对应); caller go_hive/go-hive/internal/server/routes_skills.go:692"
+      },
+      {
+        "path": "core/framework/skills/parser.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/skills/parser.go",
+        "basis": "go_hive/go-hive/internal/skills/parser.go:1 (同域同名对应); caller go_hive/go-hive/internal/skills/skill_writer.go:49"
+      },
+      {
+        "path": "core/framework/skills/registry.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/skills/registry.go",
+        "basis": "go_hive/go-hive/internal/skills/registry.go:1 (同域同名对应); caller go_hive/go-hive/internal/cli/cli.go:34"
+      },
+      {
+        "path": "core/framework/skills/skill_errors.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/skills/errors.go",
+        "basis": "go_hive/go-hive/internal/skills/errors.go:8 SkillErrorCode（7 码与上游一致） / :35 LogSkillError; caller go_hive/go-hive/internal/skills/discovery.go:281"
+      },
+      {
+        "path": "core/framework/skills/skill_writer.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/skills/skill_writer.go",
+        "basis": "go_hive/go-hive/internal/skills/skill_writer.go:1 (同域同名对应); caller go_hive/go-hive/internal/server/routes_skills.go:420"
+      },
+      {
+        "path": "core/framework/skills/tool_gating.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/skills/tool_gating.go",
+        "basis": "go_hive/go-hive/internal/skills/tool_gating.go:1 (同域同名对应); caller go_hive/go-hive/internal/agentloop/prompting.go:102"
+      },
+      {
+        "path": "core/framework/skills/trust.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/skills/trust.go",
+        "basis": "go_hive/go-hive/internal/skills/trust.go:1 (同域同名对应); caller go_hive/go-hive/internal/skills/manager.go:104"
+      },
+      {
+        "path": "core/framework/skills/validator.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/skills/validator.go",
+        "basis": "go_hive/go-hive/internal/skills/validator.go:1 (同域同名对应); caller go_hive/go-hive/internal/cli/skill.go:709"
+      },
+      {
+        "path": "core/framework/storage/checkpoint_store.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/storage/checkpoint_store.go",
+        "basis": "go_hive/go-hive/internal/storage/checkpoint_store.go:1 (同域同名对应); caller go_hive/go-hive/e2e/cmd/storagecompat/main.go:161"
+      },
+      {
+        "path": "core/framework/storage/concurrent.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/storage/concurrent.go",
+        "basis": "go_hive/go-hive/internal/storage/concurrent.go:1 (同域同名对应); caller go_hive/go-hive/e2e/cmd/storagecompat/main.go:283"
+      },
+      {
+        "path": "core/framework/storage/conversation_store.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/colony/worker_transcript.go",
+        "basis": "go_hive/go-hive/internal/colony/worker_transcript.go:19 // Parity: framework/storage/conversation_store.py::FileConversationStore; caller go_hive/go-hive/internal/colony/runtime_publish.go:106"
+      },
+      {
+        "path": "core/framework/storage/migrate_colony_sessions.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/storage/migrate_colony_sessions.go",
+        "basis": "go_hive/go-hive/internal/storage/migrate_colony_sessions.go:1 (同域同名对应); caller go_hive/go-hive/e2e/cmd/storagecompat/main.go:95"
+      },
+      {
+        "path": "core/framework/storage/migrate_v2.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/storage/migrate_v2.go",
+        "basis": "go_hive/go-hive/internal/storage/migrate_v2.go:1 (同域同名对应); caller go_hive/go-hive/e2e/cmd/storagecompat/main.go:93"
+      },
+      {
+        "path": "core/framework/storage/migrate_v3.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/storage/migrate_v3.go",
+        "basis": "go_hive/go-hive/internal/storage/migrate_v3.go:1 (同域同名对应); caller go_hive/go-hive/e2e/cmd/storagecompat/main.go:94"
+      },
+      {
+        "path": "core/framework/storage/session_store.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/storage/session_store.go",
+        "basis": "go_hive/go-hive/internal/storage/session_store.go:1 (同域同名对应); caller go_hive/go-hive/internal/server/routes_queens_sessions.go:101"
+      },
+      {
+        "path": "core/framework/storage/session_summary.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/storage/session_summary.go",
+        "basis": "go_hive/go-hive/internal/storage/session_summary.go:1 (同域同名对应); caller go_hive/go-hive/internal/session/cold.go:104"
+      },
+      {
+        "path": "core/framework/tasks/events.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/tasks/events.go",
+        "basis": "go_hive/go-hive/internal/tasks/events.go:3 // Parity: framework/tasks/events.py; caller go_hive/go-hive/internal/tasks/colony_tools.go:100"
+      },
+      {
+        "path": "core/framework/tasks/hooks.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/tasks/hooks.go",
+        "basis": "go_hive/go-hive/internal/tasks/hooks.go:3 // Parity: framework/tasks/hooks.py; caller go_hive/go-hive/internal/tasks/session_tools.go:413"
+      },
+      {
+        "path": "core/framework/tasks/models.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/tasks/models.go",
+        "basis": "go_hive/go-hive/internal/tasks/models.go:3 // Parity: framework/tasks/models.py; caller go_hive/go-hive/internal/tasks/store.go:898"
+      },
+      {
+        "path": "core/framework/tasks/reminders.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/tasks/reminders.go",
+        "basis": "go_hive/go-hive/internal/tasks/reminders.go:3 // Parity: framework/tasks/reminders.py; caller go_hive/go-hive/e2e/cmd/storagecompat/main.go:553"
+      },
+      {
+        "path": "core/framework/tasks/scoping.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/tasks/scoping.go",
+        "basis": "go_hive/go-hive/internal/tasks/scoping.go:3 // Parity: framework/tasks/scoping.py; caller go_hive/go-hive/internal/tasks/colony_tools.go:205"
+      },
+      {
+        "path": "core/framework/tasks/store.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/tasks/store.go",
+        "basis": "go_hive/go-hive/internal/tasks/store.go:3 // Parity: framework/tasks/store.py; caller go_hive/go-hive/internal/server/routes_tasks.go:201"
+      },
+      {
+        "path": "core/framework/tasks/tools/_context.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/tasks/context.go",
+        "basis": "go_hive/go-hive/internal/tasks/context.go:3 // Parity: framework/tasks/tools/_context.py; caller go_hive/go-hive/internal/tasks/session_tools.go:347"
+      },
+      {
+        "path": "core/framework/tasks/tools/colony_tools.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/tasks/colony_tools.go",
+        "basis": "go_hive/go-hive/internal/tasks/colony_tools.go:3 // Parity: framework/tasks/tools/colony_tools.py; caller go_hive/go-hive/internal/cli/session_tools_task_pivot.go:30"
+      },
+      {
+        "path": "core/framework/tasks/tools/names.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/tasks/names.go",
+        "basis": "go_hive/go-hive/internal/tasks/names.go:3 // Parity: framework/tasks/tools/names.py; caller go_hive/go-hive/internal/server/routes_reminders.go:154"
+      },
+      {
+        "path": "core/framework/tasks/tools/register.py",
+        "status": "partial",
+        "go": "go_hive/go-hive/internal/tasks/register.go",
+        "basis": "go_hive/go-hive/internal/tasks/register.go:3 // Parity: framework/tasks/tools/register.py; 无生产调用方: no non-test file references a symbol defined in go_hive/go-hive/internal/tasks/register.go"
+      },
+      {
+        "path": "core/framework/tasks/tools/session_tools.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/tasks/session_tools.go",
+        "basis": "go_hive/go-hive/internal/tasks/session_tools.go:3 // Parity: framework/tasks/tools/session_tools.py; caller go_hive/go-hive/internal/cli/task_tools.go:87"
+      },
+      {
+        "path": "core/framework/testing/approval_cli.py",
+        "status": "unported",
+        "go": null,
+        "basis": "scan: 域映射(testing->无) + 同 basename + // Parity: 注解均未找到 Go 对应文件"
+      },
+      {
+        "path": "core/framework/testing/approval_types.py",
+        "status": "unported",
+        "go": null,
+        "basis": "scan: 域映射(testing->无) + 同 basename + // Parity: 注解均未找到 Go 对应文件"
+      },
+      {
+        "path": "core/framework/testing/categorizer.py",
+        "status": "unported",
+        "go": null,
+        "basis": "scan: 域映射(testing->无) + 同 basename + // Parity: 注解均未找到 Go 对应文件"
+      },
+      {
+        "path": "core/framework/testing/debug_tool.py",
+        "status": "unported",
+        "go": null,
+        "basis": "scan: 域映射(testing->无) + 同 basename + // Parity: 注解均未找到 Go 对应文件"
+      },
+      {
+        "path": "core/framework/testing/llm_judge.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/llmjudge/judge.go",
+        "basis": "go_hive/go-hive/internal/llmjudge/judge.go:3 // Parity: framework/testing/llm_judge.py::LLMJudge; caller go_hive/go-hive/internal/cli/cli.go:45"
+      },
+      {
+        "path": "core/framework/testing/test_case.py",
+        "status": "unported",
+        "go": null,
+        "basis": "scan: 域映射(testing->无) + 同 basename + // Parity: 注解均未找到 Go 对应文件"
+      },
+      {
+        "path": "core/framework/testing/test_result.py",
+        "status": "unported",
+        "go": null,
+        "basis": "scan: 域映射(testing->无) + 同 basename + // Parity: 注解均未找到 Go 对应文件"
+      },
+      {
+        "path": "core/framework/testing/test_storage.py",
+        "status": "unported",
+        "go": null,
+        "basis": "scan: 域映射(testing->无) + 同 basename + // Parity: 注解均未找到 Go 对应文件"
+      },
+      {
+        "path": "core/framework/tools/browser_tools.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/tools/integrations/browser_setup.go",
+        "basis": "go_hive/go-hive/internal/tools/integrations/browser_setup.go:59 InstallBrowserSetup（browser_setup 发现工具）; caller go_hive/go-hive/internal/cli/session_tools.go:349"
+      },
+      {
+        "path": "core/framework/tools/harness_tools.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/tools/mcp.go",
+        "basis": "go_hive/go-hive/internal/tools/mcp.go:80 HarnessTool / :94 HarnessGroups / :112 ContextParams / :131 ConcurrencySafeTools; caller go_hive/go-hive/internal/tools/mcp_registry.go:632"
+      },
+      {
+        "path": "core/framework/tools/playbook_tools.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/colony/playbook_tools.go",
+        "basis": "go_hive/go-hive/internal/colony/playbook_tools.go:89 // Parity: framework/tools/playbook_tools.py::register_playbook_tools; caller go_hive/go-hive/internal/cli/session_tools.go:473"
+      },
+      {
+        "path": "core/framework/tools/queen_lifecycle/context.py",
+        "status": "partial",
+        "go": null,
+        "basis": "python: core/framework/tools/queen_lifecycle/context.py:18 class QueenToolContext（工具共享上下文：runtime 晚绑定 + update_meta 写 session meta）; Go 工具直取会话状态：go_hive/go-hive/internal/server/queen_lifecycle_tools.go（register 端口）+ queen_phase_state.go:132 MetaPath（meta 写入）"
+      },
+      {
+        "path": "core/framework/tools/queen_lifecycle_tools.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/trigger_runtime.go",
+        "basis": "go_hive/go-hive/internal/server/trigger_runtime.go:3 // Parity: framework/tools/queen_lifecycle_tools.py::_save_trigger_to_agent; caller go_hive/go-hive/internal/server/routes_session_triggers.go:389"
+      },
+      {
+        "path": "core/framework/tools/queen_mail_tools.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/cli/session_tools_queen_mail.go",
+        "basis": "go_hive/go-hive/internal/cli/session_tools_queen_mail.go:8 // Parity: framework/tools/queen_mail_tools.py::register_queen_mail_tools; caller go_hive/go-hive/internal/cli/loader_queen_mail.go:47"
+      },
+      {
+        "path": "core/framework/tools/tool_tiers.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/agentloop/search_tools.go",
+        "basis": "go_hive/go-hive/internal/agentloop/search_tools.go:15 // Parity: framework/tools/tool_tiers.py::build_search_tools; caller go_hive/go-hive/internal/agentloop/loop.go:516"
+      },
+      {
+        "path": "core/framework/tools/tracker_tools.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/tracker/tools.go",
+        "basis": "go_hive/go-hive/internal/tracker/tools.go:3 // Parity: framework/tools/tracker_tools.py::build_tracker_tools; caller go_hive/go-hive/internal/colony/overseer_tools.go:132"
+      },
+      {
+        "path": "core/framework/tools/worker_monitoring_tools.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/server/queen_worker_monitoring.go",
+        "basis": "go_hive/go-hive/internal/server/queen_worker_monitoring.go:22 // Parity: framework/tools/worker_monitoring_tools.py::get_worker_health_summary; caller go_hive/go-hive/internal/server/queen_lifecycle_tools.go:103"
+      },
+      {
+        "path": "core/framework/tracker/decision_tracker.py",
+        "status": "unported",
+        "go": null,
+        "basis": "scan: 域映射(tracker->tracker) + 同 basename + // Parity: 注解均未找到 Go 对应文件"
+      },
+      {
+        "path": "core/framework/tracker/llm_debug_logger.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/agentloop/llm_debug_log.go",
+        "basis": "go_hive/go-hive/internal/agentloop/llm_debug_log.go:3 // Parity: framework/tracker/llm_debug_logger.py; caller go_hive/go-hive/internal/agentloop/loop.go:751"
+      },
+      {
+        "path": "core/framework/tracker/runtime_log_schemas.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/runtimelogs/runtime_log_schemas.go",
+        "basis": "go_hive/go-hive/internal/runtimelogs/runtime_log_schemas.go:4 // Parity: framework/tracker/runtime_log_schemas.py; caller go_hive/go-hive/internal/runtimelogs/runtime_log_store.go:104"
+      },
+      {
+        "path": "core/framework/tracker/runtime_log_store.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/runtimelogs/runtime_log_store.go",
+        "basis": "go_hive/go-hive/internal/runtimelogs/runtime_log_store.go:3 // Parity: framework/tracker/runtime_log_store.py; caller go_hive/go-hive/internal/runtimelogs/runtime_logger.go:237"
+      },
+      {
+        "path": "core/framework/tracker/runtime_logger.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/runtimelogs/runtime_logger.go",
+        "basis": "go_hive/go-hive/internal/runtimelogs/runtime_logger.go:5 // Parity: framework/tracker/runtime_logger.py; caller go_hive/go-hive/e2e/cmd/runtimelogs/main.go:102"
+      },
+      {
+        "path": "core/framework/trackerdb/errors.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/tracker/errors.go",
+        "basis": "go_hive/go-hive/internal/tracker/errors.go:3 // Parity: framework/trackerdb/errors.py; caller go_hive/go-hive/internal/cli/cred.go:135"
+      },
+      {
+        "path": "core/framework/utils/io.py",
+        "status": "ported",
+        "go": "go_hive/go-hive/internal/atomicfs/atomicfs.go",
+        "basis": "go_hive/go-hive/internal/atomicfs/atomicfs.go:12 WriteFile（tempfile+rename 原子写，同上游 mkstemp+os.replace 语义）; caller go_hive/go-hive/internal/mcpregistry/registry.go:141（全库通用）"
+      },
+      {
+        "path": "core/framework/utils/python_env.py",
+        "status": "unported",
+        "go": null,
+        "basis": "scan: 域映射(utils->无) + 同 basename + // Parity: 注解均未找到 Go 对应文件"
+      },
+      {
+        "path": "core/framework/utils/task_registry.py",
+        "status": "unported",
+        "go": null,
+        "basis": "scan: 域映射(utils->无) + 同 basename + // Parity: 注解均未找到 Go 对应文件"
+      },
+      {
+        "path": "core/framework/utils/text.py",
+        "status": "partial",
+        "go": "go_hive/go-hive/internal/server/routes_colonies.go",
+        "basis": "go_hive/go-hive/internal/server/routes_colonies.go:479 humanizeSlug（注记 mirrors framework/utils/text.py::humanize_slug，含 str.title() 词边界对齐）; python: core/framework/utils/text.py:6 def humanize_slug; 仅同文件 :460 使用——C12 跨文件调用规则不命中，登记 partial 而非 ported"
+      }
+    ]
+  },
+  "integrations": {
+    "totals": {
+      "rows": 104,
+      "actions": 864,
+      "impl_actions": 716,
+      "spec_actions": 150
+    },
+    "grades": {
+      "A": 12,
+      "B": 91,
+      "C": 0,
+      "D": 1,
+      "E": 0
+    }
+  },
+  "mechanisms": [
+    {
+      "id": "M01",
+      "layer": 1,
+      "name": "AgentLoop",
+      "purpose": "唯一的执行原语：流式多轮 + 工具执行 + 预算。",
+      "code": "core/framework/agent_loop/agent_loop.py"
+    },
+    {
+      "id": "M02",
+      "layer": 1,
+      "name": "Turn（回合）",
+      "purpose": "一次模型回复 + 工具结果回填 + 是否继续的判定；无工具即 park。",
+      "code": "core/framework/agent_loop/agent_loop.py"
+    },
+    {
+      "id": "M03",
+      "layer": 1,
+      "name": "工具调用执行",
+      "purpose": "concurrency_safe 的工具并行，其余按序执行。",
+      "code": "core/framework/agent_loop/agent_loop.py"
+    },
+    {
+      "id": "M04",
+      "layer": 1,
+      "name": "工具预算",
+      "purpose": "每回合 / 生命周期 / 硬停（worker 30/90/200 口径）。",
+      "code": "core/framework/agent_loop/internals/types.py"
+    },
+    {
+      "id": "M05",
+      "layer": 1,
+      "name": "上下文压缩",
+      "purpose": "先清旧工具结果指向文件，再摘最旧回合，最近回合保留。",
+      "code": "core/framework/agent_loop/internals/compaction.py"
+    },
+    {
+      "id": "M06",
+      "layer": 1,
+      "name": "大结果外置",
+      "purpose": "超过阈值的结果落盘，只留预览 + 路径 + 检索提示。",
+      "code": "core/framework/agent_loop/internals/tool_result_handler.py"
+    },
+    {
+      "id": "M07",
+      "layer": 1,
+      "name": "Park / 冷恢复",
+      "purpose": "等待即落盘；重启从 cursor 精确续跑。",
+      "code": "core/framework/agent_loop/internals/cursor_persistence.py"
+    },
+    {
+      "id": "M08",
+      "layer": 1,
+      "name": "流停滞守卫",
+      "purpose": "TTFT 600s 与 inter-event 120s 双预算；超时取消并注入 continue-nudge。",
+      "code": "core/framework/agent_loop/stream_stall.py"
+    },
+    {
+      "id": "M09",
+      "layer": 1,
+      "name": "重复 / doom-loop 检测",
+      "purpose": "相似度与工具调用指纹，识别原地打转。",
+      "code": "core/framework/agent_loop/internals/stall_detector.py"
+    },
+    {
+      "id": "M10",
+      "layer": 1,
+      "name": "stall check",
+      "purpose": "judge 判定“说了没做”，给一次提醒（每用户回合最多一次）。",
+      "code": "core/framework/server/stall_check.py"
+    },
+    {
+      "id": "M11",
+      "layer": 1,
+      "name": "judge 流水线",
+      "purpose": "Level 0 短路 → custom judge → output-key 门 → 2b 质量判分。",
+      "code": "core/framework/agent_loop/internals/judge_pipeline.py"
+    },
+    {
+      "id": "M12",
+      "layer": 1,
+      "name": "限额",
+      "purpose": "迭代 / 超时 / 成本 / 并发上限。",
+      "code": "core/framework/agent_loop/internals/types.py"
+    },
+    {
+      "id": "M13",
+      "layer": 2,
+      "name": "Colony",
+      "purpose": "一个业务过程的组织与目录边界（一个 tracker、一套 skills/playbooks）。",
+      "code": "core/framework/host/colony_runtime.py"
+    },
+    {
+      "id": "M14",
+      "layer": 2,
+      "name": "Queen",
+      "purpose": "常驻、面向用户的 agent；拥有会话、计划与派活权。",
+      "code": "core/framework/agents/queen/"
+    },
+    {
+      "id": "M15",
+      "layer": 2,
+      "name": "Worker（ephemeral）",
+      "purpose": "一次性 AgentLoop 克隆：独立上下文、无记忆、结束即报。",
+      "code": "core/framework/host/worker.py"
+    },
+    {
+      "id": "M16",
+      "layer": 2,
+      "name": "Persistent worker / overseer",
+      "purpose": "常驻模式：用 inject 接收用户消息；colony 的 queen 即 overseer。",
+      "code": "core/framework/host/worker.py、core/framework/host/colony_runtime.py"
+    },
+    {
+      "id": "M17",
+      "layer": 2,
+      "name": "Session",
+      "purpose": "server 侧容器：EventBus + LLM + 会话目录；DM 与 colony 两种住所。",
+      "code": "core/framework/server/session_manager.py"
+    },
+    {
+      "id": "M18",
+      "layer": 2,
+      "name": "ColonyBinding",
+      "purpose": "不可变 {name, dir, tracker_db}，保证 queen/worker 打开同一库。",
+      "code": "core/framework/host/colony_binding.py"
+    },
+    {
+      "id": "M19",
+      "layer": 2,
+      "name": "WorkerProfile",
+      "purpose": "worker 的可复用规格（模型/工具/提示），colony 元数据的一部分。",
+      "code": "core/framework/host/worker_profiles.py"
+    },
+    {
+      "id": "M20",
+      "layer": 3,
+      "name": "Plan（tasks.json）",
+      "purpose": "意图：任务清单与状态，会话级、可恢复。",
+      "code": "core/framework/tasks/store.py"
+    },
+    {
+      "id": "M21",
+      "layer": 3,
+      "name": "Tracker（tracker.db）",
+      "purpose": "事实：每单位一行；queen 建表/声明可写列，worker upsert。",
+      "code": "core/framework/host/tracker_db.py、core/framework/tools/tracker_tools.py"
+    },
+    {
+      "id": "M22",
+      "layer": 3,
+      "name": "运行日志",
+      "purpose": "playbook run log 与 colony 账本（colony.db）。",
+      "code": "core/framework/host/colony_db.py、core/framework/host/playbook/runner.py"
+    },
+    {
+      "id": "M23",
+      "layer": 4,
+      "name": "EventBus",
+      "purpose": "事件信号：worker 报告、生命周期、SSE 都走它。",
+      "code": "core/framework/host/event_bus.py"
+    },
+    {
+      "id": "M24",
+      "layer": 4,
+      "name": "ReminderHub",
+      "purpose": "在固定注入点把短建议塞进 loop（15 个源 / 9 个点）。",
+      "code": "core/framework/agent_loop/reminders.py"
+    },
+    {
+      "id": "M25",
+      "layer": 4,
+      "name": "SSE / live transcript",
+      "purpose": "把事件流变成前端可见的实时对话。",
+      "code": "core/framework/server/sse.py"
+    },
+    {
+      "id": "M26",
+      "layer": 4,
+      "name": "Event log",
+      "purpose": "事件落盘（events.jsonl）供回放/审计。",
+      "code": "core/framework/host/event_log.py"
+    },
+    {
+      "id": "M27",
+      "layer": 5,
+      "name": "Skill",
+      "purpose": "SKILL.md 方法包：发现、解析、信任门控、按需注入。",
+      "code": "core/framework/skills/"
+    },
+    {
+      "id": "M28",
+      "layer": 5,
+      "name": "Playbook",
+      "purpose": "批量跑法：lane、重试退避、死信、断点续跑、熔断。",
+      "code": "core/framework/tools/playbook_tools.py、core/framework/host/playbook/runner.py"
+    },
+    {
+      "id": "M29",
+      "layer": 5,
+      "name": "Tool tiers / search_tools",
+      "purpose": "常开层（全 schema）+ 可搜索层（manifest），按需加载。",
+      "code": "core/framework/tools/tool_tiers.py"
+    },
+    {
+      "id": "M30",
+      "layer": 6,
+      "name": "Timer trigger",
+      "purpose": "interval / cron 唤醒 colony queen。",
+      "code": "core/framework/host/triggers.py"
+    },
+    {
+      "id": "M31",
+      "layer": 6,
+      "name": "Webhook trigger",
+      "purpose": "入站 HTTP → WEBHOOK_RECEIVED → queen 回合。",
+      "code": "core/framework/host/webhook_server.py、core/framework/host/triggers.py"
+    },
+    {
+      "id": "M32",
+      "layer": 6,
+      "name": "Missed-fire 补跑",
+      "purpose": "停机期间错过的触发，加载时补报（有上限）。",
+      "code": "core/framework/host/triggers.py"
+    },
+    {
+      "id": "M33",
+      "layer": 6,
+      "name": "Sentinel 分类器",
+      "purpose": "停车时判定 nudge / 判定完成 / 升级给人。",
+      "code": "core/framework/sentinel/classifier.py、core/framework/sentinel/manager.py"
+    },
+    {
+      "id": "M34",
+      "layer": 6,
+      "name": "Escalation 记录与回复",
+      "purpose": "升级落盘、token 路由、人类回复恢复 queen。",
+      "code": "core/framework/sentinel/store.py、core/framework/sentinel/listeners.py"
+    },
+    {
+      "id": "M35",
+      "layer": 7,
+      "name": "Memory 反思笔记",
+      "purpose": "定期把可复用事实写成 markdown（global/queen scope）。",
+      "code": "core/framework/agents/queen/queen_memory_v2.py"
+    },
+    {
+      "id": "M36",
+      "layer": 7,
+      "name": "Recall index",
+      "purpose": "按关键词从历史会话召回相关片段（索引按 owner）。",
+      "code": "core/framework/agents/queen/recall_selector.py、tools/src/memory_tools"
+    },
+    {
+      "id": "M37",
+      "layer": 7,
+      "name": "Timeline",
+      "purpose": "抽取带日期的事件/事实/计划（memory_timeline 开关）。",
+      "code": "core/framework/agents/queen/timeline.py"
+    },
+    {
+      "id": "M38",
+      "layer": 7,
+      "name": "Soul",
+      "purpose": "每日反思人格与行为准则，落盘到 queens/<id>/soul/。",
+      "code": "core/framework/agents/queen/soul.py、core/framework/agents/queen/soul_reflection.py"
+    },
+    {
+      "id": "M39",
+      "layer": 8,
+      "name": "Harness 工具组",
+      "purpose": "进程内 5 组：terminal / files / chart / memory / hive_tools。",
+      "code": "core/framework/tools/harness_tools.py"
+    },
+    {
+      "id": "M40",
+      "layer": 8,
+      "name": "MCP 外部工具",
+      "purpose": "外部 MCP server 注册、命名空间注入、与内置工具同 allowlist。",
+      "code": "core/framework/loader/mcp_registry.py"
+    },
+    {
+      "id": "M41",
+      "layer": 8,
+      "name": "Credentials / hive-cred",
+      "purpose": "Fernet 凭据库 + 按需取值 CLI（stdout 只打值）。",
+      "code": "core/framework/credentials/"
+    },
+    {
+      "id": "M42",
+      "layer": 8,
+      "name": "Browser bridge",
+      "purpose": "用户自己的 Chrome：扩展 + bridge + hive-browser CLI。",
+      "code": "tools/browser-extension/、tools/src/gcu/"
+    },
+    {
+      "id": "M43",
+      "layer": 8,
+      "name": "附件 / 多模态",
+      "purpose": "图片/PDF 进入模型请求；不支持的 provider 显式降级。",
+      "code": "core/framework/agent_loop/internals/vision_fallback.py、core/framework/agent_loop/conversation.py"
+    },
+    {
+      "id": "M44",
+      "layer": 8,
+      "name": "Chart / 图表",
+      "purpose": "ECharts/Mermaid 渲染（依赖浏览器）。",
+      "code": "tools/src/chart_tools/、core/framework/tools/harness_tools.py"
+    },
+    {
+      "id": "M45",
+      "layer": 8,
+      "name": "Global DB",
+      "purpose": "云端团队共享库（跨 colony GTM 数据）。",
+      "code": "core/framework/global_db/"
+    },
+    {
+      "id": "M46",
+      "layer": "HITL",
+      "name": "ask_user",
+      "purpose": "agent 提问 → loop park → 用户回答恢复。",
+      "code": "core/framework/agent_loop/internals/synthetic_tools.py、core/framework/agent_loop/agent_loop.py"
+    },
+    {
+      "id": "M47",
+      "layer": "HITL",
+      "name": "Credential form",
+      "purpose": "缺凭据时弹出安全表单 → park → 收到后继续。",
+      "code": "core/framework/agent_loop/internals/credential_tool.py、core/framework/server/routes_credentials.py"
+    },
+    {
+      "id": "M48",
+      "layer": "HITL",
+      "name": "Colony suggestion / 确认",
+      "purpose": "chat 转 colony 必须用户确认（suggest_colony）。",
+      "code": "core/framework/agent_loop/internals/synthetic_tools.py、core/framework/host/event_bus.py"
+    },
+    {
+      "id": "M49",
+      "layer": "HITL",
+      "name": "Queen mail",
+      "purpose": "queen 之间的信件；含 Claude Code queen 与 queen-mail MCP。",
+      "code": "core/framework/server/queen_mail.py、core/framework/server/queen_mail_mcp.py、core/framework/server/claude_code_queens.py"
+    },
+    {
+      "id": "M50",
+      "layer": "Pipeline",
+      "name": "Pipeline 中间件",
+      "purpose": "触发期 stage 链：校验/限流/成本/凭据/LLM/MCP/skills。",
+      "code": "core/framework/pipeline/"
+    }
+  ],
+  "enumerations": [
+    {
+      "name": "一级原语",
+      "count": 18,
+      "basis": "8 层之和",
+      "source": "docs/key_concepts/runtime_spine.md"
+    },
+    {
+      "name": "概念页",
+      "count": 8,
+      "basis": "key_concepts/*.md",
+      "source": "docs/key_concepts/"
+    },
+    {
+      "name": "Queen 生命周期工具",
+      "count": 12,
+      "basis": "Tool(...) 定义",
+      "source": "core/framework/tools/queen_lifecycle_tools.py"
+    },
+    {
+      "name": "Reminder 源",
+      "count": 15,
+      "basis": "ReminderSource 实现类（hub 全量注册）",
+      "source": "core/framework/agent_loop/agent_loop.py:898-964（注册点）"
+    },
+    {
+      "name": "Reminder 注入点",
+      "count": 9,
+      "basis": "ReminderPoint 枚举（8 lifecycle + 1 stream_stalled）",
+      "source": "core/framework/agent_loop/reminders.py:48"
+    },
+    {
+      "name": "Event 类型",
+      "count": 77,
+      "basis": "EventType 成员",
+      "source": "core/framework/host/event_bus.py:102"
+    },
+    {
+      "name": "Queen 人格 YAML",
+      "count": 13,
+      "basis": "queen_defaults/*.yaml",
+      "source": "core/framework/agents/queen/queen_defaults/"
+    },
+    {
+      "name": "Park 原因",
+      "count": 11,
+      "basis": "ParkReason 枚举（7 设计内 + 3 异常 + 1 unknown）",
+      "source": "core/framework/agent_loop/reminders.py:113"
+    },
+    {
+      "name": "Task 状态",
+      "count": 5,
+      "basis": "TaskStatus 枚举",
+      "source": "core/framework/tasks/models.py:18"
+    },
+    {
+      "name": "Worker 状态",
+      "count": 6,
+      "basis": "WorkerStatus 枚举",
+      "source": "core/framework/host/worker.py:69"
+    },
+    {
+      "name": "Judge 家族",
+      "count": "3 活跃 + 1 legacy",
+      "basis": "LLMJudge / conversation_judge / judge 槽 + SubagentJudge",
+      "source": "testing/llm_judge.py、orchestrator/conversation_judge.py、server/judge.py、judge_pipeline.py"
+    },
+    {
+      "name": "Stall 家族",
+      "count": 3,
+      "basis": "stream stall / doom-loop / stall check",
+      "source": "stream_stall.py、stall_detector.py、server/stall_check.py"
+    },
+    {
+      "name": "Sentinel 通道",
+      "count": 3,
+      "basis": "hive / telegram / slack",
+      "source": "core/framework/sentinel/notifier.py"
+    },
+    {
+      "name": "Harness 工具组",
+      "count": 5,
+      "basis": "HARNESS_GROUPS",
+      "source": "core/framework/tools/harness_tools.py:42"
+    },
+    {
+      "name": "Skill 扫描面",
+      "count": "9 类根 / 6 scope",
+      "basis": "discovery.py",
+      "source": "core/framework/skills/discovery.py:98"
+    },
+    {
+      "name": "四基底",
+      "count": 4,
+      "basis": "Plan / Tracker / EventBus / ReminderHub",
+      "source": "docs/key_concepts/runtime_spine.md"
+    },
+    {
+      "name": "Worker 模式",
+      "count": 2,
+      "basis": "ephemeral / persistent",
+      "source": "core/framework/host/worker.py"
+    },
+    {
+      "name": "Queen 阶段",
+      "count": 2,
+      "basis": "independent / colony",
+      "source": "core/framework/tools/queen_lifecycle_tools.py"
+    },
+    {
+      "name": "触发类型",
+      "count": 2,
+      "basis": "timer / webhook",
+      "source": "core/framework/host/triggers.py"
+    },
+    {
+      "name": "停滞预算",
+      "count": 2,
+      "basis": "TTFT 600s / inter-event 120s",
+      "source": "core/framework/agent_loop/stream_stall.py"
+    },
+    {
+      "name": "人机确认点",
+      "count": 4,
+      "basis": "ask_user / 凭据表单 / 建 colony / Sentinel 升级",
+      "source": "多处"
+    }
+  ]
+}

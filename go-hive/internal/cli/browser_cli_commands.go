@@ -443,22 +443,24 @@ func (c *browserCLI) evaluateCommand() *commandSpec {
 		[]argSpec{
 			{Dest: "js", Long: "js", Kind: kindString, Metavar: "SRC|@FILE|-",
 				Help: "JS source: inline, @FILE (read from path), or - (stdin)"},
-			{Dest: "script", Long: "script", Kind: kindString, Metavar: "JS", Help: "alias for --js"},
+			// Upstream registers both flags with dest="js", so a repeated
+			// flag's LAST occurrence wins; sharing the dest reproduces that.
+			{Dest: "js", Long: "script", Kind: kindString, Metavar: "JS", Help: "alias for --js"},
 			tabFlag(),
 		}, nil, "browser_evaluate", func(args *parsedArgs) (map[string]any, int) {
-			source := args.str("js")
-			if !args.wasProvided("js") {
-				source = args.str("script")
-			}
-			if strings.TrimSpace(source) == "" {
-				// Upstream raises this as a command-level validation error
-				// (exit 6), printed as "error: <message>".
-				fmt.Fprintln(c.stderr, "error: evaluate requires JavaScript via --js (inline, @file, or -)")
+			// Upstream resolves --js first (read_arg_value: exact "-" reads
+			// stdin, a leading "@" reads a file — no trimming) and only then
+			// rejects a missing or whitespace-only payload (cmd_evaluate:
+			// `if not js or not js.strip()`). Both the order and the
+			// no-trim resolution matter: an empty @file / empty stdin are
+			// upstream exit-6 cases, while " @file" is inline source.
+			js, err := c.readScriptSource(args.str("js"))
+			if err != nil {
+				fmt.Fprintf(c.stderr, "error: %v\n", err)
 				return nil, browserExitBadArgs
 			}
-			js, err := c.readScriptSource(source)
-			if err != nil {
-				fmt.Fprintf(c.stderr, "hive-browser: %v\n", err)
+			if strings.TrimSpace(js) == "" {
+				fmt.Fprintln(c.stderr, "error: evaluate requires JavaScript via --js (inline, @file, or -)")
 				return nil, browserExitBadArgs
 			}
 			params := map[string]any{"script": js}
@@ -494,10 +496,19 @@ func (c *browserCLI) scriptCommand() *commandSpec {
 			tabFlag(),
 			browserProfileFlag(),
 		}, nil, "browser_script", func(args *parsedArgs) (map[string]any, int) {
-			skill := strings.TrimSpace(args.str("skill"))
-			script := strings.TrimSpace(args.str("script"))
-			// Upstream validates these in cmd_script (not argparse), with its
-			// own wording and exit 6 — reproduced verbatim.
+			// argparse converts --timeout-s (type=float) before any handler
+			// runs, so a bad float is exit 2 even when another argument is
+			// missing. Reproduce that evaluation order.
+			timeout, err := parseFloatValue(args.str("timeout_s"))
+			if err != nil {
+				fmt.Fprintf(c.stderr, "hive-browser: --timeout-s: %v\n", err)
+				return nil, browserExitUsage
+			}
+			// Upstream validates these in cmd_script (not argparse) on the RAW
+			// values: only an empty string is "missing" — a whitespace-only
+			// value flows on to script resolution, so it must not exit 6 here.
+			skill := args.str("skill")
+			script := args.str("script")
 			if skill == "" {
 				fmt.Fprintln(c.stderr, "error: --skill is required (scripts are scoped to a skill dir). "+
 					"For ad-hoc JavaScript, use: hive-browser evaluate --js '<code>'")
@@ -507,22 +518,25 @@ func (c *browserCLI) scriptCommand() *commandSpec {
 				fmt.Fprintln(c.stderr, "error: --script is required (a script file under <skill>/scripts/)")
 				return nil, browserExitBadArgs
 			}
-			timeout, err := parseFloatValue(args.str("timeout_s"))
-			if err != nil {
-				fmt.Fprintf(c.stderr, "hive-browser: --timeout-s: %v\n", err)
-				return nil, browserExitUsage
-			}
 			params := map[string]any{"skill": skill, "script": script, "timeout_s": timeout}
+			// cmd_script validates --browser-profile BEFORE reading --args
+			// (nav.py::validate_browser_profile): ""/"default" pass, and an
+			// unknown label fails as validation only when the bridge reports
+			// at least one connected profile (empty enumeration must not guess).
+			if label := args.str("browser_profile"); label != "" {
+				if message := c.unknownBrowserProfile(args, label); message != "" {
+					fmt.Fprintf(c.stderr, "error: %s\n", message)
+					return nil, browserExitBadArgs
+				}
+				params["browser_profile"] = label
+			}
 			scriptArgs, err := c.decodeJSONObject(args.str("args"), "--args")
 			if err != nil {
-				fmt.Fprintf(c.stderr, "hive-browser: %v\n", err)
+				fmt.Fprintf(c.stderr, "error: %v\n", err)
 				return nil, browserExitBadArgs
 			}
 			if scriptArgs != nil {
 				params["args"] = scriptArgs
-			}
-			if label := strings.TrimSpace(args.str("browser_profile")); label != "" {
-				params["browser_profile"] = label
 			}
 			c.optTab(args, params)
 			return params, browserExitOK

@@ -63,7 +63,13 @@ const browserHealthTimeout = 3 * time.Second
 // RunBrowserCLI is the `hive-browser` entry point; it returns the process exit
 // code (see tools/src/gcu/errors.py for the taxonomy).
 func RunBrowserCLI(argv []string, stdout, stderr io.Writer) int {
-	app := &browserCLI{stdout: stdout, stderr: stderr, env: os.Getenv, stdin: os.Stdin}
+	return runBrowserCLI(argv, stdout, stderr, os.Stdin)
+}
+
+// runBrowserCLI is RunBrowserCLI with the stdin seam the `-` (stdin) argument
+// form needs in tests.
+func runBrowserCLI(argv []string, stdout, stderr io.Writer, stdin io.Reader) int {
+	app := &browserCLI{stdout: stdout, stderr: stderr, env: os.Getenv, stdin: stdin}
 	root := app.rootCommand()
 	app.root = root
 	args, err := parseCommand(root, argv)
@@ -338,6 +344,78 @@ func (c *browserCLI) bridgeConnected(args *parsedArgs) bool {
 	return payload.Connected
 }
 
+// connectedProfileLabels fetches the bridge's connected Chrome profile labels
+// (GET /status, the Go bridge's `profiles` list; falls back to
+// connections[].label). Upstream's validate_browser_profile reads the same
+// list via bridge.connected_profiles() and treats an empty enumeration as
+// "cannot tell" — never a rejection.
+func (c *browserCLI) connectedProfileLabels(args *parsedArgs) []string {
+	base := c.bridgeBase(args)
+	ctx, cancel := context.WithTimeout(context.Background(), browserHealthTimeout)
+	defer cancel()
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, base+"/status", nil)
+	if err != nil {
+		return nil
+	}
+	client := &http.Client{Timeout: browserHealthTimeout}
+	response, err := client.Do(request)
+	if err != nil {
+		return nil
+	}
+	defer func() { _ = response.Body.Close() }()
+	if response.StatusCode != http.StatusOK {
+		return nil
+	}
+	var payload struct {
+		Profiles    []string `json:"profiles"`
+		Connections []struct {
+			Label string `json:"label"`
+		} `json:"connections"`
+	}
+	if err := json.NewDecoder(io.LimitReader(response.Body, 1<<20)).Decode(&payload); err != nil {
+		return nil
+	}
+	labels := make([]string, 0, len(payload.Profiles))
+	for _, label := range payload.Profiles {
+		if strings.TrimSpace(label) != "" {
+			labels = append(labels, label)
+		}
+	}
+	if len(labels) == 0 {
+		for _, connection := range payload.Connections {
+			if strings.TrimSpace(connection.Label) != "" {
+				labels = append(labels, connection.Label)
+			}
+		}
+	}
+	return labels
+}
+
+// unknownBrowserProfile mirrors nav.py::validate_browser_profile (audit B4):
+// "" and "default" are always acceptable; an unknown label is rejected ONLY
+// when the bridge reported at least one connected profile. The message matches
+// upstream's `unknown browser profile {label!r}. connected: {labels}` shape
+// (exit 6); no message means the label is fine.
+func (c *browserCLI) unknownBrowserProfile(args *parsedArgs, label string) string {
+	if label == "" || label == "default" {
+		return ""
+	}
+	labels := c.connectedProfileLabels(args)
+	if len(labels) == 0 {
+		return ""
+	}
+	for _, known := range labels {
+		if known == label {
+			return ""
+		}
+	}
+	quoted := make([]string, 0, len(labels))
+	for _, known := range labels {
+		quoted = append(quoted, "'"+known+"'")
+	}
+	return fmt.Sprintf("unknown browser profile '%s'. connected: [%s]", label, strings.Join(quoted, ", "))
+}
+
 // optTab injects the resolved tab id when there is one; the bridge then falls
 // back to its own context registry for the profile.
 func (c *browserCLI) optTab(args *parsedArgs, params map[string]any) {
@@ -360,24 +438,27 @@ func (c *browserCLI) statePath() string {
 
 // --- argument helpers -------------------------------------------------------
 
-// readScriptSource implements `--js SRC|@FILE|-` (inline, file, stdin).
+// readScriptSource implements upstream's `--js SRC|@FILE|-` resolution
+// (cli_commands/script.py::read_arg_value): the raw value is used verbatim —
+// only an exact "-" reads stdin and only a leading "@" reads a file. No
+// trimming, so " @file" is inline source with a leading space, exactly like
+// upstream's `raw == "-"` / `raw.startswith("@")` tests. A failed file read
+// is upstream's validation("could not read <path>: <e>") (exit 6).
 func (c *browserCLI) readScriptSource(value string) (string, error) {
-	raw := strings.TrimSpace(value)
 	switch {
-	case raw == "-":
+	case value == "-":
 		data, err := io.ReadAll(io.LimitReader(c.stdin, 8<<20))
 		if err != nil {
-			return "", fmt.Errorf("read script from stdin: %w", err)
+			return "", fmt.Errorf("could not read input: %w", err)
 		}
 		return string(data), nil
-	case strings.HasPrefix(raw, "@"):
-		data, err := os.ReadFile(expandUser(raw[1:]))
+	case strings.HasPrefix(value, "@"):
+		path := expandUser(value[1:])
+		data, err := os.ReadFile(path)
 		if err != nil {
-			return "", fmt.Errorf("read script file: %w", err)
+			return "", fmt.Errorf("could not read %s: %v", path, err)
 		}
 		return string(data), nil
-	case raw == "":
-		return "", fmt.Errorf("--js is required (inline source, @FILE, or - for stdin)")
 	}
 	return value, nil
 }
@@ -399,32 +480,41 @@ func parseFloatList(raw string, want int, label string) ([]any, error) {
 	return out, nil
 }
 
-// decodeJSONObject parses inline JSON, @file, or - for stdin.
+// decodeJSONObject implements upstream's `--args JSON|@FILE|-` contract
+// (cli_commands/script.py): the value is resolved verbatim like --js (exact
+// "-" = stdin, leading "@" = file, no trimming), an EMPTY resolved payload
+// means "no args" (upstream's `if args_raw:` truthiness), and any non-empty
+// payload must parse as a JSON object (dict) — anything else is upstream's
+// validation error, printed as `error: <message>` and exit 6. Parsing runs on
+// the raw resolved text, so whitespace-only input fails like upstream's
+// json.loads("   ") instead of being skipped.
 func (c *browserCLI) decodeJSONObject(raw string, label string) (map[string]any, error) {
-	source := strings.TrimSpace(raw)
+	resolved := raw
 	switch {
-	case source == "":
-		return nil, nil
-	case source == "-":
+	case raw == "-":
 		data, err := io.ReadAll(io.LimitReader(c.stdin, 8<<20))
 		if err != nil {
-			return nil, fmt.Errorf("read %s from stdin: %w", label, err)
+			return nil, fmt.Errorf("could not read input: %w", err)
 		}
-		source = string(data)
-	case strings.HasPrefix(source, "@"):
-		data, err := os.ReadFile(expandUser(source[1:]))
+		resolved = string(data)
+	case strings.HasPrefix(raw, "@"):
+		path := expandUser(raw[1:])
+		data, err := os.ReadFile(path)
 		if err != nil {
-			return nil, fmt.Errorf("read %s file: %w", label, err)
+			return nil, fmt.Errorf("could not read %s: %v", path, err)
 		}
-		source = string(data)
+		resolved = string(data)
+	}
+	if resolved == "" {
+		return nil, nil
 	}
 	var decoded any
-	if err := json.Unmarshal([]byte(source), &decoded); err != nil {
-		return nil, fmt.Errorf("%s is not valid JSON: %w", label, err)
+	if err := json.Unmarshal([]byte(resolved), &decoded); err != nil {
+		return nil, fmt.Errorf("%s must be valid JSON: %v", label, err)
 	}
 	object, ok := decoded.(map[string]any)
 	if !ok {
-		return nil, fmt.Errorf("%s must be a JSON object", label)
+		return nil, fmt.Errorf("%s must be a JSON object (dict)", label)
 	}
 	return object, nil
 }

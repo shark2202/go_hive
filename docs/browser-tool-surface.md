@@ -126,6 +126,34 @@ CLI help，**没有 tool schema 层**（`docs/browser-bridge-surface-audit.html`
   `TestScreenshotMaxWidthJpegsAt800`（dpr 2 假页 = 真实 Chrome 语义：
   `clip.width × scale × dpr`）。
 
+### 4.2 收口（2026-11-22，修复轮 6）：isHiveGroup 值级 + evaluate/script 校验条件
+
+**面板 `isHiveGroup` 值级。** 上游 `handle_browser_tabs` 从 `list_active_contexts()`
+行里读 `ctx.get("groupId")`，行键却是 `group_id`（`routes_workers.py:341-360` vs
+`lifecycle.py:127-135`）——上游集合恒空，`isHiveGroup` 恒 `false`、`hive_group_count`
+恒 0。Go 路由原按桥 registry 真富化（值级分歧）；现与上游同值。同一 fixture
+（profile `e2e-profile`→group 777，tab 101/102）双跑，`/api/browser/contexts` 与
+`/api/browser/tabs` body 逐字段相等：`docs/fixtures/browser-final-parity/dual-run.txt`。
+
+**evaluate/script 退出码 6 的条件。** 对照 `cmd_evaluate` / `cmd_script` 逐类对齐（改前 → 改后）：
+
+| 输入 | 上游 | Go 改前 | Go 改后 |
+| --- | --- | --- | --- |
+| `evaluate --js @empty` / `--js -`（空 stdin） | 6（解析后空白） | 进桥（未复检解析后空白） | 6，`error: evaluate requires JavaScript via --js (inline, @file, or -)` |
+| `evaluate --js @missing` | 6，`could not read <path>: …` | 6，`hive-browser: read script file: …` | 6，`error: could not read <path>: …` |
+| `evaluate --js ' @file'`（前导空格） | 当内联源码（不读文件） | 先 trim 后读文件 | 当内联源码（同上游） |
+| `evaluate --js A --script B`（两别名同给） | 后者胜（argparse 同 dest） | `--js` 恒优先 | 后者胜 |
+| `script --skill '   '` | 不本地拦（空格是真值） | 6（trim 后为空） | 进桥（同上游） |
+| `script --args '   '` | 6（`json.loads("   ")` 抛错） | 跳过（trim 后为空） | 6，`error: --args must be valid JSON: …` |
+| `script --args @empty` / `-`（空 stdin） | 跳过（空真值） | 6（`json.Unmarshal("")`） | 跳过（同上游） |
+| `script --args '[1]'` / `null` | 6，`--args must be a JSON object (dict)` | 6，`must be a JSON object` | 6，同上游文案 |
+| `script --browser-profile Nope`（有连接 profile） | 6，`unknown browser profile 'Nope'. connected: ['Work']` | 直接进桥 | 6，同上游文案 |
+| `script --timeout-s soon`（且缺 `--skill`） | 2（argparse 先转 float） | 6（先查 skill） | 2 |
+
+Go 自有 `type` 动词仍为 6（上游无对应 CLI 动词；其 `browser_type` 工具要求 `text`，
+条件同构）。证据：`docs/fixtures/browser-final-parity/dual-run.txt`（24 例逐例
+上游 exit / Go exit 对照，全部相等）。
+
 ## 5. 测试与复跑
 
 ```bash

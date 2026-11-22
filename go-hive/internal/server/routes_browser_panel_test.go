@@ -3,9 +3,10 @@ package server
 // routes_browser_panel_test.go pins the three panel routes against the
 // upstream routes_workers.py bodies: the {available,count,contexts} registry
 // shape, the {available,count,live_count,discarded_count,hive_group_count,tabs}
-// diagnostic shape with isHiveGroup enrichment, the 200/available:false
-// no-bridge envelope (upstream has no 503 path here), and the close route's
-// {closed:[…]} / 400 {"error": …} contract.
+// diagnostic shape with upstream's isHiveGroup VALUE (always false — see the
+// handle_browser_tabs test), the 200/available:false no-bridge envelope
+// (upstream has no 503 path here), and the close route's {closed:[…]} / 400
+// {"error": …} contract.
 
 import (
 	"encoding/json"
@@ -158,7 +159,7 @@ func TestBrowserPanelTabsMatchesUpstreamShape(t *testing.T) {
 		t.Fatalf("status = %d, body = %#v", status, body)
 	}
 	if body["available"] != true || body["count"] != float64(4) || body["live_count"] != float64(3) ||
-		body["discarded_count"] != float64(1) || body["hive_group_count"] != float64(2) {
+		body["discarded_count"] != float64(1) || body["hive_group_count"] != float64(0) {
 		t.Fatalf("envelope = %#v", body)
 	}
 	tabs, _ := body["tabs"].([]any)
@@ -169,11 +170,16 @@ func TestBrowserPanelTabsMatchesUpstreamShape(t *testing.T) {
 		row, _ := tabs[index].(map[string]any)
 		return row
 	}
-	// A tab inside a registered Hive group is the only isHiveGroup=true row.
-	if row := rowOf(0); row["isHiveGroup"] != true || row["groupId"] != float64(101) ||
+	// Upstream's hive-group set is always empty: it reads ctx.get("groupId")
+	// from list_active_contexts() rows keyed "group_id"
+	// (routes_workers.py:341-360), so a tab inside a registered Hive group
+	// keeps its groupId but is still isHiveGroup=false, and hive_group_count
+	// stays 0. The route mirrors that value, not the code comment's intent
+	// (dual-run evidence: docs/fixtures/browser-final-parity/).
+	if row := rowOf(0); row["isHiveGroup"] != false || row["groupId"] != float64(101) ||
 		row["windowId"] != nil || row["discarded"] != false || row["active"] != false ||
 		row["audible"] != false || row["pinned"] != false {
-		t.Fatalf("hive tab row = %#v", row)
+		t.Fatalf("registered-group tab row = %#v", row)
 	}
 	// Chrome's -1 group id means "no group": null in the body, not hive.
 	if row := rowOf(1); row["groupId"] != nil || row["isHiveGroup"] != false {

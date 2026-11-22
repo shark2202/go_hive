@@ -14,7 +14,8 @@
 #   R03  GET /api/browser/status reports the running bridge (connected/healthy
 #        with an extension attached) instead of a hardcoded offline.
 #   R04  GET /api/browser/contexts and /api/browser/tabs return the upstream
-#        Python bodies ({available,count,…} / isHiveGroup enrichment / 200
+#        Python bodies ({available,count,…} / isHiveGroup value parity, always
+#        false per upstream's group_id/groupId key mismatch / 200
 #        available:false when no bridge), and POST /contexts/close keeps the
 #        upstream {closed:[…]} / 400 contract.
 #   R05  CLI exit codes: screenshot without --intent reaches the bridge (0 when
@@ -131,10 +132,16 @@ import json, sys
 body = json.loads(sys.argv[1])
 assert body["available"] is True, body
 assert body["count"] == 2 and body["live_count"] == 2 and body["discarded_count"] == 0, body
-assert body["hive_group_count"] == 1, body
+assert body["hive_group_count"] == 0, body
 rows = {row["id"]: row for row in body["tabs"]}
 hive = rows[101]
-assert hive["isHiveGroup"] is True and hive["groupId"] == 777, hive
+# Value-level parity with upstream: handle_browser_tabs reads
+# ctx.get("groupId") from list_active_contexts() rows keyed "group_id"
+# (routes_workers.py:341-360 vs lifecycle.py:127-135), so its hive-group set
+# is always empty — isHiveGroup is false and hive_group_count 0 even for a
+# registered group's tab. This route mirrors that outcome (dual-run evidence:
+# docs/fixtures/browser-final-parity/).
+assert hive["isHiveGroup"] is False and hive["groupId"] == 777, hive
 assert hive["windowId"] is None and hive["discarded"] is False, hive
 loose = rows[102]
 assert loose["isHiveGroup"] is False and loose["groupId"] is None, loose
@@ -269,10 +276,14 @@ r15 key --action key --text Enter --coordinate 0.5,0.5
 python3 - "$tmp" <<'PY' || fail "R15 coordinate action image contract"
 import json, pathlib, sys
 tmp = pathlib.Path(sys.argv[1])
+# Action dicts follow the upstream bridge returns (click_coordinate /
+# hover_coordinate / press_at in gcu/browser/bridge.py) after the tool-surface
+# lane removed the Go legacy tabId/button/clickCount keys; the Go CLI adds only
+# the R15 image carrier (saved_to + _image).
 cases = {
-    "click": ("click", {"ok", "action", "tabId", "x", "y", "button", "clickCount", "method", "saved_to", "_image"}),
-    "hover": ("hover_coordinate", {"ok", "action", "tabId", "x", "y", "saved_to", "_image"}),
-    "key": ("press_at", {"ok", "action", "tabId", "x", "y", "key", "saved_to", "_image"}),
+    "click": ("click_coordinate", {"ok", "action", "x", "y", "saved_to", "_image"}),
+    "hover": ("hover_coordinate", {"ok", "action", "x", "y", "saved_to", "_image"}),
+    "key": ("press_at", {"ok", "action", "x", "y", "key", "saved_to", "_image"}),
 }
 for name, (action, want_keys) in cases.items():
     body = json.loads((tmp / f"r15-{name}.json").read_text())
@@ -282,7 +293,9 @@ for name, (action, want_keys) in cases.items():
     assert set(body) == want_keys, (sorted(body), sorted(want_keys))
     saved = pathlib.Path(body["saved_to"])
     assert saved.is_file(), saved
-    assert saved.name.startswith("browser_interact_") and saved.name.endswith("_tab101.jpg"), saved.name
+    # The action dict carries no tabId (upstream's action results do not
+    # either), so the artifact name uses upstream's tab0 fallback.
+    assert saved.name.startswith("browser_interact_") and saved.name.endswith("_tab0.jpg"), saved.name
     raw = saved.read_bytes()
     assert raw[:3] == b"\xff\xd8\xff", raw[:3]
     image = body["_image"]

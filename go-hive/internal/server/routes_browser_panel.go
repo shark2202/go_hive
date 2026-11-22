@@ -209,23 +209,15 @@ func handleBrowserPanelTabs(w http.ResponseWriter, r *http.Request, deps Browser
 		return
 	}
 
-	// Which groupIds carry the Hive marker? Same source as the contexts route:
-	// the bridge's tab-group registry. A registry read failure only drops the
-	// enrichment (isHiveGroup false), never the tab list.
+	// Which groupIds carry the Hive marker? Upstream derives the set from
+	// list_active_contexts() rows via ctx.get("groupId") while those rows key
+	// the value "group_id" (routes_workers.py:341-360 vs lifecycle.py:127-135),
+	// so the set is ALWAYS EMPTY upstream: every row's isHiveGroup is false and
+	// hive_group_count is 0, even for a tab inside a registered group. The Go
+	// route mirrors that value-level outcome instead of enriching from the
+	// bridge's tab-group registry; dual-run evidence (upstream handler vs this
+	// route on the same fixture) lives in docs/fixtures/browser-final-parity/.
 	hiveGroupIDs := map[int]struct{}{}
-	if contextsReply, contextsReason := getBridgeJSON(r, deps, base, "/contexts"); contextsReason == "" && contextsReply.status == http.StatusOK {
-		if rows, ok := contextsReply.body["contexts"].([]any); ok {
-			for _, raw := range rows {
-				entry, ok := raw.(map[string]any)
-				if !ok {
-					continue
-				}
-				if groupID, ok := pythonIntValue(entry["groupId"]); ok && groupID > 0 {
-					hiveGroupIDs[groupID] = struct{}{}
-				}
-			}
-		}
-	}
 
 	rows, _ := reply.body["tabs"].([]any)
 	tabs := make([]map[string]any, 0, len(rows))

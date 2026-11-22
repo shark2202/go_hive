@@ -19,7 +19,7 @@
 | --- | --- | --- |
 | **外观一致** | 模型/前端/脚本能看到的每一层字段级逐字：API/WS 字段、tool 定义（name/description/input schema）、skill 内容、env、configuration.json、CLI help/输出 | `contracts/*.json` + `docs/tool-contract-diff.md`、`api-contract-diff.md`、`env-config-contract-diff.md`、`sse-payload-parity.md`、`cli-surface.html`；`make compat-check` C1–C12 |
 | **语义一致** | 同一输入产生同一行为与同一可观测结果：AgentLoop/Colony/playbook/memory/soul/queen-mail 全链路 | 逐文件 `// Parity:` 注解（`check_parity.sh`）+ 真实双跑证据（`docs/e2e-assets/**`） |
-| **功能一致** | 上游每个工具/路由/命令/机制在 Go 侧都存在且可被真实调用 | C12 模块清单 271 条登记 0 未登记；`docs/tool-parity-matrix.html`；缺口登记在 `docs/delivery-backlog.json` |
+| **功能一致** | 上游每个工具/路由/命令/机制在 Go 侧都存在且可被真实调用 | C12 模块清单 273 条登记 0 未登记；`docs/tool-parity-matrix.html`；缺口登记在 `docs/delivery-backlog.json` |
 | **特性一致** | 机制完整性：热重载、调度（cron/trigger/slot）、多模态、升级兼容、热插拔 skill、MCP 热重载等 | `docs/compatibility-policy.md` + `scripts/upgrade_compat_check.sh`（每 slot 自动跑）；各特性页 |
 | **无痛无损迁移** | 同一 `HIVE_HOME` 直接可用：旧数据零丢失、启动自动迁移、可回滚 | G2 清单 6/6：旧 home e2e、回滚演练、安装升级、sidecar 一致、G2 文档、支持矩阵（`docs/g2-lossless-replacement.html`） |
 
@@ -92,14 +92,16 @@ Go 代码与配套文档在 `go_hive/` 下：`go-hive/`（模块）、`contracts
 | 格式/静态 | `make fmt-check && make vet` | 无输出 | 通过 |
 | 单元测试 | `make test` | 全部包 `ok` | 通过（Makefile 已固化 `TEST_FLAGS ?= -count=1`） |
 | 交叉编译 | `make cross` | 6 平台 | 通过 |
-| parity 注解 | `make parity` | 退出码 0 | 通过：**5,722/5,722**（wave-66；refs 全解析） |
+| parity 注解 | `make parity` | 退出码 0 | 通过：**5,816/5,816**（wave-71；refs 6,391 全解析） |
 | parity 引用 | `make parity-targets` | 退出码 0 | 通过：全解析，0 missing |
 | 接线 | `make wiring-check` | 退出码 0 | 通过 |
-| 升级兼容 | `make compat-check` | 12 项全过 | 通过（C1–C12；C12 = 273 条登记 0 未登记：ported 218 / partial 27 / out_of_scope 9 / unported 19（triage 修正 11 假标 + coercion 升级 + GA sidecar 迁移）；config 137 键 / 22 section） |
-| 架构 | `make arch-check` | 7 生成物一致 | 通过（82 包 / 219 边 / 8 层 / 1 条 info warning；soul→queen 反向依赖已消除） |
+| 升级兼容 | `make compat-check` | 12 项全过 | 通过（C1–C12；C12 = 273 条登记 0 未登记：ported 220 / partial 27 / out_of_scope 9 / unported 17（triage + coercion + sentinel/antigravity/GA 并集）；config 137 键 / 22 section） |
+| 架构 | `make arch-check` | 7 生成物一致 | 通过（82 包 / 223 边 / 8 层 / 1 条 info warning；soul→queen 反向依赖已消除） |
 | 行为冻结 | `refactor_freeze.sh compare wave15-base` | OK（allowlist 逐条理由） | 通过（结构重构 lane 必跑） |
 | QC | `scripts/qc_check.py` | 9/9 | 通过 |
 | slot | 每 2 小时 `dist/slots/<slot>` | artifact+manifest+compat | 22:00/00:00 已产；24h 窗口 |
+
+> 逐项核查（全量）：`docs/consistency-audit.md`（18 原语 / 273 模块全列 / 104 集成分级 / 契约表面 8 层 / 50 机制；JSON + 生成器可重算）。
 
 ## 9. 与 Python 上游的关系
 

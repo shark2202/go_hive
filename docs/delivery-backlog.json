@@ -143,6 +143,13 @@
         "done": true
       },
       {
+        "id": "browser-final-parity",
+        "label": "Browser 残差收口：isHiveGroup 值级 + evaluate/script 校验条件（9230/WS 心跳已于修复轮 5 收口）",
+        "hours": 3,
+        "done": true,
+        "note": "修复轮 6（2026-11-22，工作树 browser-final-parity）：与上游同值/同条件；双跑证据 docs/fixtures/browser-final-parity/dual-run.txt"
+      },
+      {
         "id": "cron-seconds",
         "label": "croniter 6 字段/秒级 cron（Python 可调度、Go 现拒绝）",
         "hours": 3,
