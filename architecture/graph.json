@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "module": "github.com/aden-hive/hive-go",
-  "generated_at_commit": "45aa262ebd54",
+  "generated_at_commit": "ba611d73c559",
   "generated_from": "architecture/model.yaml + go list -json ./... + internal/server mux.HandleFunc + internal/eventbus event_type.go",
   "stats": {
     "packages": 82,
-    "package_edges": 214,
+    "package_edges": 218,
     "capabilities": 12,
     "capability_edges": 85,
     "layers": 8,
@@ -552,7 +552,7 @@
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 3,
+      "direct_dependencies": 4,
       "dependents": 3
     },
     {
@@ -816,7 +816,7 @@
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 1,
+      "direct_dependencies": 2,
       "dependents": 11
     },
     {
@@ -828,7 +828,7 @@
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 14,
+      "direct_dependencies": 15,
       "dependents": 1
     },
     {
@@ -1008,7 +1008,7 @@
       "stability": "stable",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 0,
+      "direct_dependencies": 1,
       "dependents": 5
     },
     {
@@ -1028,12 +1028,12 @@
       "kind": "technical",
       "package": "internal/hivehome",
       "layer": "foundation",
-      "responsibility": "~/.hive 目录布局解析与 ensure（queens/colonies/memories/credentials/...）。",
+      "responsibility": "~/.hive_go 目录布局解析与 ensure（HIVE_HOME 可覆盖；queens/colonies/memories/credentials/...）。",
       "stability": "stable",
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 0,
-      "dependents": 21
+      "dependents": 25
     },
     {
       "id": "pkg:internal/logging",
@@ -2011,6 +2011,11 @@
       "kind": "depends"
     },
     {
+      "from": "pkg:internal/eventbus",
+      "to": "pkg:internal/hivehome",
+      "kind": "depends"
+    },
+    {
       "from": "pkg:internal/hiveconf",
       "to": "pkg:internal/hivehome",
       "kind": "depends"
@@ -2506,6 +2511,11 @@
       "kind": "depends"
     },
     {
+      "from": "pkg:internal/tasks",
+      "to": "pkg:internal/hivehome",
+      "kind": "depends"
+    },
+    {
       "from": "pkg:internal/tools",
       "to": "pkg:internal/hivehome",
       "kind": "depends"
@@ -2532,6 +2542,11 @@
     },
     {
       "from": "pkg:internal/tools/integrationkit",
+      "to": "pkg:internal/hivehome",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tools/integrationkit",
       "to": "pkg:internal/tools",
       "kind": "depends"
     },
@@ -2543,6 +2558,11 @@
     {
       "from": "pkg:internal/tools/integrations",
       "to": "pkg:internal/hiveclock",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tools/integrations",
+      "to": "pkg:internal/hivehome",
       "kind": "depends"
     },
     {

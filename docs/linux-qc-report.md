@@ -1,13 +1,13 @@
 # go_hive Linux 测试与质检报告
 
 - 日期：2026-11-22
-- 代码基线：`c6ee8b5 sync: go_hive @ 986628d5`
+- 代码基线：`c6ee8b5 sync: go_hive @ 986628d5`（本报告结论已在 rebase 到上游 `fd806ea sync: go_hive @ 8256edaf` 后复验）
 - 平台：Linux x86_64（32GB 内存，可用 ~2.6GB），Go 1.27.3（`~/.local/go/bin/go`），Node v22.23.3 / npm 10.9.9，Python 3，gcc 可用
 - 范围：`go_hive/go-hive`（Go 模块，1302 个 .go / 618 个 _test.go）+ `go_hive/scripts`（Python 门禁）
 
 ## 1. 结论
 
-Linux 上 `go test ./...` 从 **48 ok / 4 FAIL** 修到 **52/52 全绿**；仓库自带 QC 门禁 `scripts/qc_check.py` 从 **4/8** 修到 **8/8**；`scripts/smoke.sh`（真二进制 + 真 HTTP）**13/13**。剩余不可验证项全部指向同一个根因：**本机没有 Python 上游参考树 `core/`**，不是 Go 代码缺陷。
+Linux 上 `go test ./...` 从 **48 ok / 4 FAIL** 修到 **全绿**（rebase 后复验：63 个包全 ok）；仓库自带 QC 门禁 `scripts/qc_check.py` 从 **4/8** 修到 **9/9**；`scripts/smoke.sh`（真二进制 + 真 HTTP）**13/13**。剩余不可验证项全部指向同一个根因：**本机没有 Python 上游参考树 `core/`**，不是 Go 代码缺陷。
 
 ## 2. 本次改动
 
@@ -32,18 +32,18 @@ Linux 上 `go test ./...` 从 **48 ok / 4 FAIL** 修到 **52/52 全绿**；仓�
 | 格式 | `gofmt -l .` | 0 个文件 |
 | 编译 | `CGO_ENABLED=0 go build ./...` | PASS |
 | 静态检查 | `go vet ./...` | PASS |
-| 单测 | `go test -count=1 ./...` | **PASS 52/52**（修复前 48 ok + 4 FAIL） |
-| 测试注解 | `make parity` | PASS：5490 个测试全部带 parity 注解，0 missing |
+| 单测 | `go test -count=1 ./...` | **PASS 63/63**（修复前 48 ok + 4 FAIL） |
+| 测试注解 | `make parity` | PASS：5609 个测试全部带 parity 注解，0 missing |
 | parity 目标 | `make parity-targets` | SKIP：`check_parity_targets: SKIP — python root not found at ../../core` |
 | 接线 | `make wiring-check` | PASS：19 个接线文件、64 项要求全部命中 |
 | 冻结契约 | `make compat-check` | **FAIL**：pass=4 fail=5 skip=3（见 §4） |
 | 跨平台编译 | `make cross` | PASS：darwin/linux/windows × amd64/arm64 6 个二进制 |
 | 发布打包 | `scripts/release.sh` | PASS：6 个归档 + SHA256SUMS，归档内 4 个二进制本地执行 exit=0 |
-| 仓库 QC | `scripts/qc_check.py` | **8/8 PASS**（修复前 4/8） |
+| 仓库 QC | `scripts/qc_check.py` | **9/9 PASS**（修复前 4/8） |
 | 集成冒烟 | `scripts/smoke.sh` | **13/13 PASS**（修复前 11/13） |
 | 表面审计 | `scripts/surface_audit.py --root <monorepo>` | PASS：前端缺失 0 / Python 缺失 0 / 卫生 0 / 悬空 waiver 0 |
-| 竞态 | `make race`（`go test -race ./...`，CGO_ENABLED=1） | **PASS**：52 个包全 ok，0 data race（修复前该目标在任何机器上都报 `-race requires cgo`） |
-| 架构一致性 | `make arch-check` | PASS（重新生成后一致：71 包 / 190 边 / commit c6ee8b5052ef） |
+| 竞态 | `make race`（`go test -race ./...`，CGO_ENABLED=1） | **PASS**：63 个包全 ok，0 data race（修复前该目标在任何机器上都报 `-race requires cgo`） |
+| 架构一致性 | `make arch-check` | PASS（重新生成后一致：82 包 / 218 边） |
 | 整树门禁 | `make ci` | **仅 compat-check 一处 FAIL**，其余目标（fmt-check / vet / test / cross / parity / parity-targets / wiring-check / arch-check）全部通过 |
 | e2e（可选标签） | `go test -tags e2e ./e2e` | FAIL：2 个测试（见 §4），修复前 3 个 |
 
@@ -93,7 +93,7 @@ cd go_hive/go-hive
 CGO_ENABLED=0 go build ./... && go vet ./... && go test -count=1 ./...
 CGO_ENABLED=0 go test -count=1 -tags e2e ./e2e      # 需要前端/网络环境
 make race                                             # 竞态检测（需要 C 编译器）
-cd .. && python3 scripts/qc_check.py                   # 8/8
+cd .. && python3 scripts/qc_check.py                   # 9/9
 cd .. && bash scripts/smoke.sh 8793                    # 13/13
 cd .. && python3 scripts/surface_audit.py --root /home/a/ai-work   # 审计根 = monorepo 根
 cd go-hive/go-hive && make compat-check                # 需要 core/ 参考树
