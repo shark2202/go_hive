@@ -1,6 +1,6 @@
 # 模块清单（生成物，勿手改）
 
-> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` + `go list` 生成。commit: `45aa262ebd54`
+> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` + `go list` 生成。commit: `41ae8d322918`
 > 修改分层或职责请改 `architecture/model.yaml`，不要编辑本文件。
 
 ## 分层统计
@@ -16,7 +16,7 @@
 | 能力层（`capability`） | 29 | 可被循环调用的能力：工具、集成、LLM 传输、记忆、技能、soul、凭据、出站消息。 |
 | 基础层（`foundation`） | 16 | 无业务语义的底座：事件总线、文件存储、schema、原子写、目录布局、限速、质量门禁。 |
 
-共 82 个包、214 条包间 import 边。
+共 82 个包、215 条包间 import 边。
 
 ## 模块表
 
@@ -63,12 +63,12 @@
 | `internal/charts` | capability | chart_render 的纯 Go 渲染实现（SVG 生成 + 可选 PNG 栅格化）。 | 2 | 1 |  |
 | `internal/credentials` | capability | 凭证规格与加密存储、OAuth 状态与表单校验。 | 2 | 5 |  |
 | `internal/globaldb` | capability | 全局数据表（CRM / global data）的 SQLite 访问。 | 0 | 1 |  |
-| `internal/hiveconf` | capability | 全局 configuration.json 的类型严格读取（与 Python 参考同规则），供装配与编排层取配置。 | 2 | 3 |  |
+| `internal/hiveconf` | capability | 全局 configuration.json 的类型严格读取（与 Python 参考同规则），供装配与编排层取配置。 | 2 | 4 |  |
 | `internal/llm` | capability | LLM 传输：provider 选择、Anthropic/OpenAI 协议、流式事件、模型目录与出站限速门。 | 3 | 16 |  |
 | `internal/maintenance` | capability | Janitor：孤儿会话、缓存、工件与事件日志的清理规则与报告。 | 2 | 2 |  |
 | `internal/mcpregistry` | capability | MCP 服务器注册表 CLI 后端：索引、安装/启用、健康检查与清单渲染。 | 6 | 3 |  |
 | `internal/mcpregistry/nativecli` | capability | mcp2cli 3.8.0 的 Go 子集实现：MCP 服务器注册表 native CLI 后端。 | 2 | 2 |  |
-| `internal/memory` | capability | Markdown 记忆文件：召回、写入、按天时间线与反思沉淀。 | 3 | 3 |  |
+| `internal/memory` | capability | Markdown 记忆文件：召回、写入、按天时间线与反思沉淀。 | 4 | 3 |  |
 | `internal/pipeline` | capability | 配置驱动的 trigger 中间件：Stage 接口、按 order 执行/reject 短路/transform 的 Runner、stage 注册表与 7 个内置 stage（llm_provider/credential_resolver/mcp_registry/skill_registry/input_validation/rate_limit/cost_guard）。 | 7 | 1 |  |
 | `internal/senders` | capability | 出站消息发送：正文渲染、抑制列表、每发件人锁与发送日志。 | 2 | 2 |  |
 | `internal/skills` | capability | 技能发现/安装/校验，以及 agent 侧的技能读取工具。 | 3 | 6 |  |

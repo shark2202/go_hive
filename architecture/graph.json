@@ -1,16 +1,16 @@
 {
   "schema_version": 1,
   "module": "github.com/aden-hive/hive-go",
-  "generated_at_commit": "45aa262ebd54",
+  "generated_at_commit": "41ae8d322918",
   "generated_from": "architecture/model.yaml + go list -json ./... + internal/server mux.HandleFunc + internal/eventbus event_type.go",
   "stats": {
     "packages": 82,
-    "package_edges": 214,
+    "package_edges": 215,
     "capabilities": 12,
     "capability_edges": 85,
     "layers": 8,
     "contracts": 34,
-    "http_routes": 220,
+    "http_routes": 225,
     "event_types": 77,
     "warnings": 1
   },
@@ -673,7 +673,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 2,
-      "dependents": 3
+      "dependents": 4
     },
     {
       "id": "pkg:internal/llm",
@@ -732,7 +732,7 @@
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 3,
+      "direct_dependencies": 4,
       "dependents": 3
     },
     {
@@ -2138,6 +2138,11 @@
     {
       "from": "pkg:internal/memory",
       "to": "pkg:internal/atomicfs",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/memory",
+      "to": "pkg:internal/hiveconf",
       "kind": "depends"
     },
     {

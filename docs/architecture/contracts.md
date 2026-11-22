@@ -1,6 +1,6 @@
 # 接口与契约（生成物，勿手改）
 
-> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` 的 `contracts:` / `disk_formats:`，加上 `internal/server` 路由注册与 `internal/eventbus` 常量生成。commit: `45aa262ebd54`
+> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` 的 `contracts:` / `disk_formats:`，加上 `internal/server` 路由注册与 `internal/eventbus` 常量生成。commit: `41ae8d322918`
 > 契约是模块之间「靠什么约束交互」的清单：谁提供、谁消费、定义在哪、保证什么、失败怎么表现、变更属于加法还是破坏、由什么机制强制。
 > `providers` / `consumers` 里的 `ext:` 前缀表示外部消费面（前端、运维、MCP server、外部调用方），不是仓库内的包。
 
@@ -16,7 +16,7 @@
 | 其中 磁盘格式（`disk`） | 8 |
 | 其中 工具 schema（`tool-schema`） | 2 |
 | 其中 CLI 命令（`cli`） | 3 |
-| HTTP 路由（`internal/server`，method+path） | 220 |
+| HTTP 路由（`internal/server`，method+path） | 225 |
 | EventType 常量 | 77 |
 | 磁盘格式（人工维护） | 8 |
 
@@ -434,7 +434,7 @@
 
 从 `internal/server` 的非测试文件里正则提取 `mux.HandleFunc("METHOD /path", handler)`：**只覆盖标准库 ServeMux 的「方法 + 路径」式注册**。handler 列取注册闭包中第一个具名调用（优先 `handle*`），纯内联逻辑写 `(inline)`；它只用于阅读，不作为门禁判断。`http.*` 契约是按治理职责划分的族群，不是互斥路由集合；同一条路由可以同时属于一个族群与另一族群的语义边界，全量以本表为准。
 
-共 **220** 条：DELETE 19、GET 89、PATCH 11、POST 84、PUT 17
+共 **225** 条：DELETE 19、GET 92、PATCH 11、POST 85、PUT 18
 
 | 方法 | 路径 | handler | 来源 |
 | --- | --- | --- | --- |
@@ -475,24 +475,26 @@
 | POST | `/api/colony/{colony_id}/notifications/test` | `handleTestNotification` | `internal/server/routes_sentinel.go:110` |
 | GET | `/api/colony/{colony_id}/tools` | `handleGetColonyTools` | `internal/server/routes_colony_tools.go:50` |
 | PATCH | `/api/colony/{colony_id}/tools` | `handlePatchColonyTools` | `internal/server/routes_colony_tools.go:53` |
-| GET | `/api/config/external-skills` | `handleGetExternalSkills` | `internal/server/routes_config.go:294` |
-| PUT | `/api/config/external-skills` | `handlePutExternalSkills` | `internal/server/routes_config.go:295` |
+| GET | `/api/config/external-skills` | `handleGetExternalSkills` | `internal/server/routes_config.go:296` |
+| PUT | `/api/config/external-skills` | `handlePutExternalSkills` | `internal/server/routes_config.go:297` |
 | GET | `/api/config/features` | `handleGetFeatures` | `internal/server/routes_config.go:279` |
 | PUT | `/api/config/features` | `handleUpdateFeatures` | `internal/server/routes_config.go:280` |
-| GET | `/api/config/llm` | `handleGetLLMConfig` | `internal/server/routes_config.go:283` |
-| PUT | `/api/config/llm` | `handleUpdateLLMConfig` | `internal/server/routes_config.go:284` |
-| GET | `/api/config/llm-sections` | `handleGetLLMSections` | `internal/server/routes_config.go:281` |
-| PUT | `/api/config/llm-sections` | `handlePutLLMSection` | `internal/server/routes_config.go:282` |
+| GET | `/api/config/llm` | `handleGetLLMConfig` | `internal/server/routes_config.go:285` |
+| PUT | `/api/config/llm` | `handleUpdateLLMConfig` | `internal/server/routes_config.go:286` |
+| GET | `/api/config/llm-sections` | `handleGetLLMSections` | `internal/server/routes_config.go:283` |
+| PUT | `/api/config/llm-sections` | `handlePutLLMSection` | `internal/server/routes_config.go:284` |
+| GET | `/api/config/memory` | `handleGetMemorySettings` | `internal/server/routes_config.go:281` |
+| PUT | `/api/config/memory` | `handleUpdateMemorySettings` | `internal/server/routes_config.go:282` |
 | GET | `/api/config/models` | `handleGetModels` | `internal/server/routes_config.go:276` |
-| GET | `/api/config/profile` | `handleGetProfile` | `internal/server/routes_config.go:290` |
-| PUT | `/api/config/profile` | `handleUpdateProfile` | `internal/server/routes_config.go:291` |
-| GET | `/api/config/profile/avatar` | `handleGetAvatar` | `internal/server/routes_config.go:293` |
-| POST | `/api/config/profile/avatar` | `handleUploadAvatar` | `internal/server/routes_config.go:292` |
-| GET | `/api/config/provider-library` | `handleGetProviderLibrary` | `internal/server/routes_config.go:285` |
-| PUT | `/api/config/provider-library` | `handlePutProviderLibrary` | `internal/server/routes_config.go:286` |
-| POST | `/api/config/provider-library/apply` | `handleApplyProviderLibrary` | `internal/server/routes_config.go:287` |
-| GET | `/api/config/rate-limits` | `handleGetRateLimits` | `internal/server/routes_config.go:288` |
-| PUT | `/api/config/rate-limits` | `handleUpdateRateLimits` | `internal/server/routes_config.go:289` |
+| GET | `/api/config/profile` | `handleGetProfile` | `internal/server/routes_config.go:292` |
+| PUT | `/api/config/profile` | `handleUpdateProfile` | `internal/server/routes_config.go:293` |
+| GET | `/api/config/profile/avatar` | `handleGetAvatar` | `internal/server/routes_config.go:295` |
+| POST | `/api/config/profile/avatar` | `handleUploadAvatar` | `internal/server/routes_config.go:294` |
+| GET | `/api/config/provider-library` | `handleGetProviderLibrary` | `internal/server/routes_config.go:287` |
+| PUT | `/api/config/provider-library` | `handlePutProviderLibrary` | `internal/server/routes_config.go:288` |
+| POST | `/api/config/provider-library/apply` | `handleApplyProviderLibrary` | `internal/server/routes_config.go:289` |
+| GET | `/api/config/rate-limits` | `handleGetRateLimits` | `internal/server/routes_config.go:290` |
+| PUT | `/api/config/rate-limits` | `handleUpdateRateLimits` | `internal/server/routes_config.go:291` |
 | GET | `/api/config/sentinel` | `handleGetSentinel` | `internal/server/routes_config.go:277` |
 | PUT | `/api/config/sentinel` | `handleUpdateSentinel` | `internal/server/routes_config.go:278` |
 | GET | `/api/credentials` | `routes.handleListCredentials` | `internal/server/routes_credentials.go:78` |
@@ -541,11 +543,14 @@
 | POST | `/api/mcp/servers/{name}/enable` | `handleEnableMCPServer` | `internal/server/routes_mcp.go:80` |
 | POST | `/api/mcp/servers/{name}/health` | `handleMCPHealth` | `internal/server/routes_mcp.go:86` |
 | POST | `/api/mcp/servers/{name}/mode` | `handleSetMCPMode` | `internal/server/routes_mcp.go:89` |
-| GET | `/api/memories` | `handleListMemories` | `internal/server/routes_memories_extra.go:22` |
-| DELETE | `/api/memories/file` | `handleDeleteMemory` | `internal/server/routes_memories_extra.go:34` |
-| GET | `/api/memories/file` | `handleGetMemory` | `internal/server/routes_memories_extra.go:25` |
-| POST | `/api/memories/file` | `handleCreateMemory` | `internal/server/routes_memories_extra.go:28` |
-| PUT | `/api/memories/file` | `handleUpdateMemory` | `internal/server/routes_memories_extra.go:31` |
+| GET | `/api/memories` | `handleListMemories` | `internal/server/routes_memories_extra.go:24` |
+| DELETE | `/api/memories/file` | `handleDeleteMemory` | `internal/server/routes_memories_extra.go:36` |
+| GET | `/api/memories/file` | `handleGetMemory` | `internal/server/routes_memories_extra.go:27` |
+| POST | `/api/memories/file` | `handleCreateMemory` | `internal/server/routes_memories_extra.go:30` |
+| PUT | `/api/memories/file` | `handleUpdateMemory` | `internal/server/routes_memories_extra.go:33` |
+| GET | `/api/memories/history` | `handleMemoryHistory` | `internal/server/routes_memories_extra.go:39` |
+| POST | `/api/memories/restore` | `handleRestoreMemory` | `internal/server/routes_memories_extra.go:42` |
+| GET | `/api/memories/retired` | `handleRetiredMemories` | `internal/server/routes_memories_extra.go:45` |
 | POST | `/api/messages/classify` | `handleClassifyMessage` | `internal/server/routes_messages_extra.go:66` |
 | POST | `/api/messages/classify-colony` | `handleClassifyColony` | `internal/server/routes_messages_extra.go:69` |
 | DELETE | `/api/models/endpoints/{name}` | `handleDeleteModelEndpoint` | `internal/server/routes_models.go:143` |
@@ -764,6 +769,6 @@
 
 ## 覆盖边界
 
-- HTTP 路由表只统计带方法前缀的 `mux.HandleFunc`，共 220 条（含 `GET /` SPA 兜底）；`internal/server/webhook_server.go` 里独立的 `mux.HandleFunc("/", ...)` webhook 入口不在表内。
+- HTTP 路由表只统计带方法前缀的 `mux.HandleFunc`，共 225 条（含 `GET /` SPA 兜底）；`internal/server/webhook_server.go` 里独立的 `mux.HandleFunc("/", ...)` webhook 入口不在表内。
 - SSE 端点没有单独一张表；它们的帧形状写在 `sse.*` 契约明细里，路由本身仍在 HTTP 路由表中。
 - `contracts:` 是人工维护的治理视图，不是从代码自动推导的依赖图；生成器只校验字段完整性、包名与类别，不能证明每条保证在运行期成立。
