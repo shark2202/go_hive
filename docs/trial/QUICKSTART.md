@@ -8,7 +8,7 @@ tar xzf hive-<platform>.tar.gz && cd hive-<platform>
 ./install.sh          # 默认装到 ~/.hive-go，可 HIVE_HOME=... 覆盖
 ```
 
-或直接使用 slot 产物：`go_hive/dist/slots/20261122-20/`。
+或直接使用 slot 产物：`go_hive/dist/slots/<最新 slot>/`（每 2 小时一版）。
 
 ## 首次启动
 

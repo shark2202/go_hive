@@ -2,6 +2,10 @@
 
 本文件记录 Go 移植（`github.com/aden-hive/hive-go`）的版本内容。上游 Python 版本的发布说明在仓库根目录的 [`CHANGELOG.md`](../../CHANGELOG.md)。
 
+## 1.0.27-go.1 — 2026-11-22
+
+预览版：govulncheck 23 OSV→0（go1.26.11）；cold-resume guard + resume 快照/首帧；recall warm p50 12.7ms（9.7×，dump 逐字节相同）；check-agent/resync 实装（前端真实验证）；工具输入 coercion 接线；存储 SC-04/06/08 收口 + `make storage-sweep`；MCP 裸名别名层；C12 triage 修正（273=217/27/9/20）。测试 5,756、refs 6,274、QC 9/9、compat 12/12。
+
 ## 1.0.26-go.1 — 2026-11-20
 
 overseer 回复写入会话转录；events.jsonl flush 边界；归档补齐 `hive-browser`/`browserbridge`（六平台，包内 SHA256SUMS 全覆盖）；Orca 浏览器 UI E2E 7/7。测试 4,566、引用 4,843。

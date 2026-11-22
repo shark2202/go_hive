@@ -1,6 +1,6 @@
 # go_hive 语义一致试用版 · KNOWN-GAPS（2026-11-22）
 
-> 版本：`hive 1.0.26-go.1`（slot `20261122-20`，go1.26.11 工具链）。
+> 版本：`hive 1.0.27-go.1`（构建批次见包内 TRIAL-MANIFEST；go1.26.11 工具链）。
 > 判定口径：**语义一致 = 模型 / 客户端 SDK / 持久化数据与 resume / CLI 输出与退出码**四类观测者可见的面逐字一致或显式登记；四者都不可见的内部机制（goroutine vs asyncio、EventBus 异步派发等）属实现自由。
 
 ## 1. 本版已验证（实测证据）
@@ -35,7 +35,7 @@
 - **background 记忆模式**：仍同步挑选（上游异步流水线）。
 - **playbook 父侧 900s 静默守护**：保护性差异。
 - **EventBus 异步派发**：观测等价（SSE 42/42）。
-- **版本双轨**：Go `1.0.26-go.1` / Python 参考 `1.0.15`，独立演进。
+- **版本双轨**：Go `1.0.27-go.1` / Python 参考 `1.0.15`，独立演进。
 - **工具 schema 归一**：raw 25/47、归一 33/47（其余为可选字段/描述差异，逐条在 `tool-surface` 登记）。
 - **`attached_credentials.json`**：Python-only（会话固定凭据），Go 无读写；不阻塞启动/迁移。
 - **cold_interrupted 的 `[System]` 注记**：Go 恢复时不自动续跑回合，下一回合从用户消息开始。
