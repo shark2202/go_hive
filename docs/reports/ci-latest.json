@@ -1,9 +1,9 @@
 {
- "wave": 58,
- "at": "2026-11-22 14:55",
- "head": "4d823763",
+ "wave": 59,
+ "at": "2026-11-22 15:22",
+ "head": "609481d1",
  "ci": 0,
  "qc": 0,
  "publish": 0,
- "note": "recall-seed + dual-scope 合并后"
+ "note": "dash-memory 合并且 8788 换新构建后"
 }

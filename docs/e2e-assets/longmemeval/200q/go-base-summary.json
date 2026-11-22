@@ -1,0 +1,63 @@
+{
+  "title": "LongMemEval-S through Hive",
+  "questions": 200,
+  "correct": 175,
+  "accuracy": 0.875,
+  "ci95": [
+    0.8219846471534161,
+    0.9138808484078432
+  ],
+  "task_averaged": 0.8676470588235294,
+  "per_type": {
+    "knowledge-update": {
+      "n": 34,
+      "correct": 31,
+      "accuracy": 0.9117647058823529,
+      "searched": 0.9117647058823529,
+      "evidence": 0.875
+    },
+    "multi-session": {
+      "n": 34,
+      "correct": 27,
+      "accuracy": 0.7941176470588235,
+      "searched": 0.8823529411764706,
+      "evidence": 0.875
+    },
+    "single-session-assistant": {
+      "n": 34,
+      "correct": 34,
+      "accuracy": 1,
+      "searched": 0.6176470588235294,
+      "evidence": 0.6176470588235294
+    },
+    "single-session-preference": {
+      "n": 30,
+      "correct": 15,
+      "accuracy": 0.5,
+      "searched": 0.4,
+      "evidence": 0.36666666666666664
+    },
+    "single-session-user": {
+      "n": 34,
+      "correct": 34,
+      "accuracy": 1,
+      "searched": 0.5,
+      "evidence": 0.45161290322580644
+    },
+    "temporal-reasoning": {
+      "n": 34,
+      "correct": 34,
+      "accuracy": 1,
+      "searched": 0.7941176470588235,
+      "evidence": 0.7878787878787878
+    }
+  },
+  "judge_model": "deepseek-v4-pro",
+  "reader_model": "deepseek-flash-1017",
+  "abstention_n": 8,
+  "abstention_correct": 7,
+  "errors": 0,
+  "ungraded": 0,
+  "median_seconds": 7.123106438000001,
+  "retrieval_diagnostics": true
+}
