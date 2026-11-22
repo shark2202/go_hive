@@ -1,0 +1,34 @@
+Hive API journey gate — real hive-embed serve on a throwaway HIVE_HOME
+  binary     : /Users/mac/hive/go_hive/go-hive/dist/hive-embed (hive 1.0.27-go.1)
+  binary sha : cf0db63cd944a273…
+  repo HEAD  : 5e79351dd8c3a703e720bd4da28ff4aa1ae70f70 (journey-e2e)
+  HIVE_HOME  : /Users/mac/.hermes/profiles/omh-tui/cache/scratch/journey-7ac853f2-4a9f-4286-9723-7769af0da1e0 [deleted after the run]
+  base URL   : http://127.0.0.1:53578
+  started at : 2026-11-23T01:17:26+08:00
+
+[a] PASS http=201   38.7ms  create queen DM session
+      HTTP 201 · session_id=session_20261123_011726_539de298 · colony_id=None
+[b] PASS http=200    3.8ms  list queen profiles (UI prerequisite)
+      HTTP 200 · 13 queen(s) · first id=queen_brand_design
+[c] FAIL http=404   17.5ms  create fresh colony 'journey-colony' (popup path)
+      expect : HTTP 201 + session_id + colony_id + has_worker
+      actual : HTTP 404 · error='Colony not found: journey-colony'
+      failed : HTTP status is 201 — HTTP 404
+      failed : body carries session_id — session_id=''
+      failed : session is bound to the new colony — colony_id=None, want 'journey-colony'
+      failed : has_worker is true — has_worker=None
+[d] SKIP http=-          -  colony on disk + in tools-index + in sessions
+      skipped — skipped: step c did not create the colony
+[e] PASS http=200    1.5ms  SPA pages answer (root + colony route)
+      / → HTTP 200 text/html; charset=utf-8 · /colony/journey-colony → HTTP 200 text/html; charset=utf-8
+[f] SKIP http=-          -  create + deactivate a timer trigger on the colony session
+      skipped — skipped: step c did not create the colony
+
+cleanup (step g):
+  ok  DELETE queen DM session session_20261123_011726_539de298 — HTTP 200 · {"session_id":"session_20261123_011726_539de298","stopped":true}
+  ok  stop serve process — serve stopped on SIGTERM (rc=0)
+  ok  delete temp HIVE_HOME — /Users/mac/.hermes/profiles/omh-tui/cache/scratch/journey-7ac853f2-4a9f-4286-9723-7769af0da1e0
+
+result: FAIL — failed: c
+note: step c returned the known pre-fix 404 ('Colony not found') recorded in docs/qa-postmortem-20261123.md — this gate exists to catch exactly that.
+exit code: 1

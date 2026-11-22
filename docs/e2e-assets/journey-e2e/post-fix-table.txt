@@ -1,0 +1,29 @@
+Hive API journey gate — real hive-embed serve on a throwaway HIVE_HOME
+  binary     : /Users/mac/hive/go_hive/go-hive/dist/hive-embed (hive 1.0.27-go.1)
+  binary sha : e79ce6b60f583ce0…
+  repo HEAD  : 761cbe6576a3f6f49fd7b41b13d97fabc1760fcf (journey-e2e)
+  HIVE_HOME  : /Users/mac/.hermes/profiles/omh-tui/cache/scratch/journey-7b9c41f6-e753-43e1-83ed-00654c7b6be7 [deleted after the run]
+  base URL   : http://127.0.0.1:53818
+  started at : 2026-11-23T01:19:11+08:00
+
+[a] PASS http=201   35.0ms  create queen DM session
+      HTTP 201 · session_id=session_20261123_011911_77744a8c · colony_id=None
+[b] PASS http=200    0.6ms  list queen profiles (UI prerequisite)
+      HTTP 200 · 13 queen(s) · first id=queen_brand_design
+[c] PASS http=201   68.5ms  create fresh colony 'journey-colony' (popup path)
+      HTTP 201 · session_id=session_20261123_011911_157d8194
+[d] PASS http=200    3.8ms  colony on disk + in tools-index + in sessions
+      metadata=ok · worker=ok · tools-index=listed · sessions=listed
+[e] PASS http=200    6.2ms  SPA pages answer (root + colony route)
+      / → HTTP 200 text/html; charset=utf-8 · /colony/journey-colony → HTTP 200 text/html; charset=utf-8
+[f] PASS http=200   17.1ms  create + deactivate a timer trigger on the colony session
+      create HTTP 200 trigger_id=user-probe · deactivate HTTP 200
+
+cleanup (step g):
+  ok  DELETE colony session session_20261123_011911_157d8194 — HTTP 200 · {"session_id":"session_20261123_011911_157d8194","stopped":true}
+  ok  DELETE queen DM session session_20261123_011911_77744a8c — HTTP 200 · {"session_id":"session_20261123_011911_77744a8c","stopped":true}
+  ok  stop serve process — serve stopped on SIGTERM (rc=0)
+  ok  delete temp HIVE_HOME — /Users/mac/.hermes/profiles/omh-tui/cache/scratch/journey-7b9c41f6-e753-43e1-83ed-00654c7b6be7
+
+result: PASS — 6 steps, cleanup ok
+exit code: 0

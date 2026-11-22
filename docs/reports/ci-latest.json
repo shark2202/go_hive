@@ -1,9 +1,9 @@
 {
- "wave": 78,
- "at": "2026-11-23 00:44",
- "head": "b04f82e1",
- "ci": 2,
+ "wave": 79,
+ "at": "2026-11-23 00:51",
+ "head": "aa82660a",
+ "ci": 0,
  "qc": 0,
  "publish": 0,
- "note": "size gate 失败：trigger-batch 合并后 (ChatRuntime).runTurn 201>200；lane size-fix 拆分中；其余包全 ok"
+ "note": "size-fix 拆 runTurn 解规模门禁（201→173）；wave-79 首跑 colony playbook flaky 失败、复跑全绿；publish 镜像 677abf6（sync aa82660a）；refs 6442"
 }

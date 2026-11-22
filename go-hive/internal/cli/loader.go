@@ -647,11 +647,11 @@ func (r *Runner) createSessionWithRuntime(
 	// A session bound to a colony carries that colony's live runtime, not
 	// just its id: arm the host (overseer included) before the session is
 	// registered. The fork path hands in a runtime it already started; a
-	// plain create-session with colony_id builds it here. Either way a
-	// missing colony is a 404 and a runtime that cannot start is a 500, so
-	// the create route reports the failure instead of returning a session
+	// plain create-session with colony_id bootstraps a fresh colony first and
+	// builds its runtime here. A runtime that cannot start is a 500, so the
+	// create route reports the failure instead of returning a session
 	// that silently has no colony behind it.
-	if err := r.bindSessionColony(record, home, requestedModel, prebuilt, prebuiltPath); err != nil {
+	if err := r.bindSessionColony(record, home, requestedModel, params.QueenName, prebuilt, prebuiltPath); err != nil {
 		return nil, err
 	}
 
@@ -684,14 +684,22 @@ func (r *Runner) createSessionWithRuntime(
 // route maps to 4xx/5xx — a session never looks colony-backed while its runtime
 // is missing.
 // bindSessionColony attaches the session's colony host: a prebuilt one wins,
-// otherwise the colony is built and started from disk. Extracted from
+// otherwise a fresh colony is bootstrapped (metadata.json + worker.json) and
+// the colony is built and started from disk. Extracted from
 // createSessionWithRuntime to keep that function inside the size budget.
-func (r *Runner) bindSessionColony(record *hiveserver.Session, home hivehome.Home, requestedModel string, prebuilt *colonyhost.Host, prebuiltPath string) error {
+func (r *Runner) bindSessionColony(record *hiveserver.Session, home hivehome.Home, requestedModel string, requestedQueen *string, prebuilt *colonyhost.Host, prebuiltPath string) error {
 	switch {
 	case prebuilt != nil:
 		record.Colony = prebuilt
 		record.WorkerPath = prebuiltPath
 	case record.ColonyID != "":
+		// SessionManager.create_session's fresh-colony branch: a colony_id
+		// with no metadata.json on disk is bootstrapped before its runtime is
+		// built, so the create lands in a real colony instead of a 404. An
+		// existing colony (a scaffold-only one included) is loaded as-is.
+		if err := ensureColonyForCreate(home, record.ColonyID, requestedQueen); err != nil {
+			return err
+		}
 		colonyPath := home.ColonyDir(record.ColonyID)
 		info, statErr := os.Stat(colonyPath)
 		if statErr != nil || !info.IsDir() {
