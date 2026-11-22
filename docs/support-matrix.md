@@ -65,7 +65,7 @@
 | Janitor | 部分 | `hive janitor status` 实测；`run --execute` 未执行 |
 | `hive-cred` | 已实现 | 实测 `browse` / `inspect` |
 | MCP 注册表与 CLI | 部分 | 14 个子命令注册；未对真实 MCP server 验证 |
-| 依赖漏洞扫描（govulncheck） | 已实现；当前门禁 **FAIL**（23 个 stdlib CVE） | 2026-11-21 `make vulncheck` 实测：govulncheck v1.10.0 / DB 2026-11-11 / source+symbol；go-hive 23 unique OSV·778 events，browserbridge 23·608，全部 Go 标准库（fixed in go1.26.6–1.26.11），0 第三方模块 finding；发布归档 slot `20261121-18` 二进制 `-mode=binary` 复扫另有 18 个可达 stdlib 漏洞。离线降级 `vulncheck.sh --offline` 退出 3=UNVERIFIED。证据 `docs/e2e-assets/vulncheck/20261121/`、`docs/install-verify.md` §1。修复（未做，属需批准的依赖变更）：`go 1.26.5` → ≥1.26.11 并重建 |
+| 依赖漏洞扫描（govulncheck） | 已实现；门禁 **PASS（0 OSV）** | 2026-11-22 起 `go 1.26.11`（D1 拍板 `d6831999`）实测 **0 unique OSV**（source+symbol），wave-66→74 连续绿。历史：go1.26.5 时 23 个 stdlib CVE（fixed in 1.26.6–1.26.11，0 第三方模块 finding）。离线降级 `vulncheck.sh --offline` 退出 3=UNVERIFIED。证据 `docs/govulncheck-bump-prep.md`、`docs/e2e-assets/vulncheck/`、`docs/install-verify.md` §1 |
 
 ### 1.1 老用户无损替换（G2：旧 `HIVE_HOME` → Go 1.0.26）
 
