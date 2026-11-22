@@ -55,7 +55,9 @@
       {
         "id": "govulncheck",
         "label": "govulncheck + 安全审查",
-        "hours": 2
+        "hours": 2,
+        "done": true,
+        "note": "｜ 2026-11-22 D1 批准：go.mod→1.26.11，govulncheck 0 OSV（wave-66/67/69/70 连续复验）"
       },
       {
         "id": "installer-verify",
@@ -75,8 +77,8 @@
         "id": "exports-baseline-decision",
         "label": "exports/ 基准差异决策（Python=CWD vs Go=HIVe_HOME）；备忘已产，待用户拍板 Q1/Q2",
         "hours": 1,
-        "done": false,
-        "note": "备忘：docs/exports-baseline-decision.md（选项 A/B/C/C′/D，推荐 A，若必须自动迁移则 C′）。F4 .migrations 已复核：colony list 两侧逐字一致（sha 30e73cca），登记为行为对齐无需修。"
+        "done": true,
+        "note": "备忘：docs/exports-baseline-decision.md（选项 A/B/C/C′/D，推荐 A，若必须自动迁移则 C′）。F4 .migrations 已复核：colony list 两侧逐字一致（sha 30e73cca），登记为行为对齐无需修。 ｜ 2026-11-22 D2 拍板：维持 $HIVE_HOME 基准（A），无代码改动"
       }
     ],
     "G1": [
