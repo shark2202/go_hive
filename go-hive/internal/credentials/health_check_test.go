@@ -23,7 +23,7 @@ func healthTestServer(t *testing.T, status int, body string, inspect func(*http.
 	return server
 }
 
-// Parity: health_check.py::check_credential_health — a spec endpoint without a
+// Parity: tools/src/aden_tools/credentials/health_check.py::check_credential_health — a spec endpoint without a
 // dedicated checker falls back to the generic OAuth bearer checker; without an
 // endpoint the credential is assumed valid.
 func TestCheckCredentialHealthFallbackDispatch(t *testing.T) {
@@ -49,7 +49,7 @@ func TestCheckCredentialHealthFallbackDispatch(t *testing.T) {
 	}
 }
 
-// Parity: health_check.py::OAuthBearerHealthChecker.check — status mapping and
+// Parity: tools/src/aden_tools/credentials/health_check.py::OAuthBearerHealthChecker.check — status mapping and
 // message text.
 func TestOAuthBearerHealthCheckStatusMapping(t *testing.T) {
 	cases := []struct {
@@ -74,7 +74,7 @@ func TestOAuthBearerHealthCheckStatusMapping(t *testing.T) {
 	}
 }
 
-// Parity: health_check.py::BaseHttpHealthChecker._interpret_response — the
+// Parity: tools/src/aden_tools/credentials/health_check.py::BaseHttpHealthChecker._interpret_response — the
 // shared status interpretation behind the declarative checkers, including the
 // 429-valid and identity-extraction branches.
 func TestBaseHTTPHealthCheckInterpretation(t *testing.T) {
@@ -132,6 +132,7 @@ func TestBaseHTTPHealthCheckInterpretation(t *testing.T) {
 
 // Auth shapes: bearer header, custom header template, query param, basic auth
 // and a POST JSON body (Exa's shape).
+// Parity: tools/src/aden_tools/credentials/health_check.py::BaseHttpHealthChecker.check
 func TestBaseHTTPHealthCheckAuthShapes(t *testing.T) {
 	var gotPath, gotAuth, gotCustom, gotQuery, gotMethod, gotBody string
 	server := healthTestServer(t, 200, `{}`, func(r *http.Request) {
@@ -185,6 +186,7 @@ func TestBaseHTTPHealthCheckAuthShapes(t *testing.T) {
 // A too-slow endpoint reports the timeout message (httpx.TimeoutException
 // branch); the probe uses a short per-request timeout instead of waiting the
 // production 10s.
+// Parity: tools/src/aden_tools/credentials/health_check.py::BaseHttpHealthChecker.check
 func TestHealthCheckTimeoutMessage(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(150 * time.Millisecond)
@@ -218,6 +220,7 @@ func TestHealthCheckTimeoutMessage(t *testing.T) {
 
 // The registered checker table mirrors HEALTH_CHECKERS: every upstream key is
 // present (a missing registration would silently fall back to bearer auth).
+// Parity: tools/src/aden_tools/credentials/health_check.py::HEALTH_CHECKERS
 func TestHealthCheckerRegistryMatchesUpstream(t *testing.T) {
 	expected := []string{
 		"apify", "apollo", "asana", "attio", "brave_search", "brevo", "calcom",

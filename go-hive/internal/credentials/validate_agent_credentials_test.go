@@ -104,7 +104,7 @@ func TestValidateAgentCredentialsPresence(t *testing.T) {
 	}
 }
 
-// Parity: validation.py::validate_agent_credentials — a required=False spec in
+// Parity: core/framework/credentials/validation.py::validate_agent_credentials — a required=False spec in
 // the single-provider branch is recorded as checked but never reported.
 func TestValidateAgentCredentialsSkipsNonRequiredSpec(t *testing.T) {
 	t.Setenv(AdenEnvVar, "")
@@ -119,7 +119,7 @@ func TestValidateAgentCredentialsSkipsNonRequiredSpec(t *testing.T) {
 	}
 }
 
-// Parity: validation.py::validate_agent_credentials — multi-provider tools are
+// Parity: core/framework/credentials/validation.py::validate_agent_credentials — multi-provider tools are
 // any-of: with nothing available every alternative is reported with the tool
 // name as its group; with one available only that provider is reported.
 func TestValidateAgentCredentialsAlternativeGroups(t *testing.T) {
@@ -162,7 +162,7 @@ func TestValidateAgentCredentialsAlternativeGroups(t *testing.T) {
 	}
 }
 
-// Parity: validation.py::validate_agent_credentials phase 2 — present
+// Parity: core/framework/credentials/validation.py::validate_agent_credentials phase 2 — present
 // credentials with a health endpoint are checked; the result fills valid and
 // validation_message (and identity details persist best-effort).
 func TestValidateAgentCredentialsHealthCheckAndIdentity(t *testing.T) {
@@ -222,6 +222,7 @@ func TestValidateAgentCredentialsHealthCheckAndIdentity(t *testing.T) {
 
 // A credential with no value never reaches the checker (reference: `if not
 // value: continue`), and SkipVerification leaves valid unset.
+// Parity: core/framework/credentials/validation.py::validate_agent_credentials
 func TestValidateAgentCredentialsSkipsEmptyValueAndVerification(t *testing.T) {
 	t.Setenv(AdenEnvVar, "")
 	nodes := []AgentNode{{Tools: []string{"github_create_issue"}}}
@@ -255,7 +256,7 @@ func TestValidateAgentCredentialsSkipsEmptyValueAndVerification(t *testing.T) {
 	}
 }
 
-// Parity: validation.py::compute_unavailable_tools — failed credentials report
+// Parity: core/framework/credentials/validation.py::compute_unavailable_tools — failed credentials report
 // their tools for spawn-time filtering.
 func TestComputeUnavailableTools(t *testing.T) {
 	t.Setenv(AdenEnvVar, "")
@@ -279,6 +280,7 @@ func TestComputeUnavailableTools(t *testing.T) {
 
 // Aden-only credentials missing while ADEN_API_KEY is set are surfaced as
 // aden_not_connected, not as plain missing credentials.
+// Parity: core/framework/credentials/validation.py::validate_agent_credentials
 func TestValidateAgentCredentialsAdenNotConnected(t *testing.T) {
 	t.Setenv(AdenEnvVar, "aden-key")
 	// google is the registry's only Aden-supported, direct-key-unsupported spec;

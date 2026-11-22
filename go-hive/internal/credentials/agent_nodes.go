@@ -159,7 +159,7 @@ func parseDeclarativeNodes(data []byte) ([]AgentNode, bool) {
 		}
 
 		// Tool resolution: node-level explicit -> node-level none -> inherit.
-		// Parity: agent_loader.py::load_agent_config
+		// Parity: core/framework/credentials/setup.py::_load_nodes_from_json_declarative
 		var toolsList []string
 		switch {
 		case nodeTools.Policy == "explicit" && len(nodeTools.Allowed) > 0:

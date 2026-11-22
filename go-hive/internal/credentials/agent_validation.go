@@ -26,7 +26,7 @@ type AgentCredentialStore interface {
 
 // AgentCredentialStatus is the status of one required credential after
 // validation.
-// Parity: validation.py::CredentialStatus
+// Parity: core/framework/credentials/validation.py::CredentialStatus
 type AgentCredentialStatus struct {
 	CredentialName        string
 	CredentialID          string
@@ -48,7 +48,7 @@ type AgentCredentialStatus struct {
 
 // AgentCredentialValidationResult is the result of validating every credential
 // an agent requires.
-// Parity: validation.py::CredentialValidationResult
+// Parity: core/framework/credentials/validation.py::CredentialValidationResult
 type AgentCredentialValidationResult struct {
 	Credentials []AgentCredentialStatus
 	HasAdenKey  bool
@@ -119,7 +119,7 @@ func mergedAgentSpecRows() []agentSpecRow {
 // ValidateAgentCredentials checks that required credentials are available and,
 // unless skipped, valid.
 //
-// Parity: validation.py::validate_agent_credentials
+// Parity: core/framework/credentials/validation.py::validate_agent_credentials
 func ValidateAgentCredentials(nodes []AgentNode, store AgentCredentialStore, opts ValidateAgentCredentialsOptions) (AgentCredentialValidationResult, error) {
 	result := AgentCredentialValidationResult{Credentials: []AgentCredentialStatus{}}
 	rows := mergedAgentSpecRows()
@@ -159,33 +159,9 @@ func ValidateAgentCredentials(nodes []AgentNode, store AgentCredentialStore, opt
 	toVerify := []int{}
 
 	checkCredential := func(spec GeneratedCredentialSpec, credName string, affectedTools, affectedNodeTypes []string, alternativeGroup *string) {
-		credentialID := spec.CredentialID
-		if credentialID == "" {
-			credentialID = credName
-		}
-		available := false
-		if store != nil {
-			available = store.IsAvailable(credentialID)
-		}
-		adenNotConnected := !available && hasAdenKey && spec.AdenSupported && !spec.DirectAPIKeySupported
-		status := AgentCredentialStatus{
-			CredentialName:        credName,
-			CredentialID:          credentialID,
-			EnvVar:                spec.EnvVar,
-			Description:           spec.Description,
-			HelpURL:               spec.HelpURL,
-			APIKeyInstructions:    spec.APIKeyInstructions,
-			Tools:                 copyStrings(affectedTools),
-			NodeTypes:             copyStrings(affectedNodeTypes),
-			Available:             available,
-			AdenSupported:         spec.AdenSupported,
-			DirectAPIKeySupported: spec.DirectAPIKeySupported,
-			CredentialKey:         spec.CredentialKey,
-			AdenNotConnected:      adenNotConnected,
-			AlternativeGroup:      alternativeGroup,
-		}
+		status, needVerify := buildAgentCredentialStatus(spec, credName, affectedTools, affectedNodeTypes, alternativeGroup, store, hasAdenKey)
 		result.Credentials = append(result.Credentials, status)
-		if available && !opts.SkipVerification && spec.HealthCheckEndpoint != "" {
+		if needVerify && !opts.SkipVerification {
 			toVerify = append(toVerify, len(result.Credentials)-1)
 		}
 	}
@@ -323,6 +299,39 @@ func ValidateAgentCredentials(nodes []AgentNode, store AgentCredentialStore, opt
 	return result, nil
 }
 
+// buildAgentCredentialStatus projects one merged credential spec into the row
+// the check-agent endpoint reports; needVerify reports whether the credential
+// is available with a health-check endpoint (caller still applies SkipVerification).
+// Parity: core/framework/credentials/validation.py::validate_agent_credentials
+func buildAgentCredentialStatus(spec GeneratedCredentialSpec, credName string, affectedTools, affectedNodeTypes []string, alternativeGroup *string, store AgentCredentialStore, hasAdenKey bool) (AgentCredentialStatus, bool) {
+	credentialID := spec.CredentialID
+	if credentialID == "" {
+		credentialID = credName
+	}
+	available := false
+	if store != nil {
+		available = store.IsAvailable(credentialID)
+	}
+	adenNotConnected := !available && hasAdenKey && spec.AdenSupported && !spec.DirectAPIKeySupported
+	status := AgentCredentialStatus{
+		CredentialName:        credName,
+		CredentialID:          credentialID,
+		EnvVar:                spec.EnvVar,
+		Description:           spec.Description,
+		HelpURL:               spec.HelpURL,
+		APIKeyInstructions:    spec.APIKeyInstructions,
+		Tools:                 copyStrings(affectedTools),
+		NodeTypes:             copyStrings(affectedNodeTypes),
+		Available:             available,
+		AdenSupported:         spec.AdenSupported,
+		DirectAPIKeySupported: spec.DirectAPIKeySupported,
+		CredentialKey:         spec.CredentialKey,
+		AdenNotConnected:      adenNotConnected,
+		AlternativeGroup:      alternativeGroup,
+	}
+	return status, available && spec.HealthCheckEndpoint != ""
+}
+
 // persistHealthIdentity mirrors the reference's best-effort write of identity
 // fields a health check learned (Brevo email/company, Telegram username).
 func persistHealthIdentity(store AgentCredentialStore, credentialID string, details map[string]any) {
@@ -359,7 +368,7 @@ func persistHealthIdentity(store AgentCredentialStore, credentialID string, deta
 // member is available and valid — failures are reported only when the whole
 // group is unsatisfied.
 //
-// Parity: validation.py::CredentialValidationResult.failed
+// Parity: core/framework/credentials/validation.py::CredentialValidationResult.failed
 func (r AgentCredentialValidationResult) Failed() []AgentCredentialStatus {
 	altSatisfied := map[string]bool{}
 	for _, credential := range r.Credentials {
@@ -416,7 +425,7 @@ func (r AgentCredentialValidationResult) FailedCredNames() []string {
 }
 
 // FormatErrorMessage renders the human-readable CLI/runner error message.
-// Parity: validation.py::CredentialValidationResult.format_error_message
+// Parity: core/framework/credentials/validation.py::CredentialValidationResult.format_error_message
 func (r AgentCredentialValidationResult) FormatErrorMessage() string {
 	missing := []AgentCredentialStatus{}
 	invalid := []AgentCredentialStatus{}
@@ -487,7 +496,7 @@ func agentCredentialLabel(credential AgentCredentialStatus) string {
 // ComputeUnavailableTools names the tools bound to failed credentials so a
 // spawn preflight can drop them from the worker's tool list.
 //
-// Parity: validation.py::compute_unavailable_tools
+// Parity: core/framework/credentials/validation.py::compute_unavailable_tools
 func ComputeUnavailableTools(nodes []AgentNode, store AgentCredentialStore) (map[string]bool, []string) {
 	result, err := ValidateAgentCredentials(nodes, store, ValidateAgentCredentialsOptions{SkipVerification: true})
 	if err != nil {

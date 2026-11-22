@@ -60,6 +60,7 @@ func TestLoadAgentNodesDeclarativeToolResolution(t *testing.T) {
 
 // A document the Pydantic AgentConfig would reject yields no nodes — the
 // reference swallows load_agent_config exceptions.
+// Parity: core/framework/credentials/setup.py::load_agent_nodes
 func TestLoadAgentNodesRejectsInvalidDocuments(t *testing.T) {
 	cases := map[string]string{
 		"not json":          `{`,
@@ -90,12 +91,14 @@ func TestLoadAgentNodesPythonAgentHasNoNodes(t *testing.T) {
 	}
 }
 
+// Parity: core/framework/credentials/setup.py::load_agent_nodes
 func TestLoadAgentNodesEmptyDirectory(t *testing.T) {
 	if nodes := LoadAgentNodes(t.TempDir()); len(nodes) != 0 {
 		t.Fatalf("nodes = %#v, want none", nodes)
 	}
 }
 
+// Parity: core/framework/credentials/setup.py::load_agent_nodes
 func TestPyTitleMatchesPythonTitleCasing(t *testing.T) {
 	cases := map[string]string{
 		"google":        "Google",

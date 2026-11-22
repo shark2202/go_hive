@@ -65,6 +65,7 @@ func rowByCredentialID(t *testing.T, rows []map[string]any, credentialID string)
 // reports the missing credential. Any aden_supported credential prepends the
 // synthetic Aden row (github is aden_supported), available following
 // ADEN_API_KEY.
+// Parity: core/framework/server/routes_credentials.py::handle_check_agent
 func TestCheckAgentWorkerConfigRows(t *testing.T) {
 	home := hivehome.Home{Root: t.TempDir()}
 	colony := makeCredentialColony(t, home, "cred_colony", `["github_create_issue"]`)
@@ -126,6 +127,7 @@ func TestCheckAgentWorkerConfigRows(t *testing.T) {
 
 // A declarative agent.json is the upstream branch: node tools (and agent-level
 // inheritance) come from the document itself.
+// Parity: core/framework/server/routes_credentials.py::handle_check_agent
 func TestCheckAgentDeclarativeAgentJSONRow(t *testing.T) {
 	home := hivehome.Home{Root: t.TempDir()}
 	colony := filepath.Join(home.ColoniesDir(), "json_colony")
@@ -157,6 +159,7 @@ func TestCheckAgentDeclarativeAgentJSONRow(t *testing.T) {
 // Any returned credential with aden_supported prepends the synthetic Aden
 // Platform row; the row has no alternative_group key and reports the Aden key
 // presence.
+// Parity: core/framework/server/routes_credentials.py::handle_check_agent
 func TestCheckAgentAdenRowPrepended(t *testing.T) {
 	home := hivehome.Home{Root: t.TempDir()}
 	colony := makeCredentialColony(t, home, "aden_colony", `["notion_search"]`)
@@ -211,6 +214,7 @@ func TestCheckAgentAdenRowPrepended(t *testing.T) {
 
 // An unknown directory inside the allowed roots is a valid path: the reference
 // returns an empty requirement list rather than a 404.
+// Parity: core/framework/server/routes_credentials.py::handle_check_agent
 func TestCheckAgentUnknownAgentInRootsIsEmpty(t *testing.T) {
 	home := hivehome.Home{Root: t.TempDir()}
 	t.Setenv("HIVE_CREDENTIAL_KEY", "")
@@ -230,6 +234,7 @@ func TestCheckAgentUnknownAgentInRootsIsEmpty(t *testing.T) {
 }
 
 // Non-string agent_path follows the reference's TypeError path → 500.
+// Parity: core/framework/server/routes_credentials.py::handle_check_agent
 func TestCheckAgentNonStringPath(t *testing.T) {
 	home := hivehome.Home{Root: t.TempDir()}
 	mux := agentRoutesMux(home, NewSessionManager())

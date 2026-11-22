@@ -33,7 +33,7 @@ import (
 )
 
 // HealthCheckResult is the result of a credential health check.
-// Parity: health_check.py::HealthCheckResult
+// Parity: tools/src/aden_tools/credentials/health_check.py::HealthCheckResult
 type HealthCheckResult struct {
 	// Valid reports whether the credential is valid.
 	Valid bool
@@ -76,7 +76,7 @@ func registerHealthChecker(name string, checker func(string) HealthCheckResult) 
 // registered for its name; a spec-declared endpoint without a dedicated
 // checker uses the generic OAuth bearer fallback.
 //
-// Parity: health_check.py::check_credential_health
+// Parity: tools/src/aden_tools/credentials/health_check.py::check_credential_health
 func CheckCredentialHealth(credentialName, credentialValue, healthCheckEndpoint, healthCheckMethod string) HealthCheckResult {
 	if checker, ok := healthCheckers[credentialName]; ok {
 		return checker(credentialValue)
@@ -297,7 +297,7 @@ func redactHealthErrorText(text string, needles []string) string {
 // runOAuthBearerHealthCheck is the generic fallback for a spec-declared
 // endpoint without a dedicated checker.
 //
-// Parity: health_check.py::OAuthBearerHealthChecker.check
+// Parity: tools/src/aden_tools/credentials/health_check.py::OAuthBearerHealthChecker.check
 func runOAuthBearerHealthCheck(credentialValue, endpoint, serviceName string) HealthCheckResult {
 	status, _, reqErr := performHealthRequest(healthRequestConfig{
 		endpoint:    endpoint,
@@ -330,7 +330,7 @@ func runOAuthBearerHealthCheck(credentialValue, endpoint, serviceName string) He
 
 // runBaseHTTPHealthCheck implements BaseHttpHealthChecker's default flow.
 //
-// Parity: health_check.py::BaseHttpHealthChecker.check / _interpret_response
+// Parity: tools/src/aden_tools/credentials/health_check.py::BaseHttpHealthChecker.check / _interpret_response
 func runBaseHTTPHealthCheck(cfg healthRequestConfig, credentialValue string, redactTokens []string) HealthCheckResult {
 	status, body, reqErr := performHealthRequest(cfg, credentialValue)
 	if reqErr != nil {
@@ -368,6 +368,23 @@ func runBaseHTTPHealthCheck(cfg healthRequestConfig, credentialValue string, red
 // --- Dedicated checkers -----------------------------------------------------
 
 func init() {
+	registerHealthCheckersPart1()
+	registerHealthCheckersPart2()
+	registerHealthCheckersPart3()
+	registerHealthCheckersPart4()
+	registerHealthCheckersPart5()
+}
+
+// registerBaseHTTP registers a declarative BaseHttpHealthChecker subclass:
+// same auth-header probing and redaction list as the class-based checkers.
+func registerBaseHTTP(name string, cfg healthRequestConfig) {
+	registerHealthChecker(name, func(value string) HealthCheckResult {
+		return runBaseHTTPHealthCheck(cfg, value, []string{"Bearer", "Authorization", "api_key", "token"})
+	})
+}
+
+// registerHealthCheckersPart1 registers one slice of the upstream health-checker registry.
+func registerHealthCheckersPart1() {
 	// HubSpot
 	registerHealthChecker("hubspot", func(value string) HealthCheckResult {
 		return runBaseHTTPHealthCheck(healthRequestConfig{
@@ -503,6 +520,10 @@ func init() {
 			Details: map[string]any{"partial_check": true},
 		}
 	})
+}
+
+// registerHealthCheckersPart2 registers one slice of the upstream health-checker registry.
+func registerHealthCheckersPart2() {
 
 	// Slack
 	registerHealthChecker("slack", func(value string) HealthCheckResult {
@@ -644,6 +665,10 @@ func init() {
 			},
 		}, value, []string{"Bearer", "Authorization", "api_key", "token"})
 	})
+}
+
+// registerHealthCheckersPart3 registers one slice of the upstream health-checker registry.
+func registerHealthCheckersPart3() {
 
 	// Google Maps
 	registerHealthChecker("google_maps", func(value string) HealthCheckResult {
@@ -763,17 +788,15 @@ func init() {
 
 	// --- BaseHttpHealthChecker subclasses (declarative configs) ------------
 
-	registerBaseHTTP := func(name string, cfg healthRequestConfig) {
-		registerHealthChecker(name, func(value string) HealthCheckResult {
-			return runBaseHTTPHealthCheck(cfg, value, []string{"Bearer", "Authorization", "api_key", "token"})
-		})
-	}
-
 	registerBaseHTTP("stripe", healthRequestConfig{
 		endpoint:    "https://api.stripe.com/v1/balance",
 		serviceName: "Stripe",
 		authType:    healthAuthBearer,
 	})
+}
+
+// registerHealthCheckersPart4 registers one slice of the upstream health-checker registry.
+func registerHealthCheckersPart4() {
 	registerBaseHTTP("exa_search", healthRequestConfig{
 		endpoint:    "https://api.exa.ai/search",
 		serviceName: "Exa Search",
@@ -904,6 +927,10 @@ func init() {
 			"Notion-Version": "2022-06-28",
 		},
 	})
+}
+
+// registerHealthCheckersPart5 registers one slice of the upstream health-checker registry.
+func registerHealthCheckersPart5() {
 	registerBaseHTTP("greenhouse_token", healthRequestConfig{
 		endpoint:    "https://harvest.greenhouse.io/v1/jobs?per_page=1",
 		serviceName: "Greenhouse",

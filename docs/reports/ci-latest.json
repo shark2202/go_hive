@@ -1,9 +1,9 @@
 {
- "wave": 67,
- "at": "2026-11-22 19:48",
- "head": "f3fd6f85",
- "ci": 0,
- "qc": 0,
+ "wave": 68,
+ "at": "2026-11-22 20:20",
+ "head": "77594ee4",
+ "ci": 2,
+ "qc": 1,
  "publish": 0,
- "note": "perf-opt 合并后（recall 9.7×）"
+ "note": "cred-check + coercer 合并后"
 }

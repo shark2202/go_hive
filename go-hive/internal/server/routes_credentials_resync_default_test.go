@@ -16,6 +16,7 @@ import (
 	"github.com/aden-hive/hive-go/internal/hivehome"
 )
 
+// Parity: core/framework/server/routes_credentials.py::handle_resync_credentials
 func TestCredentialRoutesResyncDefaultHookArmed(t *testing.T) {
 	home := hivehome.Home{Root: t.TempDir()}
 	t.Setenv("HIVE_HOME", home.Root)
@@ -40,6 +41,7 @@ func TestCredentialRoutesResyncDefaultHookArmed(t *testing.T) {
 // The local resync default re-reads a key another process persisted (the
 // observable part of the reference's force-resync: a saved credential becomes
 // visible without a restart).
+// Parity: core/framework/server/routes_credentials.py::handle_resync_credentials
 func TestResyncLocalCredentialsReloadsPersistedKey(t *testing.T) {
 	home := hivehome.Home{Root: t.TempDir()}
 	t.Setenv("HIVE_HOME", home.Root)
