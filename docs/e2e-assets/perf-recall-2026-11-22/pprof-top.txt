@@ -1,0 +1,38 @@
+File: perfrecall
+Type: cpu
+Time: 2026-11-22 19:03:33 CST
+Duration: 2.72s, Total samples = 2.70s (99.23%)
+Showing nodes accounting for 2.42s, 89.63% of 2.70s total
+Dropped 69 nodes (cum <= 0.01s)
+Showing top 30 nodes out of 120
+      flat  flat%   sum%        cum   cum%
+     0.93s 34.44% 34.44%      0.93s 34.44%  runtime.madvise
+     0.27s 10.00% 44.44%      0.27s 10.00%  regexp/syntax.(*Inst).MatchRunePos
+     0.13s  4.81% 49.26%      0.50s 18.52%  regexp.(*Regexp).tryBacktrack
+     0.11s  4.07% 53.33%      0.11s  4.07%  runtime.pthread_cond_wait
+     0.10s  3.70% 57.04%      0.10s  3.70%  runtime.kevent
+     0.10s  3.70% 60.74%      0.10s  3.70%  runtime.pthread_cond_signal
+     0.08s  2.96% 63.70%      0.08s  2.96%  runtime.usleep
+     0.08s  2.96% 66.67%      0.08s  2.96%  syscall.rawsyscalln
+     0.07s  2.59% 69.26%      0.24s  8.89%  runtime.mapassign_faststr
+     0.05s  1.85% 71.11%      0.05s  1.85%  aeshashbody
+     0.05s  1.85% 72.96%      0.05s  1.85%  regexp.(*bitState).push (inline)
+     0.05s  1.85% 74.81%      0.05s  1.85%  runtime.pthread_kill
+     0.04s  1.48% 76.30%      0.07s  2.59%  github.com/aden-hive/hive-go/internal/memory.pastRecallFrequency
+     0.04s  1.48% 77.78%      0.64s 23.70%  regexp.(*Regexp).backtrack
+     0.04s  1.48% 79.26%      0.06s  2.22%  regexp.(*inputString).step
+     0.03s  1.11% 80.37%      0.08s  2.96%  runtime.scanObject
+     0.03s  1.11% 81.48%      0.06s  2.22%  runtime.tryDeferToSpanScan
+     0.02s  0.74% 82.22%      0.04s  1.48%  internal/runtime/maps.(*Iter).Next
+     0.02s  0.74% 82.96%      0.02s  0.74%  internal/runtime/maps.(*ctrlGroup).set (inline)
+     0.02s  0.74% 83.70%      0.02s  0.74%  internal/runtime/maps.(*groupReference).ctrls (inline)
+     0.02s  0.74% 84.44%      0.04s  1.48%  internal/runtime/maps.typedmemmove
+     0.02s  0.74% 85.19%      0.02s  0.74%  runtime.alignDown (inline)
+     0.02s  0.74% 85.93%      0.02s  0.74%  runtime.typedmemmove
+     0.02s  0.74% 86.67%      0.03s  1.11%  strings.Map
+     0.02s  0.74% 87.41%      0.05s  1.85%  strings.ToLower
+     0.02s  0.74% 88.15%      0.02s  0.74%  sync.(*Pool).Put
+     0.01s  0.37% 88.52%      0.10s  3.70%  internal/runtime/maps.(*table).grow
+     0.01s  0.37% 88.89%      0.08s  2.96%  internal/runtime/maps.(*table).uncheckedPutSlot
+     0.01s  0.37% 89.26%      0.65s 24.07%  regexp.(*Regexp).allMatches
+     0.01s  0.37% 89.63%      0.03s  1.11%  regexp.freeBitState

@@ -93,6 +93,11 @@ type ChatRuntimeDeps struct {
 	// IdleNudge overrides the idle-nudge budgets the session hub starts with.
 	// Nil uses the loop's session_idle_nudge_* defaults.
 	IdleNudge *agentloop.IdleNudgeConfig
+	// InitialInputPending marks a create that delivers a prompt immediately
+	// after construction (initial_prompt). The cold-resume mid-turn guard is
+	// then suppressed: upstream only parks a restored mid-turn session when
+	// the first iteration drained no user injection. False keeps the guard on.
+	InitialInputPending bool
 	// SkillsCatalog supplies the queen's rendered skills catalog for the
 	// skills reminder. Nil (or an empty return) keeps that source silent.
 	SkillsCatalog func() string
@@ -402,10 +407,10 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 	// A session that has not run a turn is parked at turn_done: without this
 	// the idle ticker would auto-start an untouched session after the
 	// between-turns budget. A persisted pending_input (an unanswered ask_user
-	// question, or a broken turn) restores the wait instead of forgetting it.
-	if !runtime.restoreParkState() {
-		runtime.setParkState(agentloop.ParkReasonTurnDone, true)
-	}
+	// question, or a broken turn) restores the wait instead of forgetting it;
+	// a restart over a mid-turn conversation restores the cold-interrupt park
+	// (upstream §6b1½), so the in-flight work is never silently resumed.
+	restoredPark := runtime.restoreParkForNewRuntime(deps.InitialInputPending)
 	runtime.queenName = strings.TrimSpace(deps.QueenName)
 	if runtime.queenName == "" {
 		runtime.queenName = "default"
@@ -535,6 +540,13 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 		if err := runtime.bus.SetSessionLog(filepath.Join(deps.Root, "events.jsonl"), 0); err != nil {
 			log.Printf("chat runtime %s: session event log unavailable: %v", deps.SessionID, err)
 		}
+	}
+	if restoredPark {
+		// A restarted bus carries no history: re-announce the restored wait
+		// now that the session log is attached, so the snapshot endpoint and
+		// the SSE first frame project the parked state (and /events/history
+		// keeps the announcement).
+		runtime.announceRestoredPark()
 	}
 
 	go runtime.run()

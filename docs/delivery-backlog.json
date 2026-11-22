@@ -390,15 +390,15 @@
     "id": "cold-resume-midturn-guard",
     "label": "上游 cold-resume mid-turn guard：崩溃时写 cold_interrupted（Go 该 park reason 无生产者，resume 写 turn_done）",
     "hours": 2,
-    "done": false,
-    "note": "reliability lane 观察（非阻断）：上游 queen_orchestrator cold-interrupt 路径；需实跑上游确认字段后对齐。"
+    "done": true,
+    "note": "DONE 2026-11-22（lane resume-guards）：上游 §6b1½ 真探针取证（core 侧 pytest 2 passed；条件=restore 命中会话+queen+首迭代无 drain 注入+无 pending_input；字段=cursor pending_input.reason=cold_interrupted/emit_client_request=true + [System] note + client_input_requested/loop_state_changed，证据 docs/e2e-assets/reliability-2026-11-22/resume-guards/upstream-probe/）后对齐：chat_park.go 在 runtime 重建时按上游条件写 ParkReasonColdInterrupted（会话已有 parts + cursor 无 pending_input；create 自带 initial_prompt 经 InitialInputPending 抑制，等价 drained-injection 条件）。真机复跑 post-resume-cursor.json reason=cold_interrupted、snapshot awaiting_input=true。登记差异：未注入上游的 [System] note（Go 恢复不自动起回合，见报告 §5）。测试 internal/server/chat_resume_guard_test.go；报告 docs/reliability-soak-recovery.md §5。"
    },
    {
     "id": "resume-snapshot-first-frame",
     "label": "resume 后 /snapshot 与 SSE 首帧空态（即使 cursor=ask_user）",
     "hours": 2,
-    "done": false,
-    "note": "reliability lane 观察：不影响恢复正确性；只影响 UI 首帧展示，需对齐或登记为展示差异。"
+    "done": true,
+    "note": "DONE 2026-11-22（lane resume-guards）：根因=snapshot 只读总线 latest_loop_state 且重启总线为空；修法=runtime 重建还原 cursor park 后在新总线重播恢复等待（client_input_requested / client_credential_form_requested + loop_state_changed），SSE 首帧即同一 ComputeSessionSnapshot。真机复跑 park/resume-snapshot.json=awaiting_input=true/park_reason=ask_user/pending_questions 非空（崩溃会话同 cold_interrupted）；测试 TestRestoredAskUserParkShowsInSnapshotAndFirstSSEFrame。"
    }
   ]
  }

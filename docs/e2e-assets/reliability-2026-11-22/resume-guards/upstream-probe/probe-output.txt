@@ -1,0 +1,9 @@
+
+[cursor]  {"iteration": 4, "next_seq": 4, "node_id": "queen", "outputs": {}, "tool_calls_used": 0, "recent_responses": [], "recent_tool_fingerprints": [], "pending_input": {"reason": "cold_interrupted", "emit_client_request": true}, "user_stopped": false}
+[events]  ['node_loop_started', 'client_input_requested', 'loop_state_changed', 'node_loop_completed']
+[client_input_requested.data]  {"park_reason": "cold_interrupted"}
+[loop_state_changed.data]  {"activity": "awaiting_user", "park_reason": "cold_interrupted", "interrupt_cause": null, "questions": null}
+.
+[cursor with queued input]  {"iteration": 1, "next_seq": 4, "node_id": "queen", "outputs": {}, "tool_calls_used": 0, "recent_responses": ["replied"], "recent_tool_fingerprints": [], "pending_input": {"questions": null, "colony_suggestion": null, "colony_pivot": null, "credential_form": null, "emit_client_request": true, "reason": "turn_done"}, "user_stopped": false}
+.
+2 passed in 0.47s

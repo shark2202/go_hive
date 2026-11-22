@@ -92,13 +92,13 @@ Go 代码与配套文档在 `go_hive/` 下：`go-hive/`（模块）、`contracts
 | 格式/静态 | `make fmt-check && make vet` | 无输出 | 通过 |
 | 单元测试 | `make test` | 全部包 `ok` | 通过（Makefile 已固化 `TEST_FLAGS ?= -count=1`） |
 | 交叉编译 | `make cross` | 6 平台 | 通过 |
-| parity 注解 | `make parity` | 退出码 0 | 通过：**5,702/5,702**（installer-verify / lm-notes / bg-recall 三 lane 合并后；refs 全解析） |
-| parity 引用 | `make parity-targets` | 退出码 0 | 通过：5,934 条引用，0 missing |
+| parity 注解 | `make parity` | 退出码 0 | 通过：**5,709/5,709**（wave-62；refs 全解析） |
+| parity 引用 | `make parity-targets` | 退出码 0 | 通过：全解析，0 missing |
 | 接线 | `make wiring-check` | 退出码 0 | 通过 |
-| 升级兼容 | `make compat-check` | 12 项全过 | 通过（C1–C12；C12 = 271 条登记 0 未登记：ported 202 / partial 10 / out_of_scope 7 / unported 52；config 135 键 / 21 section） |
-| 架构 | `make arch-check` | 7 生成物一致 | 通过（82 包 / 214 边 / 8 层 / 1 条 info warning；soul→queen 反向依赖已消除） |
+| 升级兼容 | `make compat-check` | 12 项全过 | 通过（C1–C12；C12 = 273 条登记 0 未登记：ported 205 / partial 10 / out_of_scope 7 / unported 51；config 137 键 / 22 section） |
+| 架构 | `make arch-check` | 7 生成物一致 | 通过（82 包 / 219 边 / 8 层 / 1 条 info warning；soul→queen 反向依赖已消除） |
 | 行为冻结 | `refactor_freeze.sh compare wave15-base` | OK（allowlist 逐条理由） | 通过（结构重构 lane 必跑） |
-| QC | `scripts/qc_check.py` | 8/8 | 通过 |
+| QC | `scripts/qc_check.py` | 9/9 | 通过 |
 | slot | 每 2 小时 `dist/slots/<slot>` | artifact+manifest+compat | 22:00/00:00 已产；24h 窗口 |
 
 ## 9. 与 Python 上游的关系

@@ -1,0 +1,17 @@
+binary_sha256	d9ea5d5f97940c4b8be5f105fbbac7d794de86bad33ddf1e0cc312a5fac37655
+git_head	25968ddbe1f3fce82c7bbe4119bb969a21923b4b
+model	deepseek-flash-1017
+provider	openai https://token.tokenbroad.com/v1
+port	8801
+run_started	2026-11-22T18:57:43+0800
+kill_point	mid-turn, in-flight tool call (hard)
+session_id	session_20261122_185746_63abea4e
+parts_before	6
+events_lines_before	25
+result_before	True
+post_resume_snapshot_park	cold_interrupted
+post_resume_cursor_pending	cold_interrupted
+parts_after	6
+events_lines_after	27
+result_after	True
+continue_reply	CRASH_PRE_RELCRASH179534506750880

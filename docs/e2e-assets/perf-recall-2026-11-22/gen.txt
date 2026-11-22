@@ -1,0 +1,4 @@
+gen: home=/var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//perf-recall-15k/home-15000 turns=15000 sessions=300 event_lines=220946 timeline_items=891 event_bytes=52470968 (50.0 MB) in 233.0 ms
+gen:   queen_alpha  turns= 6000 sessions=120 event_lines= 88069 event_bytes= 20910436 timeline=368
+gen:   queen_beta   turns= 5000 sessions=100 event_lines= 73566 event_bytes= 17546015 timeline=294
+gen:   queen_gamma  turns= 4000 sessions= 80 event_lines= 59311 event_bytes= 14014517 timeline=229

@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hive 的学习资产：skill / playbook 的产生 · 应用 · 消亡</title>
+<style>
+:root{--bg:#0b0f14;--panel:#121923;--panel2:#0f1620;--line:#233041;--text:#e6edf3;--muted:#8b9bb0;--accent:#f0b429;--accent2:#58a6ff;--ok:#3fb950;--warn:#d29922;--bad:#f85149;--code:#0a0e13}
+*{box-sizing:border-box} html{scroll-behavior:auto} body{margin:0;background:linear-gradient(180deg,#0b0f14,#0d131b 55%,#0b0f14);color:var(--text);font:14.5px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+a{color:var(--accent2);text-decoration:none} a:hover{text-decoration:underline}
+.wrap{max-width:1280px;margin:0 auto;padding:44px 26px 80px}
+header{border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:28px}
+.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+h1{font-size:34px;line-height:1.2;margin:10px 0 10px;letter-spacing:-.02em} h1 span{color:var(--accent);white-space:nowrap}
+.lede{color:var(--muted);max-width:980px;font-size:15px} .meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:15px;color:var(--muted);font-size:12.5px} .meta b{color:var(--text)}
+section{margin:38px 0} h2{font-size:22px;margin:0 0 8px} h2 .num{color:var(--accent);font-size:14px;margin-right:8px} h3{font-size:15px;margin:24px 0 8px;color:#cfdae6} h4{font-size:13.5px;margin:18px 0 6px;color:#b9c7d6}
+p{color:#c6d2df;margin:8px 0} .sub{color:var(--muted);font-size:13px}
+.grid{display:grid;gap:12px} .g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:900px){.g3{grid-template-columns:1fr 1fr}} @media(max-width:560px){.g3{grid-template-columns:1fr}.wrap{padding:30px 16px 60px}h1{font-size:25px}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:15px} .card .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700} .card .v{font-size:21px;font-weight:800;margin-top:5px;letter-spacing:-.01em} .card .d{color:var(--muted);font-size:12px;margin-top:5px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:14px 0;background:var(--panel2)}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed} th,td{border-bottom:1px solid var(--line);padding:9px 10px;vertical-align:top;text-align:left;overflow-wrap:anywhere;word-break:break-word} th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;background:#0d141d;position:sticky;top:0;z-index:1} tr:hover td{background:#121a25} tr:last-child td{border-bottom:0}
+td.num{font-variant-numeric:tabular-nums;text-align:right} code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--code);border:1px solid #1e2937;border-radius:5px;padding:1px 4px;color:#d7e3f0;overflow-wrap:anywhere}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#cfe0f2}
+.pill{display:inline-flex;align-items:center;font-size:11px;border-radius:999px;padding:2px 8px;border:1px solid var(--line);color:var(--muted);white-space:normal} .pill.ok{color:var(--ok);border-color:#1d3b26;background:#0f1a13} .pill.warn{color:var(--warn);border-color:#3d3013;background:#1a150a} .pill.bad{color:var(--bad);border-color:#3d1a1a;background:#1a0f0f} .pill.info{color:var(--accent2);border-color:#17324d;background:#0d1622}
+.small{font-size:11.5px;color:var(--muted);margin-top:3px} .missing{color:#f2a3a3}
+.callout{border-left:3px solid var(--accent);background:#161207;padding:11px 14px;border-radius:0 9px 9px 0;margin:14px 0;color:#e8d9b4} .callout.bad{border-color:var(--bad);background:#1a0f0f;color:#f2c7c7} .callout.info{border-color:var(--accent2);background:#0d1622;color:#cfe3ff} .callout.ok{border-color:var(--ok);background:#0f1a13;color:#c8e9d0}
+.toc{display:flex;flex-wrap:wrap;gap:7px;margin-top:18px} .toc a{font-size:12px;border:1px solid var(--line);background:var(--panel);padding:5px 9px;border-radius:999px;color:var(--muted)} .toc a:hover{color:var(--text);text-decoration:none}
+ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin-top:44px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:12px}
+@media(max-width:560px){table{font-size:12px}th,td{padding:7px 6px}}
+@media(max-width:760px){table{min-width:760px}}
+@media(max-width:560px){.toc a{padding:8px 12px;font-size:13px;min-height:44px;display:inline-flex;align-items:center}}
+</style></head><body><div class="wrap">
+
+<header>
+<div class="eyebrow">Hive · Learning Assets</div>
+<h1>Hive 的学习资产：<span>skill / playbook 的产生 · 应用 · 消亡</span></h1>
+<p class="lede">这页回答四个问题：<b>①</b> hive 的 loop 为什么需要"资产"这一层（与 pi-agent 的分野）；<b>②</b> skill 与 playbook 各自怎么产生、怎么被应用；<b>③</b> 怎么被发现、怎么被下架；<b>④</b> 有没有<b>进化</b>。每条结论标注证据级别，并附复跑命令。</p>
+<div class="meta">
+<span>落盘：<b>2026-11-22</b></span>
+<span>基准：<b>Go 1.0.26-go.1 / Python hive 1.0.14</b></span>
+<span>对比对象：<b>@earendil-works/pi-coding-agent 1.5.2</b></span>
+<span>口径：<b>代码确认 &gt; 仓库文档 &gt; 未验证</b></span>
+</div>
+<div class="toc">
+<a href="#how">00 怎么读</a><a href="#why">01 为什么需要资产层</a><a href="#map">02 总图</a><a href="#playbook">03 playbook</a><a href="#skill">04 skill</a><a href="#relation">05 两者关系</a><a href="#evolution">06 有没有进化</a><a href="#gaps">07 三个缺口</a><a href="#fix">08 最小改法</a><a href="#verify">09 复验命令</a><a href="#log">10 变更与边界</a>
+</div>
+</header>
+
+<section id="how"><h2><span class="num">00</span>怎么读这份资料</h2>
+<div class="callout info"><b>判定纪律：</b>「已确认」= 我读了那段生产代码并给出 file:line；「仓库文档」= 引用仓库自己的声明，我没有复跑；「未验证」= 有代码但行为未实测。<b>本文不是事实源。</b></div>
+<div class="tablewrap"><table><thead><tr><th style="width:20%">证据级别</th><th>含义</th><th style="width:26%">本文用到的地方</th></tr></thead><tbody>
+<tr><td><span class="pill ok">代码确认</span></td><td>逐段读生产路径，给出 file:line</td><td>§03 全部、§04 全部、§07 的 L1/L3</td></tr>
+<tr><td><span class="pill info">仓库文档</span></td><td>引用仓库自己的概念文档 / 审计结论</td><td>§01 的设计主张、§06 的"不是 evolution"声明、worker spawn 快照</td></tr>
+<tr><td><span class="pill warn">推断</span></td><td>从代码结构推出的后果，没有实测数据</td><td>§07 的 L2、「跨会话重复发明」</td></tr>
+<tr><td><span class="pill bad">未验证</span></td><td>有代码/测试，但没对真实运行观察过</td><td>§04 的 live_reload 实效、§05 的 nudge 触发率</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="why"><h2><span class="num">01</span>为什么 hive 的 loop 需要"资产"这一层</h2>
+<p>先把坐标定住：<b>pi-agent 的 loop 里没有 skill / playbook / reminder / stall check 这些东西。</b>不是因为没想到，是因为它不需要——它有一个坐在终端前的人。</p>
+
+<h3>两者共享同一副骨架</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:16%">步</th><th style="width:42%">pi 1.5.2 <code>runLoop</code></th><th>hive</th></tr></thead><tbody>
+<tr><td>1</td><td>流式响应（<code>text_delta</code>/<code>thinking_delta</code>/<code>toolcall_delta</code>）</td><td>同</td></tr>
+<tr><td>2</td><td>取 <code>message.content.filter(c =&gt; c.type === "toolCall")</code></td><td>同</td></tr>
+<tr><td>3</td><td><b>严格顺序</b>：<code>for (toolCall of toolCalls) { await runToolCall(...) }</code></td><td>只读工具<b>并行</b>，其余按序</td></tr>
+<tr><td>4</td><td>结果 push 回 <code>context.messages</code></td><td>同</td></tr>
+<tr><td>5</td><td><code>finishTurn</code> → <code>{action:"end"|"continue"}</code></td><td>judge → ACCEPT / RETRY / ESCALATE</td></tr>
+<tr><td>6</td><td><code>for(;;)</code> 继续</td><td>同</td></tr>
+</tbody></table></div>
+
+<h3>分野在哪：pi 把复杂度外包给"人"，hive 必须把人的职能翻译成机制</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:34%">pi 里由人承担</th><th style="width:30%">hive 的替代机制</th><th>为什么不能省</th></tr></thead><tbody>
+<tr><td>盯着屏幕，发现它在复读</td><td>n-gram 相似度停滞检测</td><td>无人值守；判据是零成本纯函数，可以每轮查</td></tr>
+<tr><td>发现它反复调同一个工具</td><td>doom loop 检测 + replay breaker + 豁免表</td><td>重复调用产生 N 倍副作用</td></tr>
+<tr><td>发现流卡住，手动重发</td><td>stream watchdog + <code>STREAM_STALLED</code> 同步注入</td><td>通道问题，与模型无关</td></tr>
+<tr><td>判断"这活干完了吗"</td><td>judge（criteria / output_keys / 会话质量）</td><td>需要语义判据，只能花 LLM 调用</td></tr>
+<tr><td>提醒它"还有 3 个 worker 在跑"</td><td>reminder hub（14 源 × 9 个已知时点）</td><td>防重复派工、防压缩后失忆</td></tr>
+<tr><td>崩溃后重开、重述任务</td><td>游标落盘 + park/resume（<code>ParkReason</code> 11 值）</td><td>parked 状态必须能被机器读懂，才能决定推一把/升级/续跑</td></tr>
+<tr><td>调度多个助手并汇总</td><td>colony + <code>run_worker</code> + tracker + binding</td><td>worker 之间不对话，只写账本</td></tr>
+<tr><td><b>记得上次怎么做的</b></td><td><b>skill / playbook / memory / soul</b></td><td><b>上下文一压缩就没了；这是本文的主题</b></td></tr>
+<tr><td>手动重复一整套步骤</td><td>playbook（可重跑的收敛流程）</td><td>逐行手工派工不可靠且活不过压缩</td></tr>
+</tbody></table></div>
+
+<div class="callout ok"><b>一句话：</b>pi 的 loop 复杂度上限 = <b>一个人能理解的</b>；hive 的复杂度上限 = <b>一个无人值守的 colony 需要的</b>。资产层（skill / playbook）存在的唯一理由是：<b>Queen 的调度意图和方法必须活过上下文压缩与进程重启。</b></div>
+</section>
+
+<section id="map"><h2><span class="num">02</span>总图：两个资产 × 四个阶段</h2>
+<pre>                        产生                     应用                    发现                  消亡
+skill      write_skill(draft)          Queen 每回合读 catalog    六 scope 目录扫描     janitor KEEP_ALWAYS
+           replace_existing=True      worker spawn 时快照        &lt;available_skills&gt;     ← 永不清
+           → &lt;colony&gt;/skills/&lt;n&gt;/     tool_gating 条件预激活      块注入提示词
+             SKILL.md                 live_reload 热重载
+                                    ─────────────────────────────────────────────────
+playbook   run_playbook 的副作用        run_playbook 三选一入口     ✓ 运行日志(name 列)     ✗ 无 delete
+           （内联即存）                get/stop/list_playbook_    ✓ 踩空后报错里的清单    ✗ 无 GC
+           → &lt;colony&gt;/playbooks/         runs                     ✗ 无 list_playbooks     ✗ 删文件≠不可执行
+             &lt;n&gt;.play.py              meta.concurrency 临时抬升    ✗ 不主动注入提示词
+           同名覆盖（无版本）</pre>
+
+<div class="callout"><b>成熟弧线（execute-first → systematize）：</b>这是两个资产共同的产生路径——Queen 先亲手做<b>一个单元</b>（pilot），把真实 selectors / 边界情况摸出来，<b>然后</b>才固化成 skill + playbook，用 <code>run_playbook</code> 收敛剩下的批量。</div>
+</section>
+
+<section id="playbook"><h2><span class="num">03</span>playbook 专章</h2>
+
+<h3>3.1 它是程序吗 —— 是，但准确的说法是「被宿主收编的脚本」</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:22%">判据</th><th>证据</th></tr></thead><tbody>
+<tr><td>有文件 + manifest + 入口</td><td>保存为 <code>playbooks/&lt;sanitized-name&gt;.play.py</code>；必须定义 <code>meta</code>（<code>name</code>/<code>description</code>/可选 <code>concurrency</code>，默认 8、上限 32）和 <code>async def run(args)</code>，缺一个即 <code>PlaybookScriptError</code></td></tr>
+<tr><td>真的被执行</td><td>上游在进程内 exec 命名空间；Go 起 <b>外部 <code>python3</code></b> 子进程 + stdio 行式 JSON-RPC</td></tr>
+<tr><td>API 是注入的，且刻意很窄</td><td>只有 <b>2 个</b>跨进程：<code>dispatch_one</code>（派<b>一个</b> worker 并等终态报告）、<code>query_rows</code>（tracker SELECT）。其余 converge / retry / backoff / lane / deadletter / log / phase 都是 runner 的纯函数</td></tr>
+<tr><td>宿主收编了它的 I/O</td><td><code>sys.stdout = sys.stderr</code>，因为 stdout 是 RPC 通道——<code>print()</code> 不许污染协议</td></tr>
+</tbody></table></div>
+<p class="sub">形制上类似 CGI / Lambda handler / 插件：程序 + 声明式入口 + 宿主注入的窄 API。</p>
+
+<h4>三条限定（否则会误用）</h4>
+<ol>
+<li><b>不是通用程序</b>：没有工具、没有 LLM、没有 MCP、没有网络客户端。只能"派 worker + 读账本"。</li>
+<li><b>必须幂等可重入</b>（硬约束）：runner 原话——<i>"It owns no durable state: the tracker is the source of truth, so 'what's done / what's left' is always a fresh query, and <b>re-running a playbook is resume by construction</b>."</i></li>
+<li><b>格式在 Go 里异构</b>：上游只有 <code>.play.py</code>（程序）；Go 还认 <code>.play.json</code>（<code>rows.go:194</code> 候选顺序 <code>base+".play.json"</code> <b>优先</b>），而上游对 <code>.play.json</code> <b>零引用</b>。</li>
+</ol>
+
+<h3>3.2 谁产生它 —— Queen 自己，被一条 reminder 在特定条件下催出来</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:22%">信号</th><th style="width:32%">判据</th><th>含义</th></tr></thead><tbody>
+<tr><td><b>pilot 做过</b></td><td>本会话调用过 <code>browser_*</code> 或 <code>web_scrape</code></td><td>她真的亲手做了一单 ⚠️ 见 <a href="#gaps">L1</a></td></tr>
+<tr><td><b>落账了</b></td><td>刚写过 tracker（<code>tracker_upsert</code> / <code>tracker_sql</code>）</td><td>"我完成了一单并记下了"</td></tr>
+</tbody></table></div>
+<p><b>两个信号都到才响。</b>代码注释原话：</p>
+<div class="callout"><i>"a queen who runs the first unit herself discovers the real selectors/edge-cases, validates the protocol, and seeds the tracker — <b>so the playbook she writes next is correct</b>. Nudging <b>before</b> the pilot would push her to fan out a guess."</i></div>
+<p>配套开关：一旦调了 <code>run_playbook</code> → <b>立即静音</b>；冷却 4 轮（<code>HIVE_COLONY_PARALLEL_COOLDOWN</code>）；每会话最多 4 次（<code>HIVE_COLONY_PARALLEL_MAX</code>）——防它变成壁纸。</p>
+
+<h4>产生的机制：「保存不是动作，是 <code>run_playbook</code> 的副作用」</h4>
+<pre>if source_path:                       # 从路径/名字来的 → 它本来就在库里
+    saved_path = source_path
+else:                                 # 内联脚本 → 顺手落盘
+    _persist_script(binding.dir, meta.get("name") or run_id, script)
+    # → &lt;colony&gt;/playbooks/&lt;sanitize(name)&gt;.play.py   （playbooks/ 目录在这里懒建）</pre>
+<p><b>没有"新建 playbook"这个动作</b>：写一个 playbook = 跑一个内联脚本。Queen 的实际循环是 <code>写内联 → 跑 → 自动存 → 按名重跑 → 改了再跑</code>（注释叫 *the edit-and-re-run iteration loop*）。</p>
+<p>命名 <code>_sanitize_name</code>：小写 → 非 <code>[alnum-_]</code> 换 <code>-</code> → 去首尾 <code>-</code> → 截 64 字符 → 空则 <code>playbook</code>。<b>同名 = 直接 <code>write_text</code> 覆盖</b>：无版本、无备份、无锁。</p>
+
+<h3>3.3 怎么用 —— 三选一入口 + 四个工具</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:22%"><code>_resolve_script</code> 入口</th><th style="width:34%">来源</th><th>校验</th></tr></thead><tbody>
+<tr><td><code>playbook</code></td><td>内联脚本字符串（跑完自动存进库）</td><td>—</td></tr>
+<tr><td><code>playbook_path</code></td><td><b>磁盘任意路径</b>（<code>expanduser</code> 后 <code>is_file</code>）</td><td>只验存在</td></tr>
+<tr><td><code>playbook_name</code></td><td>库（<code>&lt;colony&gt;/playbooks/</code>）</td><td>后缀探测 + 失败时列出库内容</td></tr>
+</tbody></table></div>
+<p>执行链：<code>Load()</code> 校验 → <code>_resolve_concurrency(meta)</code>（默认 8、上限 32，超限直接 <code>failed</code>）→ <b>临时抬升 colony 的 <code>max_concurrent_workers</code> 到 <code>max(原值, meta.concurrency)</code>，跑完恢复</b> → 注入 hooks 执行 → 写 <code>colony.db.playbook_runs</code>。</p>
+<div class="tablewrap"><table><thead><tr><th style="width:30%">工具</th><th>作用</th></tr></thead><tbody>
+<tr><td><code>run_playbook</code></td><td>启动；返回 <code>run_id</code> + <code>name</code> + <code>path</code></td></tr>
+<tr><td><code>get_playbook_status(run_id)</code></td><td>查一次运行</td></tr>
+<tr><td><code>stop_playbook</code></td><td>杀<b>收敛循环</b></td></tr>
+<tr><td><code>list_playbook_runs(run_id?, limit=20)</code></td><td>读运行日志</td></tr>
+</tbody></table></div>
+<div class="callout bad"><b><code>stop_playbook</code> 为什么必须存在</b>（代码原话）：<i>"A bare <code>stop_worker</code> only kills the workers that are live right now — it does not touch a playbook's convergence loop, which <b>immediately re-dispatches fresh workers for any still-pending rows</b>. So 'stop all workers' is <b>a lie while a playbook is running</b>."</i></div>
+
+<h3>3.4 怎么发现 —— 三条路都很弱，<b>这就是最薄的一环</b></h3>
+<div class="tablewrap"><table><thead><tr><th style="width:22%">路径</th><th style="width:34%">机制</th><th>能看到什么 / 问题</th></tr></thead><tbody>
+<tr><td><b>运行日志</b>（最可靠）</td><td><code>list_playbook_runs</code> 返回每行 <code>name</code>（<code>playbook_runs.name</code> 列）</td><td>只看到<b>跑过的</b>；要 Queen 主动去查</td></tr>
+<tr><td><b>踩空后看到</b></td><td><code>playbook_name</code> 未命中 → 报错附清单（现扫目录 <code>glob("*.play.py")</code>）</td><td>反应式：<b>事先不知道</b></td></tr>
+<tr><td>回话历史</td><td>上次返回的 <code>name</code>+<code>path</code> 还在上下文里</td><td>压缩就可能丢</td></tr>
+</tbody></table></div>
+<p><b>明确没有的：</b>✗ 无 <code>list_playbooks</code> 工具（只有 <code>list_playbook_runs</code>）· ✗ 无注册表 / 索引文件（<code>playbook_runs</code> 是执行记录，不是册子）· ✗ 不主动注入提示词 · ✗ reminder 不列库（<code>colony_parallel_nudge</code> 只催"去写/去跑"）。</p>
+<div class="callout info"><b>为什么没有册子是自洽的：</b>playbook 自产自用，<b>生产者 = 消费者</b>。它和 runner 的设计声明同源——<i>"owns no durable state: the tracker is the source of truth"</i>；同理 <b>目录才是真源</b>。好处：永不失同步、<code>cp</code> 进去立刻可用、删文件即下线。代价见 §07。</div>
+
+<h3>3.5 怎么销毁 / 下架 —— <b>基本不存在</b></h3>
+<div class="tablewrap"><table><thead><tr><th style="width:36%">想要的</th><th>现状</th></tr></thead><tbody>
+<tr><td>delete / retire 工具</td><td><b>不存在</b>（4 个工具只覆盖 run / status / stop / list-runs）</td></tr>
+<tr><td>生命周期标记（deprecated / archived）</td><td>无</td></tr>
+<tr><td>引用检查（谁在用它）</td><td>无</td></tr>
+<tr><td>GC / 保留策略</td><td><b>janitor 完全不管 playbook</b></td></tr>
+<tr><td>运行记录清理</td><td><code>playbook_runs</code> 永不清</td></tr>
+<tr><td>实际做法</td><td>① <code>terminal_exec</code> 里 <code>rm</code>/<code>mv</code>；② <code>write_file</code> 覆盖成占位；③ 人工删文件</td></tr>
+</tbody></table></div>
+<div class="callout bad"><b>最关键的不对称：</b><code>playbook_path</code> 允许从<b>任意路径</b>执行。所以 <code>playbooks/</code> 目录 ≠ "能执行的集合"，<b>删掉文件 ≠ 不可执行</b>。真正的"下架"只能靠<b>不再给出路径</b>——这是约定，不是强制边界。</div>
+
+<h3>3.6 迁移</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:30%">通道</th><th>是否带走 playbook</th></tr></thead><tbody>
+<tr><td><b>colony 打包 / 导入</b></td><td>✅ <b>带走</b>。导入解压只排除 <code>sessions</code>，<code>playbooks/</code> 会一起解出来 → <b>唯一正规的分发通道</b></td></tr>
+<tr><td><code>colony fork</code></td><td>❌ 不带（只写 <code>metadata.json</code> + <code>worker.json</code>）</td></tr>
+<tr><td>colony scaffold</td><td>❌ 不预建目录（只建 <code>skills/</code>、<code>runs/</code>、<code>triggers.json</code>）</td></tr>
+<tr><td>跨 colony 复用</td><td>❌ 无 scope 机制，只能复制文件</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="skill"><h2><span class="num">04</span>skill 专章</h2>
+
+<h3>4.1 沉淀</h3>
+<p><code>write_skill(draft)</code> → 写到 <code>target_root/{draft.name}/</code>，返回 <code>(installed_path, error, replaced)</code>。</p>
+<ul>
+<li>默认 <code>replace_existing=True</code> → <b>覆盖</b>，并把 <code>replaced</code> 布尔回给调用方</li>
+<li><code>replace_existing=False</code> 且目录已存在 → 拒绝写入（非致命错误，调用方决定报 409 还是告警）</li>
+<li>失败时 <code>installed_path=None</code>，目标<b>尽力保持原样</b></li>
+</ul>
+<p class="sub">形制：SKILL.md = YAML frontmatter + markdown 正文，严格按 Agent Skills 标准解析（缺 description 才跳过，其余只告警）。</p>
+
+<h3>4.2 应用 —— 谁在什么时机看到新版本</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:18%">消费者</th><th style="width:34%">生效时机</th><th>粒度</th></tr></thead><tbody>
+<tr><td><b>Queen</b></td><td><b>每回合</b>重读自己的 catalog（<code>live_reload.py</code>：<i>"A queen reads hers each turn, so she sees the change on her next one"</i>）</td><td><b>细</b>：改完下一回合就看见</td></tr>
+<tr><td><b>Worker</b></td><td><b>spawn 时快照</b> <code>SkillDirs</code></td><td><b>粗</b>：运行中的 worker 看不到新版本，下一批才可见 <span class="pill warn">仓库文档</span></td></tr>
+<tr><td><code>tool_gating</code></td><td>工具在列表里 → 预激活对应 skill（<code>browser_</code> → <code>browser-automation</code>）</td><td>条件式</td></tr>
+<tr><td>作用域</td><td>framework / preset / project / user / external + per-queen <code>skills_overrides.json</code></td><td>分层遮蔽</td></tr>
+</tbody></table></div>
+<div class="callout"><b>这个不对称很重要：</b>改 skill → Queen <b>立刻</b>变强；<b>已经在跑的那批 worker 不变</b>。所以"改进"的传播边界是 <b>spawn 边界</b>，不是时间边界。</div>
+
+<h3>4.3 作用域与遮蔽</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:34%">scope</th><th>位置</th></tr></thead><tbody>
+<tr><td>framework</td><td><code>skills/_default_skills</code></td></tr>
+<tr><td>preset</td><td><code>skills/_preset_skills</code></td></tr>
+<tr><td>project（Hive）</td><td><code>&lt;project&gt;/.hive/skills/</code></td></tr>
+<tr><td>project（跨客户端）</td><td><code>&lt;project&gt;/.agents/skills/</code> —— 与 Claude Code / Cursor 等共用</td></tr>
+<tr><td>user（Hive）</td><td><code>~/.hive/skills/</code></td></tr>
+<tr><td>user（跨客户端）</td><td><code>~/.agents/skills/</code></td></tr>
+<tr><td>external</td><td><code>external_skills</code> 路径（不存在时告警）</td></tr>
+<tr><td>per-queen 覆盖</td><td><code>~/.hive/agents/queens/{id}/skills_overrides.json</code> —— 记录启用/禁用、provenance、参数微调。<b>colony 没有自己的 store，继承其 owner queen 的</b></td></tr>
+</tbody></table></div>
+<p class="sub">另有 trust 门禁：project 级 skill 来自被 clone 的仓库，可注入系统提示词，所以未受信仓库的 <code>.hive/skills/</code> 需要显式信任。</p>
+
+<h3>4.4 消亡</h3>
+<div class="callout bad"><b>janitor 明确保护 skills。</b> <code>maintenance/retention.py</code> 的 <code>KEEP_ALWAYS</code> 含 <code>"skills"</code>，注释写：<i>"Top-level HIVE_HOME entries the janitor must never touch, ever."</i> —— <b>没有任何东西会被淘汰。</b></div>
+</section>
+
+<section id="relation"><h2><span class="num">05</span>两者关系：不需要"一起分发"</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:16%"></th><th style="width:38%">skill</th><th>playbook</th></tr></thead><tbody>
+<tr><td>位置</td><td>6 个 scope 目录（见 §4.3）</td><td><code>~/.hive/colonies/&lt;c&gt;/playbooks/</code></td></tr>
+<tr><td>作用域</td><td><b>跨 colony / 项目 / 客户端</b></td><td><b>只属于某一个 colony</b></td></tr>
+<tr><td>本质</td><td>知识（方法 + 边界情况 + 如何记录结果）</td><td>这个 colony 的具体流程（可重跑的调度程序）</td></tr>
+</tbody></table></div>
+<p>唯一的关联是一根<b>单向、字符串级</b>的软引用：</p>
+<pre>worker(skill='name')  →  在任务文本后缀一行  Follow the 'name' skill.
+                          （Python runner.py:226-230 / Go runner.go:310 逐字一致）</pre>
+<ul>
+<li><b>没有存在性校验</b>：技能不存在也不报错，worker 只是被提示"遵循一个它可能没有的技能"</li>
+<li><b>反向为零</b>：skills 包里 grep <code>playbook</code> = 0 命中</li>
+<li><b>真正的可见性不来自 playbook</b>，来自 worker 的 <code>SkillDirs</code>（colony 的 <code>skills/</code> 自动进 catalog）——<code>skill=</code> 只是指针</li>
+</ul>
+<div class="callout info"><b>它们什么时候确实"一起走"：</b>只有打包整个 colony 目录时（两者都在树里）。那是<b>打包的副作用，不是依赖</b>。分发 skill = 装进某个 scope 目录；分发 playbook = 它天然绑在一个 colony 上。</div>
+</section>
+
+<section id="evolution"><h2><span class="num">06</span>有没有进化</h2>
+<div class="callout bad"><b>没有。</b>而且这是仓库自己写下来的。 <code>docs/key_concepts/improvement.md</code> 开头：<i>"<b>Note:</b> earlier versions of Hive described improvement as 'evolution' — a coding agent that rewrote an agent's <b>graph</b> between generations. <b>There is no graph in Hive today, and no cross-generation code rewriting.</b> Improvement now happens through the mechanisms below."</i></div>
+
+<h3>按进化的四个必要条件逐条判</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:20%">条件</th><th style="width:12%">有没有</th><th>证据</th></tr></thead><tbody>
+<tr><td><b>变异</b></td><td><span class="pill ok">✅</span></td><td>覆盖写：<code>write_skill(replace_existing=True)</code>、playbook 同名 <code>write_text</code></td></tr>
+<tr><td><b>遗传</b></td><td><span class="pill ok">✅</span></td><td>文件即基因：colony skills 进<b>每个新 spawn 的 worker</b> 的 catalog；scope 还能跨 colony / 项目 / 客户端</td></tr>
+<tr><td><b>选择</b>（差异生存）</td><td><span class="pill bad">❌ 完全没有</span></td><td><code>grep -rni "effectiveness\|success_rate\|usage_count\|hit_count\|score.*skill"</code> = <b>0 命中</b>。没有 A/B、没有回滚、没有淘汰</td></tr>
+<tr><td>隔离 / 重组</td><td><span class="pill warn">🟡 部分</span></td><td>scope + overrides 给分层遮蔽，但没有合并/重组机制</td></tr>
+</tbody></table></div>
+<div class="callout bad"><b>有变异、有遗传、没有选择 = 漂变（drift），不是选择驱动的进化。</b>进化的定义要求<b>差异生存</b>——这里没有任何东西影响"活下去"。</div>
+
+<h3>三条强化"没有选择"的证据</h3>
+<ol>
+<li><b>janitor 明确保护 skills</b>（<code>KEEP_ALWAYS</code>），playbook 目录也不在清理面 → 没有淘汰</li>
+<li><b>没有 <code>instinct</code> / <code>lessons</code> 机制</b>：全仓 grep 只命中一句注释里的英文单词，不是一个机制</li>
+<li><b>没有"修订驱动"的提醒</b>：唯一的 skill 相关 reminder 是①创建（"Factor it into a skill (write_skill)"）和②目录注入（<code>&lt;available_skills&gt;</code> 块）。<b>没有一条提醒说"这个 skill 出错了/没用了，去改它"。</b>修订完全靠 Queen 恰好想起来</li>
+</ol>
+
+<h3>那"改进"靠什么（仓库的说法）</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:16%">时机</th><th style="width:26%">机制</th><th>本质</th></tr></thead><tbody>
+<tr><td>会话内</td><td>Reflexion</td><td>工具结果 + judge 反馈回灌 → 第二三次就对了</td></tr>
+<tr><td>跨会话</td><td>Scoped evolving memory</td><td>反思写进 markdown 笔记，recall selector 后续调出</td></tr>
+<tr><td>跨会话</td><td>Learned skills</td><td>pilot 成功 → <code>write_skill</code> 写下方法与边界情况</td></tr>
+<tr><td>跨会话</td><td>Systematization (playbook)</td><td>pilot 成功 → 固化成可重跑的收敛流程</td></tr>
+</tbody></table></div>
+<div class="callout ok">四个机制的共同点：<b>"记住并复用"（remember &amp; reuse），不是"重写"（rewrite）</b>。文档自己的收尾：<i>"This is improvement by <b>remembering</b>, not by rewriting."</i></div>
+
+<h3>这个设计的代价（照实说）</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:26%">代价</th><th>后果</th></tr></thead><tbody>
+<tr><td><b>只增不减</b></td><td>没有淘汰压力 → 库持续膨胀、条目同质化。与「跨会话重复发明同一个 playbook」是同一现象的两面</td></tr>
+<tr><td><b>质量无反馈</b></td><td>写坏了的 skill 会被<b>后续每个 worker 继承</b>，而没有任何信号会告诉你它坏了</td></tr>
+<tr><td>复制延迟不对称</td><td>Queen 下一回合生效、worker 要等下一批 spawn → "改技能"救不了正在跑的批次</td></tr>
+<tr><td><b>覆盖无痕</b></td><td><code>replace_existing=True</code> + 无备份 → 一次坏改能覆盖掉一个好版本，且<b>没有回滚路径</b>（overrides 只存"启用/关闭 + provenance + 参数微调"，不存历史版本）</td></tr>
+<tr><td>修订无驱动</td><td>没提醒、没评分、没失败归因 → 修订取决于 Queen 恰好想起来了</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="gaps"><h2><span class="num">07</span>三个具体缺口（带 ID）</h2>
+
+<h3 id="l1">L1 · fan-out 的"pilot 信号"已经过期 <span class="pill bad">代码确认</span></h3>
+<p><code>colony_parallel_nudge</code> 用工具名判定"她做过 pilot"：</p>
+<pre>_WORK_TOOL_PREFIX = "browser_"                        # 前缀
+_WORK_TOOL_NAMES  = frozenset({"web_scrape"})          # 额外单列</pre>
+<p>但浏览器执行路径已经迁移：</p>
+<div class="callout bad"><code>core/framework/tools/browser_tools.py</code> 的模块文档直说：<i>"The browser is driven from the terminal via the <code>hive-browser</code> CLI (<b>which replaced the <code>browser_*</code> MCP tools</b>). But <b>the runtime can only observe tool NAMES, not opaque <code>terminal_exec</code> subprocess calls</b> — so … this one in-process tool keeps the browser capability discoverable and gate-able: <b>Its name starts with <code>browser_</code>, so <code>tool_gating</code> still pre-activates the foundational <code>browser-automation</code> skill</b>."</i></div>
+<div class="tablewrap"><table><thead><tr><th style="width:44%">事实</th><th>后果</th></tr></thead><tbody>
+<tr><td>默认 39 个扁平工具里，<code>browser_</code> 前缀只剩 <b><code>browser_setup</code></b>（且它只读、只用来读 CLI 用法）</td><td>前缀从"我做了活"退化成"我读了活的手册"</td></tr>
+<tr><td>真正的 pilot 活在 <code>terminal_exec("hive-browser … --json")</code></td><td>runtime 看不进子进程 → <b>假阴性</b></td></tr>
+<tr><td><code>web_scrape</code> 在 <code>mcp_catalog</code> 层（需先 <code>search_tools</code> 才可见）</td><td>门槛又高了一层</td></tr>
+<tr><td>两个信号（pilot + 刚写 tracker）不按任务关联</td><td><b>假阳性</b>：只读了 help + 任何无关 tracker 写入也会触发</td></tr>
+</tbody></table></div>
+<p><b>同一个前缀承载了两个不同的问题，只有一个还成立：</b></p>
+<div class="tablewrap"><table><thead><tr><th style="width:34%">消费者</th><th style="width:30%">它想问的问题</th><th>现在对吗</th></tr></thead><tbody>
+<tr><td><code>skills/tool_gating.py:35</code></td><td>"浏览器能力是否存在" → 预激活 skill</td><td><span class="pill ok">✅ 正确，且是刻意保留的</span></td></tr>
+<tr><td><code>agentloop/colony_parallel_nudge.py</code></td><td>"她是否真的做了一个单元"</td><td><span class="pill bad">❌ 已不准</span></td></tr>
+</tbody></table></div>
+<p class="sub">这不是 Go / Python 分叉——两边常量完全一致（<code>workToolPrefix = "browser_"</code> / <code>workToolNames = {"web_scrape"}</code>），<b>是两个实现同样地过期了</b>。</p>
+
+<h3>L2 · 没有发现机制 <span class="pill warn">推断</span></h3>
+<table><tbody>
+<tr><td>✗ 无 <code>list_playbooks</code> 工具</td></tr>
+<tr><td>✗ 无注册表 / 索引（<code>playbook_runs</code> 只是执行记录）</td></tr>
+<tr><td>✗ 不主动注入提示词；reminder 不列库</td></tr>
+</tbody></table>
+<p><b>推演出的后果：跨会话重复发明同一份 playbook。</b>新会话上下文是空的，她不知道库里已有 <code>instagram-dm-check</code>，于是再写一个：同名 → <b>静默覆盖</b>；不同名 → 库变成 <code>foo</code>、<code>foo-2</code>…<b>只增不减</b>。而唯一能让她看见"已有"的机制，是<b>按名调用失败时</b>的报错——她内联写的时候根本不触发。</p>
+<div class="callout bad"><b>关键缺口：</b>nudge 让她"去写一个"，却<b>从不告诉她"已经有一个"</b>。<code>_REMINDER_BODY</code> 是固定字符串，没有任何库内插。</div>
+
+<h3>L3 · 无下架、无回滚 <span class="pill ok">代码确认</span></h3>
+<ul>
+<li>无 delete / retire 工具；无生命周期标记；无引用检查；janitor 不清理</li>
+<li><code>playbook_path</code> 可从任意路径执行 → <b>删文件 ≠ 不可执行</b></li>
+<li>skill <code>replace_existing=True</code> 无备份；overrides 不存历史版本 → <b>没有回滚路径</b></li>
+</ul>
+</section>
+
+<section id="fix"><h2><span class="num">08</span>最小改法（不是"让代理自动重写自己"）</h2>
+<div class="callout">自动重写代理自己的知识风险极高，也不该是第一步。<b>缺的是"选择压力"的最小闭环。</b></div>
+<div class="tablewrap"><table><thead><tr><th style="width:5%">#</th><th style="width:28%">加什么</th><th style="width:10%">成本</th><th>收益</th></tr></thead><tbody>
+<tr><td class="num">1</td><td><b>创建前告知已有</b>：fan-out nudge 正文插入"本 colony 已有：…"（现扫目录即可，无需索引）</td><td><b>小</b></td><td>同时压住「重复发明」与「只增不减」。不引入任何新概念</td></tr>
+<tr><td class="num">2</td><td><b>覆盖前留痕</b>：写入前存一份旧版（或至少在 overrides 记 provenance）</td><td>小</td><td>给出回滚路径</td></tr>
+<tr><td class="num">3</td><td><b>修 L1 的 pilot 信号</b>：不再只看工具名（识别 <code>terminal_exec</code> 里的 <code>hive-browser</code>，或改用"tracker 新增完成行 + 工作量阈值"）</td><td>中</td><td>让"别继续手工做行了"这条提醒重新生效</td></tr>
+<tr><td class="num">4</td><td><b>计数与归因</b>：skill / playbook 被装载与使用的次数、关联到 <code>run_id</code> 的成功/死信率</td><td>中</td><td>让"有用/没用"第一次可观测——这是"选择"的前提</td></tr>
+</tbody></table></div>
+<p><b>第 1 条性价比最高</b>：它把已经能扫到的信息放进那条正在发出去的提醒里，不需要注册表、不需要评分、不破坏"文件即真源"。</p>
+</section>
+
+<section id="verify"><h2><span class="num">09</span>复验命令</h2>
+<pre>cd /Users/mac/hive
+
+# —— §01 分野：pi 的 loop 没有这些 ——
+P=/Users/mac/.npm-global/lib/node_modules/@earendil-works/pi-coding-agent/dist
+grep -rl "reminder" $P/core/ | wc -l                     # 0 → pi 无 reminder
+grep -oh "[a-z.]*stall[a-z]*" $P/core/*.js | sort -u      # 全是 install* → pi 无 stall 检测
+grep -rli "maxSteps\|maxIterations" $P/core/ | wc -l      # 0 → pi 无迭代上限
+grep -o "async function runLoop" $P/bundle/chunks/chunk-VEJDBY3O.js | head -1
+
+# —— §03.1 playbook 是程序 ——
+grep -n "_persist_script" -A 4 core/framework/tools/playbook_tools.py | head -8
+grep -n "sys.stdout = sys.stderr" go_hive/go-hive/internal/playbook/python_bootstrap.py
+grep -rn "\.play\.json" core/framework tools/src --include=*.py | wc -l   # 0 → Go 独有格式
+
+# —— §03.2 谁产生它 ——
+sed -n '55,80p' core/framework/agent_loop/colony_parallel_nudge.py        # 双信号常量
+sed -n '19,25p' go_hive/go-hive/internal/agentloop/colony_parallel_nudge.go
+
+# —— §03.4/§L2 发现：无注册表，只在踩空时扫 ——
+grep -n "def _saved_playbook_names" -A 4 core/framework/tools/playbook_tools.py
+grep -n "func SavedPlaybookNames" -A 3 go_hive/go-hive/internal/playbook/rows.go
+grep -rn "list_playbooks\b" core/framework --include=*.py | wc -l         # 0 → 无该工具
+
+# —— §L1 触发条件过期 ——
+sed -n '1,16p' core/framework/tools/browser_tools.py                      # replaced the browser_* MCP tools
+python3 -c "import json;f=json.load(open('go_hive/go-hive/internal/cli/tool_surface_flat.json'));print([t['name'] for t in f['tools'] if t['name'].startswith('browser_')])"
+grep -n '"browser_"' core/framework/skills/tool_gating.py go_hive/go-hive/internal/skills/tool_gating.go
+
+# —— §06 没有进化 ——
+grep -rni "effectiveness\|success_rate\|usage_count\|hit_count" core/framework/skills/ go_hive/go-hive/internal/skills/ | wc -l   # 0
+grep -n '"skills"' core/framework/maintenance/retention.py                  # KEEP_ALWAYS
+sed -n '1,10p' docs/key_concepts/improvement.md                             # "There is no graph … no cross-generation code rewriting"
+
+# —— §08 第 1 条改法的落点 ——
+grep -n "_REMINDER_BODY" -A 8 core/framework/agent_loop/colony_parallel_nudge.py</pre>
+</section>
+
+<section id="log"><h2><span class="num">10</span>变更记录与证据边界</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:14%">日期</th><th>内容</th></tr></thead><tbody>
+<tr><td>2026-11-22</td><td>首次落盘。汇总本轮对话：pi-agent loop 的分野（人职能替换表）、playbook 全生命周期（产生/应用/发现/消亡/迁移）、skill 的 scope 与覆盖语义、两者关系（不需一起分发）、进化判定（漂变非进化）、三个缺口 L1–L3、最小改法四件。</td></tr>
+</tbody></table></div>
+<div class="callout info"><b>证据边界（请连同结论一起引用）：</b>
+<ul>
+<li><b>代码确认</b>：§03 全部的 file:line、§04.1/4.4、§05 的 <code>worker(skill=)</code> 双向 grep、§06 的三条 grep、§07 L1/L3。</li>
+<li><b>仓库文档</b>：§01 的设计主张（<code>docs/key_concepts/*</code>）、§06 的"不是 evolution"声明、§04.2 的 "worker spawn 时快照"（来自 <code>CONCEPT_WIRING_AUDIT.md</code>，我没有复跑）。</li>
+<li><b>推断（无实测数据）</b>：§07 L2 的"跨会话重复发明"——要看真实 <code>HIVE_HOME</code> 里 <code>playbooks/</code> 是否真出现 <code>foo</code>/<code>foo-2</code> 这类命名，我这次没扫。</li>
+<li><b>未验证</b>：① 没有实跑一个真实 colony 会话观察 fan-out nudge 的触发率与冷却（4 轮 / 4 次）；② 没有实测 <code>live_reload</code> 实效；③ 没有构造"同名 <code>.play.json</code> + <code>.play.py</code> 并存"看 Go 实际选哪个（只有静态候选顺序）；④ 没有验证并发写同名 playbook 的真实行为（代码无锁）。</li>
+<li><b>pi 侧</b>：结论来自读 <code>@earendil-works/pi-coding-agent@1.5.2</code> 的 <code>dist/bundle/chunks/chunk-VEJDBY3O.js</code>（<code>runLoop</code>/<code>runAgentLoop</code>）、<code>dist/core/agent-session.js</code>、<code>dist/core/event-bus.js</code>。<b>没有</b>读 pi 的 SDK 层，所以"pi 把哪些能力放在 loop 之外"只看了 <code>finishTurn</code>/<code>getSteeringMessages</code>/<code>getFollowUpMessages</code> 三个钩子的签名。</li>
+</ul></div>
+</section>
+
+<footer>
+<b>Hive 的学习资产：skill / playbook 的产生 · 应用 · 消亡</b> · 落盘 2026-11-22 · Go 1.0.26-go.1 / Python hive 1.0.14 / pi-coding-agent 1.5.2
+<br>姊妹文档：<a href="runtime-elements-and-gap-matrix.html">Hive 运行时元素图谱 &amp; 对齐缺口矩阵</a>（八层栈 / park / 五种 stall / P0–P5 缺口）· <a href="agent-harness-comparison.html">三种 agent 运行时对照</a>（hive / oh-my-hermes / prime-agent 的编排·park·stall·判定·资产层）· <a href="program-sedimentation.html">程序化沉淀：playbook · factory · OMH 产物账本</a>· <a href="alignment-dimensions.html">对齐维度矩阵</a> · <a href="loop-vocabulary.html">Hive 术语表</a> · <code>docs/key_concepts/{the_loop,improvement,coordination,colony}.md</code>
+<br><b>请以本文给出的命令输出为准；本文数字与 file:line 会随 HEAD 变化而过期。</b>
+</footer>
+
+</div></body></html>

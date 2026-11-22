@@ -1,0 +1,38 @@
+File: perfrecall
+Type: cpu
+Time: 2026-11-22 19:03:33 CST
+Duration: 2.72s, Total samples = 2.70s (99.23%)
+Showing nodes accounting for 1.46s, 54.07% of 2.70s total
+Dropped 69 nodes (cum <= 0.01s)
+Showing top 30 nodes out of 120
+      flat  flat%   sum%        cum   cum%
+         0     0%     0%      1.22s 45.19%  runtime.systemstack
+         0     0%     0%      1.19s 44.07%  github.com/aden-hive/hive-go/internal/memory.RecallPastConversations
+         0     0%     0%      1.19s 44.07%  main.main
+         0     0%     0%      1.19s 44.07%  main.runBench
+         0     0%     0%      1.19s 44.07%  runtime.main
+         0     0%     0%      0.99s 36.67%  github.com/aden-hive/hive-go/internal/memory.pastRecallTurnCounts
+         0     0%     0%      0.93s 34.44%  runtime.(*mheap).alloc.func1
+         0     0%     0%      0.93s 34.44%  runtime.(*mheap).allocSpan
+     0.93s 34.44% 34.44%      0.93s 34.44%  runtime.madvise
+         0     0% 34.44%      0.92s 34.07%  runtime.sysUsed (inline)
+         0     0% 34.44%      0.92s 34.07%  runtime.sysUsedOS (inline)
+         0     0% 34.44%      0.85s 31.48%  github.com/aden-hive/hive-go/internal/memory.pastRecallTermCounts
+         0     0% 34.44%      0.65s 24.07%  regexp.(*Regexp).FindAllString
+     0.01s  0.37% 34.81%      0.65s 24.07%  regexp.(*Regexp).allMatches
+     0.04s  1.48% 36.30%      0.64s 23.70%  regexp.(*Regexp).backtrack
+         0     0% 36.30%      0.64s 23.70%  regexp.(*Regexp).doExecute
+     0.13s  4.81% 41.11%      0.50s 18.52%  regexp.(*Regexp).tryBacktrack
+     0.01s  0.37% 41.48%      0.28s 10.37%  regexp/syntax.(*Inst).MatchRune (inline)
+     0.27s 10.00% 51.48%      0.27s 10.00%  regexp/syntax.(*Inst).MatchRunePos
+     0.07s  2.59% 54.07%      0.24s  8.89%  runtime.mapassign_faststr
+         0     0% 54.07%      0.24s  8.89%  runtime.mcall
+         0     0% 54.07%      0.24s  8.89%  runtime.park_m
+         0     0% 54.07%      0.24s  8.89%  runtime.schedule
+         0     0% 54.07%      0.18s  6.67%  runtime.findRunnable
+         0     0% 54.07%      0.16s  5.93%  runtime.gcBgMarkWorker.func2
+         0     0% 54.07%      0.16s  5.93%  runtime.gcDrain
+         0     0% 54.07%      0.13s  4.81%  runtime.gcDrainMarkWorkerDedicated (inline)
+         0     0% 54.07%      0.13s  4.81%  runtime.stopm
+         0     0% 54.07%      0.12s  4.44%  github.com/aden-hive/hive-go/internal/atomicfs.ReadJSON
+         0     0% 54.07%      0.12s  4.44%  github.com/aden-hive/hive-go/internal/memory.loadRecallIndex

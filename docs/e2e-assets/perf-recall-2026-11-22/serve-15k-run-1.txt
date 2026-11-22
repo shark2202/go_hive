@@ -1,0 +1,15 @@
+tracker_db: ensured 1 colony tracker DB(s) at startup
+2026-11-22 19:03:47 [sentinel] manager starting (0 open escalations)
+2026-11-22 19:03:47 [access] GET /api/health -> 200 (0ms)
+Browser bridge: reusing the instance on 127.0.0.1:14830
+2026-11-22 19:03:47 turn context "probe" is installed but off: set turn_context.probe.enabled in configuration.json
+
+Hive API server running on http://127.0.0.1:8910
+Health:     http://127.0.0.1:8910/api/health
+Sessions:   0 colony, 0 queen-only
+
+Press Ctrl+C to stop
+Browser bridge: control connected on 127.0.0.1:14831
+2026-11-22 19:03:47 runtime-resources verdict init->ok | avail=NoneMB renderers=16 chrome_rss=1496MB hive_rss=32MB workers=<nil> | 
+
+Received SIGTERM, shutting down gracefully… (press Ctrl+C again to force quit)

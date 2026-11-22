@@ -581,6 +581,10 @@ func (r *Runner) createSessionWithRuntime(
 			SessionID:         sessionID,
 			QueenName:         record.QueenName,
 			HomeRoot:          home.Root,
+			// A prompt this create will deliver right after construction is
+			// upstream's drained injection: the cold-resume mid-turn guard
+			// must not park the session when fresh input is already headed in.
+			InitialInputPending: params.InitialPrompt != nil && strings.TrimSpace(*params.InitialPrompt) != "",
 			// The session's chat channel ("" on the dashboard): the queen
 			// mail thread claims "queens", and a resumed session restored
 			// it from meta.json. Read at each reminder render.

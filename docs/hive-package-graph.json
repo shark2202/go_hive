@@ -1,25 +1,25 @@
 {
- "generated_at": "2026-11-22 00:17 ",
- "baseline": "cd55193e",
+ "generated_at": "2026-11-22 18:30 ",
+ "baseline": "9cebd5a6",
  "totals": {
-  "python_files": 349,
-  "non_test_files": 293,
+  "python_files": 351,
+  "non_test_files": 295,
   "test_files": 56,
-  "non_test_loc": 122669,
+  "non_test_loc": 123363,
   "test_loc": 12987,
   "packages": 24,
-  "core_tests_files": 178,
-  "core_tests_loc": 51079
+  "core_tests_files": 182,
+  "core_tests_loc": 51892
  },
  "packages": {
   "(root)": {
    "files": 6,
-   "loc": 2063,
+   "loc": 2110,
    "test_files": 0,
    "test_loc": 0,
    "largest": [
     [
-     1499,
+     1546,
      "config.py"
     ],
     [
@@ -185,13 +185,13 @@
    "role": "terminal CLI 共用的退出码分类与错误分发（不是 tracker 数据库）。"
   },
   "agents": {
-   "files": 18,
-   "loc": 6708,
+   "files": 19,
+   "loc": 6993,
    "test_files": 4,
    "test_loc": 237,
    "largest": [
     [
-     970,
+     1035,
      "agents/queen/reflection_agent.py"
     ],
     [
@@ -208,7 +208,7 @@
   },
   "server": {
    "files": 42,
-   "loc": 26782,
+   "loc": 26985,
    "test_files": 32,
    "test_loc": 7687,
    "largest": [
@@ -221,7 +221,7 @@
      "server/routes_execution.py"
     ],
     [
-     2270,
+     2298,
      "server/session_manager.py"
     ]
    ],
@@ -313,13 +313,13 @@
    "role": "Pydantic 运行时模型：Goal/SuccessCriterion、session state 等。"
   },
   "agent_loop": {
-   "files": 29,
-   "loc": 17457,
+   "files": 30,
+   "loc": 17616,
    "test_files": 2,
    "test_loc": 74,
    "largest": [
     [
-     7497,
+     7501,
      "agent_loop/agent_loop.py"
     ],
     [
@@ -542,7 +542,7 @@
   {
    "from": "server",
    "to": "(root)",
-   "n": 88
+   "n": 92
   },
   {
    "from": "server",
@@ -552,7 +552,7 @@
   {
    "from": "server",
    "to": "agents",
-   "n": 50
+   "n": 54
   },
   {
    "from": "tools",
@@ -562,7 +562,7 @@
   {
    "from": "server",
    "to": "agent_loop",
-   "n": 21
+   "n": 22
   },
   {
    "from": "server",
@@ -686,6 +686,11 @@
   },
   {
    "from": "agent_loop",
+   "to": "(root)",
+   "n": 7
+  },
+  {
+   "from": "agent_loop",
    "to": "tasks",
    "n": 7
   },
@@ -722,11 +727,6 @@
   {
    "from": "server",
    "to": "maintenance",
-   "n": 5
-  },
-  {
-   "from": "agent_loop",
-   "to": "(root)",
    "n": 5
   },
   {
@@ -1263,7 +1263,7 @@
  "fan_in": [
   [
    "(root)",
-   186
+   192
   ],
   [
    "host",
@@ -1271,7 +1271,7 @@
   ],
   [
    "agents",
-   58
+   62
   ],
   [
    "llm",
@@ -1283,7 +1283,7 @@
   ],
   [
    "agent_loop",
-   42
+   43
   ],
   [
    "credentials",
@@ -1369,7 +1369,7 @@
  "fan_out": [
   [
    "server",
-   362
+   371
   ],
   [
    "host",
@@ -1377,7 +1377,7 @@
   ],
   [
    "agent_loop",
-   62
+   64
   ],
   [
    "tools",
@@ -1482,7 +1482,7 @@
    "a": "agents",
    "b": "server",
    "ab": 1,
-   "ba": 50
+   "ba": 54
   },
   {
    "a": "host",
@@ -1569,6 +1569,12 @@
    "ba": 6
   },
   {
+   "a": "(root)",
+   "b": "agent_loop",
+   "ab": 1,
+   "ba": 7
+  },
+  {
    "a": "agent_loop",
    "b": "tasks",
    "ab": 7,
@@ -1590,12 +1596,6 @@
    "a": "maintenance",
    "b": "server",
    "ab": 2,
-   "ba": 5
-  },
-  {
-   "a": "(root)",
-   "b": "agent_loop",
-   "ab": 1,
    "ba": 5
   },
   {
@@ -1676,8 +1676,8 @@
    "n": 9,
    "sites": [
     "core/framework/agent_loop/agent_loop.py:107",
-    "core/framework/agent_loop/agent_loop.py:2127",
-    "core/framework/agent_loop/agent_loop.py:2263"
+    "core/framework/agent_loop/agent_loop.py:2131",
+    "core/framework/agent_loop/agent_loop.py:2267"
    ]
   },
   {
@@ -1842,27 +1842,31 @@
  "external": [
   [
    "__future__",
-   198
+   200
   ],
   [
    "logging",
-   182
+   184
   ],
   [
    "typing",
-   182
+   184
   ],
   [
    "json",
-   115
+   116
   ],
   [
    "pathlib",
-   105
+   106
   ],
   [
    "datetime",
-   87
+   89
+  ],
+  [
+   "asyncio",
+   81
   ],
   [
    "os",
@@ -1873,16 +1877,12 @@
    79
   ],
   [
-   "asyncio",
-   79
-  ],
-  [
    "time",
-   60
+   59
   ],
   [
    "collections",
-   55
+   56
   ],
   [
    "aden_tools",
@@ -1962,7 +1962,7 @@
  "root_imports": [
   [
    "config",
-   180
+   186
   ],
   [
    "cloud_sync_hooks",
@@ -1981,7 +1981,7 @@
   {
    "from": "server",
    "module": "config",
-   "n": 80
+   "n": 84
   },
   {
    "from": "agents",
@@ -2009,6 +2009,11 @@
    "n": 9
   },
   {
+   "from": "agent_loop",
+   "module": "config",
+   "n": 7
+  },
+  {
    "from": "tools",
    "module": "config",
    "n": 6
@@ -2016,11 +2021,6 @@
   {
    "from": "server",
    "module": "cloud_sync_hooks",
-   "n": 5
-  },
-  {
-   "from": "agent_loop",
-   "module": "config",
    "n": 5
   },
   {
@@ -2312,7 +2312,7 @@
   ],
   "agents->host": [
    "core/framework/agents/queen/timeline.py:382",
-   "core/framework/agents/queen/reflection_agent.py:849",
+   "core/framework/agents/queen/reflection_agent.py:914",
    "core/framework/agents/queen/tools_ga_migration.py:34"
   ],
   "agents->schemas": [
@@ -2320,15 +2320,15 @@
    "core/framework/agents/queen/agent.py:6"
   ],
   "agents->llm": [
-   "core/framework/agents/queen/reflection_agent.py:40",
+   "core/framework/agents/queen/reflection_agent.py:41",
    "core/framework/agents/queen/soul_reflection.py:32",
    "core/framework/agents/queen/queen_profiles.py:28"
   ],
   "agents->tracker": [
-   "core/framework/agents/queen/reflection_agent.py:41"
+   "core/framework/agents/queen/reflection_agent.py:42"
   ],
   "agents->storage": [
-   "core/framework/agents/queen/reflection_agent.py:599"
+   "core/framework/agents/queen/reflection_agent.py:624"
   ],
   "agents->server": [
    "core/framework/agents/queen/soul_reflection.py:644"
@@ -2359,7 +2359,7 @@
   "server->loader": [
    "core/framework/server/routes_mcp.py:26",
    "core/framework/server/routes_mcp.py:28",
-   "core/framework/server/session_manager.py:1736"
+   "core/framework/server/session_manager.py:1764"
   ],
   "server->tools": [
    "core/framework/server/routes_mcp.py:57",
@@ -2374,7 +2374,7 @@
   "server->llm": [
    "core/framework/server/routes_sessions.py:51",
    "core/framework/server/routes_credentials.py:681",
-   "core/framework/server/session_manager.py:463"
+   "core/framework/server/session_manager.py:494"
   ],
   "server->credentials": [
    "core/framework/server/routes_sessions.py:82",
@@ -2393,7 +2393,7 @@
   ],
   "server->crm": [
    "core/framework/server/routes_colony_workers.py:1299",
-   "core/framework/server/queen_orchestrator.py:1570"
+   "core/framework/server/queen_orchestrator.py:1599"
   ],
   "server->maintenance": [
    "core/framework/server/routes_maintenance.py:27",
@@ -2401,12 +2401,12 @@
    "core/framework/server/routes_maintenance.py:92"
   ],
   "server->storage": [
-   "core/framework/server/session_manager.py:403",
-   "core/framework/server/session_manager.py:413",
-   "core/framework/server/session_manager.py:423"
+   "core/framework/server/session_manager.py:434",
+   "core/framework/server/session_manager.py:444",
+   "core/framework/server/session_manager.py:454"
   ],
   "server->schemas": [
-   "core/framework/server/session_manager.py:1653"
+   "core/framework/server/session_manager.py:1681"
   ],
   "server->skills": [
    "core/framework/server/routes_skills.py:48",
@@ -2414,7 +2414,7 @@
    "core/framework/server/routes_skills.py:50"
   ],
   "server->sentinel": [
-   "core/framework/server/routes_config.py:841",
+   "core/framework/server/routes_config.py:843",
    "core/framework/server/routes_sentinel.py:27",
    "core/framework/server/routes_sentinel.py:120"
   ],
@@ -2425,7 +2425,7 @@
    "core/framework/server/queen_orchestrator.py:259"
   ],
   "server->tracker": [
-   "core/framework/server/queen_orchestrator.py:1619"
+   "core/framework/server/queen_orchestrator.py:1648"
   ],
   "tracker->observability": [
    "core/framework/tracker/runtime_logger.py:28",
@@ -2447,6 +2447,11 @@
   "schemas->orchestrator": [
    "core/framework/schemas/session_state.py:15"
   ],
+  "agent_loop->(root)": [
+   "core/framework/agent_loop/memory_reminders.py:56",
+   "core/framework/agent_loop/memory_reminders.py:100",
+   "core/framework/agent_loop/agent_loop.py:106"
+  ],
   "agent_loop->llm": [
    "core/framework/agent_loop/conversation.py:10",
    "core/framework/agent_loop/agent_loop.py:108",
@@ -2457,15 +2462,10 @@
    "core/framework/agent_loop/internals/judge_pipeline.py:10",
    "core/framework/agent_loop/internals/judge_pipeline.py:128"
   ],
-  "agent_loop->(root)": [
-   "core/framework/agent_loop/agent_loop.py:106",
-   "core/framework/agent_loop/agent_loop.py:2072",
-   "core/framework/agent_loop/internals/vision_fallback.py:34"
-  ],
   "agent_loop->host": [
    "core/framework/agent_loop/agent_loop.py:107",
-   "core/framework/agent_loop/agent_loop.py:2127",
-   "core/framework/agent_loop/agent_loop.py:2263"
+   "core/framework/agent_loop/agent_loop.py:2131",
+   "core/framework/agent_loop/agent_loop.py:2267"
   ],
   "agent_loop->tracker": [
    "core/framework/agent_loop/agent_loop.py:117",
@@ -2478,17 +2478,17 @@
    "core/framework/agent_loop/internals/sentinel_tool.py:164"
   ],
   "agent_loop->tasks": [
-   "core/framework/agent_loop/agent_loop.py:915",
-   "core/framework/agent_loop/agent_loop.py:1023",
-   "core/framework/agent_loop/agent_loop.py:1024"
+   "core/framework/agent_loop/agent_loop.py:916",
+   "core/framework/agent_loop/agent_loop.py:1027",
+   "core/framework/agent_loop/agent_loop.py:1028"
   ],
   "agent_loop->sentinel": [
-   "core/framework/agent_loop/agent_loop.py:948",
-   "core/framework/agent_loop/agent_loop.py:1013",
-   "core/framework/agent_loop/agent_loop.py:1150"
+   "core/framework/agent_loop/agent_loop.py:952",
+   "core/framework/agent_loop/agent_loop.py:1017",
+   "core/framework/agent_loop/agent_loop.py:1154"
   ],
   "agent_loop->tools": [
-   "core/framework/agent_loop/agent_loop.py:1623"
+   "core/framework/agent_loop/agent_loop.py:1627"
   ],
   "agent_loop->skills": [
    "core/framework/agent_loop/prompting.py:69"

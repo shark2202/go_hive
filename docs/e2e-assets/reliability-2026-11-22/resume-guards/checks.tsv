@@ -1,0 +1,27 @@
+PASS	preflight	binary built from 25968ddbe1f3fce82c7bbe4119bb969a21923b4b; model=deepseek-flash-1017; port=8801
+PASS	cr_boot1	serve healthy on http://127.0.0.1:8801
+PASS	cr_long_prompt	delivered long terminal task prompt (token RELCRASH179534506750880)
+PASS	cr_mid_turn	in-flight tool call observed: {'client_input_committed': 1, 'client_input_received': 1, 'execution_completed': 0, 'execution_failed': 0, 'execution_started': 1, 'tool_call_completed': 1, 'tool_call_started': 2}
+PASS	cr_kill9	SIGKILL during the turn
+PASS	cr_boot2	restarted serve healthy on http://127.0.0.1:8801
+PASS	cr_cold_listing	history lists session_20261122_185746_63abea4e cold with messages
+PASS	cr_resume	queen_resume_from=session_20261122_185746_63abea4e reopened the same session id
+PASS	cr_parts_intact	all 6 pre-crash parts present and byte-identical
+PASS	cr_tool_result	completed echo tool result (RELCRASH179534506750880) recovered from disk
+PASS	cr_events_intact	events.jsonl 25 -> 27 lines, head preserved
+PASS	cr_tool_result_usable	post-restart reply used the recovered tool output: CRASH_PRE_RELCRASH179534506750880
+PASS	cr_log_traces	second boot banner + resume access in hive-server.log
+PASS	pk_park_written	cursor.pending_input reason=ask_user persisted
+PASS	pk_kill9	SIGKILL while parked on ask_user
+PASS	pk_boot3	restarted serve healthy on http://127.0.0.1:8801
+PASS	pk_resume	resumed the parked session under the same id
+PASS	pk_park_restored	pending_input ask_user + question text survived resume
+PASS	pk_answer_continues	answer unblocked the restored wait: Blue it is. That question had nothing to do with growth, but you answered, so it's settled.  When you're ready to talk about the thing that actually matters: bring me the product, the number you're trying to move, and last month's returning users. Then we start.
+PASS	pk_park_cleared	pending ask_user cleared after the answer
+PASS	soak_create	2/2 sessions live (opening turns done)
+PASS	soak_rounds	4/4 turns completed; http_bad=0 timeout=0 turn_failed=0 execution_failed=0
+PASS	soak_live	health poller 3/3 OK during soak (worst 36.3 ms)
+PASS	soak_rss	RSS start 58 MB -> end 64 MB (max 64 MB, growth 6 MB)
+PASS	soak_no_dropped	persisted execution_completed=6, received=6, missing=0
+PASS	soak_tokens	4/4 round answer tokens persisted in transcripts
+PASS	soak_alive	serve still alive and healthy after soak

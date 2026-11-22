@@ -131,6 +131,105 @@ func mutateConversationCursor(store agentloop.ConversationStore, fn func(cursor 
 	return store.WriteCursor(cursor)
 }
 
+// restoreParkForNewRuntime picks the park a freshly constructed runtime starts
+// with, mirroring the upstream cold-resume precedence:
+//
+//  1. a persisted pending_input wait (ask_user / credential_form / turn_done /
+//     a broken park) is re-entered as-is;
+//  2. a restart over a conversation that already ran whose cursor carries no
+//     persisted wait is the cold-resume mid-turn shape — upstream §6b1½ parks
+//     it on cold_interrupted until the user's next message instead of
+//     silently resuming the in-flight work;
+//  3. a brand-new session keeps the ordinary turn_done idle park.
+//
+// initialInputPending marks a create that delivers a prompt right after
+// construction: upstream's guard only fires when the first iteration drained
+// no user injection, so a pending prompt suppresses the cold_interrupted park.
+// It returns true when the park came from disk (case 1 or 2), which is the
+// caller's signal to re-announce the wait on the new bus.
+//
+// Parity: core/framework/agent_loop/agent_loop.py::execute (§6b1½ cold-resume mid-turn guard)
+func (r *ChatRuntime) restoreParkForNewRuntime(initialInputPending bool) bool {
+	if r == nil {
+		return false
+	}
+	if r.restoreParkState() {
+		return true
+	}
+	if r.coldResumeMidTurnShape(initialInputPending) {
+		r.setParkState(agentloop.ParkReasonColdInterrupted, true)
+		return true
+	}
+	r.setParkState(agentloop.ParkReasonTurnDone, true)
+	return false
+}
+
+// coldResumeMidTurnShape reports the crash shape upstream's §6b1½ guard keys
+// on: a conversation that already ran (parts on disk — upstream's restore
+// requires message_count > 0) whose cursor carries NO pending_input wait, with
+// no fresh prompt about to be injected. Workers are out of this path — the
+// chat runtime is the queen loop (supports_direct_user_io).
+//
+// Parity: core/framework/agent_loop/agent_loop.py::execute (§6b1½ condition)
+// Parity: core/framework/agent_loop/internals/cursor_persistence.py::restore
+func (r *ChatRuntime) coldResumeMidTurnShape(initialInputPending bool) bool {
+	if r == nil || r.store == nil || initialInputPending {
+		return false
+	}
+	cursor, err := r.store.ReadCursor()
+	if err != nil || cursor == nil {
+		return false
+	}
+	if raw, present := cursor[parkPendingInputKey]; present && raw != nil {
+		// A persisted wait exists (possibly one restoreParkState could not
+		// classify); the mid-turn shape is specifically "no wait on disk".
+		return false
+	}
+	parts, err := r.store.ReadParts()
+	if err != nil || len(parts) == 0 {
+		return false
+	}
+	return true
+}
+
+// announceRestoredPark re-announces a park restored from the cursor, the way
+// upstream's restored `_await_user_input` re-enters its wait: the wait's
+// client request is published again (client_input_requested — or the
+// credential-form variant in its place) and the loop-state cell is set. A
+// restarted runtime has an empty bus, so without this the session snapshot
+// and the SSE first frame would report an idle session even though the
+// cursor is parked (upstream re-emits here with the cursor's
+// emit_client_request flag).
+//
+// Parity: core/framework/agent_loop/agent_loop.py::_await_user_input (restored-wait path)
+// Parity: core/framework/agent_loop/internals/cursor_persistence.py::restore
+func (r *ChatRuntime) announceRestoredPark() {
+	if r == nil || r.bus == nil {
+		return
+	}
+	r.parkMu.Lock()
+	reason := r.parkReason
+	r.parkMu.Unlock()
+	if reason == "" {
+		return
+	}
+	r.mu.Lock()
+	questions := cloneParkQuestions(r.pendingQuestions)
+	form := cloneParkForm(r.pendingCredentialForm)
+	r.mu.Unlock()
+	reasonText := string(reason)
+	switch {
+	case form != nil:
+		r.bus.EmitCredentialFormRequested(chatStreamID, chatNodeID, nil, form)
+	case parkAnnouncesClientRequest(reasonText):
+		r.bus.EmitClientInputRequested(chatStreamID, chatNodeID, nil, questions, &reasonText)
+	}
+	// The park's authoritative activity, exactly as the live wait announces
+	// it: a deliberate end-of-turn park is awaiting_user, a broken one is
+	// interrupted (reason.Activity() is the single classifier).
+	r.bus.EmitLoopStateChanged(chatStreamID, chatNodeID, string(reason.Activity()), nil, &reasonText, nil, questions)
+}
+
 // restoreParkState rehydrates a persisted park. It returns false when the
 // cursor carries no pending_input marker, in which case the caller keeps the
 // ordinary turn_done default.

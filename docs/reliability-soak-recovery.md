@@ -10,6 +10,11 @@
 > key 由 `~/.hive-go/env` 静默加载）；二进制 `sha256 a93af17d91c676e0…`，由本树离线构建
 > （`CGO_ENABLED=0 GOPROXY=off GOSUMDB=off GOFLAGS=-mod=mod`）。临时 `HIVE_HOME` 在仓库外，
 > 不随证据提交。
+>
+> 2026-11-22 收口（lane `resume-guards`，分支同名，基线 `25968ddb`）：§5 两项 parity 观察已实现/登记；
+> 该 lane 改了产品代码并实跑 `bash go_hive/scripts/merge_postcheck.sh` 四关全过、`go build ./...`、
+> `go test -count=1 ./internal/server ./internal/cli ./internal/agentloop`，并缩短浸泡复跑真机脚本
+> （27/27 PASS）。复跑产物见 `resume-guards/` 子目录。
 
 ## 0. 结论
 
@@ -115,24 +120,49 @@ park 会话 `session_20261122_181856_1e1eaa7b`：模型调用 `ask_user` 提问
 ③ “发出”只统计订阅时刻之后的执行（`sse_since`）。修正后两次完整跑均 0 丢帧，冒烟与完整跑
 数字见本目录 `summary.md` 与 `soak/sse-compare-*.json`。
 
-**观察到的上游 parity 缺口（非阻断，本次未改代码，建议另行 port）**：
+**上游 parity 缺口（reliability lane 入档）与收口（lane `resume-guards`）**：
 
-1. **cold-resume mid-turn guard 未移植**。判据：崩溃瞬间 `cursor.pending_input=null`
-   （`crash-recovery/pre-kill-cursor.json`），resume 后 Go 写入的是 `turn_done`
-   （`post-resume-cursor.json`）。上游 `core/framework/agent_loop/agent_loop.py`（§6b1½）在此形态下
-   会注入 “[System] The session was interrupted …” 并把 `pending_input.reason` 置为
-   `cold_interrupted`；Go 侧 `internal/agentloop/park_reason.go` 已定义 `ParkReasonColdInterrupted`
-   但全仓无生产者（`grep ColdInterrupted` 仅枚举/判定）。
-2. **resume 后 park 可见性**。重启后新总线无事件，`GET /api/sessions/{id}/snapshot` 与 SSE 首帧
-   `session_snapshot` 都是空态（`park_reason=null, awaiting_input=false`），即使 cursor 已是
-   `ask_user`（`park/resume-cursor.json` vs `park/resume-snapshot.json`；崩溃会话同）。
-   `events.jsonl` 里已有历史问题事件，重新订阅 `/events/history` 仍可回放；差异在“实时等待态”
-   要等下一次事件才恢复。上游恢复路径会在重启后重新进入等待并重发
-   `client_input_requested`（重发时 `emit_client_request=false` 避免重复弹问）。
+原观察判据（本目录证据）：崩溃瞬间 `cursor.pending_input=null`（`crash-recovery/pre-kill-cursor.json`），
+resume 后 Go 写入的是 `turn_done`（本目录旧 `crash-recovery/post-resume-cursor.json`）；重启后新总线
+无事件，`/snapshot` 与 SSE 首帧 `session_snapshot` 空态（`park_reason=null, awaiting_input=false`），
+即使 cursor 已是 `ask_user`（`park/resume-cursor.json` vs 本目录旧 `park/resume-snapshot.json`）。
 
-影响评估：两项都不影响本轴验收属性——`kill -9` 后不会自动续跑在途工作（resume 不自动起回合）、
-回答 park 问题可正常续跑、无数据丢失；缺口集中在恢复语义与前端可见性。改动会触及
-agentloop/server 行为，按本 lane「可靠性证据、非新功能」边界仅记录，未实施。
+收口树 `.wt/resume-guards`（分支 `resume-guards`，基线 `25968ddb`）改动：
+`internal/server/chat_park.go`（cold-resume 生产者 + 恢复等待重播）、`internal/server/chat_runtime.go`
+（重建 runtime 时按上游 §6b1½ 选择 park；重播在 session 事件日志挂接后）、`internal/cli/loader.go`
+（`InitialInputPending`：create 自带 initial_prompt 时抑制 guard，等价上游「首个迭代 drain 到用户
+注入则不停泊」）。新增测试 `internal/server/chat_resume_guard_test.go`（5 项，带 `// Parity:` 与
+崩溃→恢复断言）。
+
+1. **cold-resume mid-turn guard：已对齐（上游真探针取证）**。探针
+   `resume-guards/upstream-probe/test_probe_cold_resume_guard.py`（在 `core` 用 `.venv` 跑 pytest，
+   2 passed；输出 `probe-output.txt`）实测上游条件与字段：
+   - 条件：restore 命中会话（parts>0）+ queen（`supports_direct_user_io`）+ 首迭代
+     `drained_injections==0 && drained_triggers==0` + 无持久化 `pending_input`；
+   - 字段：cursor `pending_input={"reason":"cold_interrupted","emit_client_request":true}`（无
+     questions / credential_form 键）；会话注入 `[System] The session was interrupted …` 用户消息；
+   - 事件：`client_input_requested{park_reason:"cold_interrupted"}` +
+     `loop_state_changed{activity:"awaiting_user",park_reason:"cold_interrupted",questions:null}`；
+     LLM 零调用；同形态下有排队用户消息时 guard 不触发（探针第二用例）。
+   Go 对齐实测（`resume-guards/crash-recovery/`）：`post-resume-cursor.json` 的 `park_reason` 与
+   `pending_input.reason` 均为 `cold_interrupted`；`post-resume-snapshot.json` 为
+   `awaiting_input=true, park_reason=cold_interrupted`。
+   **登记差异**：Go 恢复不自动起回合（上游在 loop 内注入 note 后阻塞等待），故未注入该 `[System]`
+   note——恢复后模型上下文保持崩溃前原样，下一条用户消息才开启回合；如需上下文逐字节对齐，可在后续
+   lane 于回合起始补注该消息（不影响 park 语义与恢复可见性）。
+
+2. **resume 后 /snapshot 与 SSE 首帧空态：已修**。根因：snapshot 只读总线 `latest_loop_state`，重启后
+   总线为空。修法：runtime 重建并还原 cursor park 后，在新总线上重播恢复等待（`client_input_requested`
+   / `client_credential_form_requested` + `loop_state_changed`），与上游恢复路径重入 `_await_user_input`
+   一致（Go 侧 cursor 恒写 `emit_client_request=true`）。实测（`resume-guards/park/`）：
+   `resume-snapshot.json` = `awaiting_input=true, park_reason=ask_user, pending_questions=[{id:"color",…}]`；
+   SSE 首帧同源（`TestRestoredAskUserParkShowsInSnapshotAndFirstSSEFrame` 断言首帧 data）；
+   `events.jsonl` 25→27 行（追加等待通知两帧、头行保留，`cr_events_intact` PASS）。
+
+复跑验收（缩短浸泡 `SOAK_SESSIONS=2 SOAK_ROUNDS=2 SOAK_CONCURRENCY=2`，真实模型）：**27/27 PASS**
+（`resume-guards/checks.tsv`、`resume-guards/summary.md`）。改动只落在「重建 runtime 且有盘上 cursor」
+的恢复路径；新建会话（`TestFreshRuntimeStillStartsTurnDoneWithoutEvents`）、正常回合、trigger/worker
+路径不变。
 
 ## 6. 复跑与证据清单
 
@@ -160,4 +190,8 @@ crash-recovery/             kill 点、pre/post part 哈希、cursor、冷列表
 park/                       ask_user park cursor、resume/answer cursor、回复、resume 后 snapshot
 soak/                       turns.tsv（逐轮延迟/状态）、per-session.tsv、sse-*.sse.jsonl（边界帧，data: 行）、
                             sse-compare-*.json（发出/收到/缺失）、rss.csv、health.csv、metrics.tsv
+resume-guards/              收口 lane 复跑产物（缩短浸泡，基线 25968ddb）：checks.tsv、summary.md、
+                            crash-recovery/{pre-kill,post-resume}-cursor.json + post-resume-snapshot.json +
+                            metrics.tsv、park/resume-{cursor,snapshot}.json + metrics.tsv、
+                            upstream-probe/（上游真探针 test_probe_cold_resume_guard.py + probe-output.txt）
 ```

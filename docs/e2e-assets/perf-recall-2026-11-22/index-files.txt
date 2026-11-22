@@ -1,0 +1,5 @@
+== recall index files ==
+7228	/var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//perf-recall-15k/home-15000/.message_index
+-rw-r--r--@ 1 mac  staff  2954681 Nov 22 19:02 /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//perf-recall-15k/home-15000/.message_index/recall/queens/queen_alpha.json
+-rw-r--r--@ 1 mac  staff  2462918 Nov 22 19:03 /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//perf-recall-15k/home-15000/.message_index/recall/queens/queen_beta.json
+-rw-r--r--@ 1 mac  staff  1974615 Nov 22 19:03 /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//perf-recall-15k/home-15000/.message_index/recall/queens/queen_gamma.json

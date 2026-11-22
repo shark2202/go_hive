@@ -1,0 +1,6 @@
+session_id	session_20261122_185800_30ea7620
+question	What color should the widget be? Answer with one word.
+pending_before	{'credential_form': None, 'emit_client_request': True, 'questions': [{'id': 'color', 'prompt': 'What color should the widget be? Answer with one word.'}], 'reason': 'ask_user'}
+post_resume_snapshot_park	ask_user
+answer_reply	Blue it is. That question had nothing to do with growth, but you answered, so it's settled.  When you're ready to talk about the thing that actually matters: bring me the product, the number you're trying to move, and last month's returning users. Then we start.
+reason_after_answer	turn_done

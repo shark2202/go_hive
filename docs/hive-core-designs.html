@@ -55,7 +55,7 @@ figure.diagram figcaption{color:var(--muted);font-size:12px;margin-top:8px}
 <div class="tablewrap"><table><thead><tr><th style="width:34%">文件</th><th>职责（引自文件自身 docstring / 函数）</th></tr></thead><tbody>
 <tr><td><code>core/framework/agent_loop/agent_loop.py</code></td><td>唯一执行原语 AgentLoop（7,497 行）；reminder 的 fire 点、judge 管线、压缩、park 都在这里</td></tr>
 <tr><td><code>core/framework/agent_loop/reminders.py</code></td><td>ReminderHub / ReminderSource / ReminderPoint / Placement / LoopActivity / ParkReason</td></tr>
-<tr><td><code>core/framework/agent_loop/*_reminder.py</code>、<code>idle_nudge.py</code>、<code>stream_stall.py</code>、<code>tool_skill_reminders.py</code></td><td>13 个 reminder source 的具体实现</td></tr>
+<tr><td><code>core/framework/agent_loop/*_reminder.py</code>、<code>memory_reminders.py</code>、<code>colony_parallel_nudge.py</code>、<code>idle_nudge.py</code>、<code>stream_stall.py</code>、<code>tool_skill_reminders.py</code>、<code>../sentinel/escalation_source.py</code></td><td>15 个 reminder source 的具体实现</td></tr>
 <tr><td><code>core/framework/agents/queen/queen_profiles.py</code></td><td>Queen 身份画像（YAML）+ 轻量分类器选择（select_queen）</td></tr>
 <tr><td><code>core/framework/agents/queen/queen_defaults/*.yaml</code></td><td>随包发行的 13 个 Queen 人设（Growth/Technology/Legal/…）</td></tr>
 <tr><td><code>core/framework/agents/queen/worker_definition.py</code></td><td>Worker 运行时身份 + <code>worker.json</code> 磁盘契约（"disk format IS the runtime identity"）</td></tr>
@@ -143,12 +143,14 @@ figure.diagram figcaption{color:var(--muted);font-size:12px;margin-top:8px}
 <li><b>失败即跳过</b>：任一 source 的 <code>applies_to/render/observe_turn</code> 抛异常 → 记 debug 日志并跳过，绝不传播（best-effort fan-out；过滤器坏了也 fail-open 保留 source）。</li>
 <li><code>applies_to</code> 是一次会话一次的"自我声明"：同一个 loop 服务多种角色（queen/worker/overseer），由 source 声明自己属于谁，而不是给 loop 按角色配置。</li>
 </ul>
-<h3>实现：13 个 source（agent_loop.py:918-960 注册处实测）</h3>
+<h3>实现：15 个 source（agent_loop.py:898-964 注册处实测）</h3>
 <div class="tablewrap"><table><thead><tr><th style="width:24%">source</th><th style="width:22%">注入点</th><th>applies_to（设计文档/代码）</th></tr></thead><tbody>
 <tr><td><code>tasks</code></td><td>SESSION_START, USER_PROMPT_SUBMIT, POST_TOOL_USE, POST_COMPACT, STOP</td><td>工具表含 task 写工具</td></tr>
 <tr><td><code>colony_parallel</code>（nudge）</td><td>POST_TOOL_USE</td><td>queen</td></tr>
 <tr><td><code>active_workers</code></td><td>USER_PROMPT_SUBMIT</td><td>queen</td></tr>
 <tr><td><code>past_conversations</code></td><td>SESSION_START, USER_PROMPT_SUBMIT</td><td>queen + recall provider</td></tr>
+<tr><td><code>memory_recall</code></td><td>SESSION_START, USER_PROMPT_SUBMIT, POST_COMPACT</td><td>queen + recall provider</td></tr>
+<tr><td><code>memory_index</code></td><td>SESSION_START, USER_PROMPT_SUBMIT, POST_COMPACT</td><td>queen + memory index provider</td></tr>
 <tr><td><code>turn_context</code></td><td>SESSION_START, USER_PROMPT_SUBMIT</td><td>queen + turn-context provider</td></tr>
 <tr><td><code>searchable_tools</code></td><td>SESSION_START, USER_PROMPT_SUBMIT, POST_TOOL_USE, POST_COMPACT</td><td>queen（或自带 provider 的分层 worker）</td></tr>
 <tr><td><code>skills_catalog</code></td><td>同上</td><td>queen</td></tr>
@@ -240,7 +242,7 @@ call the tools now. If not, carry on. Don't mention this reminder.
 </ul>
 
 <div class="callout info"><b>为什么重要</b>：三条链路把"等待"从失控态变成状态机——<b>park</b> 保证等待不丢（盘上可恢复），<b>idle nudge</b> 保证静默不烂（回合间提醒），<b>Sentinel</b> 保证无人值守也能判断"继续/找人"（升级并落盘）。分工：stream stall 管<b>流内</b>静默，idle nudge 管<b>回合间/停车</b>，Sentinel 管<b>停车后的决策与升级</b>。</div>
-<p class="sub">go_hive 对位：<code>docs/reminders-coverage.md</code>（13 source 注册矩阵，含 sentinel_escalation / idle_nudge / stream_stall）、<code>docs/hive-inbox.html</code>（Inbox 协议）、<code>internal/sentinel</code>；上游 Sentinel 的 escalation 记录是"盘上真相"，Go 侧实现与 E2E 需按此口径核对。</p>
+<p class="sub">go_hive 对位：<code>docs/reminders-coverage.md</code>（15 source 注册矩阵，含 sentinel_escalation / idle_nudge / stream_stall / memory_recall / memory_index）、<code>docs/hive-inbox.html</code>（Inbox 协议）、<code>internal/sentinel</code>；上游 Sentinel 的 escalation 记录是"盘上真相"，Go 侧实现与 E2E 需按此口径核对。</p>
 </section>
 
 <section id="coupling"><h2><span class="num">08</span>六个机制怎么咬合</h2>
@@ -270,7 +272,7 @@ sed -n '1,60p' docs/key_concepts/queen.md
 
 # 实现锚点
 sed -n '1,120p' core/framework/agent_loop/reminders.py          # ReminderPoint / Reminder / ReminderSource / wrap_reminder
-grep -n 'hub.register' core/framework/agent_loop/agent_loop.py   # 13 个 source 注册处 918-960
+grep -n 'hub.register' core/framework/agent_loop/agent_loop.py   # 15 个 source 注册处 898-964
 sed -n '1,83p' core/framework/server/judge.py                    # 槽 + typesafe + 20s
 sed -n '1,60p' core/framework/server/stall_check.py              # 判据与提醒原文
 sed -n '1,30p' core/framework/agents/queen/worker_definition.py  # worker.json 契约
@@ -289,13 +291,13 @@ core/tests/test_soul_reflection.py    # soul 反思 14 例（见 go_hive 移植�
 
 <section id="gohive"><h2><span class="num">11</span>go_hive 对位（本页只给指路）</h2>
 <div class="tablewrap"><table><thead><tr><th style="width:26%">机制</th><th>go_hive 文档</th><th>状态一句话</th></tr></thead><tbody>
-<tr><td>Reminder</td><td><code>docs/reminders-coverage.md</code></td><td>13 个 source 的注册矩阵（queen/worker/overseer 三张）；STREAM_STALLED 已真实触发；3 条实现形态差异登记</td></tr>
-<tr><td>Memory / Soul</td><td><code>docs/soul-daily-reflection.md</code>、<code>docs/memory-e2e.md</code></td><td>反思链路有 14 例 parity 测试 + 本地网关 E2E；真实模型联调未做；4 条未对齐项</td></tr>
+<tr><td>Reminder</td><td><code>docs/reminders-coverage.md</code></td><td>15 个 source 的注册矩阵（queen/worker/overseer 三张）；STREAM_STALLED 已真实触发；3 条实现形态差异登记</td></tr>
+<tr><td>Memory / Soul</td><td><a href="memory-and-soul.html">memory-and-soul.html</a>（机制参考：memory / recall / timeline / soul）· <code>docs/soul-daily-reflection.md</code>、<code>docs/memory-e2e.md</code></td><td>反思链路有 14 例 parity 测试 + 本地网关 E2E；真实模型联调未做；4 条未对齐项</td></tr>
 <tr><td>Judge / Stall</td><td><code>docs/stall-check.html</code></td><td>已实现+测试、默认关；本机 judge 指向 StartLux 本地服务已真实判定</td></tr>
 <tr><td>Queen</td><td><code>docs/queen-lifecycle-tools.md</code>、<code>docs/queen-mail.md</code></td><td>12 生命周期工具全在 queen 会话可达；queen mail 有真实双 queen E2E</td></tr>
 <tr><td>Worker / Colony</td><td><code>CONCEPT_WIRING_AUDIT.md</code>、<code>docs/queen-worker-colony-parity-audit.html</code></td><td>概念接线 80/0/0；escalation 生产链有真实 E2E</td></tr>
 </tbody></table></div>
 </section>
 
-<footer>调研：2026-11-21 15:59 CST · 上游 hive 1.0.14（core 树，本机 checkout）· 证据：源码文件头/常量/注册处 + <code>docs/key_concepts/*.md</code> + 测试文件 · 口径：本页只报告"文档怎么说、代码怎么做"，两者不一致处单列（§08），不替任何一侧圆场。</footer>
+<footer>调研：2026-11-21 15:59 CST · 上游 hive 1.0.14（core 树，本机 checkout）· 证据：源码文件头/常量/注册处 + <code>docs/key_concepts/*.md</code> + 测试文件 · 口径：本页只报告"文档怎么说、代码怎么做"，两者不一致处单列（§08），不替任何一侧圆场。 · 2026-11-22 计数修正：reminder 源 13→15（补 <code>memory_recall</code> / <code>memory_index</code>，注册处 898-964）。</footer>
 </div></body></html>

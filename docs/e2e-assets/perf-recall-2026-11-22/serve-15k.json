@@ -1,0 +1,36 @@
+{
+  "binary": "/var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//perf-recall-15k/bin/hive",
+  "home": "/var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//perf-recall-15k/serve-home-15000",
+  "label": "15k",
+  "warmup_ms": 44.601,
+  "runs": [
+    {
+      "label": "15k",
+      "run": 0,
+      "port": 8820,
+      "ready_ms": 68.627,
+      "rss_ready_kb": 36032,
+      "rss_after_2s_kb": 36032,
+      "log": "/Users/mac/hive/.wt/perf-recall/go_hive/docs/e2e-assets/perf-recall-2026-11-22/serve-15k-run0.txt"
+    },
+    {
+      "label": "15k",
+      "run": 1,
+      "port": 8821,
+      "ready_ms": 73.651,
+      "rss_ready_kb": 36112,
+      "rss_after_2s_kb": 36112,
+      "log": "/Users/mac/hive/.wt/perf-recall/go_hive/docs/e2e-assets/perf-recall-2026-11-22/serve-15k-run1.txt"
+    },
+    {
+      "label": "15k",
+      "run": 2,
+      "port": 8822,
+      "ready_ms": 46.884,
+      "rss_ready_kb": 35392,
+      "rss_after_2s_kb": 36512,
+      "log": "/Users/mac/hive/.wt/perf-recall/go_hive/docs/e2e-assets/perf-recall-2026-11-22/serve-15k-run2.txt"
+    }
+  ],
+  "median_ready_ms": 68.627
+}

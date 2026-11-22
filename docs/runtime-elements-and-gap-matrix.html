@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hive 运行时元素图谱 &amp; 对齐缺口矩阵</title>
+<style>
+:root{--bg:#0b0f14;--panel:#121923;--panel2:#0f1620;--line:#233041;--text:#e6edf3;--muted:#8b9bb0;--accent:#f0b429;--accent2:#58a6ff;--ok:#3fb950;--warn:#d29922;--bad:#f85149;--code:#0a0e13}
+*{box-sizing:border-box} html{scroll-behavior:auto} body{margin:0;background:linear-gradient(180deg,#0b0f14,#0d131b 55%,#0b0f14);color:var(--text);font:14.5px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+a{color:var(--accent2);text-decoration:none} a:hover{text-decoration:underline}
+.wrap{max-width:1280px;margin:0 auto;padding:44px 26px 80px}
+header{border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:28px}
+.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+h1{font-size:34px;line-height:1.2;margin:10px 0 10px;letter-spacing:-.02em} h1 span{color:var(--accent);white-space:nowrap}
+.lede{color:var(--muted);max-width:980px;font-size:15px} .meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:15px;color:var(--muted);font-size:12.5px} .meta b{color:var(--text)}
+section{margin:38px 0} h2{font-size:22px;margin:0 0 8px} h2 .num{color:var(--accent);font-size:14px;margin-right:8px} h3{font-size:15px;margin:24px 0 8px;color:#cfdae6}
+p{color:#c6d2df;margin:8px 0} .sub{color:var(--muted);font-size:13px}
+.grid{display:grid;gap:12px} .g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:900px){.g3{grid-template-columns:1fr 1fr}} @media(max-width:560px){.g3{grid-template-columns:1fr}.wrap{padding:30px 16px 60px}h1{font-size:25px}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:15px} .card .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700} .card .v{font-size:21px;font-weight:800;margin-top:5px;letter-spacing:-.01em} .card .d{color:var(--muted);font-size:12px;margin-top:5px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:14px 0;background:var(--panel2)}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed} th,td{border-bottom:1px solid var(--line);padding:9px 10px;vertical-align:top;text-align:left;overflow-wrap:anywhere;word-break:break-word} th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;background:#0d141d;position:sticky;top:0;z-index:1} tr:hover td{background:#121a25} tr:last-child td{border-bottom:0}
+td.num{font-variant-numeric:tabular-nums;text-align:right} code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--code);border:1px solid #1e2937;border-radius:5px;padding:1px 4px;color:#d7e3f0;overflow-wrap:anywhere}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#cfe0f2}
+.pill{display:inline-flex;align-items:center;font-size:11px;border-radius:999px;padding:2px 8px;border:1px solid var(--line);color:var(--muted);white-space:normal} .pill.ok{color:var(--ok);border-color:#1d3b26;background:#0f1a13} .pill.warn{color:var(--warn);border-color:#3d3013;background:#1a150a} .pill.bad{color:var(--bad);border-color:#3d1a1a;background:#1a0f0f} .pill.info{color:var(--accent2);border-color:#17324d;background:#0d1622}
+.small{font-size:11.5px;color:var(--muted);margin-top:3px} .missing{color:#f2a3a3}
+.callout{border-left:3px solid var(--accent);background:#161207;padding:11px 14px;border-radius:0 9px 9px 0;margin:14px 0;color:#e8d9b4} .callout.bad{border-color:var(--bad);background:#1a0f0f;color:#f2c7c7} .callout.info{border-color:var(--accent2);background:#0d1622;color:#cfe3ff}
+.toc{display:flex;flex-wrap:wrap;gap:7px;margin-top:18px} .toc a{font-size:12px;border:1px solid var(--line);background:var(--panel);padding:5px 9px;border-radius:999px;color:var(--muted)} .toc a:hover{color:var(--text);text-decoration:none}
+ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin-top:44px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:12px}
+@media(max-width:560px){table{font-size:12px}th,td{padding:7px 6px}}
+@media(max-width:760px){table{min-width:760px}}
+@media(max-width:560px){.toc a{padding:8px 12px;font-size:13px;min-height:44px;display:inline-flex;align-items:center}}
+</style></head><body><div class="wrap">
+
+<header>
+<div class="eyebrow">Hive · Runtime Map &amp; Gap Matrix</div>
+<h1>Hive 运行时元素图谱 <span>&amp; 对齐缺口矩阵</span></h1>
+<p class="lede">两件事装在一页里：<b>上半</b>回答「运行时到底有哪些元素、为什么会有它们、它们怎么连」；<b>下半</b>是逐条可复验的<b>对齐缺口矩阵</b>（带 ID、影响、修法、验收命令）。每条结论都标注证据级别，并给出复跑命令——<b>请以命令输出为准，不要引用本文的数字</b>。</p>
+<div class="meta">
+<span>落盘：<b>2026-11-22 14:06 CST</b></span>
+<span>基准：<b>go_hive <code>fb434e85</code></b> · Go 1.0.26-go.1 · Python hive 1.0.14</span>
+<span>口径：<b>命令实测 &gt; 代码确认 &gt; 冻结快照 &gt; 未验证</b></span>
+</div>
+<div class="toc">
+<a href="#how">00 怎么读</a><a href="#primitive">01 一个原语</a><a href="#stack">02 八层栈</a><a href="#elements">03 元素清单</a><a href="#why">04 为什么是这些</a><a href="#stalls">04.1 五种 stall</a><a href="#park">04.2 park</a><a href="#reminders">04.3 reminder</a><a href="#substrates">04.4 四个底座</a><a href="#timeline">05 关系</a><a href="#qw">06 Queen vs Worker</a><a href="#matrix">07 缺口矩阵</a><a href="#order">08 执行顺序</a><a href="#decide">09 裁决项</a><a href="#verify">10 复验命令</a><a href="#log">11 变更记录</a>
+</div>
+</header>
+
+<section id="how"><h2><span class="num">00</span>怎么读这份资料</h2>
+<div class="callout info"><b>判定纪律：</b>「已验证对齐」只指<b>有可复跑命令且当场跑过</b>；「冻结快照」指某次抓取产物，<b>不等于当前 HEAD</b>；「未验证」不写成「没问题」。<b>本文不是事实源，命令输出才是。</b></div>
+<div class="tablewrap"><table><thead><tr><th style="width:22%">证据级别</th><th>含义</th><th style="width:26%">本文用到的地方</th></tr></thead><tbody>
+<tr><td><span class="pill ok">命令实测</span></td><td>本轮在基准 commit 上亲手跑过，给出退出码/计数</td><td>P0 的 grep、<code>check_parity</code>、<code>check_module_inventory</code>、<code>go test ./internal/cli/</code>、<code>gen_tool_surface_flat --check</code></td></tr>
+<tr><td><span class="pill info">代码确认</span></td><td>逐段读生产入口 / 逐符号反查实现点</td><td>元素清单、P2 误登记清单、P3 机制差异</td></tr>
+<tr><td><span class="pill warn">冻结快照</span></td><td>某次抓取产物，带生成时刻；<b>可能落后于 HEAD</b></td><td><code>contracts/tool-definitions.json</code>、<code>docs/tool-contract-recheck.json</code>、<code>contracts/module-inventory.json</code></td></tr>
+<tr><td><span class="pill bad">未验证</span></td><td>有代码/测试，但没对真实外部系统跑过</td><td>P4 全部</td></tr>
+</tbody></table></div>
+<div class="callout bad"><b>时效纪律（本文踩过的坑）：</b>上一版本文曾据 <code>tool-contract-recheck.json</code>（round 8，2026-11-21 23:44）判定「终端工具 0/10 逐字、<code>remove_trigger</code>/<code>reply_to_worker</code> 多必填参数、<code>run_playbook</code> partial」。<b>这三条在后续提交里已修好</b>，本轮跑在树契约测试 <code>go test ./internal/cli/</code> <b>407 PASS</b> 且有一条断言「剩余缺口 == [exa_search]」。<b>引用冻结快照前必须先看它的 HEAD 落后多少笔。</b></div>
+</section>
+
+<section id="primitive"><h2><span class="num">01</span>根：只有一个执行原语</h2>
+<p>理解全部元素的关键（出自 <code>docs/key_concepts/the_loop.md</code>）：</p>
+<pre>Hive has exactly one execution primitive: the agent loop.
+The Queen IS an agent loop. Every worker is a CLONE of that same loop.</pre>
+<p>所以元素只有两类：</p>
+<ul>
+<li><b>loop 内部的器官</b>——stall 检测、park、judge、compaction、reminder…… 每个都在治 <b>单 loop 自身</b>的一种失效；</li>
+<li><b>loop 之间的底座</b>——colony、tracker、plan、event bus、reminder hub、sentinel、trigger…… 每个都在治 <b>多 loop 并存</b>的一种失效。</li>
+</ul>
+<p>一个一次性任务和一个长期业务看门人，是<b>同一个 loop 配不同参数</b>。</p>
+</section>
+
+<section id="stack"><h2><span class="num">02</span>八层栈（仓库自己的分层）</h2>
+<pre>┌──────────────────────────────────────────────────────────────┐
+│ 8. 能力与边界   Tools / MCP · Credentials · Budgets          │
+├──────────────────────────────────────────────────────────────┤
+│ 7. 沉淀         Memory · Soul                                │
+├──────────────────────────────────────────────────────────────┤
+│ 6. 自治         Trigger · Sentinel                           │
+├──────────────────────────────────────────────────────────────┤
+│ 5. 方法         Skill · Playbook                             │
+├──────────────────────────────────────────────────────────────┤
+│ 4. 信号         Event Bus · Reminder Hub                     │
+├──────────────────────────────────────────────────────────────┤
+│ 3. 状态         Plan（意图）· Tracker（事实）                 │
+├──────────────────────────────────────────────────────────────┤
+│ 2. 组织         Colony · Queen · Worker                      │
+├──────────────────────────────────────────────────────────────┤
+│ 1. 执行         The Loop                                     │
+└──────────────────────────────────────────────────────────────┘</pre>
+<div class="tablewrap"><table><thead><tr><th style="width:6%">层</th><th style="width:20%">元素</th><th style="width:30%">回答的问题</th><th>缺了会怎样</th></tr></thead><tbody>
+<tr><td class="num">1</td><td>agent loop</td><td>任何 agent 怎么走一步？</td><td>—</td></tr>
+<tr><td class="num">2</td><td>colony / queen / worker</td><td>谁拥有什么、谁跟谁说话？</td><td>无法并行、无法交付</td></tr>
+<tr><td class="num">3</td><td>plan / tracker</td><td>我们要干什么？实际干完了什么？</td><td>有数据没方向；并行无法协调</td></tr>
+<tr><td class="num">4</td><td>event bus / reminder hub</td><td>刚发生了什么？现在该注意什么？</td><td>worker 结果不浮现；长会话漂移</td></tr>
+<tr><td class="num">5</td><td>skill / playbook</td><td>怎么做？怎么批量做？</td><td>每次从头想；无法规模化</td></tr>
+<tr><td class="num">6</td><td>trigger / sentinel</td><td>什么时候唤醒？什么时候求援？</td><td>只能人推；失联无人管</td></tr>
+<tr><td class="num">7</td><td>memory / soul</td><td>学到什么？变成谁？</td><td>跨会话失忆、人格漂移</td></tr>
+<tr><td class="num">8</td><td>tools / MCP / credentials / budgets</td><td>能做什么、不能做什么？</td><td>无边界、无成本控制</td></tr>
+</tbody></table></div>
+<p class="sub">源：<code>docs/key_concepts/runtime_spine.md</code>。设计主张原文：「Hive has no workflow graph. Coordination happens through state, signals, and attention — not through hand-wired nodes and edges.」</p>
+</section>
+
+<section id="elements"><h2><span class="num">03</span>元素清单</h2>
+
+<h3>A · loop 内部的器官</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:20%">元素</th><th style="width:26%">作用</th><th style="width:26%">治的失效</th><th>位置（Python / Go）</th></tr></thead><tbody>
+<tr><td><b>turn / iteration</b></td><td>流式响应 → 执行工具 → 回灌结果 → 决定停或继续</td><td>—</td><td><code>agent_loop.py</code> / <code>agentloop/loop.go</code></td></tr>
+<tr><td><b>compaction</b></td><td>上下文超限时压缩历史</td><td>长会话撞窗</td><td><code>internals/</code> / <code>agentloop/compaction.go</code></td></tr>
+<tr><td><b>tool_result spillover</b></td><td>超大工具结果落盘，只留可检索句柄</td><td>一条结果撑爆上下文</td><td>— / <code>agentloop/tool_result_spillover.go</code></td></tr>
+<tr><td><b>judge（判官）</b></td><td>每轮结束判定 ACCEPT / RETRY / ESCALATE，反馈注入对话</td><td>模型自认为做完了</td><td><code>internals/judge_pipeline.py</code> / <code>agentloop/judge.go</code>+<code>llm_judge.go</code></td></tr>
+<tr><td><b>ParkReason（11）</b></td><td>声明「我为什么停下」，并提供三个消费视图</td><td>单个 <code>awaiting_input</code> 布尔分不清「正常等待」和「卡死」</td><td><code>agent_loop/reminders.py</code> / <code>agentloop/park_reason.go</code></td></tr>
+<tr><td><b>LoopActivity（3）</b></td><td>顶层三态 EXECUTING / AWAITING_USER / INTERRUPTED</td><td>散落事件无法汇总成「它现在在干嘛」</td><td>同上</td></tr>
+<tr><td><b>InterruptCause（3）</b></td><td>非 park 的中断：STREAM_STALL / CRASHED / STALE</td><td>崩溃、卡流、失联没有 ParkReason 可挂</td><td>同上</td></tr>
+<tr><td><b>doom-loop 检测</b></td><td>连续相同工具调用 → 警告 → park</td><td>模型对同一个错误反复开枪</td><td><code>internals/stall_detector.py</code> / <code>agentloop/doom_loop.go</code></td></tr>
+<tr><td><b>replay breaker</b> <span class="pill bad">Go 缺</span></td><td>拒绝执行 + stub 同批兄弟调用（防悬空 <code>tool_use</code>）</td><td>重复调用产生 N 倍副作用</td><td><code>agent_loop.py:6417</code> / —</td></tr>
+<tr><td><b>n-gram stall</b> <span class="pill bad">Go 缺</span></td><td>回复互相似 → 判停滞（2-gram Jaccard，阈值 3）</td><td>「I'm still stuck」死循环</td><td><code>internals/stall_detector.py</code> / —</td></tr>
+<tr><td><b>stall_check</b></td><td>LLM 判「说要做却没做」</td><td>宣称动手、实际结束回合</td><td><code>server/stall_check.py</code> / <code>server/stall_check.go</code></td></tr>
+<tr><td><b>worker text-only stall</b></td><td>连续 N 轮只说话不调工具 → 自动失败/升级</td><td>worker 静默空转</td><td><code>host/colony_runtime.py</code> / <code>agentloop/worker_stall.go</code></td></tr>
+<tr><td><b>stream watchdog</b></td><td>TTFT / 事件间隔超时 → 取消该流并重流同一轮</td><td>通道卡死（非模型问题）</td><td><code>agent_loop/stream_stall.py</code> / <code>agentloop/stream_stall.go</code></td></tr>
+<tr><td><b>Reminder hub</b></td><td>14 个源 × 9 个已知时点，注入短建议</td><td>长会话漂移、重复派工、压缩后失忆</td><td><code>agent_loop/reminders.py</code> / <code>agentloop/reminder_hub.go</code></td></tr>
+<tr><td><b>tool budget</b></td><td>每轮 / 每次运行的调用上限 + 软检查点</td><td>无限烧钱</td><td><code>internals/types.py</code> / <code>agentloop/loop_config.go</code></td></tr>
+<tr><td><b>落盘游标 + park/resume</b></td><td>崩溃 / 重启 / 部署后原地续跑</td><td>一崩全丢</td><td><code>agent_loop/conversation.py</code> / <code>agentloop/store.go</code></td></tr>
+</tbody></table></div>
+
+<h3>B · loop 之间的底座</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:16%">元素</th><th style="width:28%">是什么</th><th style="width:13%">谁写</th><th style="width:15%">谁读</th><th>治的失效</th></tr></thead><tbody>
+<tr><td><b>Colony</b></td><td>单目录、可移植、可定时唤醒的<b>部署单元</b></td><td>—</td><td>—</td><td>无法交付 / 迁移</td></tr>
+<tr><td><b>Queen</b></td><td>持久、面向客户的主 loop；用 <code>run_worker</code> 按需扩 worker</td><td>—</td><td>—</td><td>需要一个负责人</td></tr>
+<tr><td><b>Worker</b></td><td>临时、单任务克隆（3 工作轮 + 1 grace 收尾）</td><td>—</td><td>—</td><td>并行干活</td></tr>
+<tr><td><b>Plan</b>（<code>tasks.json</code>）</td><td>Queen 的<b>意图</b>：要做什么、什么顺序</td><td>Queen</td><td>Queen、用户</td><td>有数据没方向；长会话丢线</td></tr>
+<tr><td><b>Tracker</b>（SQLite v3）</td><td>colony 的<b>事实</b>：一行一个工作单元 + 状态 + 结果</td><td>workers upsert</td><td>Queen、playbook、用户</td><td>无并行协调 / 审计 / 恢复</td></tr>
+<tr><td><b><a href="event-bus.html">Event bus</a></b>（77 种事件）</td><td>瞬时<b>信号</b>：worker 报告、live transcript、SSE</td><td>runtime</td><td>Queen、UI</td><td>静默批处理，结果永不浮现</td></tr>
+<tr><td><b>Reminder hub</b></td><td><b>注意力</b>：已知时点的短建议</td><td>framework</td><td>Queen、workers</td><td>长会话漂移、重复派工</td></tr>
+<tr><td><b>Binding</b></td><td>colony 名 / 目录 / DB 路径的不可变绑定</td><td>装配层</td><td>Queen + 每个 worker</td><td>写错账本（跨 colony 污染）</td></tr>
+<tr><td><b>Sentinel</b></td><td>Queen park 时判断：推一把 / 收工 / 升级给人</td><td>—</td><td>你（inbox / TG / Slack）</td><td>你不在时 colony 停摆</td></tr>
+<tr><td><b>Trigger</b>（cron / interval）</td><td>定时唤醒 colony</td><td>—</td><td>—</td><td>只能人推</td></tr>
+<tr><td><b>Overseer</b></td><td><code>serve --colony</code> 时的持久执行侧 loop</td><td>—</td><td>chat 前端</td><td>执行史与前端混淆</td></tr>
+<tr><td><b>Memory / Soul</b></td><td>沉淀：笔记 / 人格</td><td>reflection</td><td>Queen</td><td>跨会话失忆</td></tr>
+<tr><td><b>Skill / Playbook</b></td><td>方法：单次能力 / 批量收敛</td><td>Queen</td><td>workers</td><td>每次重想 / 无法规模化</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="why"><h2><span class="num">04</span>为什么是这些元素</h2>
+<p>所有元素都能归到<b>三个物理约束</b>上。这是最有用的视角。</p>
+
+<h3 id="stalls">4.1 族一：流式 LLM 不可靠 → 五种「卡住」必须分治</h3>
+<div class="callout"><b>「stall」在这套系统里指五件不同的事。</b>把一个判据盖五种，要么漏报要么烧钱——因为判据的性质不同：I/O 事件（确定性、零成本）、语义（一次 LLM 调用）、文本相似度（零成本）、调用结构（零成本）、角色契约（确定性）。</div>
+<div class="tablewrap"><table><thead><tr><th style="width:4%">#</th><th style="width:20%">名字</th><th style="width:26%">触发条件</th><th style="width:18%">谁判</th><th>后果</th></tr></thead><tbody>
+<tr><td class="num">1</td><td><code>STREAM_STALL</code> / <code>stream_stalled</code></td><td><b>通道</b>没字节了（TTFT / 事件间隔超时）</td><td>看门狗（确定性）</td><td>取消该流、<b>重流同一轮</b> + 同步注入提示（不可延到下一轮）</td></tr>
+<tr><td class="num">2</td><td><code>stall_check</code></td><td>模型<b>说要干</b>、但结束回合没调任何工具</td><td>LLM judge</td><td>注入 REMINDER，<b>不发布事件</b>（<code>node_stalled</code> 属 doom-loop）</td></tr>
+<tr><td class="num">3</td><td><code>is_stalled</code>（n-gram）</td><td>最近几条回复<b>互相相似</b>（≥ 阈值）</td><td>纯函数，无模型调用</td><td>发布 <code>NODE_STALLED</code> + <code>continue</code>；一条不相似就重置</td></tr>
+<tr><td class="num">4</td><td>doom loop</td><td>连续 N 轮<b>工具集完全相同</b>（turn 级指纹，顺序敏感）</td><td>纯函数</td><td>发布 <code>NODE_TOOL_DOOM_LOOP</code>；可 park（<code>ParkReason.DOOM_LOOP</code>）</td></tr>
+<tr><td class="num">5</td><td>worker text-only stall</td><td>worker 连续 N 轮<b>只说话不调工具</b></td><td>确定性</td><td>并行 worker → 合成 <code>report_to_parent(failed)</code> 终止；legacy worker → <code>ESCALATION_REQUESTED</code> 等 Queen</td></tr>
+</tbody></table></div>
+<p class="sub">Go 侧现状：1 中 <code>stream_stall</code>、2、5 均已移植；3 <b>欠缺</b>（全仓 <code>ngram|jaccard</code> 命中 0）；4 有，但粒度为<b>单调用 streak</b>（warn 3 / park 5）而非 turn 级指纹窗口，且无 <code>replay_exempt_tools</code> 豁免表。见 <a href="#matrix">§07 P0</a>。</p>
+
+<h3 id="park">4.2 族二：长会话会失忆、会漂移 → park 11 值 + reminder + compaction</h3>
+<p>单个 <code>awaiting_input</code> 布尔有两个盲点：分不清「正常等待」与「卡死」；分不清「用户自己按了停」与「崩了」。于是每个 <code>_await_user_input</code> 调用点必须声明原因，并用三个视图收敛给消费者用：</p>
+<div class="tablewrap"><table><thead><tr><th style="width:30%">ParkReason</th><th style="width:16%">分类</th><th style="width:24%">含义</th><th>activity 映射</th></tr></thead><tbody>
+<tr><td><code>ASK_USER</code></td><td><span class="pill ok">is_external_wait</span></td><td>agent 调了 ask_user，等你回答</td><td>AWAITING_USER</td></tr>
+<tr><td><code>CREDENTIAL_FORM</code></td><td><span class="pill ok">is_external_wait</span></td><td>等安全凭据表单</td><td>AWAITING_USER</td></tr>
+<tr><td><code>COLONY_SUGGESTION</code></td><td><span class="pill ok">is_external_wait</span></td><td>等你确认建 colony</td><td>AWAITING_USER</td></tr>
+<tr><td><code>AWAITING_QUEEN</code></td><td><span class="pill ok">is_external_wait</span></td><td>worker 升级了，等 Queen 指引</td><td>AWAITING_USER</td></tr>
+<tr><td><code>TURN_DONE</code></td><td><span class="pill info">is_silent_park</span></td><td>干净地结束了一轮</td><td>AWAITING_USER</td></tr>
+<tr><td><code>USER_STOPPED</code></td><td><span class="pill info">is_silent_park</span></td><td>你点了 Stop / 取消了这一轮</td><td>INTERRUPTED</td></tr>
+<tr><td><code>COLD_INTERRUPTED</code></td><td><span class="pill info">is_silent_park</span></td><td>运行时死时 Queen 正在轮中；重载后在冷态停</td><td>AWAITING_USER</td></tr>
+<tr><td><code>LLM_ERROR</code></td><td><span class="pill bad">is_broken</span></td><td>LLM 调用失败</td><td>INTERRUPTED</td></tr>
+<tr><td><code>EMPTY_RESPONSES</code></td><td><span class="pill bad">is_broken</span></td><td>连续空轮</td><td>INTERRUPTED</td></tr>
+<tr><td><code>DOOM_LOOP</code></td><td><span class="pill bad">is_broken</span></td><td>工具 doom loop</td><td>INTERRUPTED</td></tr>
+<tr><td><code>UNKNOWN</code></td><td><span class="pill bad">—</span></td><td>没记原因的 park（出现即是 bug）</td><td>INTERRUPTED</td></tr>
+</tbody></table></div>
+<p>三个视图就是给不同消费者用的——例如 <b>idle nudge 只敢碰 <code>is_broken</code></b>：碰「等你在回」没意义，碰「你自己按了停」会覆盖你的自然停顿。而 <code>ParkReason.activity</code> 是<b>唯一</b>把「原因」变成「顶层状态」的地方（避免两处各自推导）。</p>
+<p><code>InterruptCause</code> 补上非 park 的中断：<code>STREAM_STALL</code>（看门狗触发）、<code>CRASHED</code>（execute 异常退出）、<code>STALE</code>（超过失联窗口无事件）。</p>
+
+<h3 id="reminders">4.3 reminder hub：9 个时点 × 14 个源</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:26%">ReminderPoint</th><th style="width:14%">类型</th><th>治什么</th></tr></thead><tbody>
+<tr><td><code>SESSION_START</code></td><td>生命周期</td><td>重新入戏、召回历史</td></tr>
+<tr><td><code>USER_PROMPT_SUBMIT</code></td><td>生命周期</td><td>每轮提交前对齐</td></tr>
+<tr><td><code>POST_TOOL_USE</code></td><td>生命周期</td><td>工具发现、技能目录（静态提示词因此能保持精简）</td></tr>
+<tr><td><code>TOOL_BUDGET_CHECKPOINT</code></td><td>生命周期</td><td>预算跨过软倍数 → 提醒收尾（软/硬两处都触发）</td></tr>
+<tr><td><code>PRE_COMPACT</code></td><td>生命周期</td><td>压缩前提醒落盘进度</td></tr>
+<tr><td><code>POST_COMPACT</code></td><td>生命周期</td><td>重播被摘要丢掉的清单（延迟工具清单、技能目录）；放进新对话，<b>不再摘要</b></td></tr>
+<tr><td><code>STOP</code></td><td>生命周期</td><td>回合结束</td></tr>
+<tr><td><code>IDLE_TICK</code></td><td>时间</td><td>hub 自有 ticker，<b>parked 也能 nudge</b></td></tr>
+<tr><td><code>STREAM_STALLED</code></td><td>反应式</td><td>流卡当下<b>同步</b>注入（hub.collect inline），不能延到下一轮</td></tr>
+</tbody></table></div>
+<p>两侧源名对照（<span class="pill ok">14 个相同</span>）：<code>active_workers</code>、<code>colony_parallel</code>、<code>colony_worker_snapshot</code>、<code>idle_nudge</code>、<code>memory_index</code>、<code>memory_recall</code>、<code>searchable_tools</code>、<code>sentinel_escalation</code>、<code>skills_catalog</code>、<code>stream_stall</code>、<code>tasks</code>、<code>tracker_snapshot</code>、<code>turn_context</code>、<code>worker_tracker_snapshot</code>。</p>
+<p class="sub">唯一差异：Python 还有 <code>past_conversations</code> 挂在 hub 上；Go 把它实现为 hub 外的直接注入（<code>internal/memory/past_conversations.go</code> + <code>server/chat_memory_wiring.go</code>），行为在，但失去 <code>points</code>/<code>applies_to</code> 的统一裁决。见 <a href="#matrix">D2</a>。</p>
+
+<h3 id="substrates">4.4 族三：多 loop 并存会互相踩 → 四个底座</h3>
+<p>没有工作流图，就必须有东西替代「边」和「共享数据缓冲」。答案是四个<b>性质不同</b>的底座：</p>
+<div class="tablewrap"><table><thead><tr><th style="width:14%">底座</th><th style="width:22%">性质</th><th style="width:30%">不是另外三个的原因</th><th>存储</th></tr></thead><tbody>
+<tr><td><b>Plan</b></td><td>意图，可变</td><td>计划会变；tracker 是审计面。混用 → 「计划看起来全做完了，但没人知道实际发生了什么」</td><td><code>tasks.json</code></td></tr>
+<tr><td><b>Tracker</b></td><td>事实，持久，可查</td><td>它是<b>持久共享状态</b>；event bus 是<b>瞬时信令</b>，不能当账本</td><td><code>tracker/tracker.db</code></td></tr>
+<tr><td><b>Event bus</b></td><td>瞬时信令</td><td>不持久，换不来「现在到底完成了多少」</td><td>内存 + <code>events.jsonl</code></td></tr>
+<tr><td><b>Reminder hub</b></td><td>注意力，由框架写</td><td>不是事件：它不报告「发生了什么」，而是决定「现在该注意什么」</td><td>注入对话，不落盘</td></tr>
+</tbody></table></div>
+<div class="callout"><b>最反直觉的一条设计主张</b>（<code>coordination.md</code> 原文）：<code>workers never message each other</code>。它们不互相通话，只往 tracker 写行，Queen 之后读。这就是「没有图」却能协作的全部机制。配套的是 <b>Binding</b>：「没有 binding 的工具<b>拒绝运行</b>，而不是猜一个路径」——这才是两个 colony 不会写到对方账本的真正原因。</div>
+</section>
+
+<section id="timeline"><h2><span class="num">05</span>关系：一个 turn 的时间线（元素串起来）</h2>
+<pre>用户消息 / trigger / sentinel 回复
+   ↓
+[SESSION_START | USER_PROMPT_SUBMIT] reminder 注入
+   ↓
+┌─ turn ────────────────────────────────────────────────────┐
+│  流式 LLM                                                   │
+│     │──(通道卡住)──► stream watchdog 取消 ──► 重流 + STREAM_STALLED 提示
+│     ▼                                                       │
+│  工具批（只读的并行，其余按序）                                │
+│     │──(连续相同调用)──► doom loop 警告 ──► 可 park           │
+│     ▼                                                       │
+│  [POST_TOOL_USE] reminder（工具 / 技能清单）                  │
+│     │──(只说话不调工具)──► stall_check / worker stall         │
+│     ▼                                                       │
+│  结果回灌 + 预算计数                                          │
+│     │──(跨软倍数)──► [TOOL_BUDGET_CHECKPOINT]                │
+│     ▼                                                       │
+│  judge：ACCEPT / RETRY(反馈注入) / ESCALATE                   │
+│     ▼                                                       │
+│  上下文超限 ──► [PRE_COMPACT] → 压缩 → [POST_COMPACT]         │
+└─────────────────────────────────────────────────────────────┘
+   ↓
+park( Reason )  ──►  activity = AWAITING_USER | INTERRUPTED
+   ↓
+[IDLE_TICK] ──► idle nudge（只碰 is_broken）
+   ↓
+Sentinel 判断：推一把 / 收工 / 升级给你
+   ↓
+新输入 ──► resume（游标已落盘）</pre>
+
+<h3>谁写谁读（避免「看着正常其实错了」）</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:20%">状态</th><th style="width:16%">写者</th><th style="width:26%">读者</th><th>落盘位置</th></tr></thead><tbody>
+<tr><td>对话转录</td><td>loop</td><td>loop、UI</td><td><code>conversations/parts/*.json</code></td></tr>
+<tr><td>Plan</td><td>Queen</td><td>Queen、用户</td><td><code>tasks.json</code></td></tr>
+<tr><td>Tracker 行</td><td><b>workers</b></td><td>Queen、playbook</td><td><code>tracker/tracker.db</code></td></tr>
+<tr><td>事件</td><td>runtime</td><td>Queen、UI</td><td>内存 + <code>events.jsonl</code></td></tr>
+<tr><td>Reminder</td><td><b>framework</b></td><td>Queen</td><td>注入对话（不落盘）</td></tr>
+<tr><td>Binding</td><td>装配层</td><td>Queen + 每个 worker</td><td>线程进 ctx（工具缺它则拒绝运行）</td></tr>
+<tr><td>Worker 运行态</td><td>runtime</td><td>恢复逻辑</td><td><code>state.json</code> + <code>result.json</code></td></tr>
+</tbody></table></div>
+</section>
+
+<section id="qw"><h2><span class="num">06</span>Queen 与 Worker：同一 loop 的两组参数</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:16%"></th><th style="width:42%">Queen</th><th>Worker 克隆</th></tr></thead><tbody>
+<tr><td>角色</td><td>持久、面向客户的主 agent</td><td>临时、单任务</td></tr>
+<tr><td>迭代</td><td>实际无上限</td><td><b>3 工作轮 + 1 grace 收尾</b></td></tr>
+<tr><td>工具预算</td><td>软检查点每 30 次（colony 内 50）</td><td>30 / 轮（硬停 90），生命期 200</td></tr>
+<tr><td>提问</td><td>问你；Sentinel 可代升级</td><td><b>不许问你</b>——fail fast 上报</td></tr>
+<tr><td>记忆</td><td>反思笔记 + 历史会话</td><td>无（每次全新）</td></tr>
+<tr><td>judge</td><td><b>跳过</b>（「你就是她的 judge」）</td><td>结束靠 <code>report_to_parent</code></td></tr>
+</tbody></table></div>
+<div class="callout info"><b>grace iteration 是「worker 不会静默死掉」的保证</b>：即使预算耗尽，也一定还留一轮调 <code>report_to_parent</code>。</div>
+</section>
+
+<section id="matrix"><h2><span class="num">07</span>对齐缺口矩阵</h2>
+
+<h3>7.0 与上一版相比的更正（先看这段）</h3>
+<div class="callout bad">上一版据 round-8 冻结快照（<code>tool-contract-recheck.json</code>，2026-11-21 23:44 @ <code>c8cca067</code>）判定下面三条为缺口。<b>本轮在 <code>fb434e85</code> 上实测：已修，从清单撤回。</b>
+<ul>
+<li>~~<code>terminal_*</code> 10 个工具 0/10 逐字~~ → <code>go test ./internal/cli/</code> 含 <code>TestTerminalToolsRequestShapeMatchesPythonContract</code>（10 个工具 desc + request schema 逐字比对 Python 契约）<b>PASS</b>；<code>gen_tool_surface_flat.py --check</code> up-to-date，flat 面 39/39 desc 逐字。</li>
+<li>~~<code>remove_trigger</code> 多 required <code>trigger_id</code>~~ → 测试断言「剩余缺口 == <code>[exa_search]</code>」。</li>
+<li>~~<code>reply_to_worker</code> 多 required <code>reply</code>/<code>request_id</code>~~ → 同上。</li>
+<li>~~<code>run_playbook</code> partial~~ → 已由折叠控制参数移到真实 control 工具定义关闭（<code>docs/tool-contract-diff.md</code> §14）。</li>
+</ul>
+</div>
+
+<h3>7.1 P0 · 控制流语义 <span class="pill bad">本轮实测：全部仍 open</span></h3>
+<div class="tablewrap"><table><thead><tr><th style="width:5%">ID</th><th style="width:15%">项</th><th style="width:22%">Go 现状</th><th style="width:24%">Python 预期</th><th style="width:20%">影响</th><th>成本</th></tr></thead><tbody>
+<tr><td class="num">A1</td><td><b>replay 豁免表</b></td><td><code>grep -rn "ReplayExempt\|replay_exempt"</code> = <b>0</b></td><td><code>replay_exempt_tools</code> 10 个：<code>ask_user, escalate, collect_result, terminal_job_logs, terminal_job_manage, terminal_output_get, search_tools, search_messages, get_current_time, get_account_info</code></td><td>连续 5 次正常轮询（<code>collect_result</code> / <code>terminal_job_logs</code>）→ <b>turn 被 park</b>；Python 的注释写明它就是为这个坑加的</td><td>小</td></tr>
+<tr><td class="num">A2</td><td><b>replay breaker</b></td><td><code>grep -rni "replayBreaker\|_trip_replay\|replayDetector"</code> = <b>0</b></td><td>拒绝执行该调用 + stub 同批兄弟（避免悬空 <code>tool_use</code>）+ 注入 <code>[SYSTEM]</code> + park + 抛 <code>TurnCancelled</code></td><td>重复失败的工具<b>真被执行 N 次</b>（副作用 ×N）</td><td>中</td></tr>
+<tr><td class="num">A3</td><td><b>doom-loop 粒度</b></td><td><code>DoomLoopDetector.Observe(name, input)</code>：单<b>调用</b> streak（warn 3 / park 5）</td><td>turn 级指纹窗口（<code>tool_doom_loop_threshold=3</code>，整个 turn 的工具集比对，顺序敏感）</td><td>交替 <code>A,B,A,B</code> <b>永不命中</b>；单 turn 内连发 3 次<b>误命中</b></td><td>中</td></tr>
+<tr><td class="num">A4</td><td><b>judge Level 2 隐式门</b></td><td><code>grep "Task incomplete\|No output keys have been set"</code> = <b>0</b>；<code>shouldJudge</code> 要求 <code>hasSuccessCriteria</code></td><td>有 <code>output_keys</code> 就检查 <code>missing_keys</code> → RETRY <code>"Task incomplete. Required outputs not yet produced: {missing}..."</code>；全 nullable 未设 → 另一条 RETRY</td><td><b><code>output_keys</code> 契约在 Go 里失效</b>：该被逼调 <code>set_output</code> 的回合直接判成功</td><td>中</td></tr>
+<tr><td class="num">A5</td><td>judge Level 0</td><td><code>SkipJudge → false</code></td><td><code>skip_judge → RETRY(feedback=None)</code>，<b>不写进对话</b></td><td>少一次 no-log 判定；影响 runtime log 与对话洁净度</td><td>小</td></tr>
+<tr><td class="num">A6</td><td><b>n-gram 停滞检测</b></td><td><code>grep -rni "ngram\|jaccard"</code> = <b>0</b></td><td><code>ngram_similarity</code> + <code>is_stalled</code>（阈值 3），命中即 <code>_publish_stalled</code> + continue</td><td>复读同一句话不触发停滞，只能等 judge 花一次 LLM 调用</td><td>小</td></tr>
+<tr><td class="num">A7</td><td>SubagentJudge 分层</td><td>无</td><td><code>remaining≤3</code> → URGENT / <code>≤max/2</code> → WARNING / 否则普通</td><td>子代理只见平铺缺键提示</td><td>裁决</td></tr>
+</tbody></table></div>
+
+<h3>7.2 P1 · 对外契约面</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:5%">ID</th><th style="width:16%">项</th><th style="width:10%">状态</th><th>证据 / 说明</th></tr></thead><tbody>
+<tr><td class="num">B4</td><td><code>exa_search</code></td><td><span class="pill bad">未对齐</span></td><td>Go 注册成 7-action 模块工具（required <code>action</code>），Python 是扁平工具（required <code>query</code>）。<b>它是遍历全部共享工具后唯一被记录的 partial</b>（测试断言 <code>want := []string{"exa_search"}</code>）。</td></tr>
+<tr><td class="num">B5</td><td><code>attach_file</code> 多模态</td><td><span class="pill bad">未对齐</span></td><td>图片块 / PDF <code>file</code> 块<b>到不了 LLM</b>，只到工具结果层。结果 JSON 用 <code>inline</code> 字段如实标注，不声称模型看到了字节。</td></tr>
+<tr><td class="num">B6</td><td>终端工具<b>两套冻结契约口径冲突</b></td><td><span class="pill warn">需复采裁定</span></td><td><code>internal/cli/tool_contract_parity.json</code>（in-process 测试用）判定 10/10 全等 <b>PASS</b>；<code>contracts/tool-definitions.json</code> 的 <code>parity</code> 字段（round-8）判定 10/10 全不等。另：<code>terminal_job_start</code> 与 <code>terminal_pty_open</code> 只存在于 <code>mcp_catalog</code> 层且其 schema <b>带 <code>session_cwd</code></b>，Go 在 <code>Defs()</code> 统一 <code>StripContextParams</code> → 若 Python 在这 2 个上不剥离，就是 Go 剥多了。</td></tr>
+</tbody></table></div>
+
+<h3>7.3 P2 · 功能缺口（<code>check_module_inventory --check</code> 本轮实测）</h3>
+<p>273 条登记 / <b>ported 205 · partial 10 · out_of_scope 7 · unported 51</b>。近 3 天只移出 2 条（<code>agent_loop/memory_reminders.py</code>、<code>agents/queen/recall_selector.py</code>）。</p>
+
+<h4>P2-A 真缺口（有上游生产调用方）— 12 条</h4>
+<div class="tablewrap"><table><thead><tr><th style="width:6%">ID</th><th style="width:32%">模块</th><th style="width:30%">上游调用方</th><th>影响</th></tr></thead><tbody>
+<tr><td class="num">C1</td><td><code>tracker/decision_tracker.py</code></td><td><code>server/queen_orchestrator.py</code>、<code>agent_loop/types.py</code></td><td>决策记账缺失（Go 全仓 0 命中）</td></tr>
+<tr><td class="num">C2</td><td><code>agents/queen/config.py</code>（<code>RuntimeConfig</code>/<code>AgentMetadata</code>）</td><td><code>pipeline/stages/{mcp_registry,llm_provider,skill_registry}.py</code></td><td>pipeline 配置面</td></tr>
+<tr><td class="num">C3</td><td><code>agents/__init__.py::list_framework_agents</code></td><td><code>pipeline/runner.py</code> + 3 个 stage</td><td>pipeline 发现面</td></tr>
+<tr><td class="num">C4</td><td><code>agents/queen/tools_ga_migration.py</code></td><td><code>server/app.py</code>（启动迁移）</td><td>缺 GA 迁移</td></tr>
+<tr><td class="num">C5</td><td><code>credentials/aden/client.py</code>（9 符号）</td><td>—</td><td>Aden 云凭据客户端</td></tr>
+<tr><td class="num">C6</td><td><code>credentials/setup.py</code>（6 符号）</td><td>—</td><td>交互式凭据 setup（<code>hive-cred</code> 是 token CLI，不是 setup）</td></tr>
+<tr><td class="num">C7</td><td><code>credentials/validation.py</code>（6/7 缺）</td><td>—</td><td><code>compute_unavailable_tools</code> 等</td></tr>
+<tr><td class="num">C8</td><td><code>credentials/oauth2/{zoho,hubspot}_provider.py</code></td><td>—</td><td>provider 专属（Go 只有通用 oauth）</td></tr>
+<tr><td class="num">C9</td><td><code>global_db/cli.py</code>（6 子命令）</td><td>—</td><td><code>internal/globaldb</code> 库被 server 正常使用，<b>但 <code>internal/cli</code> 零引用</b> → 库活了、命令面缺</td></tr>
+<tr><td class="num">C10</td><td><code>host/isolation.py::IsolationLevel</code></td><td><code>playbook/runner.py</code>、<code>colony_runtime.py</code></td><td>worker 隔离等级</td></tr>
+<tr><td class="num">C11</td><td><code>llm/antigravity.py::AntigravityProvider</code></td><td>—</td><td>已声明「配置只读、无消费路径」</td></tr>
+<tr><td class="num">C12</td><td><code>agent_loop/internals/sentinel_tool.py</code></td><td>—</td><td>sentinel 运行时在，模型可见工具面缺</td></tr>
+</tbody></table></div>
+
+<h4>P2-B 待裁决 — 7 条</h4>
+<p><code>framework/testing/{approval_cli, approval_types, categorizer, debug_tool, test_case, test_result, test_storage}.py</code> —— 是<b>产品代码</b>（内部互引），不是测试代码。属不属于「Go 不做的宿主」？是 → 改判 <code>out_of_scope</code>；否 → 排期。</p>
+
+<h4>P2-C 误登记（<b>只改清单，不改代码</b>）— 16 条</h4>
+<p>Go 已有等价实现，只是文件名/符号名不同；C12 对 <code>ported</code> 做反向复验、<b>但对 <code>unported</code> 不做</b>，所以这些会永久留在缺口名单里。</p>
+<div class="tablewrap"><table><thead><tr><th style="width:44%">Go 实际实现</th><th>覆盖的 Python 模块（符号命中）</th></tr></thead><tbody>
+<tr><td><code>internal/llm/catalog.go</code></td><td><code>llm/model_catalog.py</code>（13/13）</td></tr>
+<tr><td><code>internal/llm/keypool.go</code></td><td><code>llm/key_pool.py</code>（2/2）</td></tr>
+<tr><td><code>internal/llm/keycheck.go</code></td><td><code>llm/key_check.py</code>（5/8，3 个内部 helper 名不同）</td></tr>
+<tr><td><code>internal/memory/memory.go</code></td><td><code>agents/queen/queen_memory_v2.py</code>（13/13）</td></tr>
+<tr><td><code>internal/agentloop/memory_reminders.go</code></td><td><code>agent_loop/memory_reminders.py</code>（2/2，<b>同名文件</b>）</td></tr>
+<tr><td><code>internal/tools/coerce.go</code></td><td><code>agent_loop/internals/tool_input_coercer.py</code></td></tr>
+<tr><td><code>internal/colony/worker_doom_loop.go</code> + <code>server/chat_loop_guards.go</code></td><td><code>agent_loop/internals/stall_detector.py</code>（行为在）</td></tr>
+<tr><td><code>internal/skills/errors.go</code></td><td><code>skills/skill_errors.py</code>（3/3）</td></tr>
+<tr><td><code>internal/credentials/keys.go</code></td><td><code>credentials/key_storage.py</code>（3/6）</td></tr>
+<tr><td><code>internal/tools/integrationkit/oauth.go</code></td><td><code>credentials/oauth2/{base_provider,lifecycle}.py</code>（Go 注释直引 <code>BaseOAuth2Provider</code>）</td></tr>
+<tr><td><code>internal/server/routes_colonies.go</code></td><td><code>utils/text.py::humanize_slug</code>（注释直引 <code>framework/utils/text.py::humanize_slug</code>）</td></tr>
+<tr><td><code>internal/atomicfs</code></td><td><code>utils/io.py::atomic_write</code></td></tr>
+<tr><td><code>internal/tools/integrations/browser_tools.go</code></td><td><code>tools/browser_tools.py</code>（22 个工具，golden JSON 生成）</td></tr>
+<tr><td><code>internal/tools/mcp.go</code></td><td><code>tools/harness_tools.py</code>（<code>HarnessTool</code>/<code>HarnessGroups</code>）</td></tr>
+<tr><td><code>internal/tools/mcp_client.go</code></td><td><code>loader/mcp_errors.py</code>（1/9）</td></tr>
+<tr><td>Go deps 结构体</td><td><code>tools/queen_lifecycle/context.py</code>（结构差异）</td></tr>
+</tbody></table></div>
+
+<h4>P2-D 应剔除（平台差异，不是缺口）— 7 条</h4>
+<ul>
+<li><code>utils/task_registry.py</code> —— 治 asyncio 弱引用导致的 task 被 GC 静默取消；Go goroutine 无此失效模式</li>
+<li><code>utils/python_env.py::drop_launcher_pythonhome</code> —— 修 Python launcher 注入的 <code>PYTHONHOME</code></li>
+<li><code>host/{shared_state,stream_runtime}.py</code> —— 图执行引擎面</li>
+<li><code>cloud_sync_hooks.py</code> —— 云端同步，应与 <code>server/streamtoken_refresh.py</code> 一起记 <code>out_of_scope(cloud)</code>（Go 侧同名 <code>schedulePush</code> 是 queen 工具路由的 DI 钩子，不是云同步）</li>
+<li><code>loader/preload_validation.py</code> —— 图 host 预热校验</li>
+</ul>
+
+<h4>P2-E 名义缺口 — 9 条（无需处理）</h4>
+<p>7 个 <code>__init__.py</code> + <code>__main__.py</code> + <code>agents/queen/agent.py</code>（纯 re-export，无独立行为）。</p>
+
+<h4>P2-F 仍 open 的 <code>partial</code> — 10 条</h4>
+<div class="tablewrap"><table><thead><tr><th style="width:34%">模块</th><th>缺什么 / 裁决方向</th></tr></thead><tbody>
+<tr><td><code>agent_loop/agent_loop.py</code></td><td>Go 自述覆盖子集 → 与 A1–A6 同一批</td></tr>
+<tr><td><code>agent_loop/internals/judge_pipeline.py</code></td><td>Level 0/1 短路 + 隐式判官 → = <b>A4/A5</b></td></tr>
+<tr><td><code>orchestrator/conversation_judge.py</code></td><td><b>协议不同</b>：Python 用 <code>ACTION/CONFIDENCE/FEEDBACK</code> 文本，Go 用 JSON <code>passes/explanation</code> → 改 Go 或登记例外</td></tr>
+<tr><td><code>host/execution_manager.py</code></td><td>图执行主循环未移植 → 归 <code>out_of_scope(graph)</code></td></tr>
+<tr><td><code>schemas/goal.py</code> + <code>orchestrator/goal.py</code></td><td><code>weight=0</code> 被改写 1.0 / <code>context</code> 键序被排序 / <code>id</code> 校验 → 三处可修</td></tr>
+<tr><td><code>orchestrator/node.py</code></td><td>节点模型不移植 → 归 <code>out_of_scope</code></td></tr>
+<tr><td><code>orchestrator/safe_eval.py</code> · <code>validator.py</code></td><td><span class="pill bad">孤岛</span> Go 文件在、<code>internal/orchestrator</code> 被任何非测试文件 import 的次数 = <b>0</b>（实测）→ 删或接线</td></tr>
+<tr><td><code>tasks/tools/register.py</code></td><td>无生产调用方（分散在 3 个文件）→ 改判 <code>ported</code></td></tr>
+<tr><td><code>exa_search</code></td><td>= <b>B4</b></td></tr>
+</tbody></table></div>
+
+<h3>7.4 P3 · 机制差异（本轮实测仍在）</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:6%">ID</th><th style="width:22%">项</th><th>证据</th></tr></thead><tbody>
+<tr><td class="num">D1</td><td><code>.play.json</code> 是 <b>Go 独有格式</b></td><td><code>grep -rn "\.play\.json" core/framework</code> = <b>0</b>；上游只有 <code>.play.py</code>。与 <code>00-product-goals.md</code> §6「不新增上游没有的能力」冲突 → 登记为 Go 扩展，或删</td></tr>
+<tr><td class="num">D2</td><td><code>past_conversations</code> 绕过 reminder hub</td><td>Go <code>internal/agentloop</code> 里 0 引用；行为在 <code>internal/memory/past_conversations.go</code> + <code>server/chat_memory_wiring.go</code> 直接注入 → 失去 hub 的 <code>points</code>/<code>applies_to</code> 统一裁决。同一 env <code>HIVE_PAST_RECALL_TIMEOUT</code>，同默认 3s</td></tr>
+<tr><td class="num">D3</td><td><code>govulncheck</code> FAIL</td><td><code>go.mod</code> = <code>go 1.26.5</code>；23 个 stdlib CVE 修在 1.26.6–1.26.11；命中 <code>net/http</code>（HTTP/2 内存耗尽、连接失步、<code>MaxBytesReader</code> 竞态）/ <code>crypto/tls</code> / <code>crypto/x509</code> —— <b>正是 <code>hive serve</code> 的生产面</b>。零代码改动，升工具链重建即可</td></tr>
+<tr><td class="num">D4</td><td><code>exports/</code> 解析基准未拍板</td><td>Python = CWD，Go = <code>$HIVE_HOME</code>。<code>00-product-goals.md</code> 把「无痛无损迁移」列为硬门槛，任何一条不满足即不得宣称交付 → 需你选 A/B/C/C'/D</td></tr>
+</tbody></table></div>
+
+<h3>7.5 P4 · 未验证（补证据，不补代码）</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:6%">ID</th><th style="width:30%">项</th><th>现状</th></tr></thead><tbody>
+<tr><td class="num">E1</td><td>skills 的 trust / overrides / live_reload / installer / tool_gating</td><td>文件级 16/19 同名（<code>trust.go</code>/<code>overrides.go</code>/<code>live_reload.go</code>/<code>installer.go</code>/<code>tool_gating.go</code> 都在），Go 9834 行 vs Python 5004 行；<b>语义未验</b></td></tr>
+<tr><td class="num">E2</td><td>soul 沉淀语义</td><td>Go 4317 行 / Python 1123 行；未逐段比</td></tr>
+<tr><td class="num">E3</td><td>mcp 命名空间三组残余</td><td>只有 <code>docs/mcp-namespace-residuals.md</code>（R1 折叠不可逆 / R2 &gt;64 无截断 / R3 序列化与畸形载荷）</td></tr>
+<tr><td class="num">E4</td><td>colony runtime 整体调度</td><td>只验了并发默认值（同 env <code>HIVE_MAX_CONCURRENT_WORKERS</code>，同默认 4）与 worker 状态机 6/6</td></tr>
+<tr><td class="num">E5</td><td>overseer 的 park / 注入</td><td>只有接线审计（<code>C</code> 静态追踪）</td></tr>
+<tr><td class="num">E6</td><td>Windows 实机 / Actions 实跑</td><td>G3 剩余项，<code>external: true</code></td></tr>
+<tr><td class="num">E7</td><td>Sentinel 真实 Telegram / Slack 投递</td><td>8/8 模块同名，未对真实通道</td></tr>
+<tr><td class="num">E8</td><td>81 个需第三方凭据的集成模块</td><td>只有假上游证据</td></tr>
+</tbody></table></div>
+
+<h3>7.6 P5 · 门禁与口径 <span class="pill warn">优先级最高，因为它在掩盖上面全部</span></h3>
+<div class="tablewrap"><table><thead><tr><th style="width:6%">ID</th><th style="width:26%">项</th><th>为什么必须修</th></tr></thead><tbody>
+<tr><td class="num">F1</td><td>C12 缺 <code>unported</code> 反向复验</td><td><code>ported</code> 会反向校验（包可达 + 符号被非测试文件引用），<code>unported</code> 不校验 → 16 条误登记会<b>永久</b>留在缺口名单，让人按错清单排期</td></tr>
+<tr><td class="num">F2</td><td>两套终端契约口径冲突（= B6）</td><td>同一批工具两套冻结契约给出相反判定，无法据此做任何决定</td></tr>
+<tr><td class="num">F3</td><td>round-8 recheck 无时效标注</td><td>上一版本页就是被它误导的。冻结快照必须带「落后 HEAD N 笔」</td></tr>
+<tr><td class="num">F4</td><td>三份文档对 R1 三种说法</td><td><code>RELEASE_CHECKLIST</code>=PASS / <code>RELEASE_PLAN</code>=代码面已齐 / <code>DELIVERY.md</code>=不满足 → 同一版可有三种对外声明</td></tr>
+<tr><td class="num">F5</td><td>陈旧数字仍在引用</td><td><code>STATUS.md</code> 2238、<code>15-test-parity-matrix.md</code> 2215（实时 <b>5696</b>）</td></tr>
+</tbody></table></div>
+
+<h3>7.7 已对齐 —— <span class="pill ok">不要动</span></h3>
+<div class="tablewrap"><table><thead><tr><th style="width:30%">项</th><th>证据</th></tr></thead><tbody>
+<tr><td><b>事件类型</b></td><td><b>77/77，双向差集为空</b>（<code>event_bus.py</code> ↔ <code>eventbus/event_type.go</code>）</td></tr>
+<tr><td><b>ParkReason</b></td><td>11/11 值与字符串完全相同</td></tr>
+<tr><td><b>worker 状态机</b></td><td>6/6（queued/pending/running/completed/failed/stopped）+ <code>IsActive</code> 语义一致</td></tr>
+<tr><td><b>tracker schema v3</b></td><td>DDL + <code>_tracker_changes</code> 索引 + 剪枝 SQL + <code>schema_version</code> meta 逐行一致</td></tr>
+<tr><td><b>task 工具名</b></td><td>4/4 + 读写分类（Go 直接标 <code>Parity: framework/tasks/tools/names.py</code>）</td></tr>
+<tr><td><b>queen 档案</b></td><td>13 个 YAML <b>逐字节一致</b>（<code>cmp</code> 全 IDENTICAL）</td></tr>
+<tr><td><b>memory 工具名</b></td><td>7/7</td></tr>
+<tr><td><b>claudecode queen 路由</b></td><td>2/2（method + path）</td></tr>
+<tr><td><b>colony 并发默认值</b></td><td>同 env <code>HIVE_MAX_CONCURRENT_WORKERS</code>，同默认 4</td></tr>
+<tr><td><b>sentinel 模块</b></td><td>8/8 同名（classifier / escalation_source / listeners / manager / notifier / runtime_identity / store / token）</td></tr>
+<tr><td><b>reminders 源名</b></td><td>14/15（仅 <code>past_conversations</code>，见 D2）</td></tr>
+<tr><td><b>stall-check（judge 版）</b></td><td>REMINDER 文案逐字一致</td></tr>
+<tr><td><b>worker 升级原因文案</b></td><td><code>"Tool doom loop detected"</code> 逐字一致</td></tr>
+<tr><td><b>终端工具契约（in-process）</b></td><td>10/10 PASS（与 B6 冲突，待裁定）</td></tr>
+<tr><td><b>flat 工具面</b></td><td><code>gen_tool_surface_flat.py --check</code> up-to-date；39/39 desc 逐字</td></tr>
+<tr><td><b>cli 契约测试</b></td><td><code>go test ./internal/cli/</code> <b>407 PASS</b>，剩余缺口仅 <code>exa_search</code></td></tr>
+</tbody></table></div>
+</section>
+
+<section id="order"><h2><span class="num">08</span>建议执行顺序</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:12%">批次</th><th style="width:26%">做什么</th><th>为什么这个顺序</th></tr></thead><tbody>
+<tr><td><b>第一批<br>修口径</b></td><td>F1（给 <code>unported</code> 加反向复验）→ P2-C 16 条改判 <code>ported</code>；P2-D 7 条改判 <code>out_of_scope</code>；F2 复采终端契约；F3 给快照加落后笔数；F5 清陈旧数字</td><td>几乎零代码改动，却让 <code>unported</code> 从 <b>51 → 约 19–28</b>。做完这一步，缺口清单第一次可信——否则后面所有排期都建立在错清单上</td></tr>
+<tr><td><b>第二批<br>修控制流</b></td><td>A1 豁免表 → A6 n-gram → A5/A4 judge Level 0/2 → A3 doom-loop 粒度 → A2 breaker</td><td>都是小改动但影响大：A1 会<b>误伤正常轮询</b>（唯一会让生产出现用户可见故障的一条）；A4 让 <code>output_keys</code> 契约失效</td></tr>
+<tr><td><b>第三批<br>对外面与安全</b></td><td>B4 <code>exa_search</code> 收敛 → B5 <code>attach_file</code> 多模态 → D3 升 Go 工具链重建</td><td>D3 是唯一红灯，零代码改动，但必须先于任何公网暴露</td></tr>
+<tr><td><b>第四批<br>缺口补齐</b></td><td>C1 decision_tracker → C2/C3 pipeline 配置面 → C9 global_db CLI → C10 isolation → C5–C8 credentials → C4 GA 迁移 → C12 sentinel 工具面</td><td>按上游调用方权重排序：有生产调用方的先做</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="decide"><h2><span class="num">09</span>裁决项（需要人定，不该由执行者定）</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:34%">项</th><th>选项</th></tr></thead><tbody>
+<tr><td>P2-B <code>framework/testing</code> 7 条</td><td>移植 / 改判 <code>out_of_scope</code>（视作「Go 不做的宿主」，同图引擎）</td></tr>
+<tr><td>A7 SubagentJudge 分层</td><td>移植 / 保持不移植（backlog 已登记「不移植」）</td></tr>
+<tr><td>D1 <code>.play.json</code></td><td>登记为 Go 扩展（带 annotation）/ 删除第二套实现</td></tr>
+<tr><td>D4 <code>exports/</code> 基准</td><td>A（Python=CWD，推荐）/ B（Go=<code>HIVE_HOME</code>）/ C（双读）/ C'（自动迁移）/ D</td></tr>
+<tr><td>E1–E8 未验证项</td><td>先补证据再发布 / 带「未验证」声明发布</td></tr>
+<tr><td>B6 终端契约口径</td><td>需一次随 HEAD 的双跑复采来裁定哪套 fixture 对</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="verify"><h2><span class="num">10</span>复验命令（直接可跑，离线）</h2>
+<pre>cd /Users/mac/hive/go_hive/go-hive
+
+# —— P0：四条修好后必须不再为 0 ——
+grep -rn "ReplayExempt\|replay_exempt" --include=*.go . | wc -l                    # 现在 0  → A1
+grep -rni "replayBreaker\|_trip_replay\|replayDetector" --include=*.go . | wc -l  # 现在 0  → A2
+grep -rn "Task incomplete\|No output keys have been set" --include=*.go . | wc -l  # 现在 0  → A4
+grep -rni "ngram\|jaccard" --include=*.go . | wc -l                                # 现在 0  → A6
+grep -n "func (d \*DoomLoopDetector) Observe" internal/agentloop/doom_loop.go      # 单调用 streak → A3
+
+# —— P0：孤岛（safe_eval / validator）确认 ——
+grep -rn "internal/orchestrator" --include=*.go . | grep -v "internal/orchestrator/"   # 空 = 孤岛
+
+# —— 契约面 ——
+CGO_ENABLED=0 GOPROXY=off GOSUMDB=off GOFLAGS=-mod=mod go test -count=1 ./internal/cli/
+cd ../.. && (cd go_hive && uv run --no-project python scripts/gen_tool_surface_flat.py --check)
+cd go_hive/go-hive && bash ../scripts/check_parity.sh .          # parity 注解
+cd /Users/mac/hive && python3 scripts/check_module_inventory.py --check   # C12 模块清单
+
+# —— P3 机制差异 ——
+grep -rn "\.play\.json" core/framework --include=*.py | wc -l     # 0 → D1 是 Go 独有格式
+grep -m1 "^go " go_hive/go-hive/go.mod                            # 1.26.5 → D3 未修
+python3 -c "import json;d=json.load(open('go_hive/docs/delivery-backlog.json'));print([x['id'] for x in d['gates']['G3'] if not x.get('done')])"
+
+# —— 已对齐项复验（应全部通过）——
+python3 - &lt;&lt;'EOF'
+import re
+py=set(re.findall(r'^\s{4}[A-Z][A-Z0-9_]*\s*=\s*["\']([^"\']+)["\']', open('core/framework/host/event_bus.py').read(), re.M))
+go=set(re.findall(r'=\s*"([a-z][a-z0-9_.]*)"', open('go_hive/go-hive/internal/eventbus/event_type.go').read()))
+print('event types:', len(py), len(go), 'py_only', py-go, 'go_only', go-py)
+EOF
+cmp core/framework/agents/queen/queen_defaults/*.yaml go_hive/go-hive/internal/queen/queen_defaults/ 2>&1 | head</pre>
+</section>
+
+<section id="log"><h2><span class="num">11</span>变更记录与边界</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:14%">日期</th><th style="width:20%">基准</th><th>变更</th></tr></thead><tbody>
+<tr><td>2026-11-22 14:06</td><td><code>fb434e85</code></td><td>首次落盘。相对口头分析版：<b>撤回 3 条</b>（终端工具面 0/10、<code>remove_trigger</code>、<code>reply_to_worker</code> —— 皆因引用 round-8 冻结快照过期）；<b>新增 2 条</b>（B6 终端契约口径冲突、F3 快照时效纪律）；A1/A2/A4/A6 与孤岛判定在 <code>fb434e85</code> 上重新实测；补 <code>docs/reports/</code> 的 G1/G2/G3 状态。</td></tr>
+</tbody></table></div>
+<div class="callout info"><b>证据边界（请连同结论一起引用）：</b>
+<ul>
+<li>P0 的 grep、P2 的计数（<code>check_module_inventory</code>）、P3 的 <code>.play.json</code>/<code>go.mod</code>、§7.7 已对齐清单、§7.4 的孤岛判定 —— 是我在 <code>fb434e85</code> 上亲手跑的。</li>
+<li>B6 只能证明「两套 fixture 判定相反」，<b>无法判定哪一套对</b>。</li>
+<li>P4 全部是仓库登记，未复跑；<code>make ci</code> 本轮未跑（只跑了 <code>./internal/cli/</code>、<code>check_parity</code>、<code>check_module_inventory</code>、<code>gen_tool_surface_flat --check</code> 四项）。</li>
+<li>本文未覆盖：colony 目录布局细节、sentinel 分类器判据、playbook 收敛算法、soul 沉淀时机。</li>
+</ul></div>
+</section>
+
+<footer>
+<b>Hive 运行时元素图谱 &amp; 对齐缺口矩阵</b> · 落盘 2026-11-22 14:06 CST · 基准 <code>fb434e85</code> · Go 1.0.26-go.1 / Python hive 1.0.14
+<br>姊妹文档：<a href="learning-assets-lifecycle.html">Hive 学习资产：skill / playbook 的产生·应用·消亡</a>（与 pi-agent 的分野 / 生命周期 / 漂变非进化）· <a href="agent-harness-comparison.html">三种 agent 运行时对照</a>（hive / oh-my-hermes / prime-agent）· <a href="alignment-dimensions.html">Hive ↔ go_hive 对齐维度矩阵</a>（18 维度范围视角）· <a href="surface-tracking-matrix.html">外观对齐追踪矩阵</a> · <a href="loop-vocabulary.html">Hive 术语表</a> · <a href="memory-and-soul.html">Memory &amp; Soul</a> · <a href="api-contract-diff.md">API 契约差异</a> · <code>docs/key_concepts/{runtime_spine,the_loop,coordination,colony,queen,worker_agent}.md</code>
+<br><b>请以本文给出的命令输出为准；本文数字会随 HEAD 变化而过期。</b>
+</footer>
+
+</div></body></html>
