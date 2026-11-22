@@ -185,11 +185,18 @@ WIRING: tuple[WiringPoint, ...] = (
     ),
     WiringPoint(
         path="internal/agentloop/loop.go",
-        description="Judge 面：回合内判定调用点与判定应用（判定必须仍在主循环里）",
+        description="Judge 面：回合内判定步骤入口（判定实现见 loop_judge.go::runJudgeStep）",
+        requirements=(
+            Requirement("判定步骤入口", r"l\.runJudgeStep\(ctx, agentCtx, conv, completion, records, inner, toolFailure, loggedCalls, iterLatencyMS, &result\)"),
+        ),
+    ),
+    WiringPoint(
+        path="internal/agentloop/loop_judge.go",
+        description="Judge 面：runJudgeStep 内的门控、判定评估与应用（2026-11-22 从 loop.go 抽出守函数规模预算）",
         requirements=(
             Requirement("自然停/工具失败判定调用", r"l\.shouldJudge\(agentCtx, inner, false, toolFailure\)"),
             Requirement("判定评估调用", r"l\.evaluateJudge\("),
-            Requirement("判定应用", r"applyJudgeVerdict\(conv, verdict, completion, inner, &result\)"),
+            Requirement("判定应用", r"applyJudgeVerdict\(conv, verdict, completion, inner, result\)"),
         ),
     ),
     WiringPoint(

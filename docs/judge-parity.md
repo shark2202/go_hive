@@ -28,7 +28,7 @@
 | 机制 | Python 调用链（谁调用 → 被调用） | 输入字段 | 路径 | Go 状态 | 依据 |
 | --- | --- | --- | --- | --- | --- |
 | J1 | `agent_loop.py:3325 _judge_turn` → `6223 judge_turn` → `judge_pipeline.py:76 if ctx.agent_spec.skip_judge → RETRY(feedback=None)`；事件 `agent_loop.py:3343 judge_type="custom" if self._judge else "implicit"` → `7459 _publish_judge_verdict` | `agent_spec.skip_judge` | graph 节点 + colony worker 都走（两条路径都用同一个 `agent_spec` 鸭子类型） | **有**：`chat_implicit_judge.go:35-74`（`noteImplicitJudgeVerdictDue`/`emitPendingImplicitJudgeVerdict`，`judge_type="implicit"`），门控见 `:64` `HasSuccessCriteria` | 探针 `go-implicit-verdict-event`；`wiring_check` judge 组 |
-| J2 | `agent_loop.py:6223 judge_turn(judge=self._judge)` → `judge_pipeline.py:81-96`（`JudgeProtocol.evaluate`） | `assistant_text` / `tool_calls` / `output_accumulator` / `accumulator` / `iteration` / `conversation_summary` / `output_keys` / `missing_keys` | 缝存在于两条路径，但两侧生产构造都是 `judge=None`（§3.2） | **有（Go 扩展）**：`agentloop/judge.go:58 Judge` 接口、`:98-109 ConfigureJudge`（默认 `llm_judge.go:57 NewLLMJudgeAdapterFromCompleter`）、失败回落 `:169 evaluateJudgeWithRetry`、调用点 `loop.go:777-782` 与 `worker_stall.go:152-157`、判定应用 `loop_judge.go:17` | `wiring_check` judge 组 66 项（judge-j2 增 2：失败回落契约、瞬态分类）；`go test ./internal/agentloop -run Judge` |
+| J2 | `agent_loop.py:6223 judge_turn(judge=self._judge)` → `judge_pipeline.py:81-96`（`JudgeProtocol.evaluate`） | `assistant_text` / `tool_calls` / `output_accumulator` / `accumulator` / `iteration` / `conversation_summary` / `output_keys` / `missing_keys` | 缝存在于两条路径，但两侧生产构造都是 `judge=None`（§3.2） | **有（Go 扩展）**：`agentloop/judge.go:58 Judge` 接口、`:98-109 ConfigureJudge`（默认 `llm_judge.go:57 NewLLMJudgeAdapterFromCompleter`）、失败回落 `:169 evaluateJudgeWithRetry`、调用点 `loop.go` 的 `runJudgeStep` 入口与 `worker_stall.go:152-157`、判定实现与判定应用 `loop_judge.go:17` | `wiring_check` judge 组 67 项（judge-j2 增 2；loop_judge 抽出后 judge 面拆为 loop.go 入口点 + loop_judge.go 三点）；`go test ./internal/agentloop -run Judge` |
 | J3 | `agent_loop.py:3356` 与 `judge_pipeline.py:104-124`（`get_missing_output_keys_fn` 见 `6313-6323`） | `OutputAccumulator`（`internals/types.py:368`） | graph 节点（声明 `output_keys` 的 NodeSpec） | **无**：Go 无 `OutputAccumulator` 类型、无 `missing_keys` 门；`synthetic_tools.go:344/491/534` 的 set_output 家族仅定义无调用方 | 探针 `go-no-output-accumulator`、`go-set-output-unwired`；动态用例 3 |
 | J4 | `judge_pipeline.py:126-138`（`if ctx.agent_spec.success_criteria and ctx.llm`）→ `conversation_judge.py:33 evaluate_phase_completion` → `:59 _extract_recent_context` + `:143 _format_outputs` | 最近 10 条消息（含 `set_output` 参数摘要）、`phase_name`/`phase_description`、criteria、accumulator 值；judge 预算 `max(1024, max_context_tokens//5)` | **graph 节点**（`orchestrator/orchestrator.py:764-766` 与 `node_worker.py:592-594` 都以 `judge=None` 建 loop）；触发字段可由 agent 配置抵达（`node.py:168` ← `agent_loader.py:968`） | **无宿主**：`internal/orchestrator` 只有 `buffer.go/safe_eval.go/validator.go`，无 graph/节点/边运行时，且**无人 import**；Go 无 phase 概念 | 探针 `go-no-graph-host`、`py-2b-single-call-site`、`py-criteria-config-reachable`；`internal/orchestrator` 全仓 0 引用 |
 | J5 | `judge_pipeline.py:15-39 SubagentJudge.evaluate`（`:30 remaining`、`:33/:35 URGENT/WARNING` 文案）；别名 `agent_loop.py:715` | `context["missing_keys"]` + `iteration` + `max_iterations` | 需要一个把 `SubagentJudge()` 注入 `AgentLoop(judge=…)` 的调用方 —— **不存在**（仅测试） | **无对应物**：无 judge 实现、无 urgency 文案；迭代预算位置是 grace 收尾（`loop.go:58 graceReminderBody`、`:551 announceGrace`），两侧逐字对齐 | 探针 `py-subagent-no-production-caller`、`go-iteration-feedback-is-grace`；`core/tests/test_subagent.py:1-14` 自述为 legacy 遗留面 |
@@ -100,7 +100,7 @@ Go 侧连宿主都没有（无 accumulator、`synthetic_tools.go:344 BuildSetOut
 | `go_hive/scripts/judge_python_probe.py` | 动态探针（3 用例） | 真实 `AgentLoop` 驱动 Level 2/2b 的可达性与 output-key 门现状 |
 | `go_hive/scripts/judge_prompt_golden.py` + `internal/llmjudge/testdata/prompt-parity/judge.prompt.txt` | 跨语言 golden | judge prompt 逐字冻结（Python 侧提取模板、Go 侧 `buildPrompt("%s"×4)` 比对） |
 | `internal/llmjudge/prompt_parity_golden_test.go` | 单测 | golden 漂移即失败（已用 1 字符漂移验证会红） |
-| `go_hive/scripts/wiring_check.py`（新增 6 个接线点 / 17 项要求；judge-j2 车道再增 2 项，现 19 接线文件 / 66 要求） | 接线门禁 | 把「判定仍在主循环、宿主仍接线」纳入既有门禁 |
+| `go_hive/scripts/wiring_check.py`（新增 6 个接线点 / 17 项要求；judge-j2 车道再增 2 项，现 20 接线文件 / 67 要求） | 接线门禁 | 把「判定仍在主循环、宿主仍接线」纳入既有门禁 |
 | `go_hive/docs/appearance-scope-registry.json`（新维度 `judge`） | 登记 | 6 个机制的状态与依据；J3 未对齐与 J4/J5 范围外的结论都在这里 |
 
 ## 5. 试验证据
@@ -128,9 +128,9 @@ python go_hive/scripts/judge_scope_probe.py --dynamic
 
 ```
 python go_hive/scripts/wiring_check.py --root go_hive/go-hive
-  wiring_check: OK —— 19 个接线文件、66 项要求全部命中（judge-j2 后）
+  wiring_check: OK —— 20 个接线文件、67 项要求全部命中（loop_judge 抽出后）
 python go_hive/scripts/wiring_check.py --self-test
-  wiring_check self-test: OK —— 19 个接线文件、66 项要求，缺失会被报出
+  wiring_check self-test: OK —— 20 个接线文件、67 项要求，缺失会被报出
 python go_hive/scripts/judge_scope_probe.py
   judge_scope_probe: OK —— 16 条静态断言全部与 docs/judge-parity.md 一致
 python go_hive/scripts/judge_prompt_golden.py
