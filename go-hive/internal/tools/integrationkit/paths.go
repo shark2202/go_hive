@@ -6,10 +6,12 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/aden-hive/hive-go/internal/hivehome"
 )
 
 // ResolveSafePath expands ~ and enforces the allowed roots. An empty root list
-// falls back to the upstream defaults (~/.hive and ~/aden/hive/exports).
+// falls back to the upstream defaults (~/.hive_go and ~/aden/hive/exports).
 func (rt *Runtime) ResolveSafePath(raw string) (string, error) {
 	path := strings.TrimSpace(raw)
 	if path == "" {
@@ -40,7 +42,7 @@ func (rt *Runtime) ResolveSafePath(raw string) (string, error) {
 			return absolute, nil
 		}
 	}
-	return "", fmt.Errorf("Access denied: '%s' is outside allowed directories. Use absolute paths under ~/.hive/ or exports/.", raw)
+	return "", fmt.Errorf("Access denied: '%s' is outside allowed directories. Use absolute paths under ~/.hive_go/ or exports/.", raw)
 }
 
 // DefaultRoots is the upstream-compatible sandbox used when Runtime.Roots is
@@ -51,7 +53,7 @@ func DefaultRoots() []string {
 		return nil
 	}
 	return []string{
-		filepath.Join(home, ".hive"),
+		filepath.Join(home, hivehome.DefaultDirName),
 		filepath.Join(home, "aden", "hive", "exports"),
 	}
 }

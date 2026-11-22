@@ -132,7 +132,7 @@ Go 编译器本身提供完整的静态类型检查，因此不需要 Python 项
 
 ## 5. 竞态与并发测试
 
-`make race` 在 `CGO_ENABLED=0` 下运行 `go test -race ./...`，实测全部通过：
+`make race` 需要 cgo（`-race` 不支持 `CGO_ENABLED=0`），因此该目标显式用 `CGO_ENABLED=1` 运行 `go test -race ./...`（需要本机有 C 编译器）；实测全部通过：
 
 ```
 ok  internal/atomicfs     1.735s

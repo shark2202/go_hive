@@ -509,8 +509,21 @@ def check_size_waivers(root: Path) -> list[dict]:
     return problems
 
 
+def _scoped_rels(root: Path, finder, scope: list[Path]) -> list[str]:
+    """把 finder 的结果转成相对 root 的路径，只统计 scope 里的树。"""
+    out: list[str] = []
+    for base in scope:
+        for rel in finder(base):
+            out.append((Path(base.relative_to(root)) / rel).as_posix())
+    return sorted(out)
+
+
 def hygiene_report(root: Path, allowlist: dict) -> dict:
     allowed_empty = {entry.get("path") for entry in allowlist.get("empty_dirs", [])}
+    # The hygiene walk only covers the trees this audit owns (go_hive/ and the
+    # optional core/ reference tree); the monorepo root may hold unrelated
+    # sibling projects whose empty dirs are not go_hive's problem.
+    scope = [p for p in (root / "go_hive", root / "core") if p.is_dir()]
     lane_allowed = {entry.get("path") for entry in allowlist.get("lane_named_files", [])}
     waiver_keys = set(_go_block_keys(
         (root / WAIVER_SOURCE).read_text(encoding="utf-8", errors="replace")
@@ -518,7 +531,7 @@ def hygiene_report(root: Path, allowlist: dict) -> dict:
     ))
 
     empty_dirs = []
-    for rel in find_empty_dirs(root):
+    for rel in _scoped_rels(root, find_empty_dirs, scope):
         allowed = rel in allowed_empty
         if allowed:
             entry = next(e for e in allowlist.get("empty_dirs", []) if e.get("path") == rel)
@@ -527,7 +540,7 @@ def hygiene_report(root: Path, allowlist: dict) -> dict:
             empty_dirs.append({"path": rel, "status": "pending", "reason": ""})
 
     lane_files = []
-    for rel in find_lane_named_files(root):
+    for rel in _scoped_rels(root, find_lane_named_files, scope):
         module_rel = rel[len("go_hive/go-hive/") :] if rel.startswith("go_hive/go-hive/") else ""
         waived = module_rel in waiver_keys
         allowed = rel in lane_allowed

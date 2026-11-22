@@ -193,7 +193,7 @@ specs-check:
 	fi
 
 race:
-	$(OFFLINE) $(GO) test -race ./...
+	CGO_ENABLED=1 GOPROXY=off GOSUMDB=off GOFLAGS=-mod=mod $(GO) test -race ./...
 
 # 冻结契约的自洽门禁：只读已提交的 contracts/ 与源码（stdlib、离线），
 # 覆盖 env/config 清单、配置键锚点、存储字段、tracker DB schema 版本、

@@ -505,7 +505,7 @@ func chartsHome(home string) string {
 	if err != nil {
 		return "."
 	}
-	return filepath.Join(usr, ".hive")
+	return filepath.Join(usr, hivehome.DefaultDirName)
 }
 
 func expandHome(path string) string {

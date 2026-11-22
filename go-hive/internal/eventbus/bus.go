@@ -13,6 +13,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/aden-hive/hive-go/internal/hivehome"
 )
 
 type EventHandler func(*AgentEvent)
@@ -727,9 +729,9 @@ func hiveHomeDir() string {
 	}
 	userHome, err := os.UserHomeDir()
 	if err != nil {
-		return ".hive"
+		return hivehome.DefaultDirName
 	}
-	return filepath.Join(userHome, ".hive")
+	return filepath.Join(userHome, hivehome.DefaultDirName)
 }
 
 func openDebugEventLog() *os.File {

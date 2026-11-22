@@ -28,6 +28,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aden-hive/hive-go/internal/hivehome"
+
 	"github.com/aden-hive/hive-go/internal/tools"
 )
 
@@ -572,7 +574,7 @@ func batch3ImageArtifactDir(rt *Runtime) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(userHome, ".hive", "tool-artifacts"), nil
+	return filepath.Join(userHome, hivehome.DefaultDirName, "tool-artifacts"), nil
 }
 
 // batch3ExpandHome expands a leading "~" without touching any other path.

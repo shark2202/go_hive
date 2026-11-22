@@ -185,6 +185,12 @@ func memChildEnv(homeDir string, extra []string) []string {
 }
 
 func (m *memRun) sessionDir(sessionID string) string {
+	// The session lands under the queen the server picked (queen_growth by
+	// default, "default" when the selector answers), so resolve it instead of
+	// assuming one queen name.
+	if matches, err := filepath.Glob(filepath.Join(m.home, "queens", "*", "sessions", sessionID)); err == nil && len(matches) > 0 {
+		return matches[0]
+	}
 	return filepath.Join(m.home, "queens", "default", "sessions", sessionID)
 }
 

@@ -108,6 +108,9 @@ func DiscoverAgents(coloniesDir string) map[string][]AgentEntry {
 		if !truthy(colonyCreatedAt) {
 			if created, ok := birthTimeISO(path); ok {
 				colonyCreatedAt = created
+			} else {
+				// Python's `or` chain yields None when neither source has a value.
+				colonyCreatedAt = nil
 			}
 		}
 

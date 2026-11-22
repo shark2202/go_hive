@@ -57,3 +57,21 @@ func TestColonyBindingStable(t *testing.T) {
 		t.Fatalf("binding drifted: %+v vs %+v", a, b)
 	}
 }
+
+// Parity-exempt: the Go build's default home directory name is a Go-side
+// decision; the Python upstream keeps "~/.hive".
+func TestDefaultRootUsesGoHomeName(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv(EnvHome, "")
+	root, err := DefaultRoot()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := filepath.Join(home, DefaultDirName); root != want {
+		t.Fatalf("root = %s, want %s", root, want)
+	}
+	if DefaultDirName != ".hive_go" {
+		t.Fatalf("DefaultDirName = %s, want .hive_go", DefaultDirName)
+	}
+}

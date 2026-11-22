@@ -16,6 +16,7 @@ import (
 	"sync"
 
 	"github.com/aden-hive/hive-go/internal/atomicfs"
+	"github.com/aden-hive/hive-go/internal/hivehome"
 )
 
 const DocFilename = "tasks.json"
@@ -51,9 +52,9 @@ func HiveRoot() string {
 	}
 	home, err := os.UserHomeDir()
 	if err != nil || home == "" {
-		return ".hive"
+		return hivehome.DefaultDirName
 	}
-	return filepath.Join(home, ".hive")
+	return filepath.Join(home, hivehome.DefaultDirName)
 }
 
 func findSessionDir(sessionID, hiveRoot string) (string, bool) {
