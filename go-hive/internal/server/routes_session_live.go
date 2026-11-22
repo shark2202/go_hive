@@ -10,8 +10,8 @@ import (
 	"sort"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/eventbus"
-	"github.com/aden-hive/hive-go/internal/runtimehealth"
+	"github.com/shark2202/go_hive/go-hive/internal/eventbus"
+	"github.com/shark2202/go_hive/go-hive/internal/runtimehealth"
 )
 
 const livePollInterval = 2500 * time.Millisecond

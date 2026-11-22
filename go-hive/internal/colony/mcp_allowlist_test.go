@@ -3,7 +3,7 @@ package colony
 import (
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/llm"
+	"github.com/shark2202/go_hive/go-hive/internal/llm"
 )
 
 // Parity-exempt: Go-side worker tool pool. With the MCP name set populated the

@@ -10,8 +10,8 @@ package agentloop
 import (
 	"context"
 
-	"github.com/aden-hive/hive-go/internal/llm"
-	"github.com/aden-hive/hive-go/internal/visionfallback"
+	"github.com/shark2202/go_hive/go-hive/internal/llm"
+	"github.com/shark2202/go_hive/go-hive/internal/visionfallback"
 )
 
 // VisionCaptioner captions the image content of tool results for a main model

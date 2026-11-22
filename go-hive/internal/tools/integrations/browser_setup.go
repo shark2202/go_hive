@@ -17,7 +17,7 @@ package integrations
 // hold it. Port of core/framework/tools/browser_tools.py.
 
 import (
-	"github.com/aden-hive/hive-go/internal/tools"
+	"github.com/shark2202/go_hive/go-hive/internal/tools"
 )
 
 // BrowserSetupToolName is the upstream tool name (browser_tools.py).

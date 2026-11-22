@@ -17,8 +17,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/aden-hive/hive-go/internal/eventbus"
-	"github.com/aden-hive/hive-go/internal/triggers"
+	"github.com/shark2202/go_hive/go-hive/internal/eventbus"
+	"github.com/shark2202/go_hive/go-hive/internal/triggers"
 )
 
 // validWebhookMethods is upstream's valid_methods set for webhook triggers.

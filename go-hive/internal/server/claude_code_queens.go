@@ -12,8 +12,8 @@ package server
 import (
 	"sort"
 
-	"github.com/aden-hive/hive-go/internal/claudecode"
-	"github.com/aden-hive/hive-go/internal/queenmail"
+	"github.com/shark2202/go_hive/go-hive/internal/claudecode"
+	"github.com/shark2202/go_hive/go-hive/internal/queenmail"
 )
 
 // NewClaudeCodeQueenRouteDeps builds the dashboard's view of the Claude Code

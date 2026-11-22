@@ -14,7 +14,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/aden-hive/hive-go/internal/attachments"
+	"github.com/shark2202/go_hive/go-hive/internal/attachments"
 )
 
 // Parity: framework/server/routes_sessions.py::handle_session_attachment (mime_map)

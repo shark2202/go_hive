@@ -8,8 +8,8 @@ package server
 import (
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/hivehome"
-	"github.com/aden-hive/hive-go/internal/tools"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/tools"
 )
 
 func senderTestHome(t *testing.T) hivehome.Home {

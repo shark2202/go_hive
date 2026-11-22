@@ -16,7 +16,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/llm"
+	"github.com/shark2202/go_hive/go-hive/internal/llm"
 )
 
 // Parity: core/tests/test_background_tools.py::test_a_job_wait_ends_at_its_timeout_or_a_new_message

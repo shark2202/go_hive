@@ -38,8 +38,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aden-hive/hive-go/e2e/escalationgw"
-	"github.com/aden-hive/hive-go/internal/agentloop"
+	"github.com/shark2202/go_hive/go-hive/e2e/escalationgw"
+	"github.com/shark2202/go_hive/go-hive/internal/agentloop"
 )
 
 const (

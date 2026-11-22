@@ -13,10 +13,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/colony"
-	"github.com/aden-hive/hive-go/internal/hivehome"
-	"github.com/aden-hive/hive-go/internal/tools/builtin"
-	"github.com/aden-hive/hive-go/internal/tracker"
+	"github.com/shark2202/go_hive/go-hive/internal/colony"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/tools/builtin"
+	"github.com/shark2202/go_hive/go-hive/internal/tracker"
 )
 
 // fakeTrackerSpawner is the fake runtime the queen's tools resolve through: it

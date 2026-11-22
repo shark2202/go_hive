@@ -5,8 +5,8 @@ package integrations
 // entry the CLI and the lane test suite call.
 
 import (
-	"github.com/aden-hive/hive-go/internal/tools"
-	"github.com/aden-hive/hive-go/internal/tools/integrations/ai"
+	"github.com/shark2202/go_hive/go-hive/internal/tools"
+	"github.com/shark2202/go_hive/go-hive/internal/tools/integrations/ai"
 )
 
 // InstallAIPlatform publishes the AI-platform tools (pinecone, wandb,

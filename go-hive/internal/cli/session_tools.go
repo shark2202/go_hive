@@ -15,15 +15,15 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/aden-hive/hive-go/internal/colony"
-	"github.com/aden-hive/hive-go/internal/hivehome"
-	"github.com/aden-hive/hive-go/internal/llm"
-	hiveserver "github.com/aden-hive/hive-go/internal/server"
-	"github.com/aden-hive/hive-go/internal/skills"
-	"github.com/aden-hive/hive-go/internal/tools"
-	"github.com/aden-hive/hive-go/internal/tools/builtin"
-	"github.com/aden-hive/hive-go/internal/tools/integrations"
-	"github.com/aden-hive/hive-go/internal/tracker"
+	"github.com/shark2202/go_hive/go-hive/internal/colony"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/llm"
+	hiveserver "github.com/shark2202/go_hive/go-hive/internal/server"
+	"github.com/shark2202/go_hive/go-hive/internal/skills"
+	"github.com/shark2202/go_hive/go-hive/internal/tools"
+	"github.com/shark2202/go_hive/go-hive/internal/tools/builtin"
+	"github.com/shark2202/go_hive/go-hive/internal/tools/integrations"
+	"github.com/shark2202/go_hive/go-hive/internal/tracker"
 )
 
 type sessionToolCatalogue struct {

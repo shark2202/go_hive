@@ -13,9 +13,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/hivehome"
-	hiveserver "github.com/aden-hive/hive-go/internal/server"
-	hivesession "github.com/aden-hive/hive-go/internal/session"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	hiveserver "github.com/shark2202/go_hive/go-hive/internal/server"
+	hivesession "github.com/shark2202/go_hive/go-hive/internal/session"
 )
 
 // chatSessionPlan is the resolved identity of a create-session request: the id

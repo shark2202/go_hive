@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/session"
+	"github.com/shark2202/go_hive/go-hive/internal/session"
 )
 
 func handleForkSession(w http.ResponseWriter, r *http.Request, deps SessionRouteDeps) {

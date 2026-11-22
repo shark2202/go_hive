@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/tools/integrationkit"
+	"github.com/shark2202/go_hive/go-hive/internal/tools/integrationkit"
 )
 
 // Config carries the injectable dependencies for a standalone Excel registry.

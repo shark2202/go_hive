@@ -13,7 +13,7 @@ package main
 import (
 	"os"
 
-	"github.com/aden-hive/hive-go/internal/cli"
+	"github.com/shark2202/go_hive/go-hive/internal/cli"
 )
 
 func main() {

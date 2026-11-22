@@ -14,7 +14,7 @@ import (
 	"errors"
 	"os"
 
-	"github.com/aden-hive/hive-go/internal/sentinel"
+	"github.com/shark2202/go_hive/go-hive/internal/sentinel"
 )
 
 type sentinelStoreAdapter struct {

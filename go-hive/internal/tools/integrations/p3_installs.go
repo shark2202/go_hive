@@ -9,12 +9,12 @@ package integrations
 // files) with a single discoverable seam.
 
 import (
-	"github.com/aden-hive/hive-go/internal/tools"
-	"github.com/aden-hive/hive-go/internal/tools/integrations/collab"
-	"github.com/aden-hive/hive-go/internal/tools/integrations/commerce"
-	"github.com/aden-hive/hive-go/internal/tools/integrations/crm"
-	"github.com/aden-hive/hive-go/internal/tools/integrations/data"
-	"github.com/aden-hive/hive-go/internal/tools/integrations/gworkspace"
+	"github.com/shark2202/go_hive/go-hive/internal/tools"
+	"github.com/shark2202/go_hive/go-hive/internal/tools/integrations/collab"
+	"github.com/shark2202/go_hive/go-hive/internal/tools/integrations/commerce"
+	"github.com/shark2202/go_hive/go-hive/internal/tools/integrations/crm"
+	"github.com/shark2202/go_hive/go-hive/internal/tools/integrations/data"
+	"github.com/shark2202/go_hive/go-hive/internal/tools/integrations/gworkspace"
 )
 
 // The Google Workspace family lives in its domain subpackage

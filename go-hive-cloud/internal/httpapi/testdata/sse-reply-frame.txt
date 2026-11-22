@@ -1,0 +1,3 @@
+event: reply
+data: {"colony_id":"colony-1","correlation_token":"corr-live","message_id":"<dynamic>","text":"ship it"}
+

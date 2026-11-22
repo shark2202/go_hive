@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/eventbus"
+	"github.com/shark2202/go_hive/go-hive/internal/eventbus"
 )
 
 // recordingColony is the ColonyRuntime seam for the worker-match tests. The

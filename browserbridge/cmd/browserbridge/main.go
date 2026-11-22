@@ -21,7 +21,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/aden-hive/hive-go/browserbridge"
+	"github.com/shark2202/go_hive/browserbridge"
 )
 
 const version = browserbridge.BridgeVersion

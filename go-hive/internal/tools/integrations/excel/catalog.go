@@ -1,7 +1,7 @@
 package excel
 
 import (
-	"github.com/aden-hive/hive-go/internal/tools/integrationkit"
+	"github.com/shark2202/go_hive/go-hive/internal/tools/integrationkit"
 )
 
 // Catalog returns the Excel module catalog: one tool ("excel") with the six

@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/eventbus"
+	"github.com/shark2202/go_hive/go-hive/internal/eventbus"
 )
 
 func readEventFrame(t *testing.T, reader *bufio.Reader) (string, string) {

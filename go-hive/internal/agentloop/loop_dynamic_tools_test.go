@@ -5,7 +5,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/llm"
+	"github.com/shark2202/go_hive/go-hive/internal/llm"
 )
 
 // Parity-exempt: upstream has no standalone test for this helper; it mirrors _phase_state()

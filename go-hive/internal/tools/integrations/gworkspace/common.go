@@ -13,7 +13,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/aden-hive/hive-go/internal/tools/integrationkit"
+	"github.com/shark2202/go_hive/go-hive/internal/tools/integrationkit"
 )
 
 // resolveAccountToken resolves a module credential for the current call: an

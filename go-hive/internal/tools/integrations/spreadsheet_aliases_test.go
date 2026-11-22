@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/tools"
-	"github.com/aden-hive/hive-go/internal/tools/integrations/excel"
+	"github.com/shark2202/go_hive/go-hive/internal/tools"
+	"github.com/shark2202/go_hive/go-hive/internal/tools/integrations/excel"
 )
 
 // aliasProbeRegistry assembles the session view of the spreadsheet surface:

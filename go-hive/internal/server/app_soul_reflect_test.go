@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	soulstore "github.com/aden-hive/hive-go/internal/soul"
+	soulstore "github.com/shark2202/go_hive/go-hive/internal/soul"
 )
 
 func doAppJSON(t *testing.T, app *App, method, target, body string) *httptest.ResponseRecorder {

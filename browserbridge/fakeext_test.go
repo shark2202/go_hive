@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aden-hive/hive-go/browserbridge/internal/wstest"
+	"github.com/shark2202/go_hive/browserbridge/internal/wstest"
 )
 
 type fakeCommand struct {

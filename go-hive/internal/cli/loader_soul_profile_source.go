@@ -10,7 +10,7 @@ package cli
 // Parity: framework/agents/queen/soul_reflection.py::_identity
 
 import (
-	queenstore "github.com/aden-hive/hive-go/internal/queen"
+	queenstore "github.com/shark2202/go_hive/go-hive/internal/queen"
 )
 
 // soulProfileSource is the queen-backed soul.QueenProfileSource. Both calls

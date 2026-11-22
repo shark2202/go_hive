@@ -17,9 +17,9 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/colony"
-	"github.com/aden-hive/hive-go/internal/eventbus"
-	"github.com/aden-hive/hive-go/internal/triggers"
+	"github.com/shark2202/go_hive/go-hive/internal/colony"
+	"github.com/shark2202/go_hive/go-hive/internal/eventbus"
+	"github.com/shark2202/go_hive/go-hive/internal/triggers"
 )
 
 // fakeTriggerWebhookServer is the TriggerWebhookServer seam: it records the

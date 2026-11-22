@@ -1,6 +1,6 @@
 # Changelog
 
-本文件记录 Go 移植（`github.com/aden-hive/hive-go`）的版本内容。上游 Python 版本的发布说明在仓库根目录的 [`CHANGELOG.md`](../../CHANGELOG.md)。
+本文件记录 Go 移植（`github.com/shark2202/go_hive/go-hive`）的版本内容。上游 Python 版本的发布说明在仓库根目录的 [`CHANGELOG.md`](../../CHANGELOG.md)。
 
 ## 1.0.27-go.1 — 2026-11-22
 

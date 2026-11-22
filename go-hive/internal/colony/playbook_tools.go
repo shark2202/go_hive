@@ -49,9 +49,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/llm"
-	"github.com/aden-hive/hive-go/internal/playbook"
-	"github.com/aden-hive/hive-go/internal/tracker"
+	"github.com/shark2202/go_hive/go-hive/internal/llm"
+	"github.com/shark2202/go_hive/go-hive/internal/playbook"
+	"github.com/shark2202/go_hive/go-hive/internal/tracker"
 )
 
 // RunPlaybookToolName is the queen-facing tool for deterministic row batches.

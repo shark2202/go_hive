@@ -11,7 +11,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/aden-hive/hive-go/e2e/memgw"
+	"github.com/shark2202/go_hive/go-hive/e2e/memgw"
 )
 
 func main() {

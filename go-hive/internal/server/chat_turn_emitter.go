@@ -9,9 +9,9 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 
-	"github.com/aden-hive/hive-go/internal/agentloop"
-	"github.com/aden-hive/hive-go/internal/eventbus"
-	"github.com/aden-hive/hive-go/internal/llm"
+	"github.com/shark2202/go_hive/go-hive/internal/agentloop"
+	"github.com/shark2202/go_hive/go-hive/internal/eventbus"
+	"github.com/shark2202/go_hive/go-hive/internal/llm"
 )
 
 // sha256Hex12 matches the upstream cache fingerprint: the first 12 hex chars

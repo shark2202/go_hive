@@ -484,7 +484,7 @@ sequenceDiagram
 ```json
 {
   "schema_version": 1,
-  "module": "github.com/aden-hive/hive-go",
+  "module": "github.com/shark2202/go_hive/go-hive",
   "generated_at_commit": "4c198a558dfd",
   "stats": {"packages": 44, "package_edges": 124, "capabilities": 12,
             "capability_edges": 75, "layers": 7, "contracts": 34,

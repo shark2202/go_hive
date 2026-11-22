@@ -30,9 +30,9 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/hivehome"
-	hiveserver "github.com/aden-hive/hive-go/internal/server"
-	"github.com/aden-hive/hive-go/internal/tools/builtin"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	hiveserver "github.com/shark2202/go_hive/go-hive/internal/server"
+	"github.com/shark2202/go_hive/go-hive/internal/tools/builtin"
 )
 
 // contractTool is one tool of the frozen manifest. Only the fields the report

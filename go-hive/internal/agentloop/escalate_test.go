@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/llm"
+	"github.com/shark2202/go_hive/go-hive/internal/llm"
 )
 
 type escalationRecorder struct {

@@ -13,8 +13,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/hivehome"
-	soulstore "github.com/aden-hive/hive-go/internal/soul"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	soulstore "github.com/shark2202/go_hive/go-hive/internal/soul"
 )
 
 // soulReflectTimeout bounds one manual reflection. The daily scheduler may run

@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/sessionreport"
+	"github.com/shark2202/go_hive/go-hive/internal/sessionreport"
 )
 
 func handleReportSessionBundle(w http.ResponseWriter, r *http.Request, deps SessionRouteDeps) {

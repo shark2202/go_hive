@@ -7,7 +7,7 @@ package agentloop
 //
 // Parity: framework/agent_loop/agent_loop.py::AgentLoop._refresh_dynamic_tools
 
-import "github.com/aden-hive/hive-go/internal/llm"
+import "github.com/shark2202/go_hive/go-hive/internal/llm"
 
 // Parity: AgentLoop._DYNAMIC_REFRESH_SYNTHETIC_NAMES.
 var DynamicRefreshSyntheticNames = map[string]struct{}{

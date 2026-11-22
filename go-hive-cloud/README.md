@@ -1,6 +1,10 @@
 # go-hive-cloud —— 私有化 Hive 云替代（逆向工程 + 自建）
 
-> 状态：**M0（逆向规格）**，2026-11-22。本目录当前只含契约与设计文档；代码按里程碑落地。
+> 状态：**M1（骨架服务）**，2026-11-22。已落地：`serve`/`token`、自签 HS256 JWT + streamToken、
+> `/v1/global-db/*` 8 端点、`/v1/inbox/{messages,resolve,runtime/stream}`（SSE `event: reply`）、
+> `/v1/gateway/availability`、`/user/refresh-stream-token-from-stream`、内部扩展 `POST /internal/inbox/reply`、
+> 每 team SQLite 存储 + 语句门禁 + SQLite 方言翻译层、L1 契约测试、L2a 真客户端冒烟。
+> 实现口径与已知近似：`docs/m1-notes.md`；冒烟证据：`evidence/globaldb-smoke.json`。
 > 目标：用自建服务**替换 Hive Cloud（hive-backend + llm 代理 + 凭据代理）**，支持私有化部署，
 > 让 go_hive / 桌面客户端在 `HIVE_CLOUD_BASE` 指过来后，**客户端可观察契约**（API 路径/方法/字段/状态码/SSE 事件/错误文案）完全一致。
 > 证据基础：`go_hive/docs/cloud-dependencies.md`（依赖总账）+ 本目录 `docs/reverse-engineering.md`。
@@ -34,7 +38,7 @@
 | 阶段 | 内容 | 估时 |
 | --- | --- | --- |
 | **M0** | 逆向规格 + 契约 JSON（本目录） | 2h（已完成初版） |
-| **M1** | 骨架服务：JWT 自签 + streamToken、`/v1/global-db/*`、`/v1/inbox/{messages,resolve,runtime/stream}`、`/user/refresh-stream-token-from-stream`、`/v1/gateway/availability`；SQLite（纯 Go）；L1 契约测试 + globaldb 客户端 L2 冒烟 | 10–14h |
+| **M1** | 骨架服务：JWT 自签 + streamToken、`/v1/global-db/*`、`/v1/inbox/{messages,resolve,runtime/stream}`、`/user/refresh-stream-token-from-stream`、`/v1/gateway/availability`；SQLite（纯 Go）；L1 契约测试 + globaldb 客户端 L2 冒烟 | 10–14h **✅ 已落地（docs/m1-notes.md、evidence/globaldb-smoke.json）** |
 | M2 | Inbox L2（go_hive sentinel 真实 escalation→自建→回复回注闭环）+ 审计/限流 | 6h |
 | M3 | streamToken 轮换 L2 + `hive` LLM 凭据兼容（仅 token 校验面） | 4h |
 | M4 | CRM grid（`/v1/crm/*` 10 端点 + `grid_query` SQL 兼容层） | 8h |
@@ -47,14 +51,47 @@
 ```
 go_hive/go-hive-cloud/
   README.md                     # 本文件
+  go.mod                        # module github.com/shark2202/go_hive/go-hive-cloud（go 1.26.11，无 cgo）
+  cmd/hive-cloud/main.go        # serve / token 子命令
+  internal/auth/                # HS256 JWT + streamToken（stdlib）
+  internal/config/              # 配置与密钥文件（0600）
+  internal/store/               # 每 team SQLite、语句门禁、方言翻译、变更/审计、收件箱表
+  internal/httpapi/             # 路由、中间件、global-db / inbox / gateway / stream-token 处理器
+  internal/httpapi/testdata/    # L1 golden
+  contracts/observed-contract.json     # 机器可读契约（契约覆盖测试解析它）
   docs/reverse-engineering.md   # 逆向证据清单（端点/字段/错误/未知项）
   docs/private-deploy-architecture.md  # 自建服务设计（存储/认证/SSE/兼容策略）
-  contracts/observed-contract.json     # 机器可读契约（供测试生成）
-  cmd/ internal/ ...            # M1 起落地
+  docs/m1-notes.md              # M1 实现规则、方言近似、契约歧义、未知项登记
+  harness/globaldb-smoke/       # L2a：真 go_hive globaldb 客户端（独立 go.mod + replace）
+  scripts/smoke.sh              # 起服务 → 签 token → 跑 harness → 断言
+  evidence/globaldb-smoke.json  # L2a 证据（脚本生成）
 ```
 
 ## 6. 与主仓关系
 
-- 独立 module（`github.com/aden-hive/go-hive-cloud`），不进入 go_hive `make ci` 的默认门禁（后续可加自己的 CI）。
+- 独立 module（`github.com/shark2202/go_hive/go-hive-cloud`），不进入 go_hive `make ci` 的默认门禁（后续可加自己的 CI）。
 - 复用已冻结的契约认知，不改动 `go_hive/contracts/*`；主仓行为零变化。
 - 私有部署接入点：`HIVE_CLOUD_BASE`（及 `HIVE_CLOUD_JWT` 由自建签发），桌面端需可配置云基址（未知项，见逆向文档 §7）。
+
+## 7. 运行与验证（M1）
+
+```bash
+source /Users/mac/.hermes/profiles/omh-tui/cache/scratch/goenv.sh   # go1.26.11 + 预填模块缓存
+cd go_hive/go-hive-cloud
+
+# 签发 operator JWT / streamToken（密钥缺省自动落在 <data_dir>/*_secret，0600）
+go run ./cmd/hive-cloud token --data-dir ./data --user-id u1 --team-id team1 --json
+go run ./cmd/hive-cloud token --data-dir ./data --user-id u1 --team-id team1 --type stream
+
+# 起服务（--listen 127.0.0.1:0 选随机端口并打印实际地址）
+go run ./cmd/hive-cloud serve --data-dir ./data --listen 127.0.0.1:8788
+
+# 门禁
+gofmt -l .
+go vet ./...
+go test ./...            # L1 契约/golden/401/门禁/SSE/streamToken/契约覆盖
+./scripts/smoke.sh       # L2a 真客户端 → evidence/globaldb-smoke.json
+```
+
+客户端接入：`HIVE_CLOUD_BASE=http://127.0.0.1:8788`、`HIVE_CLOUD_JWT=<token 输出>`。
+`docs/m1-notes.md` 记录了 401 文案与契约 JSON 的歧义、SQLite 方言近似、以及 M2+ 的未知项。

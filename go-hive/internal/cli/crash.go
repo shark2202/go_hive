@@ -16,7 +16,7 @@ import (
 	"runtime/debug"
 	"strings"
 
-	"github.com/aden-hive/hive-go/internal/tracker"
+	"github.com/shark2202/go_hive/go-hive/internal/tracker"
 )
 
 // GuardMain runs one CLI entry point and converts a panic into the Python

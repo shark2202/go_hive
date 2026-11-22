@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/llm"
+	"github.com/shark2202/go_hive/go-hive/internal/llm"
 )
 
 // Parity: core/tests/test_event_loop_node.py::test_soft_budget_checkpoint_rides_tail_without_stopping

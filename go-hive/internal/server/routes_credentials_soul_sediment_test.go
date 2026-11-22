@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	soulstore "github.com/aden-hive/hive-go/internal/soul"
+	soulstore "github.com/shark2202/go_hive/go-hive/internal/soul"
 )
 
 // Parity-exempt: the sediment has no upstream counterpart, so a state.json-less

@@ -16,7 +16,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/llm"
+	"github.com/shark2202/go_hive/go-hive/internal/llm"
 )
 
 // ReflectionDue reports whether today's reflection should run now: past the

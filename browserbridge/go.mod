@@ -1,3 +1,3 @@
-module github.com/aden-hive/hive-go/browserbridge
+module github.com/shark2202/go_hive/browserbridge
 
 go 1.22

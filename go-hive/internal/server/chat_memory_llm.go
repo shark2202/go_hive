@@ -15,9 +15,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/aden-hive/hive-go/internal/hivehome"
-	"github.com/aden-hive/hive-go/internal/llm"
-	"github.com/aden-hive/hive-go/internal/memory"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/llm"
+	"github.com/shark2202/go_hive/go-hive/internal/memory"
 )
 
 // chatMemoryLLM resolves the memory-work model per call. `memory_reflection

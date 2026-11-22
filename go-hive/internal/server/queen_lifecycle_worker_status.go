@@ -16,8 +16,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/colony"
-	"github.com/aden-hive/hive-go/internal/eventbus"
+	"github.com/shark2202/go_hive/go-hive/internal/colony"
+	"github.com/shark2202/go_hive/go-hive/internal/eventbus"
 )
 
 // Tiered cooldowns: summary is free, detail has a short cooldown, full keeps

@@ -12,10 +12,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/agentloop"
-	"github.com/aden-hive/hive-go/internal/eventbus"
-	"github.com/aden-hive/hive-go/internal/hivehome"
-	"github.com/aden-hive/hive-go/internal/tasks"
+	"github.com/shark2202/go_hive/go-hive/internal/agentloop"
+	"github.com/shark2202/go_hive/go-hive/internal/eventbus"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/tasks"
 )
 
 // handoffForkFixture wires the fork to a temp hive home and a factory that

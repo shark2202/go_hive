@@ -22,9 +22,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/cli"
-	"github.com/aden-hive/hive-go/internal/llm"
-	"github.com/aden-hive/hive-go/internal/longmemeval"
+	"github.com/shark2202/go_hive/go-hive/internal/cli"
+	"github.com/shark2202/go_hive/go-hive/internal/llm"
+	"github.com/shark2202/go_hive/go-hive/internal/longmemeval"
 )
 
 const usage = `hive-longmemeval — LongMemEval (S or M) end to end through go_hive

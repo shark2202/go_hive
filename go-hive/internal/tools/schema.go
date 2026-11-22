@@ -1,6 +1,6 @@
 package tools
 
-import "github.com/aden-hive/hive-go/internal/llm"
+import "github.com/shark2202/go_hive/go-hive/internal/llm"
 
 // StripContextParams returns defs with every CONTEXT_PARAMS name removed from
 // each tool's model-visible properties and required list.

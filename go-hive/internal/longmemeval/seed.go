@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	hivesession "github.com/aden-hive/hive-go/internal/session"
+	hivesession "github.com/shark2202/go_hive/go-hive/internal/session"
 )
 
 const turnSpacing = 2 * time.Minute

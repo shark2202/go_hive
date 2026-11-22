@@ -18,9 +18,9 @@ package colony
 import (
 	"sync"
 
-	"github.com/aden-hive/hive-go/internal/llm"
-	"github.com/aden-hive/hive-go/internal/tasks"
-	"github.com/aden-hive/hive-go/internal/tools"
+	"github.com/shark2202/go_hive/go-hive/internal/llm"
+	"github.com/shark2202/go_hive/go-hive/internal/tasks"
+	"github.com/shark2202/go_hive/go-hive/internal/tools"
 )
 
 // workerTaskExecutionMu serialises the process-wide execution context the task

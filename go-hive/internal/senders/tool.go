@@ -9,7 +9,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/aden-hive/hive-go/internal/tools"
+	"github.com/shark2202/go_hive/go-hive/internal/tools"
 )
 
 // ToolName is the registry name of the senders suite.

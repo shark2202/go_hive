@@ -3,7 +3,7 @@ package server
 import (
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/eventbus"
+	"github.com/shark2202/go_hive/go-hive/internal/eventbus"
 )
 
 func sseStream(id string) *string { return &id }

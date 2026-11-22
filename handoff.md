@@ -16,7 +16,7 @@ wave10（browser R15 / colony doom-loop / 分页+alias / SSE 时机+judge）与 
 | 项 | 值 |
 | --- | --- |
 | 主仓库 | `/Users/mac/hive`，分支 `main`，HEAD `78649329` |
-| 主模块 | `/Users/mac/hive/go_hive/go-hive`（module `github.com/aden-hive/hive-go`） |
+| 主模块 | `/Users/mac/hive/go_hive/go-hive`（module `github.com/shark2202/go_hive/go-hive`） |
 | 全量 CI | 5,197 测试；5,539 refs；missing 0 |
 | QC | 8/8 PASS（提交 `78649329`） |
 | 发布镜像 | `github.com/shark2202/go_hive` 远端 `main = 4f03815 = 78649329` |

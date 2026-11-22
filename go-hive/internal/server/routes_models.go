@@ -19,10 +19,10 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/aden-hive/hive-go/internal/credentials"
-	"github.com/aden-hive/hive-go/internal/hivehome"
-	"github.com/aden-hive/hive-go/internal/llm"
-	"github.com/aden-hive/hive-go/internal/queen"
+	"github.com/shark2202/go_hive/go-hive/internal/credentials"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/llm"
+	"github.com/shark2202/go_hive/go-hive/internal/queen"
 )
 
 var modelRoleSlots = []string{"llm", "worker_llm", "vision_fallback"}

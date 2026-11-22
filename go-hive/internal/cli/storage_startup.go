@@ -3,8 +3,8 @@ package cli
 import (
 	"fmt"
 
-	"github.com/aden-hive/hive-go/internal/hivehome"
-	hiveserver "github.com/aden-hive/hive-go/internal/server"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	hiveserver "github.com/shark2202/go_hive/go-hive/internal/server"
 )
 
 // runStorageStartupMigrations runs the storage prep Python's

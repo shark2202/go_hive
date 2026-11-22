@@ -1,0 +1,19 @@
+# go-hive-cloud M1 gates (captured 2026-11-22T16:04:01Z)
+# go version: go version go1.26.11 darwin/arm64
+# env: CGO_ENABLED=0 GOPROXY=off GOFLAGS=-mod=mod GOMODCACHE=/Users/mac/.vfox/cache/golang/v-1.26.5/golang-1.26.5/packages/pkg/mod
+
+## gofmt -l .
+(no output = clean)
+
+## go vet ./...
+(no output = clean)
+
+## go test -count=1 ./...
+?   	github.com/shark2202/go_hive/go-hive-cloud/cmd/hive-cloud	[no test files]
+ok  	github.com/shark2202/go_hive/go-hive-cloud/internal/auth	0.696s
+?   	github.com/shark2202/go_hive/go-hive-cloud/internal/config	[no test files]
+ok  	github.com/shark2202/go_hive/go-hive-cloud/internal/httpapi	1.512s
+ok  	github.com/shark2202/go_hive/go-hive-cloud/internal/store	0.928s
+
+## harness/globaldb-smoke: gofmt/vet/build
+(clean)

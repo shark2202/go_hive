@@ -16,9 +16,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/aden-hive/hive-go/internal/hivehome"
-	hiveserver "github.com/aden-hive/hive-go/internal/server"
-	"github.com/aden-hive/hive-go/internal/tasks"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	hiveserver "github.com/shark2202/go_hive/go-hive/internal/server"
+	"github.com/shark2202/go_hive/go-hive/internal/tasks"
 )
 
 // taskPivotWiring is the live-session capability the fork needs: the manager

@@ -10,9 +10,9 @@ package cli
 // Parity: framework/tools/queen_lifecycle_tools.py::register_queen_lifecycle_tools
 
 import (
-	"github.com/aden-hive/hive-go/internal/hivehome"
-	"github.com/aden-hive/hive-go/internal/llm"
-	hiveserver "github.com/aden-hive/hive-go/internal/server"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/llm"
+	hiveserver "github.com/shark2202/go_hive/go-hive/internal/server"
 )
 
 // enableQueenSessionTools turns on both queen-only surfaces for one chat

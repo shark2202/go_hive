@@ -4,7 +4,7 @@ package server
 // Parity: framework/host/colony_runtime.py::ColonyRuntime.get_stats
 // Parity: framework/host/event_bus.py::EventBus.get_stats
 
-import "github.com/aden-hive/hive-go/internal/colony"
+import "github.com/shark2202/go_hive/go-hive/internal/colony"
 
 // sessionStatsEventBus reports the bus counters, keeping the schema intact
 // (an object with an object-valued events_by_type) when the session has no bus

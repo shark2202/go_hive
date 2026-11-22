@@ -10,8 +10,8 @@ package server
 // matches exactly and is forwarded.
 
 import (
-	"github.com/aden-hive/hive-go/internal/colony"
-	"github.com/aden-hive/hive-go/internal/skills"
+	"github.com/shark2202/go_hive/go-hive/internal/colony"
+	"github.com/shark2202/go_hive/go-hive/internal/skills"
 )
 
 // colonyWorkerSurface adapts one live colony runtime to the colony-worker read

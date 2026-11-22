@@ -3,7 +3,7 @@
 # 00 · 产品目标与验收标准
 
 > 上游参考：`aden-hive` / `aden-tools`（工具契约 reference commit 见 `contracts/*.json` 的 `reference` 字段）
-> Go 模块：`github.com/aden-hive/hive-go`
+> Go 模块：`github.com/shark2202/go_hive/go-hive`
 > 本文定义「什么叫移植完成」，是所有实现与评审的共同口径。
 > 最近修订：2026-11-22 22:15（五轴口径 + 当前状态快照；含 1.0.27-go.1 预览发布、goal-design/consistency-audit 落盘）
 

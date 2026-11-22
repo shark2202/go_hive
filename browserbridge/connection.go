@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/aden-hive/hive-go/browserbridge/ws"
+	"github.com/shark2202/go_hive/browserbridge/ws"
 )
 
 type pendingResult struct {

@@ -12,11 +12,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/hivehome"
-	"github.com/aden-hive/hive-go/internal/llm"
-	"github.com/aden-hive/hive-go/internal/queenmail"
-	hiveserver "github.com/aden-hive/hive-go/internal/server"
-	"github.com/aden-hive/hive-go/internal/tools/builtin"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/llm"
+	"github.com/shark2202/go_hive/go-hive/internal/queenmail"
+	hiveserver "github.com/shark2202/go_hive/go-hive/internal/server"
+	"github.com/shark2202/go_hive/go-hive/internal/tools/builtin"
 )
 
 const (

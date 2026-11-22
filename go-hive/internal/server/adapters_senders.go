@@ -14,9 +14,9 @@ package server
 // to the model, not merely hidden from an allowlist.
 
 import (
-	"github.com/aden-hive/hive-go/internal/hivehome"
-	"github.com/aden-hive/hive-go/internal/senders"
-	"github.com/aden-hive/hive-go/internal/tools"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/senders"
+	"github.com/shark2202/go_hive/go-hive/internal/tools"
 )
 
 // RegisterSenderTools installs the "senders" tool when the email_senders

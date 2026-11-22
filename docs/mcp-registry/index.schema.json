@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/aden-hive/hive-go/mcp-registry/index.schema.json",
+  "$id": "https://github.com/shark2202/go_hive/go-hive/mcp-registry/index.schema.json",
   "title": "Hive MCP registry index",
   "description": "Static JSON fetched by hive mcp update; one GET, no auth, no pagination.",
   "type": "object",

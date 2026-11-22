@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
 )
 
 func newFeatureHome(t *testing.T) hivehome.Home {

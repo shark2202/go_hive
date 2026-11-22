@@ -47,7 +47,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/memory"
+	"github.com/shark2202/go_hive/go-hive/internal/memory"
 )
 
 func main() {

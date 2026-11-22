@@ -17,9 +17,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aden-hive/hive-go/e2e/stallgw"
-	"github.com/aden-hive/hive-go/internal/agentloop"
-	"github.com/aden-hive/hive-go/internal/server"
+	"github.com/shark2202/go_hive/go-hive/e2e/stallgw"
+	"github.com/shark2202/go_hive/go-hive/internal/agentloop"
+	"github.com/shark2202/go_hive/go-hive/internal/server"
 )
 
 // Stall-check end-to-end: the real `hive serve` binary against a temporary

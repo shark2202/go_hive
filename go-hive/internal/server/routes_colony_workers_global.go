@@ -13,7 +13,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/aden-hive/hive-go/internal/globaldb"
+	"github.com/shark2202/go_hive/go-hive/internal/globaldb"
 )
 
 const foreignKeyIntrospectSQL = "SELECT tc.table_name AS table_name, kcu.column_name AS column_name, " +

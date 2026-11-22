@@ -12,10 +12,10 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/hivehome"
-	"github.com/aden-hive/hive-go/internal/tools"
-	"github.com/aden-hive/hive-go/internal/tools/builtin"
-	"github.com/aden-hive/hive-go/internal/tools/integrations"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/tools"
+	"github.com/shark2202/go_hive/go-hive/internal/tools/builtin"
+	"github.com/shark2202/go_hive/go-hive/internal/tools/integrations"
 )
 
 // harnessGroupCatalogNames returns the recorded catalog names for one group.

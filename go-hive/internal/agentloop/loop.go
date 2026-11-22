@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/hiveclock"
-	"github.com/aden-hive/hive-go/internal/hivehome"
-	"github.com/aden-hive/hive-go/internal/llm"
+	"github.com/shark2202/go_hive/go-hive/internal/hiveclock"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/llm"
 )
 
 // Parity: framework/llm/provider.py ToolUse (id/name/input).

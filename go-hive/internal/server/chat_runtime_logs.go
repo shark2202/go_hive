@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/runtimelogs"
+	"github.com/shark2202/go_hive/go-hive/internal/runtimelogs"
 )
 
 // newChatRuntimeLogger wires the three-level runtime log store for a

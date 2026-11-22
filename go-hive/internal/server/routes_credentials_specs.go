@@ -3,7 +3,7 @@ package server
 // Parity: tools/src/aden_tools/credentials/__init__.py::CREDENTIAL_SPECS
 // Parity: framework/server/routes_credentials.py::handle_list_specs
 
-import "github.com/aden-hive/hive-go/internal/credentials"
+import "github.com/shark2202/go_hive/go-hive/internal/credentials"
 
 // credentialSpecsFromRegistry is the /api/credentials/specs source. It serves
 // one row per credential in the upstream CREDENTIAL_SPECS dict — the exact set

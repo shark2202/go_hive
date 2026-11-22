@@ -19,8 +19,8 @@ import (
 	"path/filepath"
 	"sync"
 
-	hivelogging "github.com/aden-hive/hive-go/internal/logging"
-	"github.com/aden-hive/hive-go/internal/pyenv"
+	hivelogging "github.com/shark2202/go_hive/go-hive/internal/logging"
+	"github.com/shark2202/go_hive/go-hive/internal/pyenv"
 )
 
 const (

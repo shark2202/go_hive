@@ -9,7 +9,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/ratelimit"
+	"github.com/shark2202/go_hive/go-hive/internal/ratelimit"
 )
 
 // TestMain keeps the suite hermetic: the process-wide call limiter would

@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/credentials"
+	"github.com/shark2202/go_hive/go-hive/internal/credentials"
 )
 
 // credentialSpecRouteRows fetches /api/credentials/specs and returns the rows

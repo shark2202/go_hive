@@ -22,9 +22,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/aden-hive/hive-go/internal/hivehome"
-	hiveserver "github.com/aden-hive/hive-go/internal/server"
-	"github.com/aden-hive/hive-go/internal/skills"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	hiveserver "github.com/shark2202/go_hive/go-hive/internal/server"
+	"github.com/shark2202/go_hive/go-hive/internal/skills"
 )
 
 // queenSkillsCatalog is one session's live skills catalog. The manager is

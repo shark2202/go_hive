@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/eventbus"
+	"github.com/shark2202/go_hive/go-hive/internal/eventbus"
 )
 
 // Parity: core/tests/test_worker_started_at.py::test_info_started_at_is_wall_clock

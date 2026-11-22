@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/agentloop"
+	"github.com/shark2202/go_hive/go-hive/internal/agentloop"
 )
 
 // Parity-exempt: Go-only REST mirror. Upstream exposes no reminder REST

@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/toolgolden"
-	"github.com/aden-hive/hive-go/internal/tools"
-	"github.com/aden-hive/hive-go/internal/tools/integrations/pdf"
+	"github.com/shark2202/go_hive/go-hive/internal/toolgolden"
+	"github.com/shark2202/go_hive/go-hive/internal/tools"
+	"github.com/shark2202/go_hive/go-hive/internal/tools/integrations/pdf"
 )
 
 // goldenReportPath is the committed capture report: canonical tool-result

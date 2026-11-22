@@ -17,8 +17,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/attachments"
-	"github.com/aden-hive/hive-go/internal/tools/integrations/pdf"
+	"github.com/shark2202/go_hive/go-hive/internal/attachments"
+	"github.com/shark2202/go_hive/go-hive/internal/tools/integrations/pdf"
 )
 
 // Chat-attachment thresholds. LARGE_PDF_THRESHOLD_BYTES lives in

@@ -6,8 +6,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/llm"
-	"github.com/aden-hive/hive-go/internal/llmjudge"
+	"github.com/shark2202/go_hive/go-hive/internal/llm"
+	"github.com/shark2202/go_hive/go-hive/internal/llmjudge"
 )
 
 type fakeJudgeProvider struct {

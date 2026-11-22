@@ -17,8 +17,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/hivehome"
-	"github.com/aden-hive/hive-go/internal/tracker"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/tracker"
 )
 
 const colonyDataReadTimeout = 15 * time.Second

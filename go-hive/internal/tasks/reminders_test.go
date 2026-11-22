@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/agentloop"
+	"github.com/shark2202/go_hive/go-hive/internal/agentloop"
 )
 
 func reminderRec(id int, subject string, status TaskStatus) *TaskRecord {

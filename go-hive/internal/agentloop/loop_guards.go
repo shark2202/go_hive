@@ -8,7 +8,7 @@ package agentloop
 import (
 	"fmt"
 
-	"github.com/aden-hive/hive-go/internal/llm"
+	"github.com/shark2202/go_hive/go-hive/internal/llm"
 )
 
 // toolBudgetLimits resolves the turn-loop tool-call budget pair: the soft

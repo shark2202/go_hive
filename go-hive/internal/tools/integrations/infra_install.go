@@ -5,8 +5,8 @@ package integrations
 // historical assembly names used by the CLI and by the lane test suite.
 
 import (
-	"github.com/aden-hive/hive-go/internal/tools"
-	"github.com/aden-hive/hive-go/internal/tools/integrations/infra"
+	"github.com/shark2202/go_hive/go-hive/internal/tools"
+	"github.com/shark2202/go_hive/go-hive/internal/tools/integrations/infra"
 )
 
 // InstallBatch7Lane3 publishes the batch-7 lane-3 infrastructure tools

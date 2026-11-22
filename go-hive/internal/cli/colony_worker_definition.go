@@ -12,14 +12,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/agentloop"
-	"github.com/aden-hive/hive-go/internal/atomicfs"
-	hivecolony "github.com/aden-hive/hive-go/internal/colony"
-	"github.com/aden-hive/hive-go/internal/hivehome"
-	"github.com/aden-hive/hive-go/internal/llm"
-	"github.com/aden-hive/hive-go/internal/queen"
-	hiveserver "github.com/aden-hive/hive-go/internal/server"
-	"github.com/aden-hive/hive-go/internal/tools/builtin"
+	"github.com/shark2202/go_hive/go-hive/internal/agentloop"
+	"github.com/shark2202/go_hive/go-hive/internal/atomicfs"
+	hivecolony "github.com/shark2202/go_hive/go-hive/internal/colony"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/llm"
+	"github.com/shark2202/go_hive/go-hive/internal/queen"
+	hiveserver "github.com/shark2202/go_hive/go-hive/internal/server"
+	"github.com/shark2202/go_hive/go-hive/internal/tools/builtin"
 )
 
 // writeColonyFromSession writes the colony directory the fork resumes from:

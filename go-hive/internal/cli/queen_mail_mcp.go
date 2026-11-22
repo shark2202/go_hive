@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/aden-hive/hive-go/internal/queenmail"
+	"github.com/shark2202/go_hive/go-hive/internal/queenmail"
 )
 
 // queenMailMCPCommands is the hidden plumbing command; it is not part of a

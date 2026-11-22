@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/sentinel"
+	"github.com/shark2202/go_hive/go-hive/internal/sentinel"
 )
 
 // TestSentinelSetupToolDefMatchesFrozenSurface pins the definition chain: the

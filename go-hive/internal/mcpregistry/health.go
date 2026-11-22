@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/tools"
+	"github.com/shark2202/go_hive/go-hive/internal/tools"
 )
 
 func errorf(format string, args ...any) error { return fmt.Errorf(format, args...) }

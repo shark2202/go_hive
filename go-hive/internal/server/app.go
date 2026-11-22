@@ -19,13 +19,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/agents"
-	"github.com/aden-hive/hive-go/internal/colony"
-	"github.com/aden-hive/hive-go/internal/hivehome"
-	"github.com/aden-hive/hive-go/internal/llm"
-	"github.com/aden-hive/hive-go/internal/server/uiembed"
-	soulstore "github.com/aden-hive/hive-go/internal/soul"
-	"github.com/aden-hive/hive-go/internal/tasks"
+	"github.com/shark2202/go_hive/go-hive/internal/agents"
+	"github.com/shark2202/go_hive/go-hive/internal/colony"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/llm"
+	"github.com/shark2202/go_hive/go-hive/internal/server/uiembed"
+	soulstore "github.com/shark2202/go_hive/go-hive/internal/soul"
+	"github.com/shark2202/go_hive/go-hive/internal/tasks"
 )
 
 const runtimeLogsPath = "/api/runtime-logs"

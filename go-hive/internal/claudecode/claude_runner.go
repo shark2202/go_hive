@@ -20,7 +20,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/queenmail"
+	"github.com/shark2202/go_hive/go-hive/internal/queenmail"
 )
 
 // claudeMCPTools are the tools of the `hive` MCP server, as Claude Code names

@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/eventbus"
+	"github.com/shark2202/go_hive/go-hive/internal/eventbus"
 )
 
 const sessionEventsHeartbeatInterval = 20 * time.Second

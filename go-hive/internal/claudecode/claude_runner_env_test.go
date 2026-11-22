@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/queenmail"
+	"github.com/shark2202/go_hive/go-hive/internal/queenmail"
 )
 
 // Parity: framework/server/tests/test_claude_code_queens.py::test_her_runs_use_her_api_key_and_get_the_hive_mcp_server

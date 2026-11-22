@@ -4,7 +4,7 @@ Standalone Go port of the upstream Hive Browser Bridge
 (`tools/src/gcu/browser/bridge.py`) and a first-class copy of the Chrome
 extension (`extension/`). This module has **zero external dependencies** — only
 the Go standard library — and carries its own `go.mod`
-(`github.com/aden-hive/hive-go/browserbridge`), so it does not modify or depend on
+(`github.com/shark2202/go_hive/browserbridge`), so it does not modify or depend on
 the main `go_hive/go-hive` module.
 
 Current scope is **L0/L1/L2/L3a**:

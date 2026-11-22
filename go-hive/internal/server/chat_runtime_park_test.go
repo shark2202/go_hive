@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/agentloop"
-	"github.com/aden-hive/hive-go/internal/eventbus"
-	"github.com/aden-hive/hive-go/internal/llm"
+	"github.com/shark2202/go_hive/go-hive/internal/agentloop"
+	"github.com/shark2202/go_hive/go-hive/internal/eventbus"
+	"github.com/shark2202/go_hive/go-hive/internal/llm"
 )
 
 func waitForParkReason(t *testing.T, root, want string) map[string]any {

@@ -14,14 +14,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/atomicfs"
-	"github.com/aden-hive/hive-go/internal/eventbus"
-	"github.com/aden-hive/hive-go/internal/hivehome"
-	colonyhost "github.com/aden-hive/hive-go/internal/host"
-	"github.com/aden-hive/hive-go/internal/mcpregistry"
-	hiveserver "github.com/aden-hive/hive-go/internal/server"
-	hivesession "github.com/aden-hive/hive-go/internal/session"
-	"github.com/aden-hive/hive-go/internal/tools/builtin"
+	"github.com/shark2202/go_hive/go-hive/internal/atomicfs"
+	"github.com/shark2202/go_hive/go-hive/internal/eventbus"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	colonyhost "github.com/shark2202/go_hive/go-hive/internal/host"
+	"github.com/shark2202/go_hive/go-hive/internal/mcpregistry"
+	hiveserver "github.com/shark2202/go_hive/go-hive/internal/server"
+	hivesession "github.com/shark2202/go_hive/go-hive/internal/session"
+	"github.com/shark2202/go_hive/go-hive/internal/tools/builtin"
 )
 
 // loadPreloadedColonySession builds and registers the live session behind one

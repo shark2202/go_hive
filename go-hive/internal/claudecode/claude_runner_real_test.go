@@ -17,7 +17,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/queenmail"
+	"github.com/shark2202/go_hive/go-hive/internal/queenmail"
 )
 
 // paritySecret is what a stray credential looks like in output this test

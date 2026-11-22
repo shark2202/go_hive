@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/agents"
-	"github.com/aden-hive/hive-go/internal/credentials"
-	"github.com/aden-hive/hive-go/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/agents"
+	"github.com/shark2202/go_hive/go-hive/internal/credentials"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
 )
 
 func agentRoutesMux(home hivehome.Home, manager *SessionManager) *http.ServeMux {

@@ -7,8 +7,8 @@ package cli
 // Parity: framework/agents/queen/soul_reflection.py::run_due
 
 import (
-	"github.com/aden-hive/hive-go/internal/hivehome"
-	hiveserver "github.com/aden-hive/hive-go/internal/server"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	hiveserver "github.com/shark2202/go_hive/go-hive/internal/server"
 )
 
 // startServeBackgroundServices starts the browser-bridge supervisor and the

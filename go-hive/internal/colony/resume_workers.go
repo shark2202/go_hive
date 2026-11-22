@@ -16,7 +16,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/aden-hive/hive-go/internal/agentloop"
+	"github.com/shark2202/go_hive/go-hive/internal/agentloop"
 )
 
 // WorkerResumer is the resume half of the colony runtime run_worker drives. It

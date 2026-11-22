@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/colony"
+	"github.com/shark2202/go_hive/go-hive/internal/colony"
 )
 
 // Parity-exempt: Go-only compatibility guard — a legacy worker.json whose

@@ -6,7 +6,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/tools"
+	"github.com/shark2202/go_hive/go-hive/internal/tools"
 )
 
 // fakeMCPAttacher is an in-memory tools.MCPAttacher: the routes only need the

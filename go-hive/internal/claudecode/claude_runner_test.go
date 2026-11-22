@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/hivehome"
-	"github.com/aden-hive/hive-go/internal/queenmail"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/queenmail"
 )
 
 // The fake Claude Code script stands in for the real binary: it records what

@@ -28,7 +28,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/atomicfs"
+	"github.com/shark2202/go_hive/go-hive/internal/atomicfs"
 )
 
 // Defaults for the global sentinel block (all tunable via configuration.json).

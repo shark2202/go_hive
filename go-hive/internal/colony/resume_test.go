@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
 )
 
 const resumeSessionID = "session_20260719_121546_afe89313"

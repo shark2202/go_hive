@@ -12,7 +12,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/version"
+	"github.com/shark2202/go_hive/go-hive/internal/version"
 )
 
 // envFromMap is the getenv the MCP server reads its HIVE_QUEEN_MAIL_* with.

@@ -1,0 +1,44 @@
+{
+  "covered": [
+    "leads"
+  ],
+  "cursor": "<dynamic>",
+  "tables": {
+    "leads": {
+      "count": 6,
+      "rows": [
+        {
+          "op": "schema",
+          "pk": {}
+        },
+        {
+          "op": "insert",
+          "pk": {}
+        },
+        {
+          "op": "update",
+          "pk": {
+            "lead_id": "l2"
+          }
+        },
+        {
+          "op": "insert",
+          "pk": {
+            "lead_id": "l3"
+          }
+        },
+        {
+          "op": "import",
+          "pk": {}
+        },
+        {
+          "op": "update",
+          "pk": {
+            "lead_id": "l1"
+          }
+        }
+      ]
+    }
+  },
+  "truncated": false
+}

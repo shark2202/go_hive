@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/ratelimit"
+	"github.com/shark2202/go_hive/go-hive/internal/ratelimit"
 )
 
 // Parity: core/framework/llm/litellm.py::LiteLLMProvider._default_api_base_for_model, core/framework/llm/litellm.py::rewrite_proxy_model

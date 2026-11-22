@@ -33,8 +33,8 @@ package colony
 import (
 	"fmt"
 
-	"github.com/aden-hive/hive-go/internal/agentloop"
-	"github.com/aden-hive/hive-go/internal/llm"
+	"github.com/shark2202/go_hive/go-hive/internal/agentloop"
+	"github.com/shark2202/go_hive/go-hive/internal/llm"
 )
 
 // startOverseerReminders registers the overseer's sources, binds them to a

@@ -11,7 +11,7 @@ package cli
 import (
 	"strings"
 
-	hiveserver "github.com/aden-hive/hive-go/internal/server"
+	hiveserver "github.com/shark2202/go_hive/go-hive/internal/server"
 )
 
 // startSessionTurns delivers the create-session initial prompt, or starts the

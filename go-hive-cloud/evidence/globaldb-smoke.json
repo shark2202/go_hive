@@ -1,0 +1,122 @@
+{
+  "harness": "globaldb-smoke",
+  "base_url": "http://127.0.0.1:56953",
+  "started_at": "2026-11-22T16:18:21.468529Z",
+  "finished_at": "2026-11-22T16:18:21.485379Z",
+  "ok": true,
+  "checks": [
+    {
+      "name": "sql_create_table",
+      "ok": true,
+      "detail": {
+        "rowCount": 0
+      }
+    },
+    {
+      "name": "sql_insert",
+      "ok": true,
+      "detail": {
+        "rowCount": 2
+      }
+    },
+    {
+      "name": "query_ilike_search",
+      "ok": true,
+      "detail": {
+        "rows": 1
+      }
+    },
+    {
+      "name": "upsert_merge",
+      "ok": true,
+      "detail": {
+        "inserted": 0,
+        "updated": 1
+      }
+    },
+    {
+      "name": "upsert_new_row",
+      "ok": true,
+      "detail": {
+        "inserted": 1
+      }
+    },
+    {
+      "name": "upsert_insert_conflict_409",
+      "ok": true,
+      "detail": {
+        "response": null,
+        "status": 409
+      },
+      "error": "conflict"
+    },
+    {
+      "name": "import_rows",
+      "ok": true,
+      "detail": {
+        "inserted": 2,
+        "total": 2
+      }
+    },
+    {
+      "name": "list_tables",
+      "ok": true,
+      "detail": {
+        "tables": 1
+      }
+    },
+    {
+      "name": "list_changes_init",
+      "ok": true,
+      "detail": {
+        "covered": [
+          "leads"
+        ],
+        "cursor": "5"
+      }
+    },
+    {
+      "name": "list_changes_since",
+      "ok": true,
+      "detail": {
+        "cursor": "5",
+        "tables": {}
+      }
+    },
+    {
+      "name": "list_rows_introspect",
+      "ok": true,
+      "detail": {
+        "columns": 4,
+        "limit": 1,
+        "offset": 0,
+        "primary_key": [
+          "lead_id"
+        ],
+        "table": "leads",
+        "total": 5
+      }
+    },
+    {
+      "name": "update_row",
+      "ok": true,
+      "detail": {
+        "updated": 1
+      }
+    },
+    {
+      "name": "update_row_visible",
+      "ok": true,
+      "detail": {
+        "total": 5
+      }
+    },
+    {
+      "name": "client_401_maps_to_not_signed_in",
+      "ok": true,
+      "detail": {
+        "error": "Cloud session rejected (401) — sign in again."
+      }
+    }
+  ]
+}

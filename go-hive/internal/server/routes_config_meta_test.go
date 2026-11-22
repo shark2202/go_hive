@@ -14,8 +14,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/llm"
-	"github.com/aden-hive/hive-go/internal/memory"
+	"github.com/shark2202/go_hive/go-hive/internal/llm"
+	"github.com/shark2202/go_hive/go-hive/internal/memory"
 )
 
 func jsonCanonical(t *testing.T, value any) any {

@@ -3,7 +3,7 @@ package server
 import (
 	"strings"
 
-	"github.com/aden-hive/hive-go/internal/queen"
+	"github.com/shark2202/go_hive/go-hive/internal/queen"
 )
 
 // chatQueenStaticPrompt assembles the session's cache-stable system prompt the

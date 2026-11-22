@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/aden-hive/hive-go/mcp-registry/installed.schema.json",
+  "$id": "https://github.com/shark2202/go_hive/go-hive/mcp-registry/installed.schema.json",
   "title": "Hive MCP installed servers",
   "type": "object",
   "required": [

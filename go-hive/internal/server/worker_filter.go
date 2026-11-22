@@ -2,7 +2,7 @@ package server
 
 // Parity: framework/server/routes_events.py
 
-import "github.com/aden-hive/hive-go/internal/eventbus"
+import "github.com/shark2202/go_hive/go-hive/internal/eventbus"
 
 var WorkerEventAllowlist = eventbus.WorkerFaninTypes
 

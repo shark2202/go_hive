@@ -23,17 +23,17 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/atomicfs"
-	"github.com/aden-hive/hive-go/internal/eventbus"
-	"github.com/aden-hive/hive-go/internal/hivehome"
-	colonyhost "github.com/aden-hive/hive-go/internal/host"
-	"github.com/aden-hive/hive-go/internal/llm"
-	"github.com/aden-hive/hive-go/internal/maintenance"
-	"github.com/aden-hive/hive-go/internal/mcpregistry"
-	"github.com/aden-hive/hive-go/internal/queen"
-	"github.com/aden-hive/hive-go/internal/resources"
-	hiveserver "github.com/aden-hive/hive-go/internal/server"
-	"github.com/aden-hive/hive-go/internal/tools/builtin"
+	"github.com/shark2202/go_hive/go-hive/internal/atomicfs"
+	"github.com/shark2202/go_hive/go-hive/internal/eventbus"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	colonyhost "github.com/shark2202/go_hive/go-hive/internal/host"
+	"github.com/shark2202/go_hive/go-hive/internal/llm"
+	"github.com/shark2202/go_hive/go-hive/internal/maintenance"
+	"github.com/shark2202/go_hive/go-hive/internal/mcpregistry"
+	"github.com/shark2202/go_hive/go-hive/internal/queen"
+	"github.com/shark2202/go_hive/go-hive/internal/resources"
+	hiveserver "github.com/shark2202/go_hive/go-hive/internal/server"
+	"github.com/shark2202/go_hive/go-hive/internal/tools/builtin"
 )
 
 var goos = runtime.GOOS

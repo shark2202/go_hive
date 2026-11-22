@@ -16,7 +16,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/aden-hive/hive-go/e2e/stallgw"
+	"github.com/shark2202/go_hive/go-hive/e2e/stallgw"
 )
 
 func main() {

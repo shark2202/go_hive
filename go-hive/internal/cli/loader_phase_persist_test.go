@@ -11,9 +11,9 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/eventbus"
-	"github.com/aden-hive/hive-go/internal/hivehome"
-	hiveserver "github.com/aden-hive/hive-go/internal/server"
+	"github.com/shark2202/go_hive/go-hive/internal/eventbus"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	hiveserver "github.com/shark2202/go_hive/go-hive/internal/server"
 )
 
 func newPhaseTestRunner(t *testing.T) (*Runner, hivehome.Home, *hiveserver.SessionManager, *sync.Mutex, *[]*hiveserver.Session) {

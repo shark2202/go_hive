@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Webhook 使用手册 — Hive</title>
+<style>
+:root{--bg:#0b0f14;--panel:#121923;--panel2:#0f1620;--line:#233041;--text:#e6edf3;--muted:#8b9bb0;--accent:#f0b429;--accent2:#58a6ff;--ok:#3fb950;--warn:#d29922;--bad:#f85149;--code:#0a0e13}
+*{box-sizing:border-box} html{scroll-behavior:auto} body{margin:0;background:linear-gradient(180deg,#0b0f14,#0d131b 55%,#0b0f14);color:var(--text);font:14.5px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+a{color:var(--accent2);text-decoration:none} a:hover{text-decoration:underline}
+.wrap{max-width:1280px;margin:0 auto;padding:44px 26px 80px}
+header{border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:28px}
+.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+h1{font-size:34px;line-height:1.2;margin:10px 0 10px;letter-spacing:-.02em} h1 span{color:var(--accent);white-space:nowrap}
+.lede{color:var(--muted);max-width:980px;font-size:15px} .meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:15px;color:var(--muted);font-size:12.5px} .meta b{color:var(--text)}
+section{margin:38px 0} h2{font-size:22px;margin:0 0 8px} h2 .num{color:var(--accent);font-size:14px;margin-right:8px} h3{font-size:15px;margin:24px 0 8px;color:#cfdae6}
+p{color:#c6d2df;margin:8px 0} .sub{color:var(--muted);font-size:13px}
+.grid{display:grid;gap:12px} .g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:900px){.g3{grid-template-columns:1fr 1fr}} @media(max-width:560px){.g3{grid-template-columns:1fr}.wrap{padding:30px 16px 60px}h1{font-size:25px}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:15px} .card .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700} .card .v{font-size:21px;font-weight:800;margin-top:5px;letter-spacing:-.01em} .card .d{color:var(--muted);font-size:12px;margin-top:5px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:14px 0;background:var(--panel2)}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed} th,td{border-bottom:1px solid var(--line);padding:9px 10px;vertical-align:top;text-align:left;overflow-wrap:anywhere;word-break:break-word} th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;background:#0d141d;position:sticky;top:0;z-index:1} tr:hover td{background:#121a25} tr:last-child td{border-bottom:0}
+td.num{font-variant-numeric:tabular-nums;text-align:right} code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--code);border:1px solid #1e2937;border-radius:5px;padding:1px 4px;color:#d7e3f0;overflow-wrap:anywhere}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#cfe0f2}
+.pill{display:inline-flex;align-items:center;font-size:11px;border-radius:999px;padding:2px 8px;border:1px solid var(--line);color:var(--muted);white-space:normal} .pill.ok{color:var(--ok);border-color:#1d3b26;background:#0f1a13} .pill.warn{color:var(--warn);border-color:#3d3013;background:#1a150a} .pill.bad{color:var(--bad);border-color:#3d1a1a;background:#1a0f0f} .pill.info{color:var(--accent2);border-color:#17324d;background:#0d1622}
+.small{font-size:11.5px;color:var(--muted);margin-top:3px}
+.callout{border-left:3px solid var(--accent);background:#161207;padding:11px 14px;border-radius:0 9px 9px 0;margin:14px 0;color:#e8d9b4} .callout.bad{border-color:var(--bad);background:#1a0f0f;color:#f2c7c7} .callout.info{border-color:var(--accent2);background:#0d1622;color:#cfe3ff}
+.toc{display:flex;flex-wrap:wrap;gap:7px;margin-top:18px} .toc a{font-size:12px;border:1px solid var(--line);background:var(--panel);padding:5px 9px;border-radius:999px;color:var(--muted)} .toc a:hover{color:var(--text);text-decoration:none}
+ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin-top:44px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:12px}
+@media(max-width:560px){table{font-size:12px}th,td{padding:7px 6px}}
+@media(max-width:760px){table{min-width:860px}}
+@media(max-width:560px){.toc a{padding:8px 12px;font-size:13px;min-height:44px;display:inline-flex;align-items:center}}
+</style>
+</head><body>
+
+<div class="meta"><span>状态：<b>使用手册 v1（手写）</b> · 2026-11-23</span><span>配套：<code>triggers-webhook.html</code>（字段级契约）· <code>queen-lifecycle-tools.md</code>（set_trigger）· 实现：<code>tools/queen_lifecycle_tools.py</code> · <code>host/webhook_server.py</code> · Go <code>server/trigger_runtime.go</code></span></div>
+<h1>Webhook 使用手册</h1>
+<p class="sub">目标读者：想在 Hive 里用“外部事件叫醒 queen”的用户。本页只讲<b>怎么用</b>；字段类型、状态码逐字文案见 <code>triggers-webhook.html</code>。</p>
+
+<h2><span class="num">01</span>先搞清楚：触发器归属于谁？</h2>
+<ul>
+<li><b>归属 = 会话（session）</b>：触发器定义保存在<b>该会话</b>的 worker 目录 <code>triggers.json</code>，不是独立全局对象，也不存在“绑定到某个 colony 的触发器库”。</li>
+<li><b>运行条件 = 该会话已加载 colony</b>：webhook 事件到达时，若 <code>session.colony_id</code> 为空（上游）/ <code>Session.ColonyID == ""</code>（Go）→ <b>事件被静默丢弃</b>；queen 节点不存在同样丢弃。</li>
+<li><b>注入目标 = 该会话的 queen</b>；若该 colony 有常驻 overseer，同一 trigger 会再转发一份给 overseer（第二负责人），避免 queen 无输入源。</li>
+<li><b>创建入口 = queen 的工具 <code>set_trigger</code></b>（在会话内由 queen 调用）。REST 创建接口与 Dashboard “Create schedule”<b>只支持 timer</b>（上游逐字：<code>Only 'timer' schedules can be created here.</code>）；<b>没有 <code>hive session trigger</code> 这类 CLI 子命令</b>。</li>
+</ul>
+
+<h2><span class="num">02</span>使用前提</h2>
+<ol>
+<li><code>hive serve</code> 正在运行（默认 <code>127.0.0.1:8788</code>）。</li>
+<li>打开（或已存在）一个<b>加载了 colony 的会话</b>——从 Dashboard 打开、能与 queen 正常对话的会话即满足。</li>
+<li>知道 <code>session_id</code>（Dashboard URL 或 <code>GET /api/sessions</code>），后续查询/运维要用。</li>
+</ol>
+
+<h2><span class="num">03</span>创建 webhook 触发器（唯一正确姿势）</h2>
+<p>在该会话的聊天框里对 queen 说（让它调用工具）：</p>
+<pre>请调用 set_trigger 创建一个 webhook 触发器：
+- trigger_id: ci-fix
+- trigger_type: webhook
+- trigger_config: {"path": "/hooks/ci", "methods": ["POST"]}
+- task: "CI 失败时：读取 payload.run_id 与 payload.repo，拉取失败日志，定位并尝试修复，最后在会话里汇报结论。"</pre>
+<table><tr><th>参数</th><th>类型</th><th>必填</th><th>说明 / 错误语义</th></tr>
+<tr><td><code>trigger_id</code></td><td>string</td><td>是</td><td>会话内唯一；已激活时返回 <code>Trigger '&lt;id&gt;' is already active.</code></td></tr>
+<tr><td><code>trigger_type</code></td><td>"webhook"</td><td>新建时必填</td><td>已有同 id 定义时可省略（沿用原类型）</td></tr>
+<tr><td><code>trigger_config.path</code></td><td>string</td><td>是</td><td>必须以 <code>/</code> 开头，否则 <code>Webhook trigger requires 'path' starting with '/' in trigger_config (e.g. '/hooks/github').</code></td></tr>
+<tr><td><code>trigger_config.methods</code></td><td>array&lt;string&gt;</td><td>否</td><td>默认 <code>["POST"]</code>；合法集合 GET/POST/PUT/PATCH/DELETE/HEAD/OPTIONS</td></tr>
+<tr><td><code>trigger_config.port</code></td><td>integer</td><td>否</td><td>默认 <b>8090</b>；host 固定 127.0.0.1（多会话需配不同端口）</td></tr>
+<tr><td><code>task</code></td><td>string</td><td><b>激活前必须非空</b></td><td>为空返回 <code>Trigger '&lt;id&gt;' has no task configured…</code>；激活成功即写盘并开始监听</td></tr></table>
+<p class="sub">创建成功后：定义写入会话 <code>triggers.json</code>（enabled=true），本会话的 webhook 服务在 <code>127.0.0.1:8090</code> 惰性启动并注册 <code>path → (trigger_id, methods)</code>。</p>
+
+<h2><span class="num">04</span>确认与观察</h2>
+<ul>
+<li><b>列表</b>：<code>GET /api/sessions/&lt;sid&gt;/triggers</code> → 返回 <code>trigger_id / trigger_type / trigger_config / enabled / last_fired_at / next_due_at</code> 等。</li>
+<li><b>UI</b>：Colony 面板触发器区块（webhook 用闪电图标）；触发后聊天里出现 banner「Webhook fired」+ 以 <code>[TRIGGER: webhook/&lt;id&gt;]</code> 开头的用户消息。</li>
+<li><b>事件</b>：成功后发布 <code>trigger_fired</code>（含 <code>trigger_id / trigger_type / name / task / last_fired_at / fire_count</code>，timer 另有 <code>next_fire_in / next_fire_at</code>）；SSE 订阅者可见。</li>
+</ul>
+
+<h2><span class="num">05</span>发送一条测试请求（端到端）</h2>
+<pre>curl -i -X POST http://127.0.0.1:8090/hooks/ci \
+  -H 'Content-Type: application/json' \
+  -d '{"run_id":123,"repo":"myapp","status":"failed"}'</pre>
+<p>期望：</p>
+<ol>
+<li>HTTP <code>202 {"status":"accepted"}</code>（只表示已接收，不代表任务成功）；</li>
+<li>几秒内该会话出现触发消息（banner + <code>[TRIGGER: webhook/ci-fix]</code>…），queen 开始一轮工作；</li>
+<li>列表接口 <code>last_fired_at</code> 更新、<code>fire_count</code> +1，并收到 <code>trigger_fired</code> 事件。</li>
+</ol>
+<p class="sub">调试时也可不走 HTTP：<code>POST /api/sessions/&lt;sid&gt;/triggers/&lt;tid&gt;/run</code> → <code>{"status":"fired"}</code>（payload 为 <code>{task, trigger_config, forced:true}</code>）。</p>
+
+<h2><span class="num">06</span>运维操作（REST）</h2>
+<table><tr><th>操作</th><th>请求</th><th>返回</th></tr>
+<tr><td>列表</td><td><code>GET /api/sessions/&lt;sid&gt;/triggers</code></td><td>触发器数组</td></tr>
+<tr><td>激活</td><td><code>POST …/triggers/&lt;tid&gt;/activate</code></td><td><code>{"status":"activated"| "already_active","trigger_id":…}</code></td></tr>
+<tr><td>停用</td><td><code>POST …/triggers/&lt;tid&gt;/deactivate</code></td><td><code>{"status":"deactivated"| "already_inactive",…}</code></td></tr>
+<tr><td>手动触发一次</td><td><code>POST …/triggers/&lt;tid&gt;/run</code></td><td><code>{"status":"fired"}</code></td></tr>
+<tr><td>更新 task</td><td><code>PATCH …/triggers/&lt;tid&gt;</code></td><td>更新后的 task/trigger_config</td></tr>
+<tr><td>timer 错过决策</td><td><code>POST …/colony/resolve_missed</code></td><td>fire_latest / skip / reschedule</td></tr></table>
+<p class="sub">细节：<b>停用只取消订阅</b>（webhook 路由仍注册）——之后请求仍回 202，但不会触发 queen；重新激活会重新订阅。会话重开时，enabled 的定义会恢复并重新注册 webhook route（timer 则把错过的 tick 标为 missed，不自动补跑）。</p>
+
+<h2><span class="num">07</span>task 怎么写（决定成败的一半）</h2>
+<ul>
+<li><b>明确引用 payload</b>：写清用哪些字段（如 <code>payload.run_id</code>），queen 会在消息里看到完整 JSON。</li>
+<li><b>给出处理顺序与验收</b>：例如「拉日志 → 定位 → 修复 → 跑测试 → 汇报」。</li>
+<li><b>幂等与去重</b>：同一事件可能重复投递（无去重），task 里要求按 <code>run_id</code> 判重或只处理最新一次。</li>
+<li><b>不假设有回复通道</b>：调用方只拿到 202；结果写回会话/需要时由 queen 调外部 API。</li>
+</ul>
+
+<h2><span class="num">08</span>部署与安全（重要）</h2>
+<ul>
+<li>服务只监听 <code>127.0.0.1</code>：同机进程可直接 POST；GitHub 云端等外部服务需经 <b>self-hosted runner</b> 或隧道/反代（Cloudflare Tunnel、nginx）。</li>
+<li><b>内置 HMAC 鉴权未接线</b>（<code>secret</code> 代码存在但 set_trigger 不设置）→ <b>不要直接裸露到公网</b>；在反代层加认证/来源限制，或加签名校验。</li>
+<li>多会话默认都用 8090 会冲突：每个会话显式配不同 <code>port</code>。</li>
+<li>事件不落盘、不重放、无重试：调用方失败需自己重发。</li>
+</ul>
+
+<h2><span class="num">09</span>排障速查</h2>
+<table><tr><th>现象</th><th>原因</th><th>处理</th></tr>
+<tr><td>connection refused</td><td>会话未激活任何 webhook / serve 未运行 / 端口不是 8090</td><td>查列表 enabled；确认 port；重新激活</td></tr>
+<tr><td>404 {"error":"Not found"}</td><td>path 不匹配（大小写/拼写；精确匹配无通配）</td><td>核对 trigger_config.path</td></tr>
+<tr><td>405 Method Not Allowed</td><td>method 不在 methods</td><td>加 methods 或改用允许的方法</td></tr>
+<tr><td>413</td><td>body 超 10 MiB</td><td>减小 payload 或改走拉取式</td></tr>
+<tr><td>401 Invalid signature</td><td>仅当 route.secret 已配置（触发流程不会）</td><td>正常流程不会出现；出现说明自定义了 secret</td></tr>
+<tr><td>202 但 queen 没反应</td><td>会话未加载 colony / queen 节点不可用 / 已停用（订阅已取消）/ inject 失败</td><td>查 session colony、重新激活、看 serve 日志 <code>Webhook trigger '&lt;id&gt;' injection failed</code></td></tr>
+<tr><td>重复执行</td><td>无去重，发送方重试</td><td>task 侧按事件 id 判重</td></tr></table>
+
+<h2><span class="num">10</span>边界（完整清单见契约页 §09）</h2>
+<ul>
+<li>无毫秒、无“延迟队列/一次性 after-N”（timer 仅 cron/interval）；webhook 是事件入口不是定时器。</li>
+<li>多触发器注入形态与上游不同（上游合并一条，Go 每事件一轮）；非 object JSON body 的 payload 保留差异正在修复（lane webhook-payload）。</li>
+<li>secret 未接线、无鉴权、无重放、无去重；只本机监听。</li>
+</ul>
+<footer>手写维护（2026-11-23 v1）。字段级契约/逐字状态码：<code>triggers-webhook.html</code>；工具语义：<code>queen-lifecycle-tools.md</code>。发现与实际行为不符：以代码与实测为准并回改本页。</footer>
+</body></html>

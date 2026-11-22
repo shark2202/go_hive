@@ -27,9 +27,9 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/aden-hive/hive-go/internal/eventbus"
-	"github.com/aden-hive/hive-go/internal/hivehome"
-	"github.com/aden-hive/hive-go/internal/skills"
+	"github.com/shark2202/go_hive/go-hive/internal/eventbus"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/skills"
 )
 
 const skillsRouteMaxUploadBytes = 2 * 1024 * 1024

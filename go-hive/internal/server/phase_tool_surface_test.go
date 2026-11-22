@@ -17,7 +17,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/eventbus"
+	"github.com/shark2202/go_hive/go-hive/internal/eventbus"
 )
 
 // surfaceMCPServerNames is the test's MCP-origin universe (harness groups plus

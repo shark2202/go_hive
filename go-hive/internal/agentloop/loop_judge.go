@@ -9,8 +9,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/aden-hive/hive-go/internal/llm"
-	"github.com/aden-hive/hive-go/internal/runtimelogs"
+	"github.com/shark2202/go_hive/go-hive/internal/llm"
+	"github.com/shark2202/go_hive/go-hive/internal/runtimelogs"
 )
 
 // runJudgeStep 执行一轮的 judge 钩子：未触发时仅记 runtime 日志；

@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/credentials"
-	"github.com/aden-hive/hive-go/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/credentials"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
 )
 
 func createSessionRequest(t *testing.T, deps SessionRouteDeps, body string) (int, map[string]any) {

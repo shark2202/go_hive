@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/eventbus"
+	"github.com/shark2202/go_hive/go-hive/internal/eventbus"
 )
 
 // TestSplitWorkerEventsResolver pins HIVE_SPLIT_WORKER_EVENTS: with the switch

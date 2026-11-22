@@ -14,7 +14,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/aden-hive/hive-go/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
 )
 
 // MemoryRecallModes are the ways memory notes can reach a queen, in the order

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/toolgolden"
+	"github.com/shark2202/go_hive/go-hive/internal/toolgolden"
 )
 
 // Parity-exempt: Go-side golden harness; replays the captured scenarios in

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/mcpregistry"
+	"github.com/shark2202/go_hive/go-hive/internal/mcpregistry"
 )
 
 func newMCPRunner(t *testing.T) (*Runner, *bytes.Buffer, *bytes.Buffer) {

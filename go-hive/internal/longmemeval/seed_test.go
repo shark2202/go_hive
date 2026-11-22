@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/longmemeval"
-	"github.com/aden-hive/hive-go/internal/memory"
+	"github.com/shark2202/go_hive/go-hive/internal/longmemeval"
+	"github.com/shark2202/go_hive/go-hive/internal/memory"
 )
 
 // Parity-exempt: proves the seed writes the events.jsonl shape the Go

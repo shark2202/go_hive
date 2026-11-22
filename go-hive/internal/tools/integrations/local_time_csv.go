@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/hiveclock"
+	"github.com/shark2202/go_hive/go-hive/internal/hiveclock"
 )
 
 // getCurrentTime ports time_tool.get_current_time.

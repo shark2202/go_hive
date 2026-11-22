@@ -3,7 +3,7 @@ package agentloop
 import (
 	"strings"
 
-	"github.com/aden-hive/hive-go/internal/pyenv"
+	"github.com/shark2202/go_hive/go-hive/internal/pyenv"
 )
 
 // envInt resolves an integer env override with the upstream helper's exact

@@ -16,10 +16,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/hivehome"
-	"github.com/aden-hive/hive-go/internal/llm"
-	queen "github.com/aden-hive/hive-go/internal/queen"
-	"github.com/aden-hive/hive-go/internal/soul"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/llm"
+	queen "github.com/shark2202/go_hive/go-hive/internal/queen"
+	"github.com/shark2202/go_hive/go-hive/internal/soul"
 )
 
 // soulProfileTestLLM records the reflection's requests and answers without any

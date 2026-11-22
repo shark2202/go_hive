@@ -13,8 +13,8 @@ package colony
 import (
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/eventbus"
-	"github.com/aden-hive/hive-go/internal/llm"
+	"github.com/shark2202/go_hive/go-hive/internal/eventbus"
+	"github.com/shark2202/go_hive/go-hive/internal/llm"
 )
 
 // Parity: core/tests/test_session_unified_colony_runtime.py::test_unified_colony_uses_configured_worker_llm

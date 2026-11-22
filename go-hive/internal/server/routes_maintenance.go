@@ -11,9 +11,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/colony"
-	"github.com/aden-hive/hive-go/internal/hivehome"
-	"github.com/aden-hive/hive-go/internal/maintenance"
+	"github.com/shark2202/go_hive/go-hive/internal/colony"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/maintenance"
 )
 
 // serverProcessStartTS stands in for aiohttp's app["started_at"]: tier 1

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/tasks"
+	"github.com/shark2202/go_hive/go-hive/internal/tasks"
 )
 
 // newReminderRoutesMux builds a standalone route table pointed at a temp hive

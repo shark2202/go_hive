@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aden-hive/hive-go/browserbridge/internal/wstest"
-	"github.com/aden-hive/hive-go/browserbridge/ws"
+	"github.com/shark2202/go_hive/browserbridge/internal/wstest"
+	"github.com/shark2202/go_hive/browserbridge/ws"
 )
 
 func startEcho(t *testing.T) string {

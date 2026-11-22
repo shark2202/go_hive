@@ -6,10 +6,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/agentloop"
-	"github.com/aden-hive/hive-go/internal/colony"
-	"github.com/aden-hive/hive-go/internal/eventbus"
-	colonyhost "github.com/aden-hive/hive-go/internal/host"
+	"github.com/shark2202/go_hive/go-hive/internal/agentloop"
+	"github.com/shark2202/go_hive/go-hive/internal/colony"
+	"github.com/shark2202/go_hive/go-hive/internal/eventbus"
+	colonyhost "github.com/shark2202/go_hive/go-hive/internal/host"
 )
 
 // The real assembly layer puts a *host.Host on Session.Colony; the adapter

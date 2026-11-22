@@ -10,8 +10,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/hivehome"
-	soulstore "github.com/aden-hive/hive-go/internal/soul"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	soulstore "github.com/shark2202/go_hive/go-hive/internal/soul"
 )
 
 const soulTestQueen = "queen_x"

@@ -21,8 +21,8 @@ package colony
 // Parity: framework/host/colony_runtime.py::StreamEventBus (colony_id stamping)
 
 import (
-	"github.com/aden-hive/hive-go/internal/agentloop"
-	"github.com/aden-hive/hive-go/internal/eventbus"
+	"github.com/shark2202/go_hive/go-hive/internal/agentloop"
+	"github.com/shark2202/go_hive/go-hive/internal/eventbus"
 )
 
 // workerDoomLoopSink returns the AgentLoop sink that publishes one

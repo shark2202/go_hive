@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aden-hive/hive-go/browserbridge/internal/wstest"
+	"github.com/shark2202/go_hive/browserbridge/internal/wstest"
 )
 
 // cdpTestClient is a scripted extension: frames are read by the test and

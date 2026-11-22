@@ -10,7 +10,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/aden-hive/hive-go/internal/queen"
+	"github.com/shark2202/go_hive/go-hive/internal/queen"
 )
 
 const queenMaxAvatarBytes = 2 * 1024 * 1024

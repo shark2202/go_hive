@@ -12,11 +12,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/credentials"
-	"github.com/aden-hive/hive-go/internal/hivehome"
-	"github.com/aden-hive/hive-go/internal/tools"
-	"github.com/aden-hive/hive-go/internal/tools/builtin"
-	"github.com/aden-hive/hive-go/internal/tools/integrations"
+	"github.com/shark2202/go_hive/go-hive/internal/credentials"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/tools"
+	"github.com/shark2202/go_hive/go-hive/internal/tools/builtin"
+	"github.com/shark2202/go_hive/go-hive/internal/tools/integrations"
 )
 
 // sessionCredentialHome prepares a hermetic hive home: HIVE_HOME points at the

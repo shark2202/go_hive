@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/memory"
-	"github.com/aden-hive/hive-go/internal/soul"
+	"github.com/shark2202/go_hive/go-hive/internal/memory"
+	"github.com/shark2202/go_hive/go-hive/internal/soul"
 )
 
 // Parity-exempt: no upstream counterpart. Upstream's soul reflection reads

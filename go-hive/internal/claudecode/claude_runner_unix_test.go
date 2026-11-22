@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/queenmail"
+	"github.com/shark2202/go_hive/go-hive/internal/queenmail"
 )
 
 // Parity-exempt: 上游用 start_new_session + os.killpg 实现进程树终止，但没有

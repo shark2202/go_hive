@@ -14,12 +14,12 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/agentloop"
-	"github.com/aden-hive/hive-go/internal/eventbus"
-	"github.com/aden-hive/hive-go/internal/hivehome"
-	colonyhost "github.com/aden-hive/hive-go/internal/host"
-	"github.com/aden-hive/hive-go/internal/llm"
-	hiveserver "github.com/aden-hive/hive-go/internal/server"
+	"github.com/shark2202/go_hive/go-hive/internal/agentloop"
+	"github.com/shark2202/go_hive/go-hive/internal/eventbus"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	colonyhost "github.com/shark2202/go_hive/go-hive/internal/host"
+	"github.com/shark2202/go_hive/go-hive/internal/llm"
+	hiveserver "github.com/shark2202/go_hive/go-hive/internal/server"
 )
 
 const lifecycleWorkerSpec = `{"name":"worker","description":"trader","system_prompt":"be a careful trader",` +

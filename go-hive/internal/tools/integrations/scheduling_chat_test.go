@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/tools"
-	"github.com/aden-hive/hive-go/internal/tools/integrations/schedchat"
+	"github.com/shark2202/go_hive/go-hive/internal/tools"
+	"github.com/shark2202/go_hive/go-hive/internal/tools/integrations/schedchat"
 )
 
 // batch7Lane8TestRegistry builds a lane-8 registry pointed at one fake

@@ -30,7 +30,7 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 </style></head><body><div class="wrap">
 <header><div class="eyebrow">Hive · Browser Bridge</div><h1>Hive <span>Browser Bridge</span> — 设计、实现与使用</h1>
 <p class="lede">让 agent 驱动<b>你正在用的那一个 Chrome</b>，而不是每个 agent 各起一个无头浏览器：Chrome 扩展 + 本地 WebSocket 桥 + 每 agent 一个 tab group。本文覆盖设计动机、进程/端口架构、协议、代码地图、使用步骤、安全边界，以及 Go 移植的诚实现状。</p>
-<div class="meta"><span>生成：<b>2026-11-20 17:30 CST</b></span><span>扩展：<b>1.7.4 · protocol 6</b></span><span>端口：<b>14829 / 14830 / 14831</b>（legacy 9229 / 9230）</span><span>Go 模块：<b>github.com/aden-hive/hive-go/browserbridge</b></span></div>
+<div class="meta"><span>生成：<b>2026-11-20 17:30 CST</b></span><span>扩展：<b>1.7.4 · protocol 6</b></span><span>端口：<b>14829 / 14830 / 14831</b>（legacy 9229 / 9230）</span><span>Go 模块：<b>github.com/shark2202/go_hive/browserbridge</b></span></div>
 <div class="toc"><a href="browser-bridge-surface-audit.html">外观审计（13 维）</a><a href="#why">为什么</a><a href="#arch">架构</a><a href="#ports">端口与协议</a><a href="#lifecycle">命令生命周期</a><a href="#codemap">代码地图</a><a href="#usage">怎么用</a><a href="#health">健康与安全</a><a href="#goparity">Go 现状</a><a href="#repro">复现</a></div></header>
 
 <section id="why"><h2><span class="num">00</span>为什么需要它</h2>
@@ -265,7 +265,7 @@ go b.Start(ctx)</pre>
 <section id="repro"><h2><span class="num">08</span>复现与证据</h2>
 <div class="tablewrap"><table><thead><tr><th style="width:24%">检查</th><th>命令 / 结果</th></tr></thead><tbody>
 <tr><td>Go 模块构建</td><td><code>cd go_hive/browserbridge &amp;&amp; CGO_ENABLED=0 GOPROXY=off go build ./...</code><div class="small">本机 2026-11-20：退出码 0。</div></td></tr>
-<tr><td>Go 模块测试</td><td><code>go test ./...</code><div class="small">本机实测：<code>ok github.com/aden-hive/hive-go/browserbridge 3.032s</code>；<code>ok .../ws 0.850s</code>。</div></td></tr>
+<tr><td>Go 模块测试</td><td><code>go test ./...</code><div class="small">本机实测：<code>ok github.com/shark2202/go_hive/browserbridge 3.032s</code>；<code>ok .../ws 0.850s</code>。</div></td></tr>
 <tr><td>扩展 manifest</td><td><code>1.7.4</code> / <code>manifest_version 3</code>；权限与 host 见 §6.3。</td></tr>
 <tr><td>桥状态</td><td><code>curl -s http://127.0.0.1:14830/status | jq .</code>；未运行时 <code>hive-browser setup --json</code> 返回 <code>connected_profiles: []</code> 和安装步骤。</td></tr>
 <tr><td>Hive 代理</td><td><code>curl -s 'http://127.0.0.1:8787/api/browser/status?session_id=&lt;id&gt;' | jq .</code></td></tr>

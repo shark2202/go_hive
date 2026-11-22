@@ -13,7 +13,7 @@ package cli
 import (
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/tools/integrations"
+	"github.com/shark2202/go_hive/go-hive/internal/tools/integrations"
 )
 
 // Parity: core/framework/tools/browser_tools.py::register_browser_tools

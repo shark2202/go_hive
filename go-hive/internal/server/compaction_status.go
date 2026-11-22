@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/atomicfs"
+	"github.com/shark2202/go_hive/go-hive/internal/atomicfs"
 )
 
 const (

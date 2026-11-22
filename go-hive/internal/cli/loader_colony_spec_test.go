@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/hivehome"
-	colonyhost "github.com/aden-hive/hive-go/internal/host"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	colonyhost "github.com/shark2202/go_hive/go-hive/internal/host"
 )
 
 func writeColonySpecFixture(t *testing.T, home hivehome.Home, colonyID, config string) string {

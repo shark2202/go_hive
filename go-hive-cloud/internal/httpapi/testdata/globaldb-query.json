@@ -1,0 +1,16 @@
+{
+  "rowCount": 2,
+  "rows": [
+    {
+      "lead_id": "l1",
+      "name": "Alice",
+      "score": 5
+    },
+    {
+      "lead_id": "l2",
+      "name": "Bob",
+      "score": 7
+    }
+  ],
+  "truncated": false
+}

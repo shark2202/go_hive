@@ -24,7 +24,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/aden-hive/hive-go/internal/agentloop"
+	"github.com/shark2202/go_hive/go-hive/internal/agentloop"
 )
 
 // workerSystemPrompt builds the worker's system prompt and appends the goal

@@ -9,8 +9,8 @@ package cli
 import (
 	"context"
 
-	"github.com/aden-hive/hive-go/internal/charts"
-	"github.com/aden-hive/hive-go/internal/tools"
+	"github.com/shark2202/go_hive/go-hive/internal/charts"
+	"github.com/shark2202/go_hive/go-hive/internal/tools"
 )
 
 // registerChartTool advertises chart_render and records the chart-tools

@@ -19,7 +19,7 @@ import (
 // modulePath is the module's import prefix. Internal packages live under it,
 // so a dependency on internal/cli is exactly modulePath + "/internal/cli" or a
 // subpackage of it.
-const modulePath = "github.com/aden-hive/hive-go"
+const modulePath = "github.com/shark2202/go_hive/go-hive"
 
 // layerRule forbids one internal package (subpackages included) from importing
 // another. Keeping the boundaries as data makes a new rule a one-line change

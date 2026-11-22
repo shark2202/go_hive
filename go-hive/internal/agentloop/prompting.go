@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/aden-hive/hive-go/internal/hiveclock"
-	"github.com/aden-hive/hive-go/internal/skills"
+	"github.com/shark2202/go_hive/go-hive/internal/hiveclock"
+	"github.com/shark2202/go_hive/go-hive/internal/skills"
 )
 
 // Parity: framework/agent_loop/prompting.py PromptSpec (frozen dataclass).

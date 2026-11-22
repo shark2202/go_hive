@@ -3,7 +3,7 @@ package agentloop
 import (
 	"strings"
 
-	"github.com/aden-hive/hive-go/internal/schemas"
+	"github.com/shark2202/go_hive/go-hive/internal/schemas"
 )
 
 // SuccessCriteriaText compiles a goal/worker criteria list into the single

@@ -10,7 +10,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/tools/integrationkit"
+	"github.com/shark2202/go_hive/go-hive/internal/tools/integrationkit"
 )
 
 func isTimeout(_ context.Context, err error) bool { return integrationkit.IsTimeout(err) }

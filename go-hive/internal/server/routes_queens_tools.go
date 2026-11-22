@@ -12,9 +12,9 @@ import (
 	"sort"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/hivehome"
-	"github.com/aden-hive/hive-go/internal/queen"
-	"github.com/aden-hive/hive-go/internal/tools"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/queen"
+	"github.com/shark2202/go_hive/go-hive/internal/tools"
 	"gopkg.in/yaml.v3"
 )
 

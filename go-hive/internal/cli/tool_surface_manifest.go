@@ -21,8 +21,8 @@ import (
 	"sort"
 	"strings"
 
-	hiveserver "github.com/aden-hive/hive-go/internal/server"
-	"github.com/aden-hive/hive-go/internal/tools"
+	hiveserver "github.com/shark2202/go_hive/go-hive/internal/server"
+	"github.com/shark2202/go_hive/go-hive/internal/tools"
 )
 
 // SearchableManifestNames returns the per-queen allowlist that bounds the

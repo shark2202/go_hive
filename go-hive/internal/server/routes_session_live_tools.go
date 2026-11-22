@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"sort"
 
-	"github.com/aden-hive/hive-go/internal/colony"
-	"github.com/aden-hive/hive-go/internal/tools"
+	"github.com/shark2202/go_hive/go-hive/internal/colony"
+	"github.com/shark2202/go_hive/go-hive/internal/tools"
 )
 
 // Optional phase-state surfaces. Session.PhaseState is opaque, so the handler

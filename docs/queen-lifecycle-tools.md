@@ -1,3 +1,5 @@
+> 触发器专题页（timer/webhook scheme 与实现）：`docs/triggers-webhook.html`
+> Webhook 使用手册（创建/测试/运维/排障）：`docs/webhook-guide.html`
 # Queen lifecycle 工具对齐说明（10 个 agent 工具）
 
 上游 `core/framework/tools/queen_lifecycle_tools.py::register_queen_lifecycle_tools` 注册 12 个

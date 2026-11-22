@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/eventbus"
+	"github.com/shark2202/go_hive/go-hive/internal/eventbus"
 )
 
 var DefaultMaxConcurrentWorkers = colonyEnvInt("HIVE_MAX_CONCURRENT_WORKERS", 4)

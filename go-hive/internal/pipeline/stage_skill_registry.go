@@ -3,7 +3,7 @@ package pipeline
 import (
 	"fmt"
 
-	"github.com/aden-hive/hive-go/internal/skills"
+	"github.com/shark2202/go_hive/go-hive/internal/skills"
 )
 
 // SkillRegistryStage discovers and loads skills at startup — upstream's only

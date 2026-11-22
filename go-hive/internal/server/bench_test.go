@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/eventbus"
-	"github.com/aden-hive/hive-go/internal/session"
+	"github.com/shark2202/go_hive/go-hive/internal/eventbus"
+	"github.com/shark2202/go_hive/go-hive/internal/session"
 )
 
 func benchmarkSessionTree(b *testing.B, count int) (string, func()) {

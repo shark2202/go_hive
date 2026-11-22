@@ -12,10 +12,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/aden-hive/hive-go/internal/agents"
-	"github.com/aden-hive/hive-go/internal/credentials"
-	"github.com/aden-hive/hive-go/internal/hiveconf"
-	"github.com/aden-hive/hive-go/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/agents"
+	"github.com/shark2202/go_hive/go-hive/internal/credentials"
+	"github.com/shark2202/go_hive/go-hive/internal/hiveconf"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
 )
 
 // agentCredentialRow is one entry of the check-agent "required" list.

@@ -14,8 +14,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/aden-hive/hive-go/internal/atomicfs"
-	"github.com/aden-hive/hive-go/internal/triggers"
+	"github.com/shark2202/go_hive/go-hive/internal/atomicfs"
+	"github.com/shark2202/go_hive/go-hive/internal/triggers"
 )
 
 const (

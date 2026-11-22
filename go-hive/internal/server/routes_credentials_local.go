@@ -13,8 +13,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/aden-hive/hive-go/internal/credentials"
-	"github.com/aden-hive/hive-go/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/credentials"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
 )
 
 // LocalCredentialRegistry is the slice of credentials.LocalCredentialRegistry

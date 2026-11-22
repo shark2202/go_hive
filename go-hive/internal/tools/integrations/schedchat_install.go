@@ -5,8 +5,8 @@ package integrations
 // historical assembly name used by the CLI and by the lane test suite.
 
 import (
-	"github.com/aden-hive/hive-go/internal/tools"
-	"github.com/aden-hive/hive-go/internal/tools/integrations/schedchat"
+	"github.com/shark2202/go_hive/go-hive/internal/tools"
+	"github.com/shark2202/go_hive/go-hive/internal/tools/integrations/schedchat"
 )
 
 // InstallBatch7Lane8 publishes the batch-7 lane-8 tools (brevo, calcom,

@@ -14,7 +14,7 @@ package server
 import (
 	"sync"
 
-	"github.com/aden-hive/hive-go/internal/skills"
+	"github.com/shark2202/go_hive/go-hive/internal/skills"
 )
 
 // liveSkillsManager adapts *SessionManager to the skills package's lookup

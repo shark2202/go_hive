@@ -11,9 +11,9 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/aden-hive/hive-go/internal/hivehome"
-	"github.com/aden-hive/hive-go/internal/queen"
-	soulstore "github.com/aden-hive/hive-go/internal/soul"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/queen"
+	soulstore "github.com/shark2202/go_hive/go-hive/internal/soul"
 )
 
 type SoulProbeRouteDeps struct {

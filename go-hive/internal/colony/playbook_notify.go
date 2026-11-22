@@ -15,7 +15,7 @@ package colony
 import (
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/eventbus"
+	"github.com/shark2202/go_hive/go-hive/internal/eventbus"
 )
 
 // playbookRunNotifier is the runtime seam a background run uses to announce

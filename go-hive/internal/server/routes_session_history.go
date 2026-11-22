@@ -17,8 +17,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/aden-hive/hive-go/internal/platform"
-	"github.com/aden-hive/hive-go/internal/session"
+	"github.com/shark2202/go_hive/go-hive/internal/platform"
+	"github.com/shark2202/go_hive/go-hive/internal/session"
 )
 
 func decodeJSONValue(r *http.Request) (any, error) {

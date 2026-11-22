@@ -14,7 +14,7 @@
 
 meta:
   title: "go_hive 架构模型"
-  module: "github.com/aden-hive/hive-go"
+  module: "github.com/shark2202/go_hive/go-hive"
   module_dir: "go-hive"
   graph_schema_version: 1
 

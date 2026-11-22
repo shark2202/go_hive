@@ -11,8 +11,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/aden-hive/hive-go/internal/queen"
-	"github.com/aden-hive/hive-go/internal/session"
+	"github.com/shark2202/go_hive/go-hive/internal/queen"
+	"github.com/shark2202/go_hive/go-hive/internal/session"
 )
 
 var validInitialPhases = []string{"colony", "independent"}

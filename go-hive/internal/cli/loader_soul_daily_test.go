@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
 )
 
 func soulDailyTestHome(t *testing.T, configuration map[string]any) hivehome.Home {

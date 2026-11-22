@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/tools"
+	"github.com/shark2202/go_hive/go-hive/internal/tools"
 )
 
 // Parity: core/tests/test_tool_timeout_probe_policy.py::test_loopconfig_prefix_timeout_resolution

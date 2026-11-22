@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/schemas"
+	"github.com/shark2202/go_hive/go-hive/internal/schemas"
 )
 
 func createTestRun(runID, goalID string, status schemas.RunStatus, nodes []string) *schemas.Run {

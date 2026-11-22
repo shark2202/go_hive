@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/eventbus"
+	"github.com/shark2202/go_hive/go-hive/internal/eventbus"
 )
 
 // The session-primary SSE route (GET /api/sessions/{session_id}/events) is

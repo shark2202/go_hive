@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/colony"
-	"github.com/aden-hive/hive-go/internal/schemas"
+	"github.com/shark2202/go_hive/go-hive/internal/colony"
+	"github.com/shark2202/go_hive/go-hive/internal/schemas"
 )
 
 func writeWorkerSpecFile(t *testing.T, root, rel, content string) {

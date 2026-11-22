@@ -1,0 +1,41 @@
+{
+  "tables": [
+    {
+      "columns": [
+        {
+          "dflt_value": null,
+          "name": "lead_id",
+          "notnull": false,
+          "pk": 1,
+          "type": "TEXT"
+        },
+        {
+          "dflt_value": null,
+          "name": "name",
+          "notnull": false,
+          "pk": 0,
+          "type": "TEXT"
+        },
+        {
+          "dflt_value": null,
+          "name": "score",
+          "notnull": false,
+          "pk": 0,
+          "type": "INTEGER"
+        },
+        {
+          "dflt_value": null,
+          "name": "active",
+          "notnull": false,
+          "pk": 0,
+          "type": "BOOLEAN"
+        }
+      ],
+      "name": "leads",
+      "primary_key": [
+        "lead_id"
+      ],
+      "row_count": 5
+    }
+  ]
+}

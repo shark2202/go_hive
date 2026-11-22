@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/hivehome"
-	"github.com/aden-hive/hive-go/internal/maintenance"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/maintenance"
 )
 
 const deepCleanedWorkerID = "session_20250101_120000_deadbeef"

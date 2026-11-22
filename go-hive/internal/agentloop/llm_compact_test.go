@@ -7,7 +7,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/llm"
+	"github.com/shark2202/go_hive/go-hive/internal/llm"
 )
 
 // Parity-exempt: Go-only unit tests for llm_compact.go, which mirrors

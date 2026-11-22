@@ -11,7 +11,7 @@ Checked on 2026-11-19 against `go.mod` / `go.sum` and
 ## 1. Go module dependencies (`go_hive/go-hive`)
 
 Source of truth: `go list -m all` run in `go_hive/go-hive` with Go 1.26.5.
-That command returns 29 modules: the main module `github.com/aden-hive/hive-go`
+That command returns 29 modules: the main module `github.com/shark2202/go_hive/go-hive`
 plus the 28 external modules below. License identifiers were read from each
 module's own `LICENSE` file in the Go module cache after `go mod download`,
 not inferred from the module path.

@@ -1,6 +1,6 @@
 package server
 
-import "github.com/aden-hive/hive-go/internal/colony"
+import "github.com/shark2202/go_hive/go-hive/internal/colony"
 
 type WorkerResultView struct {
 	Status          string

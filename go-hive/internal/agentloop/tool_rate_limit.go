@@ -14,7 +14,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/aden-hive/hive-go/internal/ratelimit"
+	"github.com/shark2202/go_hive/go-hive/internal/ratelimit"
 )
 
 // defaultToolCallGate is what NewAgentLoop installs when LoopConfig leaves the

@@ -1,6 +1,6 @@
 package cli
 
-import "github.com/aden-hive/hive-go/internal/hivehome"
+import "github.com/shark2202/go_hive/go-hive/internal/hivehome"
 
 // sessionCredentialsProvider snapshots the connected accounts for the
 // session's static "# Credentials" block, exactly like upstream's

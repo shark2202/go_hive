@@ -12,7 +12,7 @@ package mcpregistry
 import (
 	"strings"
 
-	"github.com/aden-hive/hive-go/internal/arghelp"
+	"github.com/shark2202/go_hive/go-hive/internal/arghelp"
 )
 
 // MCPHelpText renders the `hive mcp` group page: usage + the choice set +

@@ -18,8 +18,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/aden-hive/hive-go/internal/mcpregistry/nativecli"
-	"github.com/aden-hive/hive-go/internal/queenmail"
+	"github.com/shark2202/go_hive/go-hive/internal/mcpregistry/nativecli"
+	"github.com/shark2202/go_hive/go-hive/internal/queenmail"
 )
 
 // TranscriptEntry is one thing in one of her conversations: what she was

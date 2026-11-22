@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/eventbus"
+	"github.com/shark2202/go_hive/go-hive/internal/eventbus"
 )
 
 // Evidence for HIVE_PLAYBOOK_FAST_GRACE and the [PLAYBOOK_COMPLETE] notice.

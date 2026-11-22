@@ -1,0 +1,3 @@
+{
+  "error": "Sign in to use the shared global DB — no cloud session (HIVE_CLOUD_JWT / HIVE_CLOUD_BASE unset)."
+}

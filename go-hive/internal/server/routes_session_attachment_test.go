@@ -13,8 +13,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/attachments"
-	"github.com/aden-hive/hive-go/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/attachments"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
 )
 
 func uploadAttachment(t *testing.T, mux *http.ServeMux, sessionID, fieldName, filename, contentType string, content []byte) (*httptest.ResponseRecorder, map[string]any) {

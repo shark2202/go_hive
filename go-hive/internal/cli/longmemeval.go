@@ -22,13 +22,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/atomicfs"
-	"github.com/aden-hive/hive-go/internal/eventbus"
-	"github.com/aden-hive/hive-go/internal/hivehome"
-	"github.com/aden-hive/hive-go/internal/longmemeval"
-	hiveserver "github.com/aden-hive/hive-go/internal/server"
-	hivesession "github.com/aden-hive/hive-go/internal/session"
-	"github.com/aden-hive/hive-go/internal/tools/builtin"
+	"github.com/shark2202/go_hive/go-hive/internal/atomicfs"
+	"github.com/shark2202/go_hive/go-hive/internal/eventbus"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/longmemeval"
+	hiveserver "github.com/shark2202/go_hive/go-hive/internal/server"
+	hivesession "github.com/shark2202/go_hive/go-hive/internal/session"
+	"github.com/shark2202/go_hive/go-hive/internal/tools/builtin"
 )
 
 // EnvFakeNow freezes the dated surfaces the queen sees (message stamps and

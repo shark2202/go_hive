@@ -3,7 +3,7 @@ package colony
 import (
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/agentloop"
+	"github.com/shark2202/go_hive/go-hive/internal/agentloop"
 )
 
 func containsName(names []string, want string) bool {

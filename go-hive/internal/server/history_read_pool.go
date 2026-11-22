@@ -16,7 +16,7 @@ package server
 import (
 	"sync"
 
-	"github.com/aden-hive/hive-go/internal/pyenv"
+	"github.com/shark2202/go_hive/go-hive/internal/pyenv"
 )
 
 const historyReadMinWorkers = 4

@@ -26,7 +26,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/aden-hive/hive-go/internal/atomicfs"
+	"github.com/shark2202/go_hive/go-hive/internal/atomicfs"
 )
 
 // ── V4A structured patch ─────────────────────────────────────────────────

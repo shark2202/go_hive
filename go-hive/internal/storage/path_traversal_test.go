@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/schemas"
+	"github.com/shark2202/go_hive/go-hive/internal/schemas"
 )
 
 func newTraversalStorage(t *testing.T) *ConcurrentStorage {

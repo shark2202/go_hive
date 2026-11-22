@@ -11,7 +11,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/aden-hive/hive-go/internal/credentials"
+	"github.com/shark2202/go_hive/go-hive/internal/credentials"
 )
 
 const colonyPivotDismissMessage = "[User dismissed the 'Create Colony' popup. The off-goal " +

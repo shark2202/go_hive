@@ -14,8 +14,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/aden-hive/hive-go/internal/queen"
-	"github.com/aden-hive/hive-go/internal/storage"
+	"github.com/shark2202/go_hive/go-hive/internal/queen"
+	"github.com/shark2202/go_hive/go-hive/internal/storage"
 )
 
 // queenLiveDM reports whether a live session is a DM of this queen. Python

@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/atomicfs"
-	"github.com/aden-hive/hive-go/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/atomicfs"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
 )
 
 const DefaultRegistryURL = "https://raw.githubusercontent.com/hive-skill-registry/hive-skill-registry/main/skill_index.json"

@@ -14,8 +14,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/agentloop"
-	"github.com/aden-hive/hive-go/internal/tasks"
+	"github.com/shark2202/go_hive/go-hive/internal/agentloop"
+	"github.com/shark2202/go_hive/go-hive/internal/tasks"
 )
 
 // Parity: core/framework/server/queen_orchestrator.py (chat_app_provider reads

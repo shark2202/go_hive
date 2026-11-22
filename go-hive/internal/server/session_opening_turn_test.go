@@ -13,8 +13,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/eventbus"
-	"github.com/aden-hive/hive-go/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/eventbus"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
 )
 
 // Parity: core/framework/server/tests/test_channels.py::test_the_queen_is_heard_turn_by_turn_in_order

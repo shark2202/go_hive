@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/llm"
+	"github.com/shark2202/go_hive/go-hive/internal/llm"
 )
 
 // TestCaptionerResolvesTheSlotPerCaption pins the vision_fallback write

@@ -15,7 +15,7 @@ package colony
 import (
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/agentloop"
+	"github.com/shark2202/go_hive/go-hive/internal/agentloop"
 )
 
 // overseerStream is the stream id the persistent overseer publishes under

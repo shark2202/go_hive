@@ -10,10 +10,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/agents"
-	"github.com/aden-hive/hive-go/internal/eventbus"
-	"github.com/aden-hive/hive-go/internal/hivehome"
-	triggers_store "github.com/aden-hive/hive-go/internal/triggers"
+	"github.com/shark2202/go_hive/go-hive/internal/agents"
+	"github.com/shark2202/go_hive/go-hive/internal/eventbus"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	triggers_store "github.com/shark2202/go_hive/go-hive/internal/triggers"
 )
 
 func makeRouteColony(t *testing.T, home hivehome.Home, name string, deleted bool) {

@@ -1,4 +1,4 @@
-module github.com/aden-hive/hive-go
+module github.com/shark2202/go_hive/go-hive
 
 go 1.26.11
 

@@ -13,7 +13,7 @@ package server
 // Parity: framework/host/colony_tools_config.py::update_colony_tools_config
 
 import (
-	"github.com/aden-hive/hive-go/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
 )
 
 // EnsureMinimalColony materialises metadata.json + worker.json + the colony

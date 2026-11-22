@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/schemas"
+	"github.com/shark2202/go_hive/go-hive/internal/schemas"
 )
 
 func testCheckpoint(id string) *schemas.Checkpoint {

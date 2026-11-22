@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/hivehome"
-	"github.com/aden-hive/hive-go/internal/tasks"
-	"github.com/aden-hive/hive-go/internal/tracker"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/tasks"
+	"github.com/shark2202/go_hive/go-hive/internal/tracker"
 )
 
 func colonyDataTestDeps(t *testing.T) (ColonyWorkerDeps, hivehome.Home) {

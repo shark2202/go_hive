@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/agentloop"
-	"github.com/aden-hive/hive-go/internal/tracker"
+	"github.com/shark2202/go_hive/go-hive/internal/agentloop"
+	"github.com/shark2202/go_hive/go-hive/internal/tracker"
 )
 
 func (s WorkerStatus) Done() bool {

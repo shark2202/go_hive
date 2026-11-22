@@ -6,7 +6,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/aden-hive/hive-go/internal/globaldb"
+	"github.com/shark2202/go_hive/go-hive/internal/globaldb"
 )
 
 type TableColumn struct {

@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
 )
 
 // defaultCacheDir mirrors mcp2cli: MCP2CLI_CACHE_DIR, else <hive home>/cache/mcp2cli.

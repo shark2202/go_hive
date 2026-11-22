@@ -10,10 +10,10 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/charts"
-	"github.com/aden-hive/hive-go/internal/hivehome"
-	"github.com/aden-hive/hive-go/internal/tools"
-	"github.com/aden-hive/hive-go/internal/tools/builtin"
+	"github.com/shark2202/go_hive/go-hive/internal/charts"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/tools"
+	"github.com/shark2202/go_hive/go-hive/internal/tools/builtin"
 )
 
 // Parity-exempt: assembly guard (see file comment).

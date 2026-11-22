@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/llm"
+	"github.com/shark2202/go_hive/go-hive/internal/llm"
 )
 
 const SelectMemoriesSystemPrompt = `You are selecting memories that will be useful to the Queen agent as it processes a user's query.

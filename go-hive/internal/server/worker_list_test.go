@@ -3,7 +3,7 @@ package server
 import (
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/colony"
+	"github.com/shark2202/go_hive/go-hive/internal/colony"
 )
 
 // Parity: tests/test_adaptive_tool_budget.py::test_workers_route_serializes_budget_telemetry

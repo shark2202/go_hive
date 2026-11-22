@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/hivehome"
-	"github.com/aden-hive/hive-go/internal/llm"
-	hiveserver "github.com/aden-hive/hive-go/internal/server"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/llm"
+	hiveserver "github.com/shark2202/go_hive/go-hive/internal/server"
 )
 
 // slotTestHome builds a temp hive home whose configuration.json holds the given

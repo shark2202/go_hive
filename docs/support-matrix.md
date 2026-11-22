@@ -258,7 +258,7 @@ CGO_ENABLED=0 GOPROXY=off GOSUMDB=off GOFLAGS=-mod=mod go test -tags e2e -count=
 | `make ci` | 退出码 0；gofmt OK；vet 无输出；37 个包 `ok`，6 个包无测试文件 |
 | 测试声明数（parity 口径） | 4,566（含 `e2e` 构建标签下的 2 条） |
 | 默认构建执行的测试 | `make test` 退出码 0（38 个包 ok、0 fail；逐条 pass/skip 以 `go test -v` 为准） |
-| `e2e`（`-tags e2e`） | `ok github.com/aden-hive/hive-go/e2e 3.247s` |
+| `e2e`（`-tags e2e`） | `ok github.com/shark2202/go_hive/go-hive/e2e 3.247s` |
 | `make cross` | 六目标全部编译通过，退出码 0 |
 | cgo | `import "C"` 0 处 |
 | `check_parity.sh` | `4566/4566` 个测试有 `Parity:` 或 `Parity-exempt:` 注解，0 missing |

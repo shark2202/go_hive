@@ -8,7 +8,7 @@
 | --- | --- |
 | 工作树 | `/Users/mac/hive/.wt/w5-dep`（分支 `w5/dep`） |
 | 提交 | `49c56b0bc7365d9f2c3dbb63c6af9b047a826192` |
-| 模块 | `github.com/aden-hive/hive-go`，`go 1.26.5` |
+| 模块 | `github.com/shark2202/go_hive/go-hive`，`go 1.26.5` |
 | 工具链 | `go version go1.26.5 darwin/arm64` |
 | 模块缓存 | `~/.vfox/sdks/golang/packages/pkg/mod`（预置；28 个外部模块均已解包） |
 | 外网 | 不可达。`curl https://proxy.golang.org/...` 与 `curl https://sum.golang.org/...` 均 6s 超时（curl exit 28，http=000），且无 `*_proxy` 环境变量 |
@@ -71,7 +71,7 @@ GOPROXY=off GOSUMDB=off GOFLAGS=-mod=mod go list -m all
 | `modernc.org/strutil` | `v1.2.1` | 仅图内 | — | 1.21 |
 | `modernc.org/token` | `v1.1.0` | 仅图内 | — | — |
 
-合计：直接 4、间接 8、仅图内 16，共 28 个外部模块（另有本模块 `github.com/aden-hive/hive-go` 自身）。
+合计：直接 4、间接 8、仅图内 16，共 28 个外部模块（另有本模块 `github.com/shark2202/go_hive/go-hive` 自身）。
 
 `gopkg.in/yaml.v3`、`github.com/google/uuid`、`gopkg.in/check.v1`、`modernc.org/token` 的 `go.mod` 未声明 `go` 指令（上表记为 `—`），属老模块写法，不影响构建。
 
@@ -103,49 +103,49 @@ $ wc -c /tmp/w5dep_build_exact.log
 B 的输出摘要（37 个 `ok` + 6 个 `no test files`，0 个 `FAIL`）。逐包耗时取自 D（`CGO_ENABLED=0`）那次运行；B 与 D 在去掉耗时列后逐行一致（已 `diff` 验证），故合并展示：
 
 ```text
-?   github.com/aden-hive/hive-go/cmd/hive        [no test files]
-?   github.com/aden-hive/hive-go/cmd/hive-cred   [no test files]
-ok  github.com/aden-hive/hive-go/internal/agentloop       2.324s
-ok  github.com/aden-hive/hive-go/internal/agents          0.478s
-ok  github.com/aden-hive/hive-go/internal/atomicfs        2.262s
-ok  github.com/aden-hive/hive-go/internal/attachments     1.655s
-ok  github.com/aden-hive/hive-go/internal/charts          1.243s
-ok  github.com/aden-hive/hive-go/internal/cli             2.711s
-ok  github.com/aden-hive/hive-go/internal/colony          3.765s
-ok  github.com/aden-hive/hive-go/internal/credentials     3.158s
-ok  github.com/aden-hive/hive-go/internal/eventbus        3.987s
-ok  github.com/aden-hive/hive-go/internal/globaldb        3.710s
-ok  github.com/aden-hive/hive-go/internal/hivehome        3.611s
-ok  github.com/aden-hive/hive-go/internal/host            3.945s
-ok  github.com/aden-hive/hive-go/internal/llm             3.987s
-ok  github.com/aden-hive/hive-go/internal/llmjudge        3.734s
-ok  github.com/aden-hive/hive-go/internal/maintenance     4.645s
-ok  github.com/aden-hive/hive-go/internal/mcpregistry     6.360s
-ok  github.com/aden-hive/hive-go/internal/memory          4.552s
-ok  github.com/aden-hive/hive-go/internal/orchestrator    3.762s
-?   github.com/aden-hive/hive-go/internal/platform        [no test files]
-ok  github.com/aden-hive/hive-go/internal/playbook        4.859s
-ok  github.com/aden-hive/hive-go/internal/qmail           4.559s
-ok  github.com/aden-hive/hive-go/internal/queen           4.247s
-ok  github.com/aden-hive/hive-go/internal/ratelimit       4.254s
-ok  github.com/aden-hive/hive-go/internal/runtimehealth   4.671s
-ok  github.com/aden-hive/hive-go/internal/schemas         4.672s
-ok  github.com/aden-hive/hive-go/internal/senders         4.445s
-ok  github.com/aden-hive/hive-go/internal/sentinel        3.987s
-ok  github.com/aden-hive/hive-go/internal/server          5.487s
-?   github.com/aden-hive/hive-go/internal/server/uiembed  [no test files]
-ok  github.com/aden-hive/hive-go/internal/session         3.950s
-ok  github.com/aden-hive/hive-go/internal/sessionreport   3.900s
-ok  github.com/aden-hive/hive-go/internal/skills          4.633s
-?   github.com/aden-hive/hive-go/internal/soul            [no test files]
-ok  github.com/aden-hive/hive-go/internal/storage         4.677s
-ok  github.com/aden-hive/hive-go/internal/tasks           6.185s
-ok  github.com/aden-hive/hive-go/internal/tools           6.401s
-ok  github.com/aden-hive/hive-go/internal/tools/builtin   7.498s
-ok  github.com/aden-hive/hive-go/internal/tools/integrations 4.461s
-ok  github.com/aden-hive/hive-go/internal/tracker         4.794s
-ok  github.com/aden-hive/hive-go/internal/triggers        4.155s
-?   github.com/aden-hive/hive-go/internal/version         [no test files]
+?   github.com/shark2202/go_hive/go-hive/cmd/hive        [no test files]
+?   github.com/shark2202/go_hive/go-hive/cmd/hive-cred   [no test files]
+ok  github.com/shark2202/go_hive/go-hive/internal/agentloop       2.324s
+ok  github.com/shark2202/go_hive/go-hive/internal/agents          0.478s
+ok  github.com/shark2202/go_hive/go-hive/internal/atomicfs        2.262s
+ok  github.com/shark2202/go_hive/go-hive/internal/attachments     1.655s
+ok  github.com/shark2202/go_hive/go-hive/internal/charts          1.243s
+ok  github.com/shark2202/go_hive/go-hive/internal/cli             2.711s
+ok  github.com/shark2202/go_hive/go-hive/internal/colony          3.765s
+ok  github.com/shark2202/go_hive/go-hive/internal/credentials     3.158s
+ok  github.com/shark2202/go_hive/go-hive/internal/eventbus        3.987s
+ok  github.com/shark2202/go_hive/go-hive/internal/globaldb        3.710s
+ok  github.com/shark2202/go_hive/go-hive/internal/hivehome        3.611s
+ok  github.com/shark2202/go_hive/go-hive/internal/host            3.945s
+ok  github.com/shark2202/go_hive/go-hive/internal/llm             3.987s
+ok  github.com/shark2202/go_hive/go-hive/internal/llmjudge        3.734s
+ok  github.com/shark2202/go_hive/go-hive/internal/maintenance     4.645s
+ok  github.com/shark2202/go_hive/go-hive/internal/mcpregistry     6.360s
+ok  github.com/shark2202/go_hive/go-hive/internal/memory          4.552s
+ok  github.com/shark2202/go_hive/go-hive/internal/orchestrator    3.762s
+?   github.com/shark2202/go_hive/go-hive/internal/platform        [no test files]
+ok  github.com/shark2202/go_hive/go-hive/internal/playbook        4.859s
+ok  github.com/shark2202/go_hive/go-hive/internal/qmail           4.559s
+ok  github.com/shark2202/go_hive/go-hive/internal/queen           4.247s
+ok  github.com/shark2202/go_hive/go-hive/internal/ratelimit       4.254s
+ok  github.com/shark2202/go_hive/go-hive/internal/runtimehealth   4.671s
+ok  github.com/shark2202/go_hive/go-hive/internal/schemas         4.672s
+ok  github.com/shark2202/go_hive/go-hive/internal/senders         4.445s
+ok  github.com/shark2202/go_hive/go-hive/internal/sentinel        3.987s
+ok  github.com/shark2202/go_hive/go-hive/internal/server          5.487s
+?   github.com/shark2202/go_hive/go-hive/internal/server/uiembed  [no test files]
+ok  github.com/shark2202/go_hive/go-hive/internal/session         3.950s
+ok  github.com/shark2202/go_hive/go-hive/internal/sessionreport   3.900s
+ok  github.com/shark2202/go_hive/go-hive/internal/skills          4.633s
+?   github.com/shark2202/go_hive/go-hive/internal/soul            [no test files]
+ok  github.com/shark2202/go_hive/go-hive/internal/storage         4.677s
+ok  github.com/shark2202/go_hive/go-hive/internal/tasks           6.185s
+ok  github.com/shark2202/go_hive/go-hive/internal/tools           6.401s
+ok  github.com/shark2202/go_hive/go-hive/internal/tools/builtin   7.498s
+ok  github.com/shark2202/go_hive/go-hive/internal/tools/integrations 4.461s
+ok  github.com/shark2202/go_hive/go-hive/internal/tracker         4.794s
+ok  github.com/shark2202/go_hive/go-hive/internal/triggers        4.155s
+?   github.com/shark2202/go_hive/go-hive/internal/version         [no test files]
 ```
 
 边界说明：

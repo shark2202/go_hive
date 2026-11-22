@@ -5,8 +5,8 @@ package integrations
 // historical assembly name used by the CLI and by the lane test suite.
 
 import (
-	"github.com/aden-hive/hive-go/internal/tools"
-	"github.com/aden-hive/hive-go/internal/tools/integrations/cloudflare"
+	"github.com/shark2202/go_hive/go-hive/internal/tools"
+	"github.com/shark2202/go_hive/go-hive/internal/tools/integrations/cloudflare"
 )
 
 // InstallBatch7Lane2 publishes the batch-7 lane-2 Cloudflare tool into a

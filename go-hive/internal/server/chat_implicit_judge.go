@@ -23,7 +23,7 @@ package server
 // Parity: framework/agent_loop/internals/judge_pipeline.py::judge_turn (Level 0 skip_judge)
 // Parity: framework/server/queen_orchestrator.py::_queen_loop (skip_judge=True spec)
 
-import "github.com/aden-hive/hive-go/internal/agentloop"
+import "github.com/shark2202/go_hive/go-hive/internal/agentloop"
 
 // noteImplicitJudgeVerdictDue records that a loop turn finished and its
 // implicit verdict is owed at the next turn start. executionID is the finished

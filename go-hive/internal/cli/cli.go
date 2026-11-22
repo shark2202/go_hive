@@ -21,13 +21,13 @@ import (
 
 	"github.com/mattn/go-isatty"
 
-	"github.com/aden-hive/hive-go/internal/hivehome"
-	"github.com/aden-hive/hive-go/internal/llm"
-	"github.com/aden-hive/hive-go/internal/llmjudge"
-	"github.com/aden-hive/hive-go/internal/mcpregistry"
-	"github.com/aden-hive/hive-go/internal/session"
-	"github.com/aden-hive/hive-go/internal/skills"
-	"github.com/aden-hive/hive-go/internal/version"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/llm"
+	"github.com/shark2202/go_hive/go-hive/internal/llmjudge"
+	"github.com/shark2202/go_hive/go-hive/internal/mcpregistry"
+	"github.com/shark2202/go_hive/go-hive/internal/session"
+	"github.com/shark2202/go_hive/go-hive/internal/skills"
+	"github.com/shark2202/go_hive/go-hive/internal/version"
 )
 
 type registryClient interface {

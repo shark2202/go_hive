@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aden-hive/hive-go/internal/llm"
-	"github.com/aden-hive/hive-go/internal/runtimelogs"
+	"github.com/shark2202/go_hive/go-hive/internal/llm"
+	"github.com/shark2202/go_hive/go-hive/internal/runtimelogs"
 )
 
 // newRuntimeLogFixture wires the L3/L2 sink the way a host does: a store

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aden-hive/hive-go/internal/eventbus"
+	"github.com/shark2202/go_hive/go-hive/internal/eventbus"
 )
 
 // fakeRunWorkerSpawner is the fake colony wire: it records the batch it was

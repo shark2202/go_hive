@@ -5,7 +5,7 @@ package colony
 import (
 	"sort"
 
-	"github.com/aden-hive/hive-go/internal/tools"
+	"github.com/shark2202/go_hive/go-hive/internal/tools"
 )
 
 // WorkerToolTiering is one worker's eager/searchable split for the debug
