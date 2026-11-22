@@ -215,8 +215,8 @@ WIRING: tuple[WiringPoint, ...] = (
         ),
     ),
     WiringPoint(
-        path="internal/server/chat_runtime.go",
-        description="Judge 面：chat 会话的 criteria judge 接线与 colony criteria 继承",
+        path="internal/server/chat_runtime_colony.go",
+        description="Judge 面：chat 会话的 criteria judge 接线与 colony criteria 继承（2026-11-22 从 chat_runtime.go 拆出守文件规模预算）",
         requirements=(
             Requirement("criteria judge 接线", r"r\.loop\.ConfigureJudge\(r\.agentCtx\.AgentSpec, r\.deps\.LLM, r\.bus\)"),
             Requirement("colony criteria 继承入口", r"func \(r \*ChatRuntime\) inheritColonyCriteria\("),

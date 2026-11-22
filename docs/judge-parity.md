@@ -44,7 +44,7 @@ Go 的移植保留了事件、去掉了无意义的每轮评估：`chat_implicit
 ### 3.2 J2（已对齐）：判定缝与 criteria judge
 
 * Python 侧：`judge_pipeline.py:81-96` 是完整的 `JudgeProtocol` 缝，`agent_loop.py:6223` 传 `self._judge`。但生产构造点全部传 `judge=None`：`orchestrator/orchestrator.py:766`、`orchestrator/node_worker.py:594`、`host/colony_runtime.py:1477`（worker）与 `:2322`（overseer）、`server/queen_orchestrator.py:1611` 均未注入；`agent_loop.py:715` 的 `SubagentJudge` 别名也只被测试使用（§3.5）。即：**缝是生产可达的，注入方不是**。
-* Go 侧：同一缝（`Judge` 接口）+ 生产默认实现（`LLMJudgeAdapter` → `internal/llmjudge`），并把 criteria 的来源补齐：worker/overseer 在自己的 spec 无 criteria 时回落到 colony goal 的 criteria（`colony/runtime.go:1195-1200`、`:1290-1296`，`GoalCriteriaText`），chat 会话绑定 colony 时继承同一批 criteria（`chat_runtime.go:1316-1328`，已标 `Parity-exempt: Go-only inheritance seam`）。
+* Go 侧：同一缝（`Judge` 接口）+ 生产默认实现（`LLMJudgeAdapter` → `internal/llmjudge`），并把 criteria 的来源补齐：worker/overseer 在自己的 spec 无 criteria 时回落到 colony goal 的 criteria（`colony/runtime.go:1195-1200`、`:1290-1296`，`GoalCriteriaText`），chat 会话绑定 colony 时继承同一批 criteria（`chat_runtime_colony.go:48-70`，已标 `Parity-exempt: Go-only inheritance seam`；该段 2026-11-22 从 chat_runtime.go 拆出守文件规模预算）。
 * prompt 逐字一致：`internal/llmjudge/judge.go:94-108` ↔ `core/framework/testing/llm_judge.py` 的 `LLMJudge.evaluate` 模板（205 字符）。本车道把它冻成 golden：
   `go_hive/go-hive/internal/llmjudge/testdata/prompt-parity/judge.prompt.txt`，由 `internal/llmjudge/prompt_parity_golden_test.go` 与 `go_hive/scripts/judge_prompt_golden.py` 两侧核对。
 * 已知语义差异（judge-j2 车道：已实测并修复）：judge 调用失败时，Python 的 `_judge_turn` 先重试瞬态错误、预算耗尽后回落到 ACCEPT（`agent_loop.py:6202-6270`），本车道修复前 Go 把错误归一成 RETRY + `"Judge evaluation failed: …"`（原 `judge.go:148-153`）。两侧都先用真实纯函数实跑过同一矩阵（`go_hive/scripts/judge_j2_probe.py` ↔ `internal/agentloop/judge_j2_parity_test.go`），修复后 Go 对齐 Python 的缝契约：

@@ -4,6 +4,9 @@
 #
 # 用法：每次用脚本解完 merge 冲突、提交前运行；在 go-hive 下检查
 # gofmt -l，非空即失败并要求先 gofmt -w。
+#
+# 另加 wiring-check：代码搬家/拆文件后接线锚点失配已发生三次
+# （w27 锚点、w43 loop_judge、w51 chat_runtime_colony），在这里挡住第 4 次。
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -16,3 +19,12 @@ if [ -n "$dirty" ]; then
   exit 1
 fi
 echo "merge-postcheck: gofmt clean"
+
+if [ -f "$ROOT/scripts/wiring_check.py" ]; then
+  if ! python3 "$ROOT/scripts/wiring_check.py" --root "$ROOT/go-hive" >/tmp/merge_postcheck_wiring.log 2>&1; then
+    echo "merge-postcheck: wiring-check 失败（搬家后锚点失配？），详见 /tmp/merge_postcheck_wiring.log："
+    tail -8 /tmp/merge_postcheck_wiring.log
+    exit 1
+  fi
+  tail -1 /tmp/merge_postcheck_wiring.log
+fi
