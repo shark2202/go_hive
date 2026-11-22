@@ -268,9 +268,11 @@ func (r *Runner) attachPreloadedChatRuntime(record *hiveserver.Session, manager 
 	record.LLM = provider
 	// Session title: written by the worker model after the first finished
 	// turn, exactly as upstream's subscribe_title_trigger registers it on the
-	// session bus.
+	// session bus — on the worker_llm slot when configured, else the session's
+	// own model (queen_orchestrator's _title_llm, resolved once at subscribe
+	// time).
 	if record.EventBus != nil && sessionDir != "" {
-		record.TitleTrigger = hiveserver.SubscribeTitleTrigger(record.EventBus, sessionDir, provider)
+		record.TitleTrigger = hiveserver.SubscribeTitleTrigger(record.EventBus, sessionDir, hiveserver.TitleTriggerLLM(home, provider))
 	}
 	// The preloaded session's queen executor is its chat runtime, so trigger
 	// timers and webhooks reach the Queen exactly like a created session.

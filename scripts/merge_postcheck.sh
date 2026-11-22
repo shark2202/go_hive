@@ -28,3 +28,12 @@ if [ -f "$ROOT/scripts/wiring_check.py" ]; then
   fi
   tail -1 /tmp/merge_postcheck_wiring.log
 fi
+
+if [ -f "$ROOT/../scripts/check_module_inventory.py" ]; then
+  if ! python3 "$ROOT/../scripts/check_module_inventory.py" --check >/tmp/merge_postcheck_c12.log 2>&1; then
+    echo "merge-postcheck: C12 模块清单失败（拆文件后 basis 锚点过期？），详见 /tmp/merge_postcheck_c12.log："
+    tail -6 /tmp/merge_postcheck_c12.log
+    exit 1
+  fi
+  tail -1 /tmp/merge_postcheck_c12.log
+fi

@@ -329,3 +329,70 @@ func TestTitleBudgetFollowsConfiguredAuxMaxTokens(t *testing.T) {
 		t.Fatalf("namer max_tokens = %d, want 1234", req.MaxTokens)
 	}
 }
+
+// TestTitleTriggerLLMTakesTheWorkerSlotWhenConfigured pins the model the
+// auto-title trigger is handed. Upstream resolves `_title_llm` once when the
+// trigger is subscribed — (session_manager.build_worker_llm() or session.llm)
+// — so a configured worker_llm names sessions on the worker model, and without
+// one the session's own model stands in. The choice is a value read at
+// subscribe time: a later worker_llm write reaches only sessions started
+// afterwards.
+//
+// Parity: tests/test_session_titles.py::test_a_finished_turn_titles_the_session_and_announces_it
+// Parity: framework/server/queen_orchestrator.py::_title_llm
+func TestTitleTriggerLLMTakesTheWorkerSlotWhenConfigured(t *testing.T) {
+	home := newFeatureHome(t)
+	sessionLLM := &titleFakeLLM{reply: "Kyoto weekend plan."}
+	writeFeatureConfig(t, home, map[string]any{
+		"llm": map[string]any{"provider": "anthropic", "model": "claude-main", "api_key": "main-key"},
+	})
+
+	// No worker_llm: build_worker_llm returns None and the session's own model
+	// is what the trigger must name the session with.
+	if got := TitleTriggerLLM(home, sessionLLM); got != llm.Completer(sessionLLM) {
+		t.Fatalf("TitleTriggerLLM without worker_llm = %T, want the session's own completer", got)
+	}
+	bus := eventbus.NewEventBus()
+	dir := newTitleSessionDir(t, "Plan a weekend in Kyoto")
+	trigger := SubscribeTitleTrigger(bus, dir, TitleTriggerLLM(home, sessionLLM))
+	finishTitleTurn(t, bus, trigger, "stop", "Here is a two-day plan.")
+	trigger.Close()
+	if title, ok := ReadTitle(dir); !ok || title != "Kyoto weekend plan" {
+		t.Fatalf("ReadTitle = (%q, %v), want the fallback model to name the session", title, ok)
+	}
+
+	// worker_llm configured: the worker slot's provider, not the session's.
+	writeFeatureConfig(t, home, map[string]any{
+		"llm": map[string]any{"provider": "anthropic", "model": "claude-main", "api_key": "main-key"},
+		"worker_llm": map[string]any{
+			"provider": "groq",
+			"model":    "llama-worker",
+			"api_base": "https://worker.example/v1",
+		},
+	})
+	worker := TitleTriggerLLM(home, sessionLLM)
+	if worker == llm.Completer(sessionLLM) {
+		t.Fatal("TitleTriggerLLM returned the session completer with worker_llm configured")
+	}
+	provider, ok := llm.ResolveCompleter(worker).(*llm.Provider)
+	if !ok {
+		t.Fatalf("worker title model type = %T, want *llm.Provider", llm.ResolveCompleter(worker))
+	}
+	if provider.ModelName() != "groq/llama-worker" || provider.APIBase != "https://worker.example/v1" {
+		t.Fatalf("worker title model = %q @ %q, want groq/llama-worker @ the configured base", provider.ModelName(), provider.APIBase)
+	}
+
+	// Read once at subscribe time: a later worker_llm write resolves a new
+	// provider for the NEXT session, while the one already built is unchanged.
+	writeFeatureConfig(t, home, map[string]any{
+		"llm":        map[string]any{"provider": "anthropic", "model": "claude-main", "api_key": "main-key"},
+		"worker_llm": map[string]any{"provider": "groq", "model": "llama-worker-next"},
+	})
+	next, ok := llm.ResolveCompleter(TitleTriggerLLM(home, sessionLLM)).(*llm.Provider)
+	if !ok || next.ModelName() != "groq/llama-worker-next" {
+		t.Fatalf("next session's title model = %v, want the new worker slot", next)
+	}
+	if provider.ModelName() != "groq/llama-worker" {
+		t.Fatalf("already-built title model moved to %q after the write", provider.ModelName())
+	}
+}

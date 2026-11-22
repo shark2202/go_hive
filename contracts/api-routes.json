@@ -1,12 +1,12 @@
 {
   "schema": "hive-api-routes/1",
   "description": "Frozen HTTP route tables. The contract reference is the Python hive checkout (reference=python@<commit>); go_hive is the target being aligned (target=go_hive@<commit>). Static extraction; path parameters are compared by shape, original spelling preserved.",
-  "reference_id": "python@6ce8deccf6249c4e50bae56485f66ab3fc8acda3",
-  "target_id": "go_hive@6ce8deccf6249c4e50bae56485f66ab3fc8acda3",
+  "reference_id": "python@e5c7603ef2591e939580e344ff9cfdf58852286d",
+  "target_id": "go_hive@e5c7603ef2591e939580e344ff9cfdf58852286d",
   "reference": {
     "implementation": "python",
     "version": "1.0.15",
-    "commit": "6ce8deccf6249c4e50bae56485f66ab3fc8acda3",
+    "commit": "e5c7603ef2591e939580e344ff9cfdf58852286d",
     "last_core_commit": "265d93d17ab9ad62520ce05b841ecbfc42439ae7",
     "last_tools_commit": "72eb6d7bb9f833ac221ed17ad6c334f5944d89bb",
     "source_root": "core/framework/server"
@@ -14,13 +14,13 @@
   "target": {
     "implementation": "go_hive",
     "version": "1.0.26-go.1",
-    "commit": "6ce8deccf6249c4e50bae56485f66ab3fc8acda3",
+    "commit": "e5c7603ef2591e939580e344ff9cfdf58852286d",
     "source_root": "go_hive/go-hive/internal/server"
   },
-  "generated_at": "2026-11-22T08:38:34+08:00",
+  "generated_at": "2026-11-22T09:57:31+08:00",
   "python": {
     "version": "1.0.15",
-    "commit": "6ce8deccf6249c4e50bae56485f66ab3fc8acda3",
+    "commit": "e5c7603ef2591e939580e344ff9cfdf58852286d",
     "source_root": "core/framework/server",
     "route_count": 222,
     "routes": [
@@ -1808,7 +1808,7 @@
   },
   "go": {
     "version": "1.0.26-go.1",
-    "commit": "6ce8deccf6249c4e50bae56485f66ab3fc8acda3",
+    "commit": "e5c7603ef2591e939580e344ff9cfdf58852286d",
     "source_root": "go_hive/go-hive/internal/server",
     "route_count": 225,
     "routes": [
@@ -3365,7 +3365,7 @@
         "path": "/api/sessions/{session_id}/reminders",
         "path_shape": "/api/sessions/{}/reminders",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_reminders.go:359",
+        "source": "go_hive/go-hive/internal/server/routes_reminders.go:361",
         "kind": "api",
         "extension": true,
         "annotation": "Go extension: reminder-hub dismissal endpoint (Go-only runtime feature)"
@@ -3375,7 +3375,7 @@
         "path": "/api/sessions/{session_id}/reminders",
         "path_shape": "/api/sessions/{}/reminders",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_reminders.go:356",
+        "source": "go_hive/go-hive/internal/server/routes_reminders.go:358",
         "kind": "api",
         "extension": true,
         "annotation": "Go extension: reminder-hub drain endpoint (Go-only runtime feature)"
@@ -3702,7 +3702,7 @@
       "path": "/api/sessions/{session_id}/reminders",
       "path_shape": "/api/sessions/{}/reminders",
       "handler": "func(w http.ResponseWriter",
-      "source": "go_hive/go-hive/internal/server/routes_reminders.go:359",
+      "source": "go_hive/go-hive/internal/server/routes_reminders.go:361",
       "kind": "api",
       "extension": true,
       "annotation": "Go extension: reminder-hub dismissal endpoint (Go-only runtime feature)"
@@ -3712,7 +3712,7 @@
       "path": "/api/sessions/{session_id}/reminders",
       "path_shape": "/api/sessions/{}/reminders",
       "handler": "func(w http.ResponseWriter",
-      "source": "go_hive/go-hive/internal/server/routes_reminders.go:356",
+      "source": "go_hive/go-hive/internal/server/routes_reminders.go:358",
       "kind": "api",
       "extension": true,
       "annotation": "Go extension: reminder-hub drain endpoint (Go-only runtime feature)"
@@ -3790,7 +3790,7 @@
       "path": "/api/sessions/{session_id}/reminders",
       "path_shape": "/api/sessions/{}/reminders",
       "handler": "func(w http.ResponseWriter",
-      "source": "go_hive/go-hive/internal/server/routes_reminders.go:359",
+      "source": "go_hive/go-hive/internal/server/routes_reminders.go:361",
       "kind": "api",
       "extension": true,
       "annotation": "Go extension: reminder-hub dismissal endpoint (Go-only runtime feature)"
@@ -3800,7 +3800,7 @@
       "path": "/api/sessions/{session_id}/reminders",
       "path_shape": "/api/sessions/{}/reminders",
       "handler": "func(w http.ResponseWriter",
-      "source": "go_hive/go-hive/internal/server/routes_reminders.go:356",
+      "source": "go_hive/go-hive/internal/server/routes_reminders.go:358",
       "kind": "api",
       "extension": true,
       "annotation": "Go extension: reminder-hub drain endpoint (Go-only runtime feature)"

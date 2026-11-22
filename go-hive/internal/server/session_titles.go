@@ -14,6 +14,7 @@ import (
 
 	"github.com/aden-hive/hive-go/internal/atomicfs"
 	"github.com/aden-hive/hive-go/internal/eventbus"
+	"github.com/aden-hive/hive-go/internal/hivehome"
 	"github.com/aden-hive/hive-go/internal/llm"
 	"github.com/aden-hive/hive-go/internal/memory"
 )
@@ -109,6 +110,25 @@ func GenerateTitle(ctx context.Context, completer llm.Completer, firstMessage, l
 		return "", err
 	}
 	return CleanTitle(completion.Content), nil
+}
+
+// TitleTriggerLLM is the model a session's automatic title runs on. Upstream
+// resolves it once, beside the other queen-loop wiring:
+//
+//	_title_llm = (session_manager.build_worker_llm() if session_manager is not None else None) or session.llm
+//
+// so a configured worker_llm names sessions on the worker model, and without
+// one the session's own model stands in (build_worker_llm returns None, as its
+// docstring documents). The read happens at subscribe time, not per turn: a
+// running session keeps the model it was handed, and a worker_llm write
+// reaches only sessions started afterwards.
+//
+// Parity: framework/server/queen_orchestrator.py::_title_llm
+func TitleTriggerLLM(home hivehome.Home, session llm.Completer) llm.Completer {
+	if section := WorkerLLMSection(home); section != nil {
+		return SectionProvider(home, section)
+	}
+	return session
 }
 
 type TitleTrigger struct {

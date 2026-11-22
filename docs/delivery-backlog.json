@@ -381,8 +381,8 @@
     "id": "title-llm-worker-slot",
     "label": "会话标题生成 LLM 槽位差异：Go 传会话 provider，上游 _title_llm 优先 build_worker_llm() or session.llm",
     "hours": 1,
-    "done": false,
-    "note": "g1-resid lane 观察（范围外）：既有 title 特性差异，非本次两项引入；对齐时同步上游测试。"
+    "done": true,
+    "note": "DONE 2026-11-22（lane title-llm）：上游 _title_llm 规则实跑确认（test_session_titles.py 8 passed + 选槽探针：未配置回退会话模型、读取时机=订阅时一次）；Go 新增 TitleTriggerLLM（internal/server/session_titles.go），两处 SubscribeTitleTrigger 接线改走 worker_llm 槽（loader.go:627、loader_preloaded_session.go:275）；新增 TestTitleTriggerLLMTakesTheWorkerSlotWhenConfigured（回退/worker 槽/读取时机）。结论与证据落 docs/session-titles-parity.md；工具面 sha 与基线一致（refactor-freeze wave15-base 通过，差异属既有 allowlist）。"
    }
   ]
  }

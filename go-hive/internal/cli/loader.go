@@ -620,9 +620,11 @@ func (r *Runner) createSessionWithRuntime(
 			record.LLM = provider
 			// Session title: written by the worker model after the first
 			// finished turn, exactly as upstream's subscribe_title_trigger
-			// registers it on the session bus.
+			// registers it on the session bus — on the worker_llm slot when
+			// configured, else the session's own model (queen_orchestrator's
+			// _title_llm, resolved once at subscribe time).
 			if record.EventBus != nil && record.QueenDir != "" {
-				record.TitleTrigger = hiveserver.SubscribeTitleTrigger(record.EventBus, record.QueenDir, provider)
+				record.TitleTrigger = hiveserver.SubscribeTitleTrigger(record.EventBus, record.QueenDir, hiveserver.TitleTriggerLLM(home, provider))
 			}
 			// The session's queen executor is the chat runtime: timer and
 			// webhook triggers reach the queen through it (queenNode →

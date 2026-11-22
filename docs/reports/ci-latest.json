@@ -1,9 +1,9 @@
 {
- "wave": 51,
- "at": "2026-11-22 09:53",
- "head": "b6e73623",
+ "wave": 52,
+ "at": "2026-11-22 09:57",
+ "head": "7a8dbcb4",
  "ci": 2,
  "qc": 0,
  "publish": 0,
- "note": "size 超限修复后"
+ "note": "wiring 重定位 + postcheck 加固后"
 }
