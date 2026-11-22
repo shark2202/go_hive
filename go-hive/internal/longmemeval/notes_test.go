@@ -77,6 +77,9 @@ func notesFixtureItem() Item {
 	}
 }
 
+// Parity-exempt: e2e runner harness — mirrors core/tests/e2e/longmemeval.py's
+// notes build order and cache layout for the four-group longmemeval report;
+// no product surface depends on it.
 func TestBuildNotesForHomeReflectsInOrderAndCaches(t *testing.T) {
 	writer := &scriptedNotesWriter{}
 	cacheDir := filepath.Join(t.TempDir(), "notes_cache")
@@ -144,6 +147,8 @@ func TestBuildNotesForHomeReflectsInOrderAndCaches(t *testing.T) {
 	}
 }
 
+// Parity-exempt: runner-only telemetry over the recall header that the
+// longmemeval report reads; upstream e2e keeps no equivalent counter.
 func TestNotesTelemetryReadsTheConversation(t *testing.T) {
 	home := t.TempDir()
 	answer := Answer{Turns: []map[string]any{

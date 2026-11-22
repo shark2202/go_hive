@@ -1,9 +1,9 @@
 {
- "wave": 54,
- "at": "2026-11-22 10:07",
- "head": "ab9ab760",
- "ci": 0,
- "qc": 0,
+ "wave": 55,
+ "at": "2026-11-22 12:01",
+ "head": "3a8a963c",
+ "ci": 2,
+ "qc": 1,
  "publish": 0,
- "note": "title-llm 合并后（G1 净面清零）"
+ "note": "installer-verify/lm-notes/bg-recall 合并后"
 }
