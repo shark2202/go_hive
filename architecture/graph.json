@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
   "module": "github.com/aden-hive/hive-go",
-  "generated_at_commit": "21f07de2a493",
+  "generated_at_commit": "7b77d047e82e",
   "generated_from": "architecture/model.yaml + go list -json ./... + internal/server mux.HandleFunc + internal/eventbus event_type.go",
   "stats": {
     "packages": 82,
-    "package_edges": 215,
+    "package_edges": 219,
     "capabilities": 12,
     "capability_edges": 85,
     "layers": 8,
@@ -216,7 +216,7 @@
       "stability": "evolving",
       "entrypoint": true,
       "note": "",
-      "direct_dependencies": 2,
+      "direct_dependencies": 3,
       "dependents": 0
     },
     {
@@ -468,7 +468,7 @@
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 1,
+      "direct_dependencies": 4,
       "dependents": 2
     },
     {
@@ -589,7 +589,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 11,
-      "dependents": 8
+      "dependents": 9
     },
     {
       "id": "pkg:internal/llmjudge",
@@ -685,7 +685,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 3,
-      "dependents": 16
+      "dependents": 18
     },
     {
       "id": "pkg:internal/maintenance",
@@ -733,7 +733,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 4,
-      "dependents": 3
+      "dependents": 4
     },
     {
       "id": "pkg:internal/pipeline",
@@ -1617,6 +1617,11 @@
     },
     {
       "from": "pkg:cmd/hive-longmemeval",
+      "to": "pkg:internal/llm",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:cmd/hive-longmemeval",
       "to": "pkg:internal/longmemeval",
       "kind": "depends"
     },
@@ -2078,6 +2083,21 @@
     {
       "from": "pkg:internal/logging",
       "to": "pkg:internal/pyenv",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/longmemeval",
+      "to": "pkg:internal/agentloop",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/longmemeval",
+      "to": "pkg:internal/llm",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/longmemeval",
+      "to": "pkg:internal/memory",
       "kind": "depends"
     },
     {

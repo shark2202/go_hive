@@ -18,10 +18,12 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
 	"github.com/aden-hive/hive-go/internal/cli"
+	"github.com/aden-hive/hive-go/internal/llm"
 	"github.com/aden-hive/hive-go/internal/longmemeval"
 )
 
@@ -45,6 +47,15 @@ Run flags:
   --model NAME         queen model (default $HIVE_LME_MODEL / $HIVE_LIVE_MODEL)
   --api-base URL       queen endpoint (default $HIVE_LME_API_BASE / $HIVE_LIVE_API_BASE)
   --api-key KEY        queen key (prefer $HIVE_LME_API_KEY / $HIVE_LIVE_API_KEY)
+  --notes              give each question's home the memory notes its history
+                       would have left, like upstream HIVE_LME_NOTES=1
+                       (default $HIVE_LME_NOTES; cache: <data>/notes_cache)
+  --notes-model NAME   model that writes the notes (default $HIVE_LME_NOTES_MODEL
+                       or --model)
+  --notes-api-base URL notes endpoint (default --api-base)
+  --notes-api-key KEY  notes key (default $HIVE_LME_NOTES_API_KEY / the queen key)
+  --notes-cache-dir DIR notes cache root (default $HIVE_LME_NOTES_CACHE_DIR or
+                       <data>/notes_cache)
   --judge-model NAME   judge model (default $HIVE_LME_JUDGE_MODEL or ` + longmemeval.OfficialJudgeModel + `)
   --judge-api-base URL judge endpoint (default $HIVE_LME_JUDGE_API_BASE or https://api.openai.com/v1)
   --judge-api-key KEY  judge key (prefer $HIVE_LME_JUDGE_API_KEY / $OPENAI_API_KEY)
@@ -52,6 +63,14 @@ Run flags:
   --keep-homes         keep each question's seeded Hive home
   --download           download the raw release when missing (default true)
   --verbose            log progress to stderr
+
+Notes flags (prebuild the cache without asking):
+hive-longmemeval notes [--data] [--dataset] [--questions] [--queen]
+                       [--notes-model] [--notes-api-base] [--notes-api-key]
+                       [--notes-cache-dir] [--concurrency 8] [--force] [--verbose]
+  Builds each question's notes once, in parallel, so a later --notes run only
+  copies them into the home. Questions already cached are skipped unless
+  --force. The cache layout is <cache>/<model>/<prompt version>/<variant>_<id>.
 
 Rejudge/reference flags: --data, --cache-dir, --dataset, --judge-model,
 --judge-api-base, --judge-api-key, --concurrency (default 8), --verbose.
@@ -73,6 +92,8 @@ func run(ctx context.Context, args []string) int {
 	switch args[0] {
 	case "run":
 		return cmdRun(ctx, args[1:])
+	case "notes":
+		return cmdNotes(ctx, args[1:])
 	case "rejudge":
 		return cmdRejudge(ctx, args[1:])
 	case "reference":
@@ -138,6 +159,70 @@ func (c *commonFlags) judge() (*longmemeval.Judge, error) {
 	return longmemeval.NewJudge(client, c.judgeModel), nil
 }
 
+// notesFlags carries the HIVE_LME_NOTES switch and its overrides: the Go side
+// of upstream's test_longmemeval.py notes options.
+type notesFlags struct {
+	enabled  bool
+	model    string
+	apiBase  string
+	apiKey   string
+	cacheDir string
+}
+
+// bindNotes declares the notes flags. *withEnabled* adds --notes (run);
+// the prebuild command is always enabled and omits it.
+func (n *notesFlags) bindNotes(fs *flag.FlagSet, withEnabled bool) {
+	if withEnabled {
+		fs.BoolVar(&n.enabled, "notes", envEnabled("HIVE_LME_NOTES"), "give each home the memory notes its history would have left (default $HIVE_LME_NOTES)")
+	}
+	fs.StringVar(&n.model, "notes-model", "", "model that writes the notes (default $HIVE_LME_NOTES_MODEL or --model)")
+	fs.StringVar(&n.apiBase, "notes-api-base", "", "notes endpoint (default --api-base)")
+	fs.StringVar(&n.apiKey, "notes-api-key", "", "notes key (default $HIVE_LME_NOTES_API_KEY / the queen key)")
+	fs.StringVar(&n.cacheDir, "notes-cache-dir", "", "notes cache root (default $HIVE_LME_NOTES_CACHE_DIR or <data>/notes_cache)")
+}
+
+// config resolves one NotesConfig; nil when the switch is off.
+func (n *notesFlags) config(queenModel, variant, queenID string) (*longmemeval.NotesConfig, error) {
+	if !n.enabled {
+		return nil, nil
+	}
+	notesModel := firstNonEmpty(n.model, os.Getenv("HIVE_LME_NOTES_MODEL"), queenModel,
+		os.Getenv("HIVE_LME_MODEL"), os.Getenv("HIVE_LIVE_MODEL"))
+	if notesModel == "" {
+		return nil, fmt.Errorf("notes: no notes model (pass --notes-model or --model)")
+	}
+	base := firstNonEmpty(n.apiBase, os.Getenv("HIVE_LME_NOTES_API_BASE"),
+		os.Getenv("HIVE_LME_API_BASE"), os.Getenv("HIVE_LIVE_API_BASE"))
+	if base == "" {
+		return nil, fmt.Errorf("notes: no notes API base (pass --notes-api-base or --api-base)")
+	}
+	key := firstNonEmpty(n.apiKey, os.Getenv("HIVE_LME_NOTES_API_KEY"),
+		os.Getenv("HIVE_LME_API_KEY"), os.Getenv("HIVE_LIVE_API_KEY"))
+	if key == "" {
+		return nil, fmt.Errorf("notes: no notes API key (set $HIVE_LME_API_KEY)")
+	}
+	cacheDir := firstNonEmpty(n.cacheDir, os.Getenv("HIVE_LME_NOTES_CACHE_DIR"),
+		filepath.Join(longmemeval.DefaultDataDir(), "notes_cache"))
+	normalized, err := longmemeval.NormalizeVariant(variant)
+	if err != nil {
+		normalized = strings.ToLower(strings.TrimSpace(variant))
+	}
+	return &longmemeval.NotesConfig{
+		Writer:   llm.NewHTTPProvider(llm.ProviderOptions{Model: notesModel, APIKey: key, APIBase: base}),
+		CacheDir: cacheDir,
+		Model:    notesModel,
+		Variant:  normalized,
+		QueenID:  queenID,
+	}, nil
+}
+
+// envEnabled mirrors upstream's `os.environ.get(name, "0") != "0"`: unset and
+// "0" are off, every other value (including "false") is on.
+func envEnabled(name string) bool {
+	value, ok := os.LookupEnv(name)
+	return ok && strings.TrimSpace(value) != "0"
+}
+
 func cmdRun(ctx context.Context, args []string) int {
 	fs := flag.NewFlagSet("run", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
@@ -154,6 +239,8 @@ func cmdRun(ctx context.Context, args []string) int {
 	apiKey := fs.String("api-key", "", "queen key (prefer environment)")
 	timeout := fs.Float64("timeout", envFloatOr("HIVE_LIVE_TIMEOUT", 420), "per-question queen turn timeout in seconds")
 	keepHomes := fs.Bool("keep-homes", false, "keep each question's seeded Hive home")
+	notes := &notesFlags{}
+	notes.bindNotes(fs, true)
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
@@ -173,6 +260,10 @@ func cmdRun(ctx context.Context, args []string) int {
 		// configuration below); prefer the environment over argv.
 		_ = os.Setenv("HIVE_LME_API_KEY", queenKey)
 		keyEnv = "HIVE_LME_API_KEY"
+	}
+	notesCfg, err := notes.config(*model, common.dataset, *queen)
+	if err != nil {
+		return fail(err)
 	}
 	asker := cli.NewLMERunner(cli.LMERunnerOptions{
 		Queen:        *queen,
@@ -202,6 +293,7 @@ func cmdRun(ctx context.Context, args []string) int {
 		Model:     *model,
 		Timeout:   time.Duration(*timeout * float64(time.Second)),
 		KeepHomes: *keepHomes,
+		Notes:     notesCfg,
 		Asker:     asker,
 		Judge:     judge,
 		Logf:      logf,
@@ -214,6 +306,104 @@ func cmdRun(ctx context.Context, args []string) int {
 	}
 	if summary != nil {
 		fmt.Fprintf(os.Stderr, "results: %s\n", dir)
+	}
+	return 0
+}
+
+// cmdNotes builds the notes cache for the selected questions without asking
+// anything: a parallel warm-up so a later --notes run only copies. The cache
+// layout and skip-on-hit rule match upstream's build-then-cache contract.
+func cmdNotes(ctx context.Context, args []string) int {
+	fs := flag.NewFlagSet("notes", flag.ContinueOnError)
+	fs.SetOutput(os.Stderr)
+	common := &commonFlags{}
+	common.bindDataset(fs)
+	questions := fs.String("questions", envOr("HIVE_LME_QUESTIONS", "12"), "all, comma-separated ids, or a count")
+	queen := fs.String("queen", envOr("HIVE_LME_QUEEN", "queen_technology"), "queen whose memory scope the notes fill")
+	model := fs.String("model", firstNonEmpty(os.Getenv("HIVE_LME_MODEL"), os.Getenv("HIVE_LIVE_MODEL")), "model fallback for --notes-model")
+	notes := &notesFlags{enabled: true}
+	notes.bindNotes(fs, false)
+	concurrency := fs.Int("concurrency", envIntOr("HIVE_LME_NOTES_CONCURRENCY", 8), "parallel questions")
+	force := fs.Bool("force", false, "rebuild notes already cached")
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+	cfg, err := notes.config(*model, common.dataset, *queen)
+	if err != nil {
+		return fail(err)
+	}
+	splitDir, err := common.splitDir(ctx)
+	if err != nil {
+		return fail(err)
+	}
+	index, err := longmemeval.LoadIndex(splitDir)
+	if err != nil {
+		return fail(err)
+	}
+	ids, err := longmemeval.Select(index, *questions)
+	if err != nil {
+		return fail(err)
+	}
+	if *concurrency < 1 {
+		*concurrency = 1
+	}
+	logf := stderrLogf(common.verbose)
+	if logf == nil {
+		logf = func(string, ...any) {}
+	}
+	logf("notes: %d question(s) -> %s", len(ids),
+		filepath.Join(cfg.CacheDir, longmemeval.SafeModelName(cfg.Model), longmemeval.NotesVersion(cfg.QueenID)))
+
+	var mu sync.Mutex
+	built, cached, failed := 0, 0, 0
+	var wg sync.WaitGroup
+	gate := make(chan struct{}, *concurrency)
+	for _, id := range ids {
+		wg.Add(1)
+		gate <- struct{}{}
+		go func(id string) {
+			defer wg.Done()
+			defer func() { <-gate }()
+			if err := ctx.Err(); err != nil {
+				return
+			}
+			cachePath := longmemeval.NotesCachePath(*cfg, id)
+			if !*force && isDir(cachePath) {
+				mu.Lock()
+				cached++
+				mu.Unlock()
+				logf("notes %s: cached", id)
+				return
+			}
+			item, err := longmemeval.LoadItem(splitDir, id)
+			if err != nil {
+				mu.Lock()
+				failed++
+				mu.Unlock()
+				logf("notes %s: %v", id, err)
+				return
+			}
+			home := filepath.Join(cfg.CacheDir, ".build", id)
+			_ = os.RemoveAll(home)
+			defer func() { _ = os.RemoveAll(home) }()
+			result, err := longmemeval.BuildNotesForHome(ctx, *cfg, home, item)
+			if err != nil {
+				mu.Lock()
+				failed++
+				mu.Unlock()
+				logf("notes %s: %v", id, err)
+				return
+			}
+			mu.Lock()
+			built++
+			mu.Unlock()
+			logf("notes %s: %d note(s) (failed reflections: %d)", id, result.Count, result.Failed)
+		}(id)
+	}
+	wg.Wait()
+	fmt.Fprintf(os.Stderr, "notes: %d built, %d already cached, %d failed\n", built, cached, failed)
+	if failed > 0 {
+		return 1
 	}
 	return 0
 }
@@ -383,6 +573,21 @@ func envFloatOr(key string, fallback float64) float64 {
 		}
 	}
 	return fallback
+}
+
+func envIntOr(key string, fallback int) int {
+	if value := strings.TrimSpace(os.Getenv(key)); value != "" {
+		if parsed, err := strconv.Atoi(value); err == nil {
+			return parsed
+		}
+	}
+	return fallback
+}
+
+// isDir reports whether path exists and is a directory (a notes cache hit).
+func isDir(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && info.IsDir()
 }
 
 func firstNonEmpty(values ...string) string {

@@ -1,0 +1,63 @@
+{
+  "title": "LongMemEval-S through Hive",
+  "questions": 60,
+  "correct": 54,
+  "accuracy": 0.9,
+  "ci95": [
+    0.7985030550748896,
+    0.9533578005427642
+  ],
+  "task_averaged": 0.9,
+  "per_type": {
+    "knowledge-update": {
+      "n": 10,
+      "correct": 8,
+      "accuracy": 0.8,
+      "searched": 0.8,
+      "evidence": 0.7777777777777778
+    },
+    "multi-session": {
+      "n": 10,
+      "correct": 6,
+      "accuracy": 0.6,
+      "searched": 0.8,
+      "evidence": 0.8
+    },
+    "single-session-assistant": {
+      "n": 10,
+      "correct": 10,
+      "accuracy": 1,
+      "searched": 0.5,
+      "evidence": 0.5
+    },
+    "single-session-preference": {
+      "n": 10,
+      "correct": 10,
+      "accuracy": 1,
+      "searched": 0.1,
+      "evidence": 0.1
+    },
+    "single-session-user": {
+      "n": 10,
+      "correct": 10,
+      "accuracy": 1,
+      "searched": 0.5,
+      "evidence": 0.4444444444444444
+    },
+    "temporal-reasoning": {
+      "n": 10,
+      "correct": 10,
+      "accuracy": 1,
+      "searched": 0.9,
+      "evidence": 0.9
+    }
+  },
+  "judge_model": "deepseek-v4-pro",
+  "reader_model": "deepseek-flash-1017",
+  "abstention_n": 2,
+  "abstention_correct": 1,
+  "errors": 0,
+  "ungraded": 0,
+  "median_seconds": 9.8979981035,
+  "retrieval_diagnostics": true
+}

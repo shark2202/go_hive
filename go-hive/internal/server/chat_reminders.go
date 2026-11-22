@@ -130,13 +130,19 @@ func (r *ChatRuntime) memoryIndexScopes() []agentloop.MemoryNoteScope {
 
 // memoryRecallForMessage is the model's pick for a message ("wait" mode): the
 // same scoped recall blocks background mode injects, rendered by the source.
+// Upstream _recall_for_message refreshes the phase_state cache in place, so the
+// pick is kept for a later background-mode delivery too.
 //
 // Parity: core/framework/server/queen_orchestrator.py::_recall_for_message
 func (r *ChatRuntime) memoryRecallForMessage(text string) string {
 	if r == nil || r.globalMemoryDir == "" || text == "" {
 		return ""
 	}
-	return r.recallBlockForQuery(text)
+	block := r.recallBlockForQuery(text)
+	r.recallMu.Lock()
+	r.recallCache = block
+	r.recallMu.Unlock()
+	return block
 }
 
 // recallBlockForQuery picks memories for a query and joins the scopes.

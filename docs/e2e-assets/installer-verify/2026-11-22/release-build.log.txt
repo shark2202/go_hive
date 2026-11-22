@@ -1,0 +1,31 @@
+release: version: 1.0.26-go.1
+release: platforms: darwin/amd64 darwin/arm64 linux/amd64 linux/arm64 windows/amd64 windows/arm64
+release: output: /Users/mac/hive/.wt/installer-verify/go_hive/go-hive/dist/release
+release: building hive-embed (dashboard embedded; npm build may run once)
+embed-ui: staging /Users/mac/hive/go_hive/go-hive/frontend/dist -> /Users/mac/hive/.wt/installer-verify/go_hive/go-hive/internal/server/uiembed/dist
+embed-ui: building /Users/mac/hive/.wt/installer-verify/go_hive/go-hive/dist/hive-embed (-tags embed_ui)
+embed-ui: wrote /Users/mac/hive/.wt/installer-verify/go_hive/go-hive/dist/hive-embed
+release: hive-embed ready: /Users/mac/hive/.wt/installer-verify/go_hive/go-hive/dist/hive-embed
+release: building darwin/amd64 (embed_ui)
+release: packaged hive-1.0.26-go.1-darwin-amd64.tar.gz
+release: building darwin/arm64 (embed_ui)
+release: packaged hive-1.0.26-go.1-darwin-arm64.tar.gz
+release: building linux/amd64 (embed_ui)
+release: packaged hive-1.0.26-go.1-linux-amd64.tar.gz
+release: building linux/arm64 (embed_ui)
+release: packaged hive-1.0.26-go.1-linux-arm64.tar.gz
+release: building windows/amd64 (embed_ui)
+release: packaged hive-1.0.26-go.1-windows-amd64.zip
+release: building windows/arm64 (embed_ui)
+release: packaged hive-1.0.26-go.1-windows-arm64.zip
+release: verified SHA256SUMS
+release: release artifacts:
+  hive-1.0.26-go.1-darwin-amd64.tar.gz                     37416117 bytes
+  hive-1.0.26-go.1-darwin-arm64.tar.gz                     35684216 bytes
+  hive-1.0.26-go.1-linux-amd64.tar.gz                      36969096 bytes
+  hive-1.0.26-go.1-linux-arm64.tar.gz                      34535219 bytes
+  hive-1.0.26-go.1-windows-amd64.zip                       34412553 bytes
+  hive-1.0.26-go.1-windows-arm64.zip                       31720053 bytes
+  SHA256SUMS                                          
+
+release: install locally with: /Users/mac/hive/.wt/installer-verify/go_hive/install.sh --from "/Users/mac/hive/.wt/installer-verify/go_hive/go-hive/dist/release"

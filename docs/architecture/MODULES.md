@@ -1,6 +1,6 @@
 # 模块清单（生成物，勿手改）
 
-> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` + `go list` 生成。commit: `21f07de2a493`
+> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` + `go list` 生成。commit: `7b77d047e82e`
 > 修改分层或职责请改 `architecture/model.yaml`，不要编辑本文件。
 
 ## 分层统计
@@ -16,7 +16,7 @@
 | 能力层（`capability`） | 29 | 可被循环调用的能力：工具、集成、LLM 传输、记忆、技能、soul、凭据、出站消息。 |
 | 基础层（`foundation`） | 16 | 无业务语义的底座：事件总线、文件存储、schema、原子写、目录布局、限速、质量门禁。 |
 
-共 82 个包、215 条包间 import 边。
+共 82 个包、219 条包间 import 边。
 
 ## 模块表
 
@@ -25,7 +25,7 @@
 | `cmd/hive` | entry | hive 主进程入口：把 argv 交给 internal/cli.Runner 并以返回码退出。 | 1 | 0 | 是 |
 | `cmd/hive-browser` | entry | 浏览器 CLI 客户端（hive-browser）：解析动词与 flag，转发给独立的 Browser Bridge 服务端。 | 1 | 0 | 是 |
 | `cmd/hive-cred` | entry | 凭证 CLI 入口（hive-cred）：复用 internal/cli 的凭证子命令。 | 1 | 0 | 是 |
-| `cmd/hive-longmemeval` | entry | LongMemEval 评测入口（内部工具）：用真实 queen 会话跑基准，并按基准自带判分提示评分。 | 2 | 0 | 是 |
+| `cmd/hive-longmemeval` | entry | LongMemEval 评测入口（内部工具）：用真实 queen 会话跑基准，并按基准自带判分提示评分。 | 3 | 0 | 是 |
 | `e2e/cmd/memgw` | harness | 确定性 OpenAI 兼容假上游的启动命令（memory e2e）。 | 1 | 0 |  |
 | `e2e/cmd/recordproxy` | harness | 录制转发代理命令：把真实上游流量录成 e2e 夹具。 | 1 | 0 |  |
 | `e2e/cmd/runtimelogs` | harness | 三级运行日志双跑的启动命令（e2e）。 | 1 | 0 |  |
@@ -46,7 +46,7 @@
 | `internal/claudecode` | orchestration | Claude Code queen 运行时：会话记录与收件箱、claude -p 回合、转录读取与进程树管理。 | 3 | 1 |  |
 | `internal/colony` | orchestration | Colony 运行时：worker 生命周期与并发闸门、run_worker 批量派发、report_to_parent 回报、playbook 驱动、目标验收与改进信号。 | 13 | 4 |  |
 | `internal/host` | orchestration | Host 组合根：把 colony 运行时、事件总线与 run 注册表装成可 Start/Spawn 的宿主，供传输层调用。 | 7 | 1 |  |
-| `internal/longmemeval` | orchestration | LongMemEval 基准运行器：数据集读取、题目选择、会话播种、判分与结果汇总（内部评测工具）。 | 1 | 2 |  |
+| `internal/longmemeval` | orchestration | LongMemEval 基准运行器：数据集读取、题目选择、会话播种、判分与结果汇总（内部评测工具）。 | 4 | 2 |  |
 | `internal/playbook` | orchestration | Playbook 定义与带并发上限的 lane 执行器。 | 1 | 2 |  |
 | `internal/queen` | orchestration | Queen 档案与身份定义（queen_profiles 的 Go 移植）。 | 0 | 3 |  |
 | `internal/queenmail` | orchestration | Queen 之间的信件引擎：信件存储、待投递队列、queens/mail.jsonl 审计日志与 hive MCP stdio 面。 | 3 | 3 |  |
@@ -56,7 +56,7 @@
 | `internal/tasks` | orchestration | 任务计划存储：tasks.json 的增删改查、归档与提醒状态。 | 3 | 3 |  |
 | `internal/tracker` | orchestration | 共享结果账本：SQLite(WAL) tracker.db 的表注册、行写入与查询。 | 0 | 4 |  |
 | `internal/triggers` | orchestration | 触发器定义、cron 解析与 triggers.json 持久化。 | 1 | 1 |  |
-| `internal/agentloop` | runtime | 唯一执行原语：一轮内的 LLM 调用、工具批处理与并发、压缩、预算/宽限、judge、提醒注入与停泊原因。 | 11 | 8 |  |
+| `internal/agentloop` | runtime | 唯一执行原语：一轮内的 LLM 调用、工具批处理与并发、压缩、预算/宽限、judge、提醒注入与停泊原因。 | 11 | 9 |  |
 | `internal/llmjudge` | runtime | 基于 LLM 的判定器适配：把成功标准与升级判定包装成可注入的 Judge。 | 1 | 2 |  |
 | `internal/orchestrator` | runtime | Python 图编排时代遗留的 DataBuffer 原语（权限、幻觉内容校验）。 | 0 | 0 |  |
 | `internal/attachments` | capability | 会话附件存取（上传、下载、类型与大小校验）。 | 0 | 2 |  |
@@ -64,11 +64,11 @@
 | `internal/credentials` | capability | 凭证规格与加密存储、OAuth 状态与表单校验。 | 2 | 5 |  |
 | `internal/globaldb` | capability | 全局数据表（CRM / global data）的 SQLite 访问。 | 0 | 1 |  |
 | `internal/hiveconf` | capability | 全局 configuration.json 的类型严格读取（与 Python 参考同规则），供装配与编排层取配置。 | 2 | 4 |  |
-| `internal/llm` | capability | LLM 传输：provider 选择、Anthropic/OpenAI 协议、流式事件、模型目录与出站限速门。 | 3 | 16 |  |
+| `internal/llm` | capability | LLM 传输：provider 选择、Anthropic/OpenAI 协议、流式事件、模型目录与出站限速门。 | 3 | 18 |  |
 | `internal/maintenance` | capability | Janitor：孤儿会话、缓存、工件与事件日志的清理规则与报告。 | 2 | 2 |  |
 | `internal/mcpregistry` | capability | MCP 服务器注册表 CLI 后端：索引、安装/启用、健康检查与清单渲染。 | 6 | 3 |  |
 | `internal/mcpregistry/nativecli` | capability | mcp2cli 3.8.0 的 Go 子集实现：MCP 服务器注册表 native CLI 后端。 | 2 | 2 |  |
-| `internal/memory` | capability | Markdown 记忆文件：召回、写入、按天时间线与反思沉淀。 | 4 | 3 |  |
+| `internal/memory` | capability | Markdown 记忆文件：召回、写入、按天时间线与反思沉淀。 | 4 | 4 |  |
 | `internal/pipeline` | capability | 配置驱动的 trigger 中间件：Stage 接口、按 order 执行/reject 短路/transform 的 Runner、stage 注册表与 7 个内置 stage（llm_provider/credential_resolver/mcp_registry/skill_registry/input_validation/rate_limit/cost_guard）。 | 7 | 1 |  |
 | `internal/senders` | capability | 出站消息发送：正文渲染、抑制列表、每发件人锁与发送日志。 | 2 | 2 |  |
 | `internal/skills` | capability | 技能发现/安装/校验，以及 agent 侧的技能读取工具。 | 3 | 6 |  |

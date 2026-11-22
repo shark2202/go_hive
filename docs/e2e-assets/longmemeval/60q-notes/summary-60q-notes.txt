@@ -1,0 +1,80 @@
+[go_base] 60 questions, 52 correct = 86.7% (95% CI 75.8-93.1), task-avg 86.7%, median 7.190553916500001s, errors=0, ungraded=0
+  single-session-user        10/10 = 100.0%
+  single-session-assistant   10/10 = 100.0%
+  multi-session               7/10 = 70.0%
+  temporal-reasoning         10/10 = 100.0%
+  knowledge-update            9/10 = 90.0%
+  single-session-preference   6/10 = 60.0%
+  abstention (_abs)           1/2  = 50.0%
+
+[py_base] 60 questions, 51 correct = 85.0% (95% CI 73.9-91.9), task-avg 85.0%, median 7.300000000000001s, errors=0, ungraded=0
+  single-session-user        10/10 = 100.0%
+  single-session-assistant   10/10 = 100.0%
+  multi-session               7/10 = 70.0%
+  temporal-reasoning         10/10 = 100.0%
+  knowledge-update            8/10 = 80.0%
+  single-session-preference   6/10 = 60.0%
+  abstention (_abs)           1/2  = 50.0%
+
+[go_notes] 60 questions, 54 correct = 90.0% (95% CI 79.9-95.3), task-avg 90.0%, median 9.8979981035s, errors=0, ungraded=0
+  single-session-user        10/10 = 100.0%
+  single-session-assistant   10/10 = 100.0%
+  multi-session               6/10 = 60.0%
+  temporal-reasoning         10/10 = 100.0%
+  knowledge-update            8/10 = 80.0%
+  single-session-preference  10/10 = 100.0%
+  abstention (_abs)           1/2  = 50.0%
+  notes: mean 42.4/question (min 22, max 62), modes=['index'], indexed 60/60, recalled 0/60, read-any 20/60 (total 35 reads)
+
+[py_notes] 60 questions, 50 correct = 83.3% (95% CI 72.0-90.7), task-avg 83.3%, median 10.9s, errors=0, ungraded=0
+  single-session-user        10/10 = 100.0%
+  single-session-assistant   10/10 = 100.0%
+  multi-session               7/10 = 70.0%
+  temporal-reasoning          8/10 = 80.0%
+  knowledge-update            9/10 = 90.0%
+  single-session-preference   6/10 = 60.0%
+  abstention (_abs)           1/2  = 50.0%
+  notes: mean 46.4/question (min 25, max 64), modes=['index'], indexed 60/60, recalled 0/60, read-any 41/60 (total 65 reads)
+
+[go_notes vs py_notes] shared=60 both_correct=48 both_wrong=4 go_notes_only=6 py_notes_only=2 (exact McNemar p=0.289)
+  go_notes only: 07b6f563         single-session-preference
+  go_notes only: 32260d93         single-session-preference
+  go_notes only: 6e984301         temporal-reasoning
+  go_notes only: a89d7624         single-session-preference
+  go_notes only: c8090214         temporal-reasoning
+  go_notes only: caf03d32         single-session-preference
+  py_notes only: 46a3abf7         multi-session
+  py_notes only: e61a7584         knowledge-update
+
+[go_notes vs go_base] shared=60 both_correct=49 both_wrong=3 go_notes_only=5 go_base_only=3 (exact McNemar p=0.727)
+  go_notes only: 07b6f563         single-session-preference
+  go_notes only: 32260d93         single-session-preference
+  go_notes only: afdc33df         single-session-preference
+  go_notes only: caf03d32         single-session-preference
+  go_notes only: edced276         multi-session
+  go_base only: 3a704032         multi-session
+  go_base only: 46a3abf7         multi-session
+  go_base only: e61a7584         knowledge-update
+
+[py_notes vs py_base] shared=60 both_correct=46 both_wrong=5 py_notes_only=4 py_base_only=5 (exact McNemar p=1.000)
+  py_notes only: 505af2f5         single-session-preference
+  py_notes only: afdc33df         single-session-preference
+  py_notes only: b0479f84         single-session-preference
+  py_notes only: e61a7584         knowledge-update
+  py_base only: 07b6f563         single-session-preference
+  py_base only: 6e984301         temporal-reasoning
+  py_base only: a89d7624         single-session-preference
+  py_base only: c8090214         temporal-reasoning
+  py_base only: caf03d32         single-session-preference
+
+[go_base vs py_base] shared=60 both_correct=48 both_wrong=5 go_base_only=4 py_base_only=3 (exact McNemar p=1.000)
+  go_base only: 3a704032         multi-session
+  go_base only: 505af2f5         single-session-preference
+  go_base only: b0479f84         single-session-preference
+  go_base only: e61a7584         knowledge-update
+  py_base only: 07b6f563         single-session-preference
+  py_base only: caf03d32         single-session-preference
+  py_base only: edced276         multi-session
+
+wrote /Users/mac/hive/.wt/lm-notes/go_hive/docs/e2e-assets/longmemeval/60q-notes/summary-60q-notes.json
+wrote per-question JSON to /Users/mac/hive/.wt/lm-notes/go_hive/docs/e2e-assets/longmemeval/60q-notes

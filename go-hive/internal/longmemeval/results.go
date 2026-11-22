@@ -65,6 +65,9 @@ type RecordInput struct {
 	SessionMap  map[string]string
 	ReaderModel *string
 	JudgeError  error
+	// NotesExtra, when set, is merged into the result row: the notes
+	// telemetry upstream's record() adds when notes were built.
+	NotesExtra map[string]any
 }
 
 // ReadResults returns the rows of a results file, repairing a tail left by
@@ -216,6 +219,9 @@ func BuildRow(in RecordInput) map[string]any {
 	}
 	if in.JudgeError != nil {
 		row["judge_error"] = truncateError(in.JudgeError)
+	}
+	for key, value := range in.NotesExtra {
+		row[key] = value
 	}
 	return row
 }

@@ -247,6 +247,11 @@ type ChatRuntime struct {
 	// lastRecall is the block injected last turn; recall is re-injected only
 	// when its content changes (same guard as the upstream _last_injected_recall).
 	lastRecall string
+	// recallMu guards recallCache, the pick left for the next turn's delivery.
+	// The pick runs off the turn goroutine (upstream's _bg_refresh task) and
+	// only the turn goroutine reads the cache, so this lock is the handoff.
+	recallMu    sync.Mutex
+	recallCache string
 	// timelineEnabled is set when the memory_timeline feature is on for this
 	// home; timelineAfterTurn then extracts new user turns in the background.
 	timelineEnabled bool
@@ -1142,17 +1147,18 @@ func newChatExecutionID() string {
 	return hex.EncodeToString(b[:])
 }
 
-// injectRecall appends the global + queen-scoped recall blocks to the current
-// turn as a <system-reminder>, after the user message and before the model
-// reads the conversation. It is the upstream "background" mode
-// (_recall_on_user_input); "wait" and "index" are reminder sources, so this
-// method is silent while either is set. Upstream delivers the same block
-// through AgentLoop.inject_event(wake=False), which the drain writes as a
-// non-client "[stamp] [External event] ..." user message — not into the system
-// prompt, so the cached history prefix stays byte-stable.
+// injectRecall gives the turn the block picked for an earlier message and
+// starts the pick for this message in the background; it is the upstream
+// "background" mode (_recall_on_user_input). The EventBus drops a handler at
+// 15s, so upstream's handler must return fast: it delivers only what is
+// already cached and fires the pick as a task that joins the queen's next
+// drain — in practice her next message. This method therefore never calls the
+// model on the turn's critical path. "wait" and "index" are reminder sources,
+// so it is silent while either is set.
 //
 // Parity: core/framework/server/queen_orchestrator.py::_recall_on_user_input
 // Parity: core/framework/server/queen_orchestrator.py::_inject_recall_if_changed
+// (cached delivery, deduped against _last_injected_recall)
 func (r *ChatRuntime) injectRecall(query, stamp string) {
 	if r.globalMemoryDir == "" {
 		return
@@ -1160,17 +1166,61 @@ func (r *ChatRuntime) injectRecall(query, stamp string) {
 	if r.memoryRecallSettings().Mode != memory.MemoryRecallBackground {
 		return
 	}
-	block := r.recallBlockForQuery(query)
+	// Upstream: await _inject_recall_if_changed() — cached block only, no
+	// model call; then asyncio.create_task(_bg_refresh()).
+	r.deliverCachedRecall(stamp)
+	r.pickRecallInBackground(query)
+}
+
+// deliverCachedRecall appends the cached pick as a <system-reminder> when it
+// differs from the last one injected. Upstream's drain queues passive
+// injections after anything already queued, so the reminder lands after the
+// user's message. It runs on the turn goroutine; conversation writes stay
+// single-writer.
+//
+// Parity: core/framework/server/queen_orchestrator.py::_inject_recall_if_changed
+func (r *ChatRuntime) deliverCachedRecall(stamp string) {
+	r.recallMu.Lock()
+	block := r.recallCache
+	r.recallMu.Unlock()
 	if block == "" || block == r.lastRecall {
 		return
 	}
 	r.lastRecall = block
-	reminder := "<system-reminder>\nRecalled memories relevant to the latest " +
-		"user message (supersedes earlier recall reminders):\n\n" +
-		block + "\n</system-reminder>"
+	reminder := "<system-reminder>\n" + agentloop.MemoryRecallHeader + "\n\n" + block + "\n</system-reminder>"
 	// Recall is context, never a reason to fail a turn: a write error leaves
 	// the conversation as it was and the turn runs without the reminder.
 	_, _ = r.conv.AddUserMessage("["+stamp+"] [External event] "+reminder, agentloop.UserMessageOptions{})
+}
+
+// pickRecallInBackground runs the pick off the turn goroutine, mirroring
+// upstream's _bg_refresh task: the result is cached, and the next drain (the
+// next message) delivers it if it differs. The pick swallows its own failures
+// the way select_memories does — an empty result overwrites the cache, as
+// upstream's _refresh_recall_cache assigns whatever the pick returned.
+//
+// Parity: core/framework/server/queen_orchestrator.py::_recall_on_user_input (_bg_refresh)
+func (r *ChatRuntime) pickRecallInBackground(query string) {
+	if r == nil {
+		return
+	}
+	go r.refreshRecallCache(query)
+}
+
+// refreshRecallCache picks the scoped recall blocks for query and stores the
+// joined result as the deliverable cache. The empty-query guard mirrors
+// upstream _refresh_recall_cache (`if not query`): an empty message makes no
+// pick call, and any cached block is still delivered at the next drain.
+//
+// Parity: core/framework/server/queen_orchestrator.py::_refresh_recall_cache
+func (r *ChatRuntime) refreshRecallCache(query string) {
+	if r == nil || query == "" {
+		return
+	}
+	block := r.recallBlockForQuery(query)
+	r.recallMu.Lock()
+	r.recallCache = block
+	r.recallMu.Unlock()
 }
 
 // injectHubReminders drains reminders the hub parked (the idle ticker) into the

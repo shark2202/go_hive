@@ -27,6 +27,13 @@ go build ./cmd/hive-longmemeval && ./hive-longmemeval run \
   --download                               # 缺 raw 文件时从 HuggingFace 拉取（默认 true）
   --verbose
 
+# 记忆笔记模式（等价上游 HIVE_LME_NOTES=1）
+./hive-longmemeval notes \
+  --data <split 目录> --questions all|id1,id2 \
+  --notes-model <写笔记的模型> --notes-api-base <端点> --notes-api-key <key> \
+  --notes-cache-dir <缓存根> --concurrency 8 --force
+./hive-longmemeval run ... --notes              # 每题先按缓存/现场构建把笔记放进 HIVE_HOME
+
 # 用另一个 judge 重判已保存的答案
 ./hive-longmemeval rejudge <run-dir> [--concurrency 8] [judge/data 同 run]
 # 官方 reader 参照点（只给答案会话 = oracle，或给全量历史）
@@ -104,6 +111,7 @@ go build ./cmd/hive-longmemeval && ./hive-longmemeval run \
 | 冻结时钟 | monkeypatch `datetime.now` 的模块列表 | `HIVE_FAKE_NOW` + `internal/hiveclock` 三个读取点 | 环境变量是进程级；顺序跑无影响 |
 | 会话 id 时间戳 | 真实 now | 真实 now（问题日期只用于日期面） | 一致 |
 | 时间线抽取 | `build_timelines`（可选，走模型） | 未移植（`search_timeline` 仍可用，timeline 特性默认关闭） | 与上游默认（timeline off）一致 |
+| 记忆笔记（notes） | `HIVE_LME_NOTES=1`：每题按 session 顺序反思一次，缓存 `$HIVE_LME_DATA/notes_cache/<model>/<prompt hash>/<variant>_<qid>` | `--notes`（`$HIVE_LME_NOTES`）：同一缓存布局与「先建后拷」语义；`notes` 子命令可并行预建缓存 | 开关等价；两侧笔记由各自实现生成 |
 | 索引预热 | `sync_scope` 预热记忆索引 | 无索引（Go 直接读 events.jsonl） | 无需预热 |
 | transcript | 每题 turns（text/tools/seconds） | 原始会话 parts 数组 | 调试信息更细，评分口径相同 |
 | skills 目录 | queen prompt 读 home 内技能 | 同左；`~/.agents/skills` 的全局技能也会进 prompt | 真实跑分时 prompt 随本机技能集变化 |

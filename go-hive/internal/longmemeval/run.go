@@ -46,6 +46,9 @@ type RunOptions struct {
 	KeepHomes bool
 	// Model names the answering model the report prints (optional).
 	Model string
+	// Notes, when set, equips each question's home with memory notes before
+	// the ask — the Go side of upstream's HIVE_LME_NOTES=1 treatment.
+	Notes *NotesConfig
 	Asker Asker
 	Judge *Judge
 	Logf  Logf
@@ -141,6 +144,19 @@ func Run(ctx context.Context, opts RunOptions) (*Summary, string, error) {
 			cleanupHome(home, opts.KeepHomes)
 			continue
 		}
+		var notes NotesResult
+		if opts.Notes != nil {
+			notes, err = BuildNotesForHome(ctx, *opts.Notes, home, item)
+			if err != nil {
+				if recordErr := RecordError(runDir, item, err); recordErr != nil {
+					return nil, "", recordErr
+				}
+				logf("notes failed for %s: %v", id, err)
+				cleanupHome(home, opts.KeepHomes)
+				continue
+			}
+			logf("%s: %d memory note(s) ready (cached=%t, failed reflections=%d)", id, notes.Count, notes.Cached, notes.Failed)
+		}
 
 		askCtx := ctx
 		var cancel context.CancelFunc
@@ -170,6 +186,10 @@ func Run(ctx context.Context, opts RunOptions) (*Summary, string, error) {
 			model := opts.Model
 			readerModel = &model
 		}
+		var notesExtra map[string]any
+		if opts.Notes != nil {
+			notesExtra = NotesTelemetry(home, notes, answer)
+		}
 		if _, err := Record(runDir, RecordInput{
 			Item:        item,
 			Answer:      answer,
@@ -177,6 +197,7 @@ func Run(ctx context.Context, opts RunOptions) (*Summary, string, error) {
 			SessionMap:  seed.Mapping,
 			ReaderModel: readerModel,
 			JudgeError:  judgeErr,
+			NotesExtra:  notesExtra,
 		}); err != nil {
 			return nil, "", err
 		}

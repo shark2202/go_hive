@@ -1,5 +1,5 @@
 // go_hive 分层依赖图（生成物，勿手改）
-// 源：architecture/model.yaml + go list -json ./... · commit 21f07de2a493
+// 源：architecture/model.yaml + go list -json ./... · commit 7b77d047e82e
 // 箭头 A -> B 读作 A imports B。
 digraph go_hive {
   graph [rankdir=LR, fontname="Helvetica", nodesep=0.28, ranksep=0.9, splines=true];
@@ -123,6 +123,7 @@ digraph go_hive {
   "cmd/hive-browser" -> "internal/cli";
   "cmd/hive-cred" -> "internal/cli";
   "cmd/hive-longmemeval" -> "internal/cli";
+  "cmd/hive-longmemeval" -> "internal/llm";
   "cmd/hive-longmemeval" -> "internal/longmemeval";
   "e2e/cmd/memgw" -> "e2e/memgw";
   "e2e/cmd/recordproxy" -> "e2e/recordproxy";
@@ -216,6 +217,9 @@ digraph go_hive {
   "internal/llm" -> "internal/ratelimit";
   "internal/llmjudge" -> "internal/llm";
   "internal/logging" -> "internal/pyenv";
+  "internal/longmemeval" -> "internal/agentloop";
+  "internal/longmemeval" -> "internal/llm";
+  "internal/longmemeval" -> "internal/memory";
   "internal/longmemeval" -> "internal/session";
   "internal/maintenance" -> "internal/atomicfs";
   "internal/maintenance" -> "internal/hivehome";

@@ -1,0 +1,80 @@
+container : Linux 7.0.14-linuxkit aarch64 PRETTY_NAME="Debian GNU/Linux 13 (trixie)"
+archive   : hive-1.0.26-go.1-linux-arm64.tar.gz
+expect    : version='1.0.26-go.1' port=18787
+
+$ (cd /release && sha256sum -c SHA256SUMS --ignore-missing) [filtered to hive-1.0.26-go.1-linux-arm64.tar.gz]
+hive-1.0.26-go.1-linux-arm64.tar.gz: OK
+  ok  : C1 sha256 matches release SHA256SUMS
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+  ok  : C2 extracted LICENSE NOTICE README.md SHA256SUMS THIRD_PARTY_NOTICES.md browserbridge hive hive-browser hive-cred 
+  ok  : C2 hive executable
+  ok  : C2 hive-cred executable
+  ok  : C2 hive-browser executable
+  ok  : C2 browserbridge executable
+$ ./hive --version
+hive 1.0.26-go.1
+exit=0
+  ok  : C3 hive --version exit=0: hive 1.0.26-go.1
+  ok  : C3 version matches expected '1.0.26-go.1'
+$ ./hive --help
+usage: hive [-h] [--version] [--model MODEL]
+            {serve,open,queen,colony,session,chat,skill,debugger,mcp,janitor}
+            ...
+
+Aden Hive — Queens, colonies, and live agent sessions
+
+positional arguments:
+  {serve,open,queen,colony,session,chat,skill,debugger,mcp,janitor}
+    serve               Start the HTTP API server
+    open                Start the server and open the dashboard
+    queen               Manage queen profiles
+    colony              Manage colonies
+... (23 lines total)
+exit=0
+  ok  : C4 hive --help exit=0, usage text present
+
+fresh HIVE_HOME: /tmp/hivehome-fresh exists before serve? no
+$ HIVE_HOME=/tmp/hivehome-fresh HIVE_BROWSER_BRIDGE=0 ./hive serve --port 18787 &  (pid 88)
+  ok  : C5 serve listening on 127.0.0.1:18787
+$ GET /api/health -> 200
+{"agents_loaded":0,"request_executor":{"max_workers":32,"active":0,"queued":0},"resources":{"avail_mb":2854,"renderers":0,"verdict":"ok"},"sessions":0,"status":"ok"}
+  ok  : C5 GET /api/health -> 200 {"status":"ok"}
+$ GET / -> 200 (first 120 bytes: <!DOCTYPE html> <html lang="en">   <head>     <meta charset="UTF-8" />     <meta name="viewport" content="width=device-w)
+  ok  : C6 GET / -> 200 (embedded dashboard)
+
+HIVE_HOME after serve (first 25 entries):
+  ok  : C5 fresh HIVE_HOME created: /tmp/hivehome-fresh
+  ok  : C9 serve exited on SIGTERM
+
+$ ./hive-cred --help
+usage: hive-cred [-h] {token,browse,inspect} ...
+
+Fetch a fresh credential value for use in a script.
+
+positional arguments:
+  {token,browse,inspect}
+exit=0
+  ok  : C7 hive-cred --help exit=0
+
+$ ./hive-browser help   exit=0 (first line: usage: hive-browser [-h] [--json])
+$ ./browserbridge -version exit=0 (0.3.0-l3a)
+  ok  : C8 hive-browser help exit=0
+  ok  : C8 browserbridge -version exit=0
+
+$ HIVE_BROWSER_BRIDGE=1 HIVE_BROWSERBRIDGE_HTTP=127.0.0.1:14930 ./hive serve --port 18787 & (pid 189)
+Browser bridge: ready on 127.0.0.1:14930 (pid 205, viewport scale 0.8)
+  ok  : C10 serve announced browserbridge ready (sibling resolved next to hive)
+$ GET http://127.0.0.1:14930/health -> 200 {"connected":false,"connections":0,"ok":true,"status":"ok","uptime_ms":498}
+  ok  : C10 bridge /health -> 200
+  ok  : C10 bridge stopped with serve (port 14930 closed)
+
+RESULT: PASS (20 checks)
+transcript: /evidence/docker-linux-arm64.log.txt

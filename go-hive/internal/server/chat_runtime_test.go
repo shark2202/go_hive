@@ -324,7 +324,11 @@ func recallReminder(parts []map[string]any) string {
 	return ""
 }
 
+// Background mode: the pick made for message N rides message N+1, so the
+// scoped blocks are asserted on the second turn.
+//
 // Parity: core/tests/test_queen_memory.py::test_build_scoped_recall_blocks_includes_global_and_queen
+// Parity: core/framework/server/queen_orchestrator.py::_recall_on_user_input
 func TestChatRuntimeInjectsQueenScopedRecallReminder(t *testing.T) {
 	// The recall injection is the upstream "background" mode
 	// (_recall_on_user_input); 1.0.15's default is "index", where the notes
@@ -350,12 +354,16 @@ func TestChatRuntimeInjectsQueenScopedRecallReminder(t *testing.T) {
 		t.Fatalf("Deliver: %v", err)
 	}
 	parts := waitForAssistantParts(t, runtime, 1)
-	if len(parts) < 3 {
-		t.Fatalf("parts = %#v, want user, recall reminder, assistant", parts)
+	if reminder := recallReminder(parts); reminder != "" {
+		t.Fatalf("the first message carried its own pick: %q", reminder)
 	}
-	if parts[0]["role"] != "user" || !strings.Contains(parts[0]["content"].(string), "what do you remember?") {
-		t.Fatalf("first part = %#v, want the user message", parts[0])
+	if !waitForChatRecallCache(t, runtime, 2*time.Second) {
+		t.Fatal("background pick never landed in the cache")
 	}
+	if err := runtime.Deliver("tell me again"); err != nil {
+		t.Fatalf("Deliver: %v", err)
+	}
+	parts = waitForAssistantParts(t, runtime, 2)
 	reminder := recallReminder(parts)
 	if reminder == "" {
 		t.Fatalf("parts = %#v, want an injected recall reminder", parts)
@@ -460,8 +468,20 @@ func TestChatRuntimeRecallIsScopedToItsQueen(t *testing.T) {
 	if err := bee.Deliver("who are you?"); err != nil {
 		t.Fatalf("bee Deliver: %v", err)
 	}
-	avaReminder := recallReminder(waitForAssistantParts(t, ava, 1))
-	beeReminder := recallReminder(waitForAssistantParts(t, bee, 1))
+	waitForAssistantParts(t, ava, 1)
+	waitForAssistantParts(t, bee, 1)
+	// The first message starts each pick; the cached block rides the next one.
+	if !waitForChatRecallCache(t, ava, 2*time.Second) || !waitForChatRecallCache(t, bee, 2*time.Second) {
+		t.Fatal("background pick never landed in the cache")
+	}
+	if err := ava.Deliver("and again?"); err != nil {
+		t.Fatalf("ava Deliver: %v", err)
+	}
+	if err := bee.Deliver("and again?"); err != nil {
+		t.Fatalf("bee Deliver: %v", err)
+	}
+	avaReminder := recallReminder(waitForAssistantParts(t, ava, 2))
+	beeReminder := recallReminder(waitForAssistantParts(t, bee, 2))
 
 	if !strings.Contains(avaReminder, "--- Queen Memories: queen_ava ---") || !strings.Contains(avaReminder, "ava only memory") {
 		t.Fatalf("ava reminder = %q", avaReminder)

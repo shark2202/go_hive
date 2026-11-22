@@ -1,0 +1,162 @@
+release dir : /Users/mac/hive/.wt/installer-verify/go_hive/go-hive/dist/release
+version     : 1.0.26-go.1
+platforms   : darwin/amd64 darwin/arm64 linux/amd64 linux/arm64 windows/amd64 windows/arm64
+host        : Darwin arm64
+
+== darwin/amd64 ==
+  ok  : A1 archive present: hive-1.0.26-go.1-darwin-amd64.tar.gz (37416117 bytes)
+  ok  : A1 sha256 == SHA256SUMS: d2132fdd6f99dfbe97a71de4f6fc553b60baff40afd468ec7d92f48334afca7c
+  ok  : A2 members: hive hive-cred hive-browser browserbridge LICENSE NOTICE README.md SHA256SUMS
+        hive               47538288 bytes sha256=173ac02a36addc00b72279978f02738d6472abc13164aae09621a71f1b74bb3d
+        hive-cred          16682944 bytes sha256=8ef9784509efe240d0b6640453c248eb3fe5bb1fb778f6806b9a18c149a2e222
+        hive-browser       16568784 bytes sha256=70574a1a0ba79cad7471607967c4e46a99c1c34496638d53b3241c84de3b3e41
+        browserbridge       8022432 bytes sha256=a9c6f59071900e6400e0e7fe8342cb224abbc71b436d0546520cdcb5d5f89bc2
+  ok  : A3 inner SHA256SUMS: 8 files OK
+  ok  : A4 install.sh exit=0 (SHA256 verified, four binaries installed)
+        install: using local archive: /Users/mac/hive/.wt/installer-verify/go_hive/go-hive/dist/release/hive-1.0.26-go.1-darwin-amd64.tar.gz
+        install: verified SHA256: hive-1.0.26-go.1-darwin-amd64.tar.gz
+        install: verified archive contents
+        install: installed hive -> /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//hive-installer-verify.uaZyzU/install-darwin-amd64/hive
+        install: installed hive-cred -> /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//hive-installer-verify.uaZyzU/install-darwin-amd64/hive-cred
+        install: installed hive-browser -> /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//hive-installer-verify.uaZyzU/install-darwin-amd64/hive-browser
+        install: installed browserbridge -> /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//hive-installer-verify.uaZyzU/install-darwin-amd64/browserbridge
+        hive 1.0.26-go.1
+        install: verified hive-cred --help
+        install: verified hive-browser help
+        install: verified browserbridge -version
+        
+        Add the install directory to PATH:
+          export PATH="/var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//hive-installer-verify.uaZyzU/install-darwin-amd64:$PATH"
+  ok  : A4 four binaries executable under /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//hive-installer-verify.uaZyzU/install-darwin-amd64
+
+== darwin/arm64 ==
+  ok  : A1 archive present: hive-1.0.26-go.1-darwin-arm64.tar.gz (35684216 bytes)
+  ok  : A1 sha256 == SHA256SUMS: bf2d2635798b988255eb56d2fc78efcd4ef93fa4a3c3805bb4de5047b7d68ff7
+  ok  : A2 members: hive hive-cred hive-browser browserbridge LICENSE NOTICE README.md SHA256SUMS
+        hive               45919826 bytes sha256=b4ae9b86203be672b1f9eb8c6424e8e125ea401eac6980b92daf39c713f3486a
+        hive-cred          16176690 bytes sha256=abacb7454221ffc2e7f7bc3fcc4e428e443ee3239f73238944f3af5d4f2e9f51
+        hive-browser       16045122 bytes sha256=27f4636e5b35bbcac207c1670d2185b250c7e64ac185a75ff72094b5fa82b617
+        browserbridge       7436642 bytes sha256=50e2eac95bd4f596f9fac58928d954b6e8d5a217af69f8d2a7bafb5f0cdead36
+  ok  : A3 inner SHA256SUMS: 8 files OK
+  ok  : A4 install.sh exit=0 (SHA256 verified, four binaries installed)
+        install: using local archive: /Users/mac/hive/.wt/installer-verify/go_hive/go-hive/dist/release/hive-1.0.26-go.1-darwin-arm64.tar.gz
+        install: verified SHA256: hive-1.0.26-go.1-darwin-arm64.tar.gz
+        install: verified archive contents
+        install: installed hive -> /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//hive-installer-verify.uaZyzU/install-darwin-arm64/hive
+        install: installed hive-cred -> /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//hive-installer-verify.uaZyzU/install-darwin-arm64/hive-cred
+        install: installed hive-browser -> /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//hive-installer-verify.uaZyzU/install-darwin-arm64/hive-browser
+        install: installed browserbridge -> /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//hive-installer-verify.uaZyzU/install-darwin-arm64/browserbridge
+        hive 1.0.26-go.1
+        install: verified hive-cred --help
+        install: verified hive-browser help
+        install: verified browserbridge -version
+        
+        Add the install directory to PATH:
+          export PATH="/var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//hive-installer-verify.uaZyzU/install-darwin-arm64:$PATH"
+  ok  : A4 four binaries executable under /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//hive-installer-verify.uaZyzU/install-darwin-arm64
+
+== linux/amd64 ==
+  ok  : A1 archive present: hive-1.0.26-go.1-linux-amd64.tar.gz (36969096 bytes)
+  ok  : A1 sha256 == SHA256SUMS: 0de567919df37a5479c941a2fc037436bf27054fa8fd6cd21f0c8edfcab7d23a
+  ok  : A2 members: hive hive-cred hive-browser browserbridge LICENSE NOTICE README.md SHA256SUMS
+        hive               46981282 bytes sha256=f5031217c87548d2832551f38069b1fcc9586b08b581dbdbc0c2e8d273725eb4
+        hive-cred          16392354 bytes sha256=477db44853073913d3e4892bf7a3f283793af6b8b39c63734546920599e36d4b
+        hive-browser       16285858 bytes sha256=194984fe71af52ea1760ac7c9e17eb7555706212ef32e8230d253b8223984c57
+        browserbridge       7880866 bytes sha256=da647471a8a0bc12178ea57484b2dc191bac0f7e8e87dab4c7d582854e9184fe
+  ok  : A3 inner SHA256SUMS: 8 files OK
+  ok  : A4 install.sh exit=0 (SHA256 verified, four binaries installed)
+        install: using local archive: /Users/mac/hive/.wt/installer-verify/go_hive/go-hive/dist/release/hive-1.0.26-go.1-linux-amd64.tar.gz
+        install: verified SHA256: hive-1.0.26-go.1-linux-amd64.tar.gz
+        install: verified archive contents
+        install: installed hive -> /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//hive-installer-verify.uaZyzU/install-linux-amd64/hive
+        install: installed hive-cred -> /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//hive-installer-verify.uaZyzU/install-linux-amd64/hive-cred
+        install: installed hive-browser -> /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//hive-installer-verify.uaZyzU/install-linux-amd64/hive-browser
+        install: installed browserbridge -> /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//hive-installer-verify.uaZyzU/install-linux-amd64/browserbridge
+        install: WARNING: installed binary did not run --version (cross-OS archive?)
+        install: WARNING: installed hive-cred did not run --help (cross-OS archive?)
+        install: WARNING: installed hive-browser did not run help (cross-OS archive?)
+        install: WARNING: installed browserbridge did not run -version (cross-OS archive?)
+        
+        Add the install directory to PATH:
+          export PATH="/var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//hive-installer-verify.uaZyzU/install-linux-amd64:$PATH"
+  ok  : A4 four binaries executable under /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//hive-installer-verify.uaZyzU/install-linux-amd64
+
+== linux/arm64 ==
+  ok  : A1 archive present: hive-1.0.26-go.1-linux-arm64.tar.gz (34535219 bytes)
+  ok  : A1 sha256 == SHA256SUMS: 6731aa6ab82f9fb297fb4e017ad5e0038368d1870a3575e2ad02a374e687ef9f
+  ok  : A2 members: hive hive-cred hive-browser browserbridge LICENSE NOTICE README.md SHA256SUMS
+        hive               45023394 bytes sha256=b6668a0f0c9b34f1fefbd25bf778d3a03e474646c25237181be5339ede094d6b
+        hive-cred          15794338 bytes sha256=fca85fd98f93766e5e45ab248b749cbb3fdb2fd3ac6caf824ebffdba58c87c53
+        hive-browser       15728802 bytes sha256=e0cfeabaf7d30eba941751bb4fd8802257d4de51ba74b9a4a3f1fe3a9e83b698
+        browserbridge       7274658 bytes sha256=8bda63ff55e892f55d60d098dd58fd8a87afab6cfd9c6fd887cd22404b330963
+  ok  : A3 inner SHA256SUMS: 8 files OK
+  ok  : A4 install.sh exit=0 (SHA256 verified, four binaries installed)
+        install: using local archive: /Users/mac/hive/.wt/installer-verify/go_hive/go-hive/dist/release/hive-1.0.26-go.1-linux-arm64.tar.gz
+        install: verified SHA256: hive-1.0.26-go.1-linux-arm64.tar.gz
+        install: verified archive contents
+        install: installed hive -> /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//hive-installer-verify.uaZyzU/install-linux-arm64/hive
+        install: installed hive-cred -> /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//hive-installer-verify.uaZyzU/install-linux-arm64/hive-cred
+        install: installed hive-browser -> /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//hive-installer-verify.uaZyzU/install-linux-arm64/hive-browser
+        install: installed browserbridge -> /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//hive-installer-verify.uaZyzU/install-linux-arm64/browserbridge
+        install: WARNING: installed binary did not run --version (cross-OS archive?)
+        install: WARNING: installed hive-cred did not run --help (cross-OS archive?)
+        install: WARNING: installed hive-browser did not run help (cross-OS archive?)
+        install: WARNING: installed browserbridge did not run -version (cross-OS archive?)
+        
+        Add the install directory to PATH:
+          export PATH="/var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//hive-installer-verify.uaZyzU/install-linux-arm64:$PATH"
+  ok  : A4 four binaries executable under /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//hive-installer-verify.uaZyzU/install-linux-arm64
+
+== windows/amd64 ==
+  ok  : A1 archive present: hive-1.0.26-go.1-windows-amd64.zip (34412553 bytes)
+  ok  : A1 sha256 == SHA256SUMS: 6c9b58f5c1b7ae562da803b78127203d85863feac2a35e07f886156ea9440a8a
+  ok  : A2 members: hive.exe hive-cred.exe hive-browser.exe browserbridge.exe LICENSE NOTICE README.md SHA256SUMS
+        hive.exe           46165504 bytes sha256=e18aa3d5e8b5474f3f1c597f1647aea863e1c5f87539a38f4f8e9e2a20abafa2
+        hive-cred.exe      15293440 bytes sha256=89aab687733e17e599617fc032a72154ad665d3ae55e5342374d7531ab5fee33
+        hive-browser.exe   15180288 bytes sha256=394c8323cef76d48bf322721ab7590ad7908ce6d88cdd4425a991c0e3827b6d8
+        browserbridge.exe    8098304 bytes sha256=15aa0ffda20727722ff02a369b806aa69d5b79374ffc9d959f0630970e2f3a3a
+  ok  : A3 inner SHA256SUMS: 8 files OK
+  ok  : A4 install.sh exit=0 (SHA256 verified, four binaries installed)
+        install: using local archive: /Users/mac/hive/.wt/installer-verify/go_hive/go-hive/dist/release/hive-1.0.26-go.1-windows-amd64.zip
+        install: verified SHA256: hive-1.0.26-go.1-windows-amd64.zip
+        install: verified archive contents
+        install: installed hive.exe -> /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//hive-installer-verify.uaZyzU/install-windows-amd64/hive.exe
+        install: installed hive-cred.exe -> /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//hive-installer-verify.uaZyzU/install-windows-amd64/hive-cred.exe
+        install: installed hive-browser.exe -> /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//hive-installer-verify.uaZyzU/install-windows-amd64/hive-browser.exe
+        install: installed browserbridge.exe -> /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//hive-installer-verify.uaZyzU/install-windows-amd64/browserbridge.exe
+        install: WARNING: installed binary did not run --version (cross-OS archive?)
+        install: WARNING: installed hive-cred.exe did not run --help (cross-OS archive?)
+        install: WARNING: installed hive-browser.exe did not run help (cross-OS archive?)
+        install: WARNING: installed browserbridge.exe did not run -version (cross-OS archive?)
+        
+        Add the install directory to PATH:
+          export PATH="/var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//hive-installer-verify.uaZyzU/install-windows-amd64:$PATH"
+  ok  : A4 four binaries executable under /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//hive-installer-verify.uaZyzU/install-windows-amd64
+
+== windows/arm64 ==
+  ok  : A1 archive present: hive-1.0.26-go.1-windows-arm64.zip (31720053 bytes)
+  ok  : A1 sha256 == SHA256SUMS: 05bf8eebd09a5c63d993c855ebffb4e77c08a0742354f61922ac706eb9e34ea4
+  ok  : A2 members: hive.exe hive-cred.exe hive-browser.exe browserbridge.exe LICENSE NOTICE README.md SHA256SUMS
+        hive.exe           43892736 bytes sha256=c1ae42b71b5b6775badcb8191b71c212ea61fb6bbdba49cd0a6481281c9611f1
+        hive-cred.exe      14495744 bytes sha256=f7e1498b1426b5d9680bfef6203c6e20b86099ae00b60a7f9251eb2a0ed54efe
+        hive-browser.exe   14380544 bytes sha256=4e5e9929d64fe473615e4702d558849f3148eea5442748d8df5acb5e9de9f86c
+        browserbridge.exe    7360512 bytes sha256=d1178be1cef0357b9c0f3e6b1b30add8976e7658d4c1271185d0ae8e6c027942
+  ok  : A3 inner SHA256SUMS: 8 files OK
+  ok  : A4 install.sh exit=0 (SHA256 verified, four binaries installed)
+        install: using local archive: /Users/mac/hive/.wt/installer-verify/go_hive/go-hive/dist/release/hive-1.0.26-go.1-windows-arm64.zip
+        install: verified SHA256: hive-1.0.26-go.1-windows-arm64.zip
+        install: verified archive contents
+        install: installed hive.exe -> /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//hive-installer-verify.uaZyzU/install-windows-arm64/hive.exe
+        install: installed hive-cred.exe -> /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//hive-installer-verify.uaZyzU/install-windows-arm64/hive-cred.exe
+        install: installed hive-browser.exe -> /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//hive-installer-verify.uaZyzU/install-windows-arm64/hive-browser.exe
+        install: installed browserbridge.exe -> /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//hive-installer-verify.uaZyzU/install-windows-arm64/browserbridge.exe
+        install: WARNING: installed binary did not run --version (cross-OS archive?)
+        install: WARNING: installed hive-cred.exe did not run --help (cross-OS archive?)
+        install: WARNING: installed hive-browser.exe did not run help (cross-OS archive?)
+        install: WARNING: installed browserbridge.exe did not run -version (cross-OS archive?)
+        
+        Add the install directory to PATH:
+          export PATH="/var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//hive-installer-verify.uaZyzU/install-windows-arm64:$PATH"
+  ok  : A4 four binaries executable under /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//hive-installer-verify.uaZyzU/install-windows-arm64
+
+RESULT: PASS (36 checks)

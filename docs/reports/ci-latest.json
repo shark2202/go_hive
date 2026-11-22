@@ -1,9 +1,9 @@
 {
- "wave": 53,
- "at": "2026-11-22 10:04",
- "head": "ba5a7524",
- "ci": 2,
+ "wave": 54,
+ "at": "2026-11-22 10:07",
+ "head": "ab9ab760",
+ "ci": 0,
  "qc": 0,
  "publish": 0,
- "note": "C6/C12 锚点修复 + postcheck 三重防线"
+ "note": "title-llm 合并后（G1 净面清零）"
 }

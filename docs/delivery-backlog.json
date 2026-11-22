@@ -60,7 +60,9 @@
    {
     "id": "installer-verify",
     "label": "六平台安装器复验",
-    "hours": 2
+    "hours": 2,
+    "done": true,
+    "note": "DONE 2026-11-22：六平台归档 36/36 PASS；linux/arm64 debian:stable-slim 容器真跑 20/20（version/help/serve+/api/health/cred/browserbridge），linux/amd64 模拟 20/20，darwin 双架构本机全 PASS；windows 无宿主仅静态。文档 docs/installer-verify.md，证据 docs/e2e-assets/installer-verify/2026-11-22/。"
    },
    {
     "id": "longmemeval-60q-evidence",
@@ -333,7 +335,7 @@
     "label": "上游 1.0.15「Notes in Time」memory notes 特性移植（notes 先于回答到达；log.jsonl 历史/恢复；用户自有 notes；note 年龄=最后确认日；memory_reflection worker 模型；recall 索引化 30ms/3s 上限；HIVE_MEMORY_RECALL、memory_recall/memory_reflection 配置；routes /api/memories* /api/config/memory）",
     "hours": 12,
     "done": true,
-    "note": "2026-11-22 引入（origin/main 6703b434 合并后实测）：新增 py 2 文件（memory_reminders.py、queen/memory_log.py）+ queen_memory_v2/recall_selector/reflection_agent/agent_loop 修改 + 前端 Settings→Memory；Go 侧缺失 5 条有效路由。 | DONE 2026-11-22（lane mem-notes-push + mem-notes-log）：notes 推送 index/wait 双模式（header 逐字）、recall 索引化（per-owner/冷建 3s 让路/删除重建）、log.jsonl 历史+恢复、8 条 /api/memories 路由 + /api/config/memory、自有标记、年龄=最后确认日；Python 探针 51/51 + 上游 pytest 95 passed；missing_in_go_effective 5→0。残余：background 模式同步挑选、索引 JSON vs SQLite（已登记 memory-notes-parity.md）。"
+    "note": "2026-11-22 引入（origin/main 6703b434 合并后实测）：新增 py 2 文件（memory_reminders.py、queen/memory_log.py）+ queen_memory_v2/recall_selector/reflection_agent/agent_loop 修改 + 前端 Settings→Memory；Go 侧缺失 5 条有效路由。 | DONE 2026-11-22（lane mem-notes-push + mem-notes-log）：notes 推送 index/wait 双模式（header 逐字）、recall 索引化（per-owner/冷建 3s 让路/删除重建）、log.jsonl 历史+恢复、8 条 /api/memories 路由 + /api/config/memory、自有标记、年龄=最后确认日；Python 探针 51/51 + 上游 pytest 95 passed；missing_in_go_effective 5→0。 | DONE 2026-11-22（lane bg-recall）：background 模式时序对齐上游（缓存块随下一条消息送达 + 挑选在后台任务，探针 36/36，见 bg-recall-probe.json）；残余：挑选 seed 未移植、双 scope 串行挑选、索引 JSON vs SQLite（已登记 memory-notes-parity.md）。"
    },
    {
     "id": "memory-recall-index-1.0.15",

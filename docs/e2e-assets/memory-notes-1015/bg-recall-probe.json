@@ -1,0 +1,525 @@
+{
+ "total": 36,
+ "passed": 36,
+ "failed": 0,
+ "cases": [
+  {
+   "case": "E1.loop_drain_order",
+   "subject": "passive recall queued before the user message is drained AFTER it in the same first request",
+   "expected": {
+    "user message before recall": true,
+    "both present": true
+   },
+   "observed": {
+    "positions": {
+     "What tea do I like?": 63,
+     "Recalled memories relevant": 141
+    },
+    "present": [
+     "What tea do I like?",
+     "Recalled memories relevant"
+    ],
+    "ordered": true
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "E2.parked_never_wakes",
+   "subject": "a passive injection while parked starts no turn and sits in the passive list",
+   "expected": {
+    "llm_calls_after": 1,
+    "passive_held": true,
+    "conversation_untouched": true
+   },
+   "observed": {
+    "llm_calls_after": 1,
+    "passive_held": true,
+    "conversation_untouched": true
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "E2.parked_never_wakes",
+   "subject": "the parked recall is delivered with the NEXT message, after it",
+   "expected": {
+    "second message before recall": true,
+    "both present": true
+   },
+   "observed": {
+    "positions": {
+     "second message": 63,
+     "Recalled memories relevant": 136
+    },
+    "present": [
+     "second message",
+     "Recalled memories relevant"
+    ],
+    "ordered": true
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "E3.midturn_delivery",
+   "subject": "a passive injection during the turn's first LLM call is absent from every request of that turn (no inner-iteration drain)",
+   "expected": {
+    "turn1_requests": [
+     false,
+     false
+    ]
+   },
+   "observed": {
+    "turn1_requests": [
+     false,
+     false
+    ]
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "E3.midturn_delivery",
+   "subject": "the mid-turn recall is delivered with the next message, after it",
+   "expected": {
+    "second message before recall": true,
+    "both present": true
+   },
+   "observed": {
+    "positions": {
+     "second message": 63,
+     "Recalled memories relevant": 136
+    },
+    "present": [
+     "second message",
+     "Recalled memories relevant"
+    ],
+    "ordered": true
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "E4.no_continuation_after_tool_turn",
+   "subject": "a tool-using turn parks at its tool-free response: the judge sees 0 real tool results and accepts, so the next drain is the next message",
+   "expected": {
+    "llm_calls": 2,
+    "judge_calls": 1,
+    "real_tool_results": 0
+   },
+   "observed": {
+    "llm_calls": 2,
+    "judge_calls": [
+     {
+      "iteration": 0,
+      "real_tool_results": 0
+     }
+    ],
+    "real_tool_results": null
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "F1.selector_concurrency",
+   "subject": "both scope picks are in flight at once (asyncio.gather)",
+   "expected": {
+    "calls": 2,
+    "overlapping": true
+   },
+   "observed": {
+    "calls": 2,
+    "overlapping": true,
+    "elapsed_s": 0.153
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "F2.selector_no_timeout",
+   "subject": "no cap inside the selector: the full pick time is awaited",
+   "expected": {
+    "elapsed_s >= 0.55": true,
+    "block_rendered": true
+   },
+   "observed": {
+    "elapsed_s": 0.602,
+    "block_rendered": true
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "F3.seed_cap",
+   "subject": "wait_for(..., 3.0) cancels a 5s seed pick; the cache is left unchanged",
+   "expected": {
+    "outcome": "TimeoutError",
+    "elapsed_s ~= 3.0": true,
+    "cache": {}
+   },
+   "observed": {
+    "outcome": "TimeoutError",
+    "elapsed_s": 3.0,
+    "cache": {}
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "F4.seed_max_results",
+   "subject": "seed call keeps 5 profile pins; the refresh keeps 3 (scope default)",
+   "expected": {
+    "seed_pins": 5,
+    "refresh_pins": 3
+   },
+   "observed": {
+    "seed_pins": 5,
+    "refresh_pins": 3
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "F5.empty_query",
+   "subject": "build_scoped_recall_blocks has no empty-query guard: the pick still runs (queen_orchestrator._refresh_recall_cache is what skips it)",
+   "expected": {
+    "model_calls": 1
+   },
+   "observed": {
+    "model_calls": 1
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "H.publish_awaits_handlers",
+   "subject": "publish awaits handlers (0.25s handler → ~0.25s); a handler that spawns a task returns immediately while the task finishes later",
+   "expected": {
+    "slow_publish_s >= 0.2": true,
+    "task_publish_s < 0.1": true,
+    "later_ran": true
+   },
+   "observed": {
+    "slow_publish_s": 0.251,
+    "task_publish_s": 0.0,
+    "later_ran": true
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "G.anchors",
+   "subject": "core/framework/server/queen_orchestrator.py::async def _recall_on_user_input",
+   "expected": "at least one anchored line (multi-match recorded for the doc)",
+   "observed": {
+    "file": "core/framework/server/queen_orchestrator.py",
+    "lines": [
+     1307
+    ]
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "G.anchors",
+   "subject": "core/framework/server/queen_orchestrator.py::if get_memory_recall_config\\(\\)\\.mode != \\\"background\\\"",
+   "expected": "at least one anchored line (multi-match recorded for the doc)",
+   "observed": {
+    "file": "core/framework/server/queen_orchestrator.py",
+    "lines": [
+     1324
+    ]
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "G.anchors",
+   "subject": "core/framework/server/queen_orchestrator.py::await _inject_recall_if_changed\\(\\)",
+   "expected": "at least one anchored line (multi-match recorded for the doc)",
+   "observed": {
+    "file": "core/framework/server/queen_orchestrator.py",
+    "lines": [
+     1327,
+     1332
+    ]
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "G.anchors",
+   "subject": "core/framework/server/queen_orchestrator.py::_asyncio\\.create_task\\(_bg_refresh\\(\\)\\)",
+   "expected": "at least one anchored line (multi-match recorded for the doc)",
+   "observed": {
+    "file": "core/framework/server/queen_orchestrator.py",
+    "lines": [
+     1338
+    ]
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "G.anchors",
+   "subject": "core/framework/server/queen_orchestrator.py::async def _inject_recall_if_changed",
+   "expected": "at least one anchored line (multi-match recorded for the doc)",
+   "observed": {
+    "file": "core/framework/server/queen_orchestrator.py",
+    "lines": [
+     1290
+    ]
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "G.anchors",
+   "subject": "core/framework/server/queen_orchestrator.py::if not block or block == _last_injected_recall",
+   "expected": "at least one anchored line (multi-match recorded for the doc)",
+   "observed": {
+    "file": "core/framework/server/queen_orchestrator.py",
+    "lines": [
+     1296
+    ]
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "G.anchors",
+   "subject": "core/framework/server/queen_orchestrator.py::async def _refresh_recall_cache",
+   "expected": "at least one anchored line (multi-match recorded for the doc)",
+   "observed": {
+    "file": "core/framework/server/queen_orchestrator.py",
+    "lines": [
+     1247
+    ]
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "G.anchors",
+   "subject": "core/framework/server/queen_orchestrator.py::if not query or not isinstance\\(query, str\\)",
+   "expected": "at least one anchored line (multi-match recorded for the doc)",
+   "observed": {
+    "file": "core/framework/server/queen_orchestrator.py",
+    "lines": [
+     1249
+    ]
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "G.anchors",
+   "subject": "core/framework/server/queen_orchestrator.py::async def _recall_for_message",
+   "expected": "at least one anchored line (multi-match recorded for the doc)",
+   "observed": {
+    "file": "core/framework/server/queen_orchestrator.py",
+    "lines": [
+     1351
+    ]
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "G.anchors",
+   "subject": "core/framework/server/queen_orchestrator.py::if trigger and get_memory_recall_config\\(\\)\\.mode == \"background\"",
+   "expected": "at least one anchored line (multi-match recorded for the doc)",
+   "observed": {
+    "file": "core/framework/server/queen_orchestrator.py",
+    "lines": [
+     1461
+    ]
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "G.anchors",
+   "subject": "core/framework/server/queen_orchestrator.py::timeout=3\\.0,",
+   "expected": "at least one anchored line (multi-match recorded for the doc)",
+   "observed": {
+    "file": "core/framework/server/queen_orchestrator.py",
+    "lines": [
+     1473
+    ]
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "G.anchors",
+   "subject": "core/framework/server/queen_orchestrator.py::event\\.data or \\{\\}\\)\\.get\\(\\\"content\\\"",
+   "expected": "at least one anchored line (multi-match recorded for the doc)",
+   "observed": {
+    "file": "core/framework/server/queen_orchestrator.py",
+    "lines": [
+     1326
+    ]
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "G.anchors",
+   "subject": "core/framework/server/routes_execution.py::Publish BEFORE inject_event so handlers",
+   "expected": "at least one anchored line (multi-match recorded for the doc)",
+   "observed": {
+    "file": "core/framework/server/routes_execution.py",
+    "lines": [
+     795
+    ]
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "G.anchors",
+   "subject": "core/framework/server/routes_execution.py::await session\\.event_bus\\.publish\\(",
+   "expected": "at least one anchored line (multi-match recorded for the doc)",
+   "observed": {
+    "file": "core/framework/server/routes_execution.py",
+    "lines": [
+     806
+    ]
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "G.anchors",
+   "subject": "core/framework/server/routes_execution.py::await node\\.inject_event\\(",
+   "expected": "at least one anchored line (multi-match recorded for the doc)",
+   "observed": {
+    "file": "core/framework/server/routes_execution.py",
+    "lines": [
+     826,
+     893,
+     909
+    ]
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "G.anchors",
+   "subject": "core/framework/agent_loop/agent_loop.py::for content in self\\._passive_injections",
+   "expected": "at least one anchored line (multi-match recorded for the doc)",
+   "observed": {
+    "file": "core/framework/agent_loop/agent_loop.py",
+    "lines": [
+     7079
+    ]
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "G.anchors",
+   "subject": "core/framework/agent_loop/agent_loop.py::drained_injections = await self\\._drain_injection_queue",
+   "expected": "at least one anchored line (multi-match recorded for the doc)",
+   "observed": {
+    "file": "core/framework/agent_loop/agent_loop.py",
+    "lines": [
+     1860
+    ]
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "G.anchors",
+   "subject": "core/framework/agent_loop/agent_loop.py::self\\._passive_injections\\.append\\(content\\)",
+   "expected": "at least one anchored line (multi-match recorded for the doc)",
+   "observed": {
+    "file": "core/framework/agent_loop/agent_loop.py",
+    "lines": [
+     3582
+    ]
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "G.anchors",
+   "subject": "core/framework/agent_loop/internals/cursor_persistence.py::stamp = datetime\\.now\\(\\)\\.astimezone\\(\\)\\.strftime",
+   "expected": "at least one anchored line (multi-match recorded for the doc)",
+   "observed": {
+    "file": "core/framework/agent_loop/internals/cursor_persistence.py",
+    "lines": [
+     271,
+     317
+    ]
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "G.anchors",
+   "subject": "core/framework/config.py::\"background\": the same pick after she has started answering",
+   "expected": "at least one anchored line (multi-match recorded for the doc)",
+   "observed": {
+    "file": "core/framework/config.py",
+    "lines": [
+     1066
+    ]
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "G.anchors",
+   "subject": "core/framework/config.py::#: The longest \"wait\" holds a message for its pick\\.",
+   "expected": "at least one anchored line (multi-match recorded for the doc)",
+   "observed": {
+    "file": "core/framework/config.py",
+    "lines": [
+     1069
+    ]
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "G.anchors",
+   "subject": "_recall_on_user_input delivers the cached block, THEN spawns the pick",
+   "expected": "cached-inject line < create_task line",
+   "observed": {
+    "cached_inject_lines": [
+     1327,
+     1332
+    ],
+    "create_task_line": 1338
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "G.anchors",
+   "subject": "deliver_to_queen publishes CLIENT_INPUT_RECEIVED before queueing the user message",
+   "expected": "publish line < inject_event line",
+   "observed": {
+    "publish_line": 806,
+    "inject_event_line": 826
+   },
+   "pass": true,
+   "note": ""
+  },
+  {
+   "case": "G.anchors",
+   "subject": "passive injections are appended to the queue AFTER anything already queued",
+   "expected": "passive line < put_nowait line",
+   "observed": {
+    "passive_line": 7079,
+    "queue_line": 7080
+   },
+   "pass": true,
+   "note": ""
+  }
+ ]
+}

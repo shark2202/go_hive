@@ -1,0 +1,1769 @@
+{
+ "groups": {
+  "go_base": {
+   "questions": 60,
+   "correct": 52,
+   "accuracy": 0.8666666666666667,
+   "wilson95": [
+    0.7583460540992789,
+    0.9308597302169036
+   ],
+   "task_averaged": 0.8666666666666667,
+   "by_type": {
+    "single-session-user": {
+     "n": 10,
+     "correct": 10
+    },
+    "single-session-assistant": {
+     "n": 10,
+     "correct": 10
+    },
+    "multi-session": {
+     "n": 10,
+     "correct": 7
+    },
+    "temporal-reasoning": {
+     "n": 10,
+     "correct": 10
+    },
+    "knowledge-update": {
+     "n": 10,
+     "correct": 9
+    },
+    "single-session-preference": {
+     "n": 10,
+     "correct": 6
+    }
+   },
+   "abstention": {
+    "n": 2,
+    "correct": 1
+   },
+   "errors": 0,
+   "ungraded": 0,
+   "median_seconds": 7.190553916500001,
+   "searched": 37,
+   "evidence_retrieved": 34,
+   "ids": [
+    "06f04340",
+    "07b6f563",
+    "0a995998",
+    "0bc8ad93",
+    "0e5e2d1a",
+    "1a1907b4",
+    "2133c1b5_abs",
+    "2788b940",
+    "2bf43736",
+    "32260d93",
+    "3a704032",
+    "41698283",
+    "4388e9dd",
+    "46a3abf7",
+    "4b24c848",
+    "4f54b7c9",
+    "5025383b",
+    "505af2f5",
+    "60472f9c",
+    "60d45044",
+    "65240037",
+    "66f24dbb",
+    "6b168ec8",
+    "6e984301",
+    "7024f17c",
+    "76d63226",
+    "7a8d0b71",
+    "86f00804",
+    "8c18457d",
+    "8cf51dda",
+    "8e9d538c",
+    "8fb83627",
+    "9bbe84a2",
+    "a89d7624",
+    "afdc33df",
+    "affe2881",
+    "b01defab",
+    "b0479f84",
+    "b46e15ee",
+    "b6025781",
+    "bc8a6e93",
+    "c5e8278d",
+    "c8090214",
+    "caf03d32",
+    "cc539528",
+    "cc5ded98",
+    "d52b4f67",
+    "e48988bc",
+    "e61a7584",
+    "e66b632c",
+    "eac54add",
+    "edced276",
+    "f35224e0",
+    "f4f1d8a4_abs",
+    "f523d9fe",
+    "fca762bc",
+    "gpt4_1a1dc16d",
+    "gpt4_b4a80587",
+    "gpt4_d31cdae3",
+    "gpt4_fa19884d"
+   ]
+  },
+  "py_base": {
+   "questions": 60,
+   "correct": 51,
+   "accuracy": 0.85,
+   "wilson95": [
+    0.7388517410884038,
+    0.9190265075770431
+   ],
+   "task_averaged": 0.85,
+   "by_type": {
+    "single-session-user": {
+     "n": 10,
+     "correct": 10
+    },
+    "single-session-assistant": {
+     "n": 10,
+     "correct": 10
+    },
+    "multi-session": {
+     "n": 10,
+     "correct": 7
+    },
+    "temporal-reasoning": {
+     "n": 10,
+     "correct": 10
+    },
+    "knowledge-update": {
+     "n": 10,
+     "correct": 8
+    },
+    "single-session-preference": {
+     "n": 10,
+     "correct": 6
+    }
+   },
+   "abstention": {
+    "n": 2,
+    "correct": 1
+   },
+   "errors": 0,
+   "ungraded": 0,
+   "median_seconds": 7.300000000000001,
+   "searched": 41,
+   "evidence_retrieved": 39,
+   "ids": [
+    "06f04340",
+    "07b6f563",
+    "0a995998",
+    "0bc8ad93",
+    "0e5e2d1a",
+    "1a1907b4",
+    "2133c1b5_abs",
+    "2788b940",
+    "2bf43736",
+    "32260d93",
+    "3a704032",
+    "41698283",
+    "4388e9dd",
+    "46a3abf7",
+    "4b24c848",
+    "4f54b7c9",
+    "5025383b",
+    "505af2f5",
+    "60472f9c",
+    "60d45044",
+    "65240037",
+    "66f24dbb",
+    "6b168ec8",
+    "6e984301",
+    "7024f17c",
+    "76d63226",
+    "7a8d0b71",
+    "86f00804",
+    "8c18457d",
+    "8cf51dda",
+    "8e9d538c",
+    "8fb83627",
+    "9bbe84a2",
+    "a89d7624",
+    "afdc33df",
+    "affe2881",
+    "b01defab",
+    "b0479f84",
+    "b46e15ee",
+    "b6025781",
+    "bc8a6e93",
+    "c5e8278d",
+    "c8090214",
+    "caf03d32",
+    "cc539528",
+    "cc5ded98",
+    "d52b4f67",
+    "e48988bc",
+    "e61a7584",
+    "e66b632c",
+    "eac54add",
+    "edced276",
+    "f35224e0",
+    "f4f1d8a4_abs",
+    "f523d9fe",
+    "fca762bc",
+    "gpt4_1a1dc16d",
+    "gpt4_b4a80587",
+    "gpt4_d31cdae3",
+    "gpt4_fa19884d"
+   ]
+  },
+  "go_notes": {
+   "questions": 60,
+   "correct": 54,
+   "accuracy": 0.9,
+   "wilson95": [
+    0.7985030550748896,
+    0.9533578005427642
+   ],
+   "task_averaged": 0.9,
+   "by_type": {
+    "single-session-user": {
+     "n": 10,
+     "correct": 10
+    },
+    "single-session-assistant": {
+     "n": 10,
+     "correct": 10
+    },
+    "multi-session": {
+     "n": 10,
+     "correct": 6
+    },
+    "temporal-reasoning": {
+     "n": 10,
+     "correct": 10
+    },
+    "knowledge-update": {
+     "n": 10,
+     "correct": 8
+    },
+    "single-session-preference": {
+     "n": 10,
+     "correct": 10
+    }
+   },
+   "abstention": {
+    "n": 2,
+    "correct": 1
+   },
+   "errors": 0,
+   "ungraded": 0,
+   "median_seconds": 9.8979981035,
+   "searched": 36,
+   "evidence_retrieved": 34,
+   "ids": [
+    "06f04340",
+    "07b6f563",
+    "0a995998",
+    "0bc8ad93",
+    "0e5e2d1a",
+    "1a1907b4",
+    "2133c1b5_abs",
+    "2788b940",
+    "2bf43736",
+    "32260d93",
+    "3a704032",
+    "41698283",
+    "4388e9dd",
+    "46a3abf7",
+    "4b24c848",
+    "4f54b7c9",
+    "5025383b",
+    "505af2f5",
+    "60472f9c",
+    "60d45044",
+    "65240037",
+    "66f24dbb",
+    "6b168ec8",
+    "6e984301",
+    "7024f17c",
+    "76d63226",
+    "7a8d0b71",
+    "86f00804",
+    "8c18457d",
+    "8cf51dda",
+    "8e9d538c",
+    "8fb83627",
+    "9bbe84a2",
+    "a89d7624",
+    "afdc33df",
+    "affe2881",
+    "b01defab",
+    "b0479f84",
+    "b46e15ee",
+    "b6025781",
+    "bc8a6e93",
+    "c5e8278d",
+    "c8090214",
+    "caf03d32",
+    "cc539528",
+    "cc5ded98",
+    "d52b4f67",
+    "e48988bc",
+    "e61a7584",
+    "e66b632c",
+    "eac54add",
+    "edced276",
+    "f35224e0",
+    "f4f1d8a4_abs",
+    "f523d9fe",
+    "fca762bc",
+    "gpt4_1a1dc16d",
+    "gpt4_b4a80587",
+    "gpt4_d31cdae3",
+    "gpt4_fa19884d"
+   ],
+   "notes_telemetry": {
+    "rows_with_notes": 60,
+    "mean_notes": 42.4,
+    "min_notes": 22,
+    "max_notes": 62,
+    "notes_modes": [
+     "index"
+    ],
+    "indexed": 60,
+    "recalled": 0,
+    "read_any": 20,
+    "read_total": 35,
+    "rows": [
+     {
+      "question_id": "06f04340",
+      "notes": 59,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "everyday-meal-and-recipe-advice.md",
+       "user-food-preferences.md",
+       "user-gardening-and-herbs.md"
+      ]
+     },
+     {
+      "question_id": "07b6f563",
+      "notes": 62,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "recommending-gaming-gear-and-accessories.md",
+       "recommending-phone-accessories.md",
+       "user-profile.md"
+      ]
+     },
+     {
+      "question_id": "0a995998",
+      "notes": 35,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "0bc8ad93",
+      "notes": 35,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "0e5e2d1a",
+      "notes": 40,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "wellness-intervention-evidence-questions.md"
+      ]
+     },
+     {
+      "question_id": "1a1907b4",
+      "notes": 45,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "cooking-and-recipe-advice-style.md",
+       "wedding-and-event-planning-style.md"
+      ]
+     },
+     {
+      "question_id": "2133c1b5_abs",
+      "notes": 43,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "2788b940",
+      "notes": 47,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "user-fitness-routine.md"
+      ]
+     },
+     {
+      "question_id": "2bf43736",
+      "notes": 27,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "32260d93",
+      "notes": 47,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "3a704032",
+      "notes": 42,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "user-gardening-habits.md"
+      ]
+     },
+     {
+      "question_id": "41698283",
+      "notes": 40,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "4388e9dd",
+      "notes": 56,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "user-creative-writing-screenplays.md"
+      ]
+     },
+     {
+      "question_id": "46a3abf7",
+      "notes": 40,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "aquarium-planted-tank-advice.md"
+      ]
+     },
+     {
+      "question_id": "4b24c848",
+      "notes": 45,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "4f54b7c9",
+      "notes": 41,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "user-declutters-and-sells-antiques.md",
+       "user-insures-inherited-heirlooms.md"
+      ]
+     },
+     {
+      "question_id": "5025383b",
+      "notes": 34,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "505af2f5",
+      "notes": 44,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "60472f9c",
+      "notes": 37,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "60d45044",
+      "notes": 24,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "65240037",
+      "notes": 61,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "66f24dbb",
+      "notes": 38,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "6b168ec8",
+      "notes": 37,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "6e984301",
+      "notes": 35,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "7024f17c",
+      "notes": 51,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "76d63226",
+      "notes": 35,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "7a8d0b71",
+      "notes": 44,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "86f00804",
+      "notes": 33,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "user-profile.md"
+      ]
+     },
+     {
+      "question_id": "8c18457d",
+      "notes": 22,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "8cf51dda",
+      "notes": 41,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "8e9d538c",
+      "notes": 50,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "8fb83627",
+      "notes": 44,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "advising-on-reading-lists-and-trackers.md"
+      ]
+     },
+     {
+      "question_id": "9bbe84a2",
+      "notes": 43,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "a89d7624",
+      "notes": 41,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "content-and-media-preferences.md",
+       "music-and-scene-recommendations.md"
+      ]
+     },
+     {
+      "question_id": "afdc33df",
+      "notes": 61,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "answering-cooking-and-household-questions.md",
+       "user-diy-home-maintenance.md"
+      ]
+     },
+     {
+      "question_id": "affe2881",
+      "notes": 33,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "b01defab",
+      "notes": 50,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "b0479f84",
+      "notes": 38,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "accuracy-on-named-facts.md",
+       "recommendation-requests-picks-first.md"
+      ]
+     },
+     {
+      "question_id": "b46e15ee",
+      "notes": 46,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "b6025781",
+      "notes": 38,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "cooking-and-meal-prep.md",
+       "cooking-and-recipe-guidance.md"
+      ]
+     },
+     {
+      "question_id": "bc8a6e93",
+      "notes": 46,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "c5e8278d",
+      "notes": 36,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "c8090214",
+      "notes": 49,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "caf03d32",
+      "notes": 33,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "nutrition-advice-approach.md",
+       "slow-cooker-and-home-cooking.md"
+      ]
+     },
+     {
+      "question_id": "cc539528",
+      "notes": 55,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "cc5ded98",
+      "notes": 39,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "d52b4f67",
+      "notes": 42,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "e48988bc",
+      "notes": 62,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "e61a7584",
+      "notes": 51,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "e66b632c",
+      "notes": 35,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "eac54add",
+      "notes": 43,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "edced276",
+      "notes": 39,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "f35224e0",
+      "notes": 41,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "podcast-listening-preferences.md"
+      ]
+     },
+     {
+      "question_id": "f4f1d8a4_abs",
+      "notes": 33,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "travel-itinerary-requests.md",
+       "user-profile.md"
+      ]
+     },
+     {
+      "question_id": "f523d9fe",
+      "notes": 57,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "fca762bc",
+      "notes": 42,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "answer-formatting-and-tone.md",
+       "repeated-question-signal.md",
+       "tech-resource-recommendations.md"
+      ]
+     },
+     {
+      "question_id": "gpt4_1a1dc16d",
+      "notes": 38,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "gpt4_b4a80587",
+      "notes": 38,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "gpt4_d31cdae3",
+      "notes": 43,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "gpt4_fa19884d",
+      "notes": 38,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "music-and-audio-preferences.md",
+       "music-making-instruments.md"
+      ]
+     }
+    ]
+   }
+  },
+  "py_notes": {
+   "questions": 60,
+   "correct": 50,
+   "accuracy": 0.8333333333333334,
+   "wilson95": [
+    0.7196814850279217,
+    0.9068692279867897
+   ],
+   "task_averaged": 0.8333333333333334,
+   "by_type": {
+    "single-session-user": {
+     "n": 10,
+     "correct": 10
+    },
+    "single-session-assistant": {
+     "n": 10,
+     "correct": 10
+    },
+    "multi-session": {
+     "n": 10,
+     "correct": 7
+    },
+    "temporal-reasoning": {
+     "n": 10,
+     "correct": 8
+    },
+    "knowledge-update": {
+     "n": 10,
+     "correct": 9
+    },
+    "single-session-preference": {
+     "n": 10,
+     "correct": 6
+    }
+   },
+   "abstention": {
+    "n": 2,
+    "correct": 1
+   },
+   "errors": 0,
+   "ungraded": 0,
+   "median_seconds": 10.9,
+   "searched": 38,
+   "evidence_retrieved": 34,
+   "ids": [
+    "06f04340",
+    "07b6f563",
+    "0a995998",
+    "0bc8ad93",
+    "0e5e2d1a",
+    "1a1907b4",
+    "2133c1b5_abs",
+    "2788b940",
+    "2bf43736",
+    "32260d93",
+    "3a704032",
+    "41698283",
+    "4388e9dd",
+    "46a3abf7",
+    "4b24c848",
+    "4f54b7c9",
+    "5025383b",
+    "505af2f5",
+    "60472f9c",
+    "60d45044",
+    "65240037",
+    "66f24dbb",
+    "6b168ec8",
+    "6e984301",
+    "7024f17c",
+    "76d63226",
+    "7a8d0b71",
+    "86f00804",
+    "8c18457d",
+    "8cf51dda",
+    "8e9d538c",
+    "8fb83627",
+    "9bbe84a2",
+    "a89d7624",
+    "afdc33df",
+    "affe2881",
+    "b01defab",
+    "b0479f84",
+    "b46e15ee",
+    "b6025781",
+    "bc8a6e93",
+    "c5e8278d",
+    "c8090214",
+    "caf03d32",
+    "cc539528",
+    "cc5ded98",
+    "d52b4f67",
+    "e48988bc",
+    "e61a7584",
+    "e66b632c",
+    "eac54add",
+    "edced276",
+    "f35224e0",
+    "f4f1d8a4_abs",
+    "f523d9fe",
+    "fca762bc",
+    "gpt4_1a1dc16d",
+    "gpt4_b4a80587",
+    "gpt4_d31cdae3",
+    "gpt4_fa19884d"
+   ],
+   "notes_telemetry": {
+    "rows_with_notes": 60,
+    "mean_notes": 46.4,
+    "min_notes": 25,
+    "max_notes": 64,
+    "notes_modes": [
+     "index"
+    ],
+    "indexed": 60,
+    "recalled": 0,
+    "read_any": 41,
+    "read_total": 65,
+    "rows": [
+     {
+      "question_id": "06f04340",
+      "notes": 56,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "queen-avoid-repeating-advice.md",
+       "queen-recommendation-chains-and-gift-planning.md",
+       "user-digestive-health.md",
+       "user-food-preferences.md",
+       "user-gardening.md",
+       "user-hosting-and-celebrations.md",
+       "user-kitchen-equipment.md"
+      ]
+     },
+     {
+      "question_id": "07b6f563",
+      "notes": 51,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "bargain-and-thrift-shopping.md",
+       "phone-and-device-accessory-guidance.md"
+      ]
+     },
+     {
+      "question_id": "0a995998",
+      "notes": 44,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "user-profile.md",
+       "user-wardrobe-and-clothing-care.md"
+      ]
+     },
+     {
+      "question_id": "0bc8ad93",
+      "notes": 41,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "0e5e2d1a",
+      "notes": 41,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "1a1907b4",
+      "notes": 43,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "home-cooking-practice.md",
+       "user-profile.md",
+       "wants-opinion-not-just-options.md"
+      ]
+     },
+     {
+      "question_id": "2133c1b5_abs",
+      "notes": 38,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "anxiety-and-stress-context.md",
+       "user-profile.md"
+      ]
+     },
+     {
+      "question_id": "2788b940",
+      "notes": 47,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "user-fitness-routine.md"
+      ]
+     },
+     {
+      "question_id": "2bf43736",
+      "notes": 49,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "spiritual-classic-study-and-summary-style.md",
+       "user-faith-and-church-community.md"
+      ]
+     },
+     {
+      "question_id": "32260d93",
+      "notes": 44,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "3a704032",
+      "notes": 51,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "user-hobby-gardening.md"
+      ]
+     },
+     {
+      "question_id": "41698283",
+      "notes": 48,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "user-photography-gear.md"
+      ]
+     },
+     {
+      "question_id": "4388e9dd",
+      "notes": 53,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "46a3abf7",
+      "notes": 50,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "user-aquarium-planted-tank-hobby.md"
+      ]
+     },
+     {
+      "question_id": "4b24c848",
+      "notes": 56,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "4f54b7c9",
+      "notes": 39,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "inherited-heirlooms-appraisal-and-insurance.md"
+      ]
+     },
+     {
+      "question_id": "5025383b",
+      "notes": 44,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "user-cooking-recipes.md",
+       "user-photography-hobby.md"
+      ]
+     },
+     {
+      "question_id": "505af2f5",
+      "notes": 55,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "cooking-and-meal-prep-advice.md",
+       "user-diet-and-health-goals.md"
+      ]
+     },
+     {
+      "question_id": "60472f9c",
+      "notes": 34,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "user-profile.md"
+      ]
+     },
+     {
+      "question_id": "60d45044",
+      "notes": 57,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "user-cooks-japanese-food.md"
+      ]
+     },
+     {
+      "question_id": "65240037",
+      "notes": 45,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "queen-handles-offdomain-casual-topics.md"
+      ]
+     },
+     {
+      "question_id": "66f24dbb",
+      "notes": 50,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "6b168ec8",
+      "notes": 43,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "cycling-gear-and-bike-maintenance-advice.md"
+      ]
+     },
+     {
+      "question_id": "6e984301",
+      "notes": 47,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "user-sculpture-and-art-practice.md"
+      ]
+     },
+     {
+      "question_id": "7024f17c",
+      "notes": 49,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "user-fitness-goals.md"
+      ]
+     },
+     {
+      "question_id": "76d63226",
+      "notes": 49,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "7a8d0b71",
+      "notes": 32,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "86f00804",
+      "notes": 37,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "reading-habits-and-book-club.md"
+      ]
+     },
+     {
+      "question_id": "8c18457d",
+      "notes": 25,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "user-gift-giving-approach.md"
+      ]
+     },
+     {
+      "question_id": "8cf51dda",
+      "notes": 44,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "grant-aim-page-writing.md"
+      ]
+     },
+     {
+      "question_id": "8e9d538c",
+      "notes": 53,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "8fb83627",
+      "notes": 46,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "reading-list-and-tracking-guidance.md"
+      ]
+     },
+     {
+      "question_id": "9bbe84a2",
+      "notes": 52,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "a89d7624",
+      "notes": 40,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "recommendation-answers-go-concrete.md",
+       "travel-planning-preference.md"
+      ]
+     },
+     {
+      "question_id": "afdc33df",
+      "notes": 43,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "user-diy-home-maintenance.md",
+       "user-home-cooking-style.md",
+       "user-meal-prep-and-snack-habits.md"
+      ]
+     },
+     {
+      "question_id": "affe2881",
+      "notes": 47,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "b01defab",
+      "notes": 35,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "reading-taste.md"
+      ]
+     },
+     {
+      "question_id": "b0479f84",
+      "notes": 53,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "user-eco-tourism-coral-reef-interest.md",
+       "user-tv-streaming-interests.md"
+      ]
+     },
+     {
+      "question_id": "b46e15ee",
+      "notes": 46,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "community-volunteering-and-charity.md"
+      ]
+     },
+     {
+      "question_id": "b6025781",
+      "notes": 38,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "barbecue-and-smoking.md",
+       "cooking-and-meal-prep.md",
+       "user-conversation-style.md"
+      ]
+     },
+     {
+      "question_id": "bc8a6e93",
+      "notes": 45,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "user-baking-desserts-hobby.md"
+      ]
+     },
+     {
+      "question_id": "c5e8278d",
+      "notes": 47,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "c8090214",
+      "notes": 49,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "caf03d32",
+      "notes": 41,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "nutrition-fitness-advice-style.md",
+       "slow-cooker-and-home-yogurt-making.md"
+      ]
+     },
+     {
+      "question_id": "cc539528",
+      "notes": 63,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "cc5ded98",
+      "notes": 29,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "learning-habits-and-tools.md"
+      ]
+     },
+     {
+      "question_id": "d52b4f67",
+      "notes": 58,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "family-and-social-circle.md"
+      ]
+     },
+     {
+      "question_id": "e48988bc",
+      "notes": 59,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "corporate-sustainability-supply-chain-answers.md",
+       "handle-misattributed-recommendations.md"
+      ]
+     },
+     {
+      "question_id": "e61a7584",
+      "notes": 57,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "e66b632c",
+      "notes": 45,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "user-fitness-and-training-profile.md"
+      ]
+     },
+     {
+      "question_id": "eac54add",
+      "notes": 64,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "edced276",
+      "notes": 42,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "user-travel-style.md"
+      ]
+     },
+     {
+      "question_id": "f35224e0",
+      "notes": 48,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "podcast-listening-preferences.md"
+      ]
+     },
+     {
+      "question_id": "f4f1d8a4_abs",
+      "notes": 40,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "user-family-thread.md",
+       "user-gift-giving-thread.md"
+      ]
+     },
+     {
+      "question_id": "f523d9fe",
+      "notes": 47,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "fca762bc",
+      "notes": 37,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "user-language-learning-style.md"
+      ]
+     },
+     {
+      "question_id": "gpt4_1a1dc16d",
+      "notes": 48,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "gpt4_b4a80587",
+      "notes": 60,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": []
+     },
+     {
+      "question_id": "gpt4_d31cdae3",
+      "notes": 53,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "user-travel-background.md"
+      ]
+     },
+     {
+      "question_id": "gpt4_fa19884d",
+      "notes": 36,
+      "notes_mode": "index",
+      "notes_indexed": true,
+      "notes_recalled": false,
+      "notes_read": [
+       "user-learning-instruments.md",
+       "user-music-taste-and-audiophile.md"
+      ]
+     }
+    ]
+   }
+  }
+ },
+ "comparisons": {
+  "go_notes_vs_py_notes": {
+   "a": "go_notes",
+   "b": "py_notes",
+   "shared_questions": 60,
+   "both_correct": 48,
+   "both_wrong": 4,
+   "go_notes_only": [
+    {
+     "question_id": "07b6f563",
+     "question_type": "single-session-preference"
+    },
+    {
+     "question_id": "32260d93",
+     "question_type": "single-session-preference"
+    },
+    {
+     "question_id": "6e984301",
+     "question_type": "temporal-reasoning"
+    },
+    {
+     "question_id": "a89d7624",
+     "question_type": "single-session-preference"
+    },
+    {
+     "question_id": "c8090214",
+     "question_type": "temporal-reasoning"
+    },
+    {
+     "question_id": "caf03d32",
+     "question_type": "single-session-preference"
+    }
+   ],
+   "py_notes_only": [
+    {
+     "question_id": "46a3abf7",
+     "question_type": "multi-session"
+    },
+    {
+     "question_id": "e61a7584",
+     "question_type": "knowledge-update"
+    }
+   ],
+   "go_notes_only_n": 6,
+   "py_notes_only_n": 2,
+   "mcnemar_exact_p": 0.2890625
+  },
+  "go_notes_vs_go_base": {
+   "a": "go_notes",
+   "b": "go_base",
+   "shared_questions": 60,
+   "both_correct": 49,
+   "both_wrong": 3,
+   "go_notes_only": [
+    {
+     "question_id": "07b6f563",
+     "question_type": "single-session-preference"
+    },
+    {
+     "question_id": "32260d93",
+     "question_type": "single-session-preference"
+    },
+    {
+     "question_id": "afdc33df",
+     "question_type": "single-session-preference"
+    },
+    {
+     "question_id": "caf03d32",
+     "question_type": "single-session-preference"
+    },
+    {
+     "question_id": "edced276",
+     "question_type": "multi-session"
+    }
+   ],
+   "go_base_only": [
+    {
+     "question_id": "3a704032",
+     "question_type": "multi-session"
+    },
+    {
+     "question_id": "46a3abf7",
+     "question_type": "multi-session"
+    },
+    {
+     "question_id": "e61a7584",
+     "question_type": "knowledge-update"
+    }
+   ],
+   "go_notes_only_n": 5,
+   "go_base_only_n": 3,
+   "mcnemar_exact_p": 0.7265625
+  },
+  "py_notes_vs_py_base": {
+   "a": "py_notes",
+   "b": "py_base",
+   "shared_questions": 60,
+   "both_correct": 46,
+   "both_wrong": 5,
+   "py_notes_only": [
+    {
+     "question_id": "505af2f5",
+     "question_type": "single-session-preference"
+    },
+    {
+     "question_id": "afdc33df",
+     "question_type": "single-session-preference"
+    },
+    {
+     "question_id": "b0479f84",
+     "question_type": "single-session-preference"
+    },
+    {
+     "question_id": "e61a7584",
+     "question_type": "knowledge-update"
+    }
+   ],
+   "py_base_only": [
+    {
+     "question_id": "07b6f563",
+     "question_type": "single-session-preference"
+    },
+    {
+     "question_id": "6e984301",
+     "question_type": "temporal-reasoning"
+    },
+    {
+     "question_id": "a89d7624",
+     "question_type": "single-session-preference"
+    },
+    {
+     "question_id": "c8090214",
+     "question_type": "temporal-reasoning"
+    },
+    {
+     "question_id": "caf03d32",
+     "question_type": "single-session-preference"
+    }
+   ],
+   "py_notes_only_n": 4,
+   "py_base_only_n": 5,
+   "mcnemar_exact_p": 1.0
+  },
+  "go_base_vs_py_base": {
+   "a": "go_base",
+   "b": "py_base",
+   "shared_questions": 60,
+   "both_correct": 48,
+   "both_wrong": 5,
+   "go_base_only": [
+    {
+     "question_id": "3a704032",
+     "question_type": "multi-session"
+    },
+    {
+     "question_id": "505af2f5",
+     "question_type": "single-session-preference"
+    },
+    {
+     "question_id": "b0479f84",
+     "question_type": "single-session-preference"
+    },
+    {
+     "question_id": "e61a7584",
+     "question_type": "knowledge-update"
+    }
+   ],
+   "py_base_only": [
+    {
+     "question_id": "07b6f563",
+     "question_type": "single-session-preference"
+    },
+    {
+     "question_id": "caf03d32",
+     "question_type": "single-session-preference"
+    },
+    {
+     "question_id": "edced276",
+     "question_type": "multi-session"
+    }
+   ],
+   "go_base_only_n": 4,
+   "py_base_only_n": 3,
+   "mcnemar_exact_p": 1.0
+  }
+ }
+}
