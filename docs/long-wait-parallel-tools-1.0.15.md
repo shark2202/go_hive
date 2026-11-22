@@ -55,7 +55,7 @@
 | B4 | 非流式路径 | 不发该参 | Go `Complete` 路径同样不发（只有 `stream_openai.go` 注入） | 一致 |
 | B5 | 任务更新与真实工具同回合（提示词） | queen 提示 3 处 + drift 文案 + schema 说明 | `internal/queen/prompt_sections.go:144,155,161`（"in the same response as the first step's tool call" / "riding along with that step's tool calls" / Heartbeat discipline 全文）、`internal/tasks/reminders.go:308`、`internal/tasks/session_tools.go:185` 均为上游同文 | 一致 |
 | B6 | 同回合行为（多 call 批次） | 一个响应可带多个 tool call；模型是否批量由模型决定（上游无独立测试） | 探针 `TestTaskUpdatesRideAlongWithARealToolInOneResponse`：一次响应 `[task_update, some_tool]` → 2 个工具同批执行（顺序保持）、**模型调用数 = 2**；下一轮请求的 assistant 消息带 2 个 tool_calls、两个工具结果按序回填 | 一致 |
-| B7 | chat app 分支（跳过强默认 + drift 关闭） | 提示词 chat-app 条目；`TaskReminderSource._drift_kind` 在 chat app 返回 None；orchestrator 注入 `session.channel` | 提示词条目已对齐（`prompt_sections.go:152`）；`TaskReminderSource.inChatApp` 门控已实现并有测试（`internal/tasks/reminders_test.go:557`）；但**生产未接线**：`AgentContext.ChatAppProvider`（`internal/agentloop/types.go:150`）没有任何生产赋值，`taskReminderSourceAdapter` 也不透传（`internal/server/routes_reminders.go:302-320`），且 Go 会话模型没有 channel 来源 | **差异→登记**（见 §3.2） |
+| B7 | chat app 分支（跳过强默认 + drift 关闭） | 提示词 chat-app 条目；`TaskReminderSource._drift_kind` 在 chat app 返回 None；orchestrator 注入 `session.channel` | 提示词条目已对齐（`prompt_sections.go:152`）；门控（`inChatApp`）与 tasks 源测试已有；**生产已接线**（lane `g1-resid`，2026-11-22）：`Session.channel`/`ChatAppProvider` → `ReminderAgentContext` → tasks adapter 全链路打通，queen mail 线程按上游 claim 为 `"queens"` 渠道会话，dashboard 仍无渠道 | **一致（queens 渠道）**；外部渠道宿主见 §3.2 |
 
 ## 3. 差异登记（不修的原因 + 重看条件）
 
@@ -65,11 +65,17 @@
 - 所以「collect_result 拉长到 600s、新消息提前返回、轮询不耗回合」在 Go 上无载体；`TestAJobWaitSpendsNoModelTurnPerStatusCheck` 已把**循环侧等待**的等价行为钉住，一旦 background tools 落地，同一 `_wait_budget/_input_waiting` 机制可直接复用。
 - 重看条件：G1 新增 background tools 移植项时，把 `collect_result` 的 `{status:pending}`/真实结果契约与 `wait_seconds` 预算一并实现并补探针。
 
-### 3.2 chat-app 运行时接线（B7）
+### 3.2 chat-app 运行时接线（B7）——已接 `queens`，外部渠道宿主仍为前置
 
-- 事实：门控与提示词齐备，但生产没有任何地方给 `AgentContext.ChatAppProvider` 赋值；tasks 适配器构造 `TaskReminderAgentContext` 时也不传（字段在桥接层被丢掉）。
-- 不修的原因：Go 现役会话面只有 dashboard（无 QQ/onebot 等渠道会话运行时），`session.channel` 没有等价来源；给一个永远为 nil 的 provider 接线不改变任何观测行为，只会制造「已接线」的假象。上游该接线的消费者是渠道会话（含 queen mail 类 channel）。
-- 重看条件：接入任一渠道会话（把渠道写进会话 meta/运行时）时，在 `internal/server/chat_runtime.go` 构造 `AgentContext` 处补 `ChatAppProvider`，并在 `routes_reminders.go` 的 tasks 适配器上透传该字段；补一条「chat app 会话 drift 不响、面板列表仍可见」的会话级 e2e。
+- 上游事实：`chat_app_provider=lambda: session.channel`（`queen_orchestrator.py`）；`session.channel` 由渠道宿主 claim 时设置（`channels.py::ChannelHost._claim`；queen mail 的线程就是 `"queens"` 渠道会话，见 `queen_mail.py` 模块注释），重启时从 `meta.json["channel"]` 恢复（`queen_orchestrator.py::create_queen`）。消费者只有 tasks reminder 的 drift 门控。
+- 复核后的边界：Go 缺的不是字段而是**来源**，而 queen mail 在 Go 已是完整实现的渠道会话（`internal/server/adapters_qmail.go` 早已写 `meta.json channel="queens"`）——因此该行为可在无 Telegram/Slack 等外部连接器下单测复现，按可复现路径接线（lane `g1-resid`，2026-11-22）：
+  - `internal/server/session.go`：新增 `Session.SetChannel` / `Session.Channel`（上游 `Session.channel`）；queen mail 投递（`markThread`、`DeliverReply`）按 `ChannelHost._claim` 置 `"queens"`，不再只写盘。
+  - 会话恢复：`loader.go`（创建/恢复）与 `loader_preloaded_session.go` 从 `meta.json["channel"]` 恢复（`ReadSessionChannel`，上游 `create_queen` 的同字段恢复）。
+  - `internal/server/chat_runtime.go`：`ChatRuntimeDeps.Channel` → `AgentContext.ChatAppProvider`（`chatAppProviderFromChannel`；无渠道时字段为 nil，dashboard 不受影响）。
+  - 桥接：`agentloop.ReminderAgentContext.ChatAppProvider` 由 `NewReminderAgentContext` 透传，`taskReminderSourceAdapter` 再转发到 `tasks.TaskReminderAgentContext`（`routes_reminders.go`）。
+  - 证据：`internal/server/chat_app_provider_test.go`（runtime 提供者、adapter 门控——chat app STOP 不响、面板列表仍可见、Session/meta 回环）、`internal/agentloop/reminder_chat_app_test.go`（桥接）、`internal/cli/loader_session_resume_test.go::TestCreateChatSessionResumeRestoresTheSessionsChannel`（恢复）、`adapters_qmail_test.go`（live claim）。
+- 仍为前置（不修）：外部渠道宿主（QQ/onebot、Telegram、Slack 等渠道包）。Go 无 `hive.channels` entry-point 宿主（`channels_config.go` 只读配置并在 serve 时提示），这些渠道的会话在 Go 上无法产生；本次已把「渠道会话出现之后」的链路全部补好。
+- 重看条件：移植渠道包宿主（entry-point 发现 + 生命周期）时，只需在每个渠道的会话 claim 点调用 `Session.SetChannel(name)`（或写 `meta.json["channel"]`），reminder/runtime 链路无需再改；并补该渠道的会话级 e2e。
 
 ### 3.3 已修的差异
 

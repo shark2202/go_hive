@@ -1,6 +1,6 @@
 # API / 仓库表面审计
 
-- 生成时间：2026-11-22T08:29:06+08:00
+- 生成时间：2026-11-22T09:15:12+08:00
 - 根目录：`/Users/mac/hive`
 - 豁免清单：`/Users/mac/hive/go_hive/scripts/surface_audit_allowlist.json`
 - 重新生成：`uv run python go_hive/scripts/surface_audit.py --write-report`
@@ -14,43 +14,24 @@
 | 项 | 数量 |
 | --- | ---: |
 | 前端路由（去重） | 165 |
-| Go 已注册路由 | 220 |
+| Go 已注册路由 | 225 |
 | Python 上游路由 | 212 |
-| 前端 → Go 缺失 | 5（待修 5） |
-| Python → Go 缺失 | 5（待修 5） |
+| 前端 → Go 缺失 | 0（待修 0） |
+| Python → Go 缺失 | 0（待修 0） |
 | Go 多余（仅提示） | 11 |
 | 空目录 | 0 |
 | batch/lane 命名文件（未豁免） | 0 |
 | 悬空 size waiver | 0 |
 
-**结论：存在未豁免缺口**
+**结论：通过**
 
 ## 前端 → Go 缺失
 
-| 方法 | 路径 | 来源 | 状态 | 归属 / 理由 |
-| --- | --- | --- | --- | --- |
-| GET | `/api/config/memory` | config.ts | 待修 | - |
-| PUT | `/api/config/memory` | config.ts | 待修 | - |
-| GET | `/api/memories/history` | memories.ts | 待修 | - |
-| POST | `/api/memories/restore` | memories.ts | 待修 | - |
-| GET | `/api/memories/retired` | memories.ts | 待修 | - |
+无。
 
 ## Python → Go 缺失（按前缀分组）
 
-### `/api/config` — 2 条（待修 2）
-
-| 方法 | 路径 | 状态 | 归属 / 理由 |
-| --- | --- | --- | --- |
-| GET | `/api/config/memory` | 待修 | - |
-| PUT | `/api/config/memory` | 待修 | - |
-
-### `/api/memories` — 3 条（待修 3）
-
-| 方法 | 路径 | 状态 | 归属 / 理由 |
-| --- | --- | --- | --- |
-| GET | `/api/memories/history` | 待修 | - |
-| POST | `/api/memories/restore` | 待修 | - |
-| GET | `/api/memories/retired` | 待修 | - |
+无。
 
 ## Go 多余（仅提示，不阻断）
 

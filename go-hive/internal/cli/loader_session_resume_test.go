@@ -277,6 +277,43 @@ func TestCreateChatSessionResumeMissingTargetCreatesNewSession(t *testing.T) {
 	}
 }
 
+// Parity: framework/server/queen_orchestrator.py::create_queen
+// (a resumed channel session keeps session.channel from meta.json, so the
+// chat-app gate reads the same answer it did before the restart)
+func TestCreateChatSessionResumeRestoresTheSessionsChannel(t *testing.T) {
+	home := writeSessionLayoutHome(t)
+	manager := hiveserver.NewSessionManager()
+	sessionDir := home.QueenSessionDir(layoutQueen, layoutSession)
+	seedSessionTranscript(t, sessionDir, "a queens thread")
+	seedConversationMeta(t, sessionDir)
+	meta, err := json.Marshal(map[string]any{"channel": "queens", "peer": "queen_ivy"})
+	if err != nil {
+		t.Fatalf("marshal meta: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(sessionDir, "meta.json"), meta, 0o644); err != nil {
+		t.Fatalf("write meta: %v", err)
+	}
+
+	record, err := resumeLayoutSession(t, home, manager, layoutSession, layoutQueen)
+	if err != nil {
+		t.Fatalf("resume: %v", err)
+	}
+	if got := record.Channel(); got != "queens" {
+		t.Fatalf("resumed channel = %q, want queens", got)
+	}
+
+	// A dashboard session (no channel in meta) stays channel-less.
+	dashboardDir := home.QueenSessionDir(layoutQueen, "session_20260101_000000_dash0001")
+	seedSessionTranscript(t, dashboardDir, "a dashboard chat")
+	dashboard, err := resumeLayoutSession(t, home, manager, "session_20260101_000000_dash0001", layoutQueen)
+	if err != nil {
+		t.Fatalf("resume dashboard: %v", err)
+	}
+	if got := dashboard.Channel(); got != "" {
+		t.Fatalf("dashboard channel = %q, want empty", got)
+	}
+}
+
 // Parity: framework/server/tests/test_api.py::test_select_queen_session_rejects_foreign_session
 func TestCreateChatSessionResumeDoesNotCrossQueens(t *testing.T) {
 	home := writeSessionLayoutHome(t)

@@ -186,7 +186,7 @@ func (r *ChatRuntime) injectPastConversationRecall(query string) {
 //
 // Parity: core/framework/agents/queen/timeline.py::subscribe_timeline_triggers
 func (r *ChatRuntime) startTimeline() {
-	if r == nil || r.deps.Root == "" || r.deps.LLM == nil {
+	if r == nil || r.deps.Root == "" || r.memoryWorkLLM() == nil {
 		return
 	}
 	enabled := memory.MemoryTimelineEnabled()
@@ -204,7 +204,7 @@ func (r *ChatRuntime) startTimeline() {
 	r.timelineWG.Add(1)
 	go func() {
 		defer r.timelineWG.Done()
-		_, _ = memory.BackfillTimelines(r.ctx, r.deps.LLM, sessionsDir, memory.BackfillOptions{
+		_, _ = memory.BackfillTimelines(r.ctx, r.memoryWorkLLM(), sessionsDir, memory.BackfillOptions{
 			Limit:       10,
 			Exclude:     map[string]struct{}{live: {}},
 			Concurrency: 2,
@@ -241,7 +241,7 @@ func (r *ChatRuntime) timelineAfterTurn() {
 	r.timelineWG.Add(1)
 	go func() {
 		defer r.timelineWG.Done()
-		_, _ = memory.UpdateSessionTimeline(r.ctx, r.deps.LLM, sessionDir)
+		_, _ = memory.UpdateSessionTimeline(r.ctx, r.memoryWorkLLM(), sessionDir)
 	}()
 }
 

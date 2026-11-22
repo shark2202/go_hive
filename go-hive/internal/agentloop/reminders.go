@@ -60,6 +60,14 @@ type ReminderAgentContext struct {
 	// a change in Settings reaches running sessions. Nil keeps the
 	// defaults ("index", 10s).
 	MemoryRecallSettingsProvider func() MemoryRecallSettings
+	// ChatAppProvider reports the chat app this conversation comes through
+	// ("" / nil on the dashboard), the value the tasks reminder source's
+	// chat-app gate reads. Upstream's ReminderContext.agent_ctx exposes
+	// ``chat_app_provider=lambda: session.channel`` to the same source.
+	//
+	// Parity: framework/agent_loop/types.py AgentContext.chat_app_provider,
+	// framework/server/queen_orchestrator.py (chat_app_provider)
+	ChatAppProvider func() any
 }
 
 // ActiveWorker is one in-flight colony worker as the reminder sources read it.

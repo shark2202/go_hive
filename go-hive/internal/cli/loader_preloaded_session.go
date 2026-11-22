@@ -187,6 +187,9 @@ func (r *Runner) attachPreloadedChatRuntime(record *hiveserver.Session, manager 
 	if sessionDir == "" {
 		sessionDir = chatSessionDir(home, chatSessionQueenScope(record.QueenName), record.ID)
 	}
+	// A resumed channel session keeps its channel (upstream create_queen
+	// restores session.channel from meta.json).
+	record.SetChannel(hiveserver.ReadSessionChannel(sessionDir))
 	toolbox := builtin.New("")
 	tools := newSessionToolCatalogue(sessionDir, toolbox, home)
 	// Same live registry handle a created session carries, so the diagnosis
@@ -219,6 +222,9 @@ func (r *Runner) attachPreloadedChatRuntime(record *hiveserver.Session, manager 
 		SessionID:       record.ID,
 		QueenName:       record.QueenName,
 		HomeRoot:        home.Root,
+		// The session's chat channel ("" on the dashboard), read at each
+		// reminder render; a resumed queen-mail thread restored it above.
+		Channel: func() string { return record.Channel() },
 		// The preloaded path must announce the same queen skills catalog a
 		// created session does: without it the skills_catalog reminder source
 		// stays silent for the whole `serve --colony` session.

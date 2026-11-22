@@ -85,6 +85,13 @@ type ChatRuntimeDeps struct {
 	// HomeRoot is HIVE_HOME. When set, the runtime recalls global + queen
 	// memory each turn and schedules memory reflection after turns.
 	HomeRoot string
+	// Channel reports the chat channel this session belongs to: "queens" for
+	// a queen-mail thread, "" for the dashboard (upstream Session.channel).
+	// Read at each reminder render, so a channel that claims a live session
+	// (queen mail does; upstream ChannelHost._claim) reaches the next turn.
+	//
+	// Parity: framework/server/queen_orchestrator.py (chat_app_provider)
+	Channel func() string
 	// IdleNudge overrides the idle-nudge budgets the session hub starts with.
 	// Nil uses the loop's session_idle_nudge_* defaults.
 	IdleNudge *agentloop.IdleNudgeConfig
@@ -235,6 +242,10 @@ type ChatRuntime struct {
 	globalMemoryDir string
 	queenMemoryDir  string
 	reflection      *memory.ReflectionScheduler
+	// memoryLLM resolves the memory-work model (reflection, dated timeline)
+	// at each call: the worker_llm slot while memory_reflection.model is
+	// "worker", else this session's provider.
+	memoryLLM llm.Completer
 	// lastRecall is the block injected last turn; recall is re-injected only
 	// when its content changes (same guard as the upstream _last_injected_recall).
 	lastRecall string
@@ -369,6 +380,17 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 		runtime.pinnedLLM = deps.LLM
 	}
 	runtime.streamLLM = newChatStreamingCompleter(runtime.pinnedLLM)
+	// Memory work (reflection, the dated timeline) resolves its model at each
+	// call: the worker_llm slot while memory_reflection.model is "worker" (the
+	// default) and one is configured, else this session's provider. A Settings
+	// edit therefore reaches a running session on its next reflection.
+	//
+	// Parity: framework/server/session_manager.py::_MemoryLLM.current
+	runtime.memoryLLM = deps.LLM
+	if root := strings.TrimSpace(deps.HomeRoot); root != "" {
+		runtime.memoryLLM = newChatMemoryLLM(deps.LLM, hivehome.Home{Root: root},
+			func() memory.ReflectionConfig { return chatMemoryReflectionConfig(root) })
+	}
 	// A session that has not run a turn is parked at turn_done: without this
 	// the idle ticker would auto-start an untouched session after the
 	// between-turns budget. A persisted pending_input (an unanswered ask_user
@@ -392,7 +414,7 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 		if deps.Root != "" {
 			runtime.reflection = &memory.ReflectionScheduler{
 				SessionDir: deps.Root,
-				LLM:        deps.LLM,
+				LLM:        runtime.memoryLLM,
 				GlobalDir:  runtime.globalMemoryDir,
 				QueenDir:   runtime.queenMemoryDir,
 				QueenID:    runtime.queenName,
@@ -428,6 +450,11 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 		InputData:      map[string]any{},
 		StreamID:       "queen",
 		MaxTokens:      maxTokens,
+		// The chat-app gate: upstream wires ``chat_app_provider=lambda:
+		// session.channel``, so a channel session (queen mail's "queens"
+		// thread, or a chat-app channel once one runs) is known as such by
+		// the tasks reminder source.
+		ChatAppProvider: chatAppProviderFromChannel(deps.Channel),
 	}
 	// Three-level runtime logs (L1 summary.json / L2 details.jsonl / L3
 	// tool_logs.jsonl): session-shaped roots (<storage>/sessions/<id>) get the

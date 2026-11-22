@@ -1249,6 +1249,7 @@ func NewReminderAgentContext(agentCtx *AgentContext) *ReminderAgentContext {
 		MemoryRecallProvider:         agentCtx.MemoryRecallProvider,
 		MemoryIndexProvider:          agentCtx.MemoryIndexProvider,
 		MemoryRecallSettingsProvider: agentCtx.MemoryRecallSettingsProvider,
+		ChatAppProvider:              chatAppProviderView(agentCtx.ChatAppProvider),
 	}
 	if agentCtx.SessionID != nil {
 		out.SessionID = *agentCtx.SessionID
@@ -1257,6 +1258,23 @@ func NewReminderAgentContext(agentCtx *AgentContext) *ReminderAgentContext {
 		out.ColonyID = *agentCtx.ColonyID
 	}
 	return out
+}
+
+// chatAppProviderView coerces AgentContext.ChatAppProvider (an `any` field
+// for upstream parity) onto the reminder view's typed reader. A nil provider,
+// or one of an unreadable shape, reads as "no chat app", exactly as upstream's
+// callable check does.
+func chatAppProviderView(provider any) func() any {
+	switch p := provider.(type) {
+	case nil:
+		return nil
+	case func() any:
+		return p
+	case func() string:
+		return func() any { return p() }
+	default:
+		return nil
+	}
 }
 
 func reminderToolsFromProvider(provider any) func() []Tool {

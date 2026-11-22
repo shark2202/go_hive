@@ -525,6 +525,10 @@ func (r *Runner) createSessionWithRuntime(
 	// independent) is resolved and stamped before any runtime is built, so a
 	// session whose provider is unavailable still records its phase.
 	phaseState := hiveserver.AttachSessionPhaseState(record, params.InitialPhase, sessionDir)
+	// A resumed channel session keeps its channel (upstream create_queen
+	// restores session.channel from meta.json), so the
+	// chat-app gate reads the same answer the session had before the restart.
+	record.SetChannel(hiveserver.ReadSessionChannel(sessionDir))
 	if phaseState != nil {
 		// The queen identity rides the phase state, as the upstream identity
 		// hook stamps it at session start.
@@ -577,6 +581,10 @@ func (r *Runner) createSessionWithRuntime(
 			SessionID:         sessionID,
 			QueenName:         record.QueenName,
 			HomeRoot:          home.Root,
+			// The session's chat channel ("" on the dashboard): the queen
+			// mail thread claims "queens", and a resumed session restored
+			// it from meta.json. Read at each reminder render.
+			Channel: func() string { return record.Channel() },
 			// The catalog is phase-filtered at render time: an independent queen
 			// drops worker/colony-only skills, a colony-bound queen announces the
 			// colony view. Reads the live phase so a mid-session fork re-announces.

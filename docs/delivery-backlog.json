@@ -367,15 +367,22 @@
     "id": "memory-reflection-worker-slot",
     "label": "反射/时间线默认用 worker_llm 槽（上游 1.0.15 changed）；Go 已读写 memory_reflection.model 但调度仍用会话模型",
     "hours": 2,
-    "done": false,
-    "note": "lane mem-notes-log 登记：worker_llm 槽位接线属 backlog。"
+    "done": true,
+    "note": "DONE 2026-11-22（lane g1-resid）：上游 ef4779ef 的 _MemoryLLM 规则实跑确认（test_queen_memory.py -k memory_llm，3 passed）；Go 新 internal/server/chat_memory_llm.go 按调用解析 worker/main（worker_llm 段 JSON 变化才重建，未配置回退会话模型），reflection scheduler 与 timeline（backfill/after-turn）共用；端口 3 条上游测试 + 2 条 runtime 接线测试。结论落 docs/memory-notes-log.md。"
    },
    {
     "id": "chat-app-provider-gap",
     "label": "chat-app provider 缺口（B7）：提示词+门控已实现，但 ChatAppProvider 生产未赋值、adapter 不透传、无渠道会话来源",
     "hours": 4,
+    "done": true,
+    "note": "DONE 2026-11-22（lane g1-resid）：复核边界——queen mail 在 Go 已是渠道会话（meta channel=queens），行为可无外部连接器复现，故接线而非仅登记：Session.Channel（claim + meta 恢复）、ChatAppProvider 生产赋值、ReminderAgentContext + tasks adapter 透传；测试 server/agentloop/cli 三处。外部渠道宿主（onebot/Telegram/Slack 包）仍为前置，重看条件已落 docs/long-wait-parallel-tools-1.0.15.md §3.2。dashboard 面无行为变化。"
+   },
+   {
+    "id": "title-llm-worker-slot",
+    "label": "会话标题生成 LLM 槽位差异：Go 传会话 provider，上游 _title_llm 优先 build_worker_llm() or session.llm",
+    "hours": 1,
     "done": false,
-    "note": "wait-parallel-1015 登记；dashboard 面无影响。"
+    "note": "g1-resid lane 观察（范围外）：既有 title 特性差异，非本次两项引入；对齐时同步上游测试。"
    }
   ]
  }

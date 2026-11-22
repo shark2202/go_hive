@@ -86,8 +86,41 @@ ported + line-format pin), `internal/server/routes_memories_log_test.go`
   insertion order); the value space and separators match.
 - A log line missing `sources` re-serialises as `"sources": null` instead of
   omitting the key; both writers always emit `[]`.
-- `memory_reflection.model` is read/served, but the reflection scheduler still
-  runs on the session model — the `worker_llm`-slot wiring stays on the
-  `memory-notes-1.0.15-parity` backlog item (`worker 模型`).
 - Cloud push on memory changes (`schedule_push`) belongs to the notes-push
   sibling lane; not wired here.
+
+## 1.0.15 worker-slot wiring (lane `g1-resid`, 2026-11-22)
+
+The `memory-notes-1.0.15-parity` backlog item `memory-reflection-worker-slot`
+is closed: the reflection scheduler no longer runs on the session model.
+
+Upstream `ef4779ef` ("her memory notes reach her before she answers") moved
+reflection and the dated timeline onto the worker model:
+`memory_reflection.model` — `"worker"` (default; the `worker_llm` slot, or her
+own model when none is set) or `"main"` (her own model) — resolved at each
+call, with the worker provider rebuilt only when the `worker_llm` section
+changes (`framework/server/session_manager.py::_MemoryLLM`;
+`framework/server/queen_orchestrator.py::_queen_loop` passes `_memory_llm` to
+`subscribe_reflection_triggers` *and* `subscribe_timeline_triggers`).
+
+The three upstream tests were run against the in-tree 1.0.15 reference to pin
+the rules (`uv run pytest tests/test_queen_memory.py -k memory_llm`: 3 passed)
+and are ported one-to-one.
+
+Go implementation:
+
+- `internal/server/chat_memory_llm.go` — `chatMemoryLLM`, the per-call
+  resolver. `current()` mirrors `_MemoryLLM.current`: model != "worker" →
+  session provider; else the `worker_llm` section (worker-provider cache keyed
+  by the section's JSON, rebuilt only when it changes), falling back to the
+  session provider when the slot is unset (`build_worker_llm` → None).
+- `internal/server/chat_runtime.go` — the runtime builds the resolver over
+  `deps.LLM` when it has a `HomeRoot`, hands it to the `ReflectionScheduler`,
+  and uses it for both timeline writers (`startTimeline` backfill,
+  `timelineAfterTurn`), matching upstream's shared `_memory_llm`.
+
+Tests: `internal/server/chat_memory_llm_test.go` — the three upstream parity
+tests (`test_memory_llm_follows_the_setting_while_the_session_runs`,
+`..._builds_the_worker_model_again_only_when_its_slot_changes`,
+`..._falls_back_to_her_model_without_a_worker_model`) plus runtime wiring
+checks for reflection and the timeline.

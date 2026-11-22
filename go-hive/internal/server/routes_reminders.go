@@ -300,8 +300,9 @@ func (a *taskReminderSourceAdapter) AppliesTo(agentCtx *agentloop.ReminderAgentC
 		return false
 	}
 	return a.inner.AppliesTo(&tasks.TaskReminderAgentContext{
-		SessionID:      agentCtx.SessionID,
-		AvailableTools: agentCtx.AvailableTools,
+		SessionID:       agentCtx.SessionID,
+		AvailableTools:  agentCtx.AvailableTools,
+		ChatAppProvider: agentCtx.ChatAppProvider,
 	})
 }
 
@@ -316,8 +317,9 @@ func (a *taskReminderSourceAdapter) Render(rctx agentloop.ReminderContext) (stri
 	return a.inner.Render(tasks.TaskReminderContext{
 		Point: rctx.Point,
 		AgentCtx: &tasks.TaskReminderAgentContext{
-			SessionID:      rctx.AgentCtx.SessionID,
-			AvailableTools: rctx.AgentCtx.AvailableTools,
+			SessionID:       rctx.AgentCtx.SessionID,
+			AvailableTools:  rctx.AgentCtx.AvailableTools,
+			ChatAppProvider: rctx.AgentCtx.ChatAppProvider,
 		},
 		ToolNames: rctx.ToolNames,
 	})

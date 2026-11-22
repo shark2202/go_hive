@@ -21,6 +21,12 @@ import (
 	"github.com/aden-hive/hive-go/internal/queenmail"
 )
 
+// queenMailChannel is the channel name marking a queen's threads with her
+// correspondents (upstream queen_mail.CHANNEL). Those sessions are channel
+// sessions, so the tasks reminder source treats them as a chat app (no panel
+// drift nudge).
+const queenMailChannel = "queens"
+
 // QueenMailAdapterOptions wires the queen-mail service to the server. Home and
 // Manager are required; CreateSession is the same hook the session routes use,
 // and nil leaves letters to stopped Hive queens undelivered rather than
@@ -244,6 +250,10 @@ func (a *QueenMailAdapter) DeliverReply(ctx context.Context, replyTo, queenID, w
 	if queenMailLocked(session) {
 		return "", queenMailError("the conversation is unreachable")
 	}
+	// A delivery claims the session for the channel, as upstream's
+	// _host.send → _resume → _claim does; a resumed thread keeps the claim
+	// from meta.json either way.
+	session.SetChannel(queenMailChannel)
 	if err := queenMailInject(session, queenmail.ReplyText(letter.FromName, letter.From, letter.Text)); err != nil {
 		return "", queenMailError("the conversation is unreachable: " + err.Error())
 	}
@@ -269,7 +279,7 @@ func (a *QueenMailAdapter) threadOf(toQueen, writer string) (string, bool) {
 		sort.Sort(sort.Reverse(sort.StringSlice(names)))
 		for _, name := range names {
 			meta := readJSONObjectOr(filepath.Join(sessionsDir, name, "meta.json"), map[string]any{})
-			if queenStr(meta["channel"]) != "queens" || queenStr(meta["peer"]) != writer {
+			if queenStr(meta["channel"]) != queenMailChannel || queenStr(meta["peer"]) != writer {
 				continue
 			}
 			if queenID := queenStr(meta["queen_id"]); queenID != "" && queenID != toQueen {
@@ -292,15 +302,19 @@ func (a *QueenMailAdapter) threadDirs(toQueen string) []string {
 }
 
 // markThread records on disk what the thread is, so a restart finds it again.
+// It also claims the live session for the channel, as ChannelHost._claim does
+// upstream: a letter's session is a channel session while it runs, not only
+// after the next resume.
 //
-// Parity: framework/server/channels.py::_merge_meta
+// Parity: framework/server/channels.py::_merge_meta; ChannelHost._claim
 func (a *QueenMailAdapter) markThread(session *Session, queenID, writer, fromRef, title string) {
+	session.SetChannel(queenMailChannel)
 	dir := a.sessionDirOf(session)
 	if dir == "" {
 		return
 	}
 	meta := readJSONObjectOr(filepath.Join(dir, "meta.json"), map[string]any{})
-	meta["channel"] = "queens"
+	meta["channel"] = queenMailChannel
 	meta["peer"] = writer
 	meta["reply_to"] = fromRef
 	meta["queen_id"] = queenID

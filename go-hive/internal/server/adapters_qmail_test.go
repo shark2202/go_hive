@@ -70,6 +70,7 @@ func TestQueenMailRoutesUseTheAdapterAndDeliverALetter(t *testing.T) {
 	manager := NewSessionManager()
 	node := &queenMailRouteNode{}
 	factoryCalls := 0
+	var threadSession *Session
 	adapter := NewQueenMailAdapter(QueenMailAdapterOptions{
 		Home:    home,
 		Manager: manager,
@@ -87,6 +88,7 @@ func TestQueenMailRoutesUseTheAdapterAndDeliverALetter(t *testing.T) {
 			session.QueenName = "queen_ivy"
 			session.QueenExecutor = &QueenExecutor{NodeRegistry: map[string]QueenNode{"queen": node}}
 			manager.AddSession(session)
+			threadSession = session
 			return session, nil
 		},
 	})
@@ -149,6 +151,12 @@ func TestQueenMailRoutesUseTheAdapterAndDeliverALetter(t *testing.T) {
 	if meta["channel"] != "queens" || meta["peer"] != "queen_claude" || meta["reply_to"] != ref || meta["title"] != "Claude" {
 		t.Fatalf("meta = %#v", meta)
 	}
+	// The live session is claimed too, not only the meta record: a letter's
+	// session is a channel session while it runs (upstream ChannelHost._claim).
+	// Parity: framework/server/channels.py::ChannelHost._claim
+	if threadSession == nil || threadSession.Channel() != "queens" {
+		t.Fatalf("live channel = %#v, want queens", threadSession)
+	}
 }
 
 // Parity: framework/server/tests/test_claude_code_queens.py::test_the_routes_want_the_token_and_one_of_her_conversations
@@ -205,6 +213,7 @@ func TestQueenMailAdapterWakesAStoppedWritersSession(t *testing.T) {
 	home := queenMailRouteHome(t)
 	manager := NewSessionManager()
 	node := &queenMailRouteNode{}
+	var resumed *Session
 	adapter := NewQueenMailAdapter(QueenMailAdapterOptions{
 		Home:    home,
 		Manager: manager,
@@ -219,6 +228,7 @@ func TestQueenMailAdapterWakesAStoppedWritersSession(t *testing.T) {
 			session.QueenName = "queen_ava"
 			session.QueenExecutor = &QueenExecutor{NodeRegistry: map[string]QueenNode{"queen": node}}
 			manager.AddSession(session)
+			resumed = session
 			return session, nil
 		},
 	})
@@ -231,6 +241,12 @@ func TestQueenMailAdapterWakesAStoppedWritersSession(t *testing.T) {
 	want := "(A reply from Ivy to your message_queen letter. To go on, write to her again.)\n[Ivy(queen_ivy)]: North shore done."
 	if len(injected) != 1 || injected[0] != want {
 		t.Fatalf("injected = %#v", injected)
+	}
+	// A delivery claims the session for the channel, as upstream's
+	// _host.send → _resume → _claim does.
+	// Parity: framework/server/channels.py::ChannelHost._claim
+	if resumed == nil || resumed.Channel() != "queens" {
+		t.Fatalf("live channel = %#v, want queens", resumed)
 	}
 }
 

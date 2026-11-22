@@ -4,6 +4,7 @@ package server
 
 import (
 	"log"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -132,11 +133,42 @@ type Session struct {
 
 	pendingMu sync.Mutex
 	triggerMu sync.Mutex
+	// channelMu guards channel, the chat channel this session belongs to
+	// (upstream Session.channel): written by the channel that claims the
+	// session (queen mail), read per reminder render.
+	channelMu sync.RWMutex
+	channel   string
 	// closedFlag marks a session torn down by StopSession. The reload fan-out
 	// snapshots live sessions before reloading them, so a session that closed
 	// in between must refuse the reload instead of rebuilding a catalog
 	// nothing reads.
 	closedFlag atomic.Bool
+}
+
+// SetChannel marks the session as a channel's, now and after a restart
+// (upstream ChannelHost._claim: session.channel = self.name plus the meta.json
+// merge). Trims the name; an empty name clears the claim.
+//
+// Parity: framework/server/channels.py::ChannelHost._claim
+func (s *Session) SetChannel(name string) {
+	if s == nil {
+		return
+	}
+	s.channelMu.Lock()
+	defer s.channelMu.Unlock()
+	s.channel = strings.TrimSpace(name)
+}
+
+// Channel is the chat channel this session belongs to, "" for the dashboard
+// (upstream Session.channel). The chat-app gate reads it at each reminder, so
+// a claim made while the session is live reaches the next turn.
+func (s *Session) Channel() string {
+	if s == nil {
+		return ""
+	}
+	s.channelMu.RLock()
+	defer s.channelMu.RUnlock()
+	return s.channel
 }
 
 type SessionTriggerClock interface {
