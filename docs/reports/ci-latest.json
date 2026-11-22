@@ -1,9 +1,9 @@
 {
- "wave": 43,
- "at": "2026-11-22 07:58",
- "head": "01c874eb",
- "ci": 2,
+ "wave": 44,
+ "at": "2026-11-22 08:00",
+ "head": "1501d2a8",
+ "ci": 0,
  "qc": 1,
  "publish": 0,
- "note": "补记：wiring-check 红，已修"
+ "note": "wiring 重定位修复后"
 }
