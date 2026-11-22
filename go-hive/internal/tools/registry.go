@@ -120,6 +120,11 @@ type ToolRegistry struct {
 	mcpConfigPath     string
 	hasMCPConfigPath  bool
 	mcpToolNames      map[string]struct{}
+	// mcpAliases maps a server-side (bare) MCP tool name to the namespaced
+	// registry name that serves it: the bare→prefixed compatibility fallback
+	// (go_hive/docs/mcp-alias-prep.md). Only MCP-owned keys are recorded, and
+	// the first claim wins, mirroring the registry's first-wins collision rule.
+	mcpAliases        map[string]string
 	mcpCredSnapshot   map[string]struct{}
 	mcpAdenKeySnap    *string
 	mcpServerTools    map[string]map[string]struct{}
@@ -154,6 +159,7 @@ func NewToolRegistry() *ToolRegistry {
 		mcpClientServers:  map[int]string{},
 		mcpManagedClients: map[int]struct{}{},
 		mcpToolNames:      map[string]struct{}{},
+		mcpAliases:        map[string]string{},
 		mcpCredSnapshot:   map[string]struct{}{},
 		mcpServerTools:    map[string]map[string]struct{}{},
 		mcpFullCatalog:    map[string][]map[string]any{},
@@ -444,6 +450,20 @@ func (e *RegistryExecutor) Execute(ctx context.Context, toolUse ToolUse) (ToolRe
 	r.mu.RUnlock()
 
 	if !ok {
+		// Bare-name compatibility fallback: a caller that still uses the
+		// server-side MCP tool name is routed to the namespaced tool. An exact
+		// registered name is matched first, so builtins and integrations can
+		// never be shadowed by a bare alias.
+		if target, found := r.resolveMCPAlias(toolUse.Name); found {
+			r.mu.RLock()
+			registered, ok = r.tools[target]
+			r.mu.RUnlock()
+			if ok {
+				r.logInfo(fmt.Sprintf("MCP tool called by bare name '%s' resolved to '%s'", toolUse.Name, target), nil)
+			}
+		}
+	}
+	if !ok {
 		errorMsg := "Unknown tool: " + toolUse.Name
 		if len(names) > 0 {
 			if matches := GetCloseMatches(toolUse.Name, names, 1, 0.6); len(matches) > 0 {
@@ -490,10 +510,16 @@ func callToolExecutor(exec ToolExecutor, inputs map[string]any) (result any, err
 }
 
 func (e *RegistryExecutor) ProbeForTool(toolName string) string {
+	if target, ok := e.registry.resolveMCPAlias(toolName); ok {
+		toolName = target
+	}
 	return e.registry.ProbeMCPForTool(toolName)
 }
 
 func (e *RegistryExecutor) KillForTool(toolName string) error {
+	if target, ok := e.registry.resolveMCPAlias(toolName); ok {
+		toolName = target
+	}
 	e.registry.KillMCPForTool(toolName)
 	return nil
 }

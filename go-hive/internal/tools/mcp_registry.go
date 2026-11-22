@@ -465,6 +465,10 @@ func (r *ToolRegistry) registerMCPServerInner(spec MCPServerSpec, opts RegisterM
 			break
 		}
 		if preserve && r.HasTool(registeredName) {
+			// The namespaced key is taken. The bare name still resolves when
+			// the owner is an MCP tool (the fold left it behind); a non-MCP
+			// owner is never exposed through the alias layer.
+			r.recordMCPAlias(remoteName, registeredName)
 			if opts.LogCollisions {
 				origin := originServer
 				if origin == "" {
@@ -484,6 +488,7 @@ func (r *ToolRegistry) registerMCPServerInner(spec MCPServerSpec, opts RegisterM
 		params := schemaParams(mcpTool.InputSchema)
 		r.Register(registeredName, tool, r.makeMCPExecutor(client, registeredName, remoteName, params))
 		r.mcpToolNames[registeredName] = struct{}{}
+		r.recordMCPAlias(remoteName, registeredName)
 		r.mcpToolClients[registeredName] = client
 		r.mcpServerTools[serverName][registeredName] = struct{}{}
 		admittedNames = append(admittedNames, registeredName)
@@ -498,6 +503,47 @@ func (r *ToolRegistry) registerMCPServerInner(spec MCPServerSpec, opts RegisterM
 	})
 	r.logInfo(fmt.Sprintf("MCP server '%s' admitted %d tool(s): %v", config.Name, len(admittedNames), sortedStrings(admittedNames)), nil)
 	return count, nil
+}
+
+// recordMCPAlias claims the compatibility alias from a server-side (bare) MCP
+// tool name to the namespaced registry name that serves it. Only registry keys
+// owned by an MCP tool qualify, so a bare name can never alias to a builtin or
+// integration tool that happens to hold the namespaced key. The first claim
+// wins, mirroring the registry's first-wins collision rule.
+func (r *ToolRegistry) recordMCPAlias(bare, registered string) {
+	if bare == "" || registered == "" || bare == registered {
+		return
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, isMCP := r.mcpToolNames[registered]; !isMCP {
+		return
+	}
+	if _, exists := r.mcpAliases[bare]; exists {
+		return
+	}
+	r.mcpAliases[bare] = registered
+}
+
+// resolveMCPAlias resolves a bare MCP tool name to its namespaced registry
+// name. It never resolves to a name that is not currently registered.
+func (r *ToolRegistry) resolveMCPAlias(name string) (string, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	registered, ok := r.mcpAliases[name]
+	if !ok {
+		return "", false
+	}
+	if _, exists := r.tools[registered]; !exists {
+		return "", false
+	}
+	return registered, true
+}
+
+func (r *ToolRegistry) resetMCPAliases() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.mcpAliases = map[string]string{}
 }
 
 func providerValue(m map[string]string, name string) any {
@@ -1164,6 +1210,7 @@ func (r *ToolRegistry) dropMCPServers(context string) {
 		r.removeTool(name)
 	}
 	r.mcpToolNames = map[string]struct{}{}
+	r.resetMCPAliases()
 	r.mcpServerTools = map[string]map[string]struct{}{}
 	r.mcpFullCatalog = map[string][]map[string]any{}
 	r.mcpServerOrder = nil

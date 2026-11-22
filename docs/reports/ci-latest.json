@@ -1,9 +1,9 @@
 {
- "wave": 62,
- "at": "2026-11-22 18:34",
- "head": "25968ddb",
+ "wave": 63,
+ "at": "2026-11-22 19:09",
+ "head": "d9aab9cf",
  "ci": 0,
  "qc": 0,
  "publish": 0,
- "note": "reliability 合并后"
+ "note": "resume-guards 合并后"
 }
