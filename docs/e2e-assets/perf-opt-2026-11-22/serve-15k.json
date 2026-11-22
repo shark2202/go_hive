@@ -1,0 +1,36 @@
+{
+  "binary": "/var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//perf-recall-15k/bin/hive",
+  "home": "/var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//perf-recall-15k/serve-home-15000",
+  "label": "15k",
+  "warmup_ms": 49.991,
+  "runs": [
+    {
+      "label": "15k",
+      "run": 0,
+      "port": 8820,
+      "ready_ms": 44.596,
+      "rss_ready_kb": 35312,
+      "rss_after_2s_kb": 35872,
+      "log": "/var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T/perf-opt-evidence/canon2/serve-15k-run0.txt"
+    },
+    {
+      "label": "15k",
+      "run": 1,
+      "port": 8821,
+      "ready_ms": 45.59,
+      "rss_ready_kb": 35168,
+      "rss_after_2s_kb": 35904,
+      "log": "/var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T/perf-opt-evidence/canon2/serve-15k-run1.txt"
+    },
+    {
+      "label": "15k",
+      "run": 2,
+      "port": 8822,
+      "ready_ms": 25.441,
+      "rss_ready_kb": 35024,
+      "rss_after_2s_kb": 35984,
+      "log": "/var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T/perf-opt-evidence/canon2/serve-15k-run2.txt"
+    }
+  ],
+  "median_ready_ms": 44.596
+}

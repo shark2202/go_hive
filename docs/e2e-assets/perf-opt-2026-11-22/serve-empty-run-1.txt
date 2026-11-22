@@ -1,0 +1,14 @@
+2026-11-22 19:38:54 [sentinel] manager starting (0 open escalations)
+Browser bridge: reusing the instance on 127.0.0.1:14830
+2026-11-22 19:38:54 turn context "probe" is installed but off: set turn_context.probe.enabled in configuration.json
+
+Hive API server running on http://127.0.0.1:8900
+Health:     http://127.0.0.1:8900/api/health
+Sessions:   0 colony, 0 queen-only
+
+Press Ctrl+C to stop
+Browser bridge: control connected on 127.0.0.1:14831
+2026-11-22 19:38:54 [access] GET /api/health -> 200 (0ms)
+2026-11-22 19:38:54 runtime-resources verdict init->ok | avail=NoneMB renderers=15 chrome_rss=1647MB hive_rss=31MB workers=<nil> | 
+
+Received SIGTERM, shutting down gracefully… (press Ctrl+C again to force quit)

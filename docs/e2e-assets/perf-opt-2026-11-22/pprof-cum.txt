@@ -1,0 +1,37 @@
+File: perfrecall
+Type: cpu
+Time: 2026-11-22 19:38:53 CST
+Duration: 403.56ms, Total samples = 260ms (64.43%)
+Showing nodes accounting for 190ms, 73.08% of 260ms total
+Showing top 30 nodes out of 74
+      flat  flat%   sum%        cum   cum%
+         0     0%     0%      140ms 53.85%  github.com/aden-hive/hive-go/internal/memory.RecallPastConversations
+         0     0%     0%      140ms 53.85%  main.main
+         0     0%     0%      140ms 53.85%  main.runBench
+         0     0%     0%      140ms 53.85%  runtime.main
+         0     0%     0%      130ms 50.00%  github.com/aden-hive/hive-go/internal/memory.recallIndexForQuery
+         0     0%     0%      120ms 46.15%  github.com/aden-hive/hive-go/internal/atomicfs.ReadJSON
+         0     0%     0%      120ms 46.15%  github.com/aden-hive/hive-go/internal/memory.loadRecallIndex
+         0     0%     0%      110ms 42.31%  runtime.systemstack
+         0     0%     0%      100ms 38.46%  runtime.(*mheap).alloc.func1
+         0     0%     0%      100ms 38.46%  runtime.(*mheap).allocSpan
+     100ms 38.46% 38.46%      100ms 38.46%  runtime.madvise
+         0     0% 38.46%      100ms 38.46%  runtime.sysUsed (inline)
+         0     0% 38.46%      100ms 38.46%  runtime.sysUsedOS (inline)
+         0     0% 38.46%       90ms 34.62%  encoding/json.(*Decoder).Decode
+      90ms 34.62% 73.08%       90ms 34.62%  syscall.rawsyscalln
+         0     0% 73.08%       90ms 34.62%  syscall.syscall
+         0     0% 73.08%       90ms 34.62%  syscall.syscalln
+         0     0% 73.08%       70ms 26.92%  encoding/json.(*Decoder).readValue
+         0     0% 73.08%       50ms 19.23%  encoding/json.(*Decoder).refill
+         0     0% 73.08%       50ms 19.23%  internal/poll.(*FD).Read
+         0     0% 73.08%       50ms 19.23%  internal/poll.ignoringEINTRIO (inline)
+         0     0% 73.08%       50ms 19.23%  os.(*File).Read
+         0     0% 73.08%       50ms 19.23%  os.(*File).read (inline)
+         0     0% 73.08%       50ms 19.23%  syscall.Read (inline)
+         0     0% 73.08%       50ms 19.23%  syscall.read
+         0     0% 73.08%       30ms 11.54%  internal/poll.(*FD).Close
+         0     0% 73.08%       30ms 11.54%  internal/poll.(*FD).decref
+         0     0% 73.08%       30ms 11.54%  internal/poll.(*FD).destroy
+         0     0% 73.08%       30ms 11.54%  internal/poll.(*SysFile).destroy (inline)
+         0     0% 73.08%       30ms 11.54%  os.(*File).Close

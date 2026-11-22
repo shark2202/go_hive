@@ -1,0 +1,9 @@
+== data sizes ==
+home: /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//perf-recall-15k/home-15000
+ 59M	/var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//perf-recall-15k/home-15000
+queen_alpha sessions=120 event_lines=88069 size=21124KiB
+queen_beta sessions=100 event_lines=73566 size=17732KiB
+queen_gamma sessions=80 event_lines=59311 size=14184KiB
+events.jsonl lines (all):   220946
+timeline.jsonl lines (all): 891
+session dirs (all):         300

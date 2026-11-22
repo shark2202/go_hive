@@ -1,0 +1,37 @@
+File: perfrecall
+Type: cpu
+Time: 2026-11-22 19:38:53 CST
+Duration: 403.56ms, Total samples = 260ms (64.43%)
+Showing nodes accounting for 260ms, 100% of 260ms total
+Showing top 30 nodes out of 74
+      flat  flat%   sum%        cum   cum%
+     100ms 38.46% 38.46%      100ms 38.46%  runtime.madvise
+      90ms 34.62% 73.08%       90ms 34.62%  syscall.rawsyscalln
+      20ms  7.69% 80.77%       20ms  7.69%  encoding/json.stateInString
+      10ms  3.85% 84.62%       10ms  3.85%  encoding/json.(*decodeState).rescanLiteral
+      10ms  3.85% 88.46%       10ms  3.85%  encoding/json.unquoteBytes
+      10ms  3.85% 92.31%       10ms  3.85%  runtime.pthread_cond_signal
+      10ms  3.85% 96.15%       10ms  3.85%  runtime.pthread_cond_wait
+      10ms  3.85%   100%       10ms  3.85%  sync.(*Pool).Get
+         0     0%   100%       90ms 34.62%  encoding/json.(*Decoder).Decode
+         0     0%   100%       70ms 26.92%  encoding/json.(*Decoder).readValue
+         0     0%   100%       50ms 19.23%  encoding/json.(*Decoder).refill
+         0     0%   100%       20ms  7.69%  encoding/json.(*decodeState).array
+         0     0%   100%       10ms  3.85%  encoding/json.(*decodeState).literalStore
+         0     0%   100%       20ms  7.69%  encoding/json.(*decodeState).object
+         0     0%   100%       20ms  7.69%  encoding/json.(*decodeState).unmarshal
+         0     0%   100%       20ms  7.69%  encoding/json.(*decodeState).value
+         0     0%   100%      120ms 46.15%  github.com/aden-hive/hive-go/internal/atomicfs.ReadJSON
+         0     0%   100%      140ms 53.85%  github.com/aden-hive/hive-go/internal/memory.RecallPastConversations
+         0     0%   100%       10ms  3.85%  github.com/aden-hive/hive-go/internal/memory.SearchSessionDir
+         0     0%   100%      120ms 46.15%  github.com/aden-hive/hive-go/internal/memory.loadRecallIndex
+         0     0%   100%       10ms  3.85%  github.com/aden-hive/hive-go/internal/memory.pastRecallChoose
+         0     0%   100%       10ms  3.85%  github.com/aden-hive/hive-go/internal/memory.pastRecallFrequency
+         0     0%   100%      130ms 50.00%  github.com/aden-hive/hive-go/internal/memory.recallIndexForQuery
+         0     0%   100%       10ms  3.85%  github.com/aden-hive/hive-go/internal/memory.recallIndexForQuery.func1
+         0     0%   100%       10ms  3.85%  github.com/aden-hive/hive-go/internal/memory.refreshRecallIndex
+         0     0%   100%       30ms 11.54%  internal/poll.(*FD).Close
+         0     0%   100%       50ms 19.23%  internal/poll.(*FD).Read
+         0     0%   100%       30ms 11.54%  internal/poll.(*FD).decref
+         0     0%   100%       30ms 11.54%  internal/poll.(*FD).destroy
+         0     0%   100%       30ms 11.54%  internal/poll.(*SysFile).destroy (inline)

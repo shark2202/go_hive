@@ -1,0 +1,7 @@
+perf_recall_parity: base=d9aab9cf (d9aab9cf)
+perf_recall_parity: queries=120 owners=queen_alpha,queen_beta,queen_gamma exclude_variant=1
+perf_recall_parity: base_results=721 lines new_results=721 lines
+sha256 base: 8ba735ba17622096c1dc0431c3e07d673be8a2eb6b2a328a1de3d86ccf58ff9f
+sha256 new:  8ba735ba17622096c1dc0431c3e07d673be8a2eb6b2a328a1de3d86ccf58ff9f
+perf_recall_parity: records base=720 new=720; turns base=7194 new=7194
+PARITY: PASS — every dumped turn and score is byte-identical

@@ -1,9 +1,9 @@
 {
- "wave": 65,
- "at": "2026-11-22 19:38",
- "head": "528bdcd6",
+ "wave": 66,
+ "at": "2026-11-22 19:42",
+ "head": "f2045f10",
  "ci": 0,
  "qc": 0,
  "publish": 0,
- "note": "cli-mcp-help 误作工作树清理后（基线恢复 + go1.26.11）"
+ "note": "disk-sc + unported-triage 合并后（go1.26.11 全链）"
 }

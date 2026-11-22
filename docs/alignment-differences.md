@@ -62,6 +62,6 @@
 
 ## 6. 证据与质量
 
-- parity **5,709/5,709**；C12 **273**（205/10/7/51）；QC **9/9**；compat **12/12**；arch **82 包/219 边**。
+- parity **5,722/5,722**；C12 **273**（216/27/9/21）；QC **9/9**；compat **12/12**；arch **82 包/219 边**；govulncheck **0 OSV**。
 - 性能：`perf-recall-15k`（15,000 轮冷建/warm/搜索/冷启动/RSS）产出中，落 `docs/perf-recall-15k.md`。
 - 大样本行为：LongMemEval n=200 四组（`e2e-assets/longmemeval/2026-11-22-200q-real-run.md`）；配对检验均不显著，新增 140 题 126:126。

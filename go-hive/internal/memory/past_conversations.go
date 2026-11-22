@@ -172,23 +172,27 @@ func pastRecallTurnCounts(user, reply string) map[string]int {
 	return out
 }
 
-func pastRecallFrequency(counts map[string]int, term string) int {
+// pastRecallFrequency is the term frequency a doc contributes for a query
+// term: for CJK terms an exact key match; for everything else every stored
+// term with that prefix (the stems in PastRecallQueryTerms match inflections).
+func pastRecallFrequency(freqs recallTermFreqs, term string) int {
+	index := freqs.search(term)
 	if pastRecallCJKTerm.MatchString(term) {
-		return counts[term]
+		if index < len(freqs.offsets) && freqs.termAt(index) == term {
+			return int(freqs.counts[index])
+		}
+		return 0
 	}
 	total := 0
-	for word, count := range counts {
-		if strings.HasPrefix(word, term) {
-			total += count
-		}
+	for ; index < len(freqs.offsets) && strings.HasPrefix(freqs.termAt(index), term); index++ {
+		total += int(freqs.counts[index])
 	}
 	return total
 }
 
 type pastRecallDoc struct {
-	turn   PastTurn
-	counts map[string]int
-	length int
+	turn  PastTurn
+	freqs recallTermFreqs
 }
 
 func pastRecallTurns(sessionDir, sessionID string) []PastTurn {
@@ -247,15 +251,15 @@ func RecallPastConversations(homeRoot string, ref ScopeRef, text string, opts Pa
 			// scan-based reference.
 			continue
 		}
-		counts := pastRecallTurnCounts(turn.User, turn.Reply)
-		length := 0
-		for _, count := range counts {
-			length += count
-		}
+		// Term frequencies come from the process-wide memo
+		// (recall_counts.go); they are a pure function of this turn's
+		// text, so a warm query never rebuilds them. The reference path
+		// is pastRecallTurnCounts + the same length sum, and results are
+		// identical (recall_counts_test.go).
+		freqs := recallTurnFreqsFor(homeRoot, ref, index.Sessions[turn.Session].EventsSize, turn.Session, turn.Ordinal, turn.User, turn.Reply)
 		docs = append(docs, pastRecallDoc{
-			turn:   PastTurn{Session: turn.Session, Ordinal: turn.Ordinal, User: turn.User, Reply: turn.Reply},
-			counts: counts,
-			length: length,
+			turn:  PastTurn{Session: turn.Session, Ordinal: turn.Ordinal, User: turn.User, Reply: turn.Reply},
+			freqs: freqs,
 		})
 	}
 	return pastRecallChoose(docs, len(docs), terms, opts.ExcludeSession, topK)
@@ -281,7 +285,7 @@ func pastRecallChoose(docs []pastRecallDoc, allTurns int, terms []string, exclud
 		}
 		hit := false
 		for i, term := range terms {
-			if pastRecallFrequency(doc.counts, term) > 0 {
+			if pastRecallFrequency(doc.freqs, term) > 0 {
 				df[i]++
 				hit = true
 			}
@@ -299,7 +303,7 @@ func pastRecallChoose(docs []pastRecallDoc, allTurns int, terms []string, exclud
 	}
 	avgLength := 0.0
 	for _, doc := range matching {
-		avgLength += float64(doc.length)
+		avgLength += float64(doc.freqs.length)
 	}
 	avgLength /= float64(len(matching))
 	const k1, b = 1.2, 0.75
@@ -308,7 +312,7 @@ func pastRecallChoose(docs []pastRecallDoc, allTurns int, terms []string, exclud
 	for _, doc := range matching {
 		matched := []int{}
 		for i, term := range terms {
-			if pastRecallFrequency(doc.counts, term) > 0 {
+			if pastRecallFrequency(doc.freqs, term) > 0 {
 				matched = append(matched, i)
 			}
 		}
@@ -324,10 +328,10 @@ func pastRecallChoose(docs []pastRecallDoc, allTurns int, terms []string, exclud
 				continue
 			}
 		}
-		norm := k1 * (1 - b + b*float64(doc.length)/avgLength)
+		norm := k1 * (1 - b + b*float64(doc.freqs.length)/avgLength)
 		score := 0.0
 		for _, i := range matched {
-			tf := float64(pastRecallFrequency(doc.counts, terms[i]))
+			tf := float64(pastRecallFrequency(doc.freqs, terms[i]))
 			idf := math.Log(1 + (float64(allTurns-df[i])+0.5)/(float64(df[i])+0.5))
 			score += idf * tf * (k1 + 1) / (tf + norm)
 		}

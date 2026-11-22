@@ -1,0 +1,31 @@
+bench: direct build queen_alpha     147.1 ms 
+bench: direct build queen_beta      125.0 ms 
+bench: direct build queen_gamma     101.2 ms 
+bench: index queen_alpha    2954681 bytes turns=6000
+bench: index queen_beta     2462918 bytes turns=5000
+bench: index queen_gamma    1974615 bytes turns=4000
+bench: cold first query 302.5 ms (results=10, index available at 148.9 ms), post-build query 15.2 ms (results=10)
+bench: warm recall queries (queen_alpha scope) n=120 p50=12.8ms p95=13.8ms p99=14.5ms min=12.1ms max=15.7ms mean=12.9ms non_empty=114/120 (load { 3.84 3.75 4.29 } -> { 3.77 3.74 4.28 })
+bench: warm by scope queen_alpha  turns= 6000 n=20 p50=13.0ms p95=14.0ms p99=14.2ms min=12.2ms max=14.3ms mean=13.1ms
+bench: warm by scope queen_beta   turns= 5000 n=20 p50=10.9ms p95=19.0ms p99=96.3ms min=10.2ms max=115.7ms mean=16.3ms
+bench: warm by scope queen_gamma  turns= 4000 n=20 p50=8.8ms p95=13.3ms p99=73.8ms min=8.3ms max=88.9ms mean=12.8ms
+bench: index load+parse replica n=20 p50=10.1ms p95=10.6ms p99=10.6ms min=9.8ms max=10.6ms mean=10.2ms
+bench: search_messages queen_alpha  (?i)postgres|kubernetes  n=8 p50=189.9ms p95=195.5ms p99=196.5ms min=187.8ms max=196.7ms mean=190.6ms matches=6364
+bench: search_messages queen_alpha  (?i)refund policy        n=8 p50=161.8ms p95=167.8ms p99=168.7ms min=158.3ms max=168.9ms mean=162.3ms matches=3244
+bench: search_messages queen_alpha  zzz_no_such_token_xyz    n=8 p50=127.2ms p95=133.0ms p99=133.9ms min=122.4ms max=134.1ms mean=127.1ms matches=0
+bench: search_timeline queen_alpha  kubernetes|postgres|迁移|退款 n=8 p50=3.0ms p95=3.7ms p99=3.9ms min=2.9ms max=4.0ms mean=3.1ms total=138
+bench: search_timeline queen_alpha  rollout|migration|发票     n=8 p50=2.8ms p95=2.9ms p99=3.0ms min=2.7ms max=3.0ms mean=2.8ms total=125
+bench: search_timeline queen_alpha  zzz_no_such_token_xyz    n=8 p50=2.4ms p95=2.5ms p99=2.5ms min=2.4ms max=2.5ms mean=2.4ms total=0
+bench: search_messages queen_beta   (?i)postgres|kubernetes  n=8 p50=162.8ms p95=170.9ms p99=173.3ms min=160.0ms max=173.9ms mean=164.0ms matches=5582
+bench: search_messages queen_beta   (?i)refund policy        n=8 p50=134.8ms p95=135.2ms p99=135.3ms min=133.8ms max=135.4ms mean=134.7ms matches=2650
+bench: search_messages queen_beta   zzz_no_such_token_xyz    n=8 p50=103.2ms p95=105.0ms p99=105.2ms min=101.3ms max=105.2ms mean=103.2ms matches=0
+bench: search_timeline queen_beta   kubernetes|postgres|迁移|退款 n=8 p50=2.4ms p95=3.0ms p99=3.3ms min=2.4ms max=3.4ms mean=2.5ms total=103
+bench: search_timeline queen_beta   rollout|migration|发票     n=8 p50=2.2ms p95=2.5ms p99=2.6ms min=2.2ms max=2.6ms mean=2.3ms total=96
+bench: search_timeline queen_beta   zzz_no_such_token_xyz    n=8 p50=1.9ms p95=2.0ms p99=2.0ms min=1.9ms max=2.0ms mean=1.9ms total=0
+bench: search_messages queen_gamma  (?i)postgres|kubernetes  n=8 p50=130.6ms p95=137.3ms p99=139.1ms min=127.7ms max=139.6ms mean=131.3ms matches=4396
+bench: search_messages queen_gamma  (?i)refund policy        n=8 p50=107.1ms p95=108.0ms p99=108.1ms min=104.3ms max=108.1ms mean=106.7ms matches=2133
+bench: search_messages queen_gamma  zzz_no_such_token_xyz    n=8 p50=83.4ms p95=88.0ms p99=89.6ms min=80.8ms max=90.0ms mean=83.6ms matches=0
+bench: search_timeline queen_gamma  kubernetes|postgres|迁移|退款 n=8 p50=1.9ms p95=2.5ms p99=2.7ms min=1.9ms max=2.8ms mean=2.0ms total=81
+bench: search_timeline queen_gamma  rollout|migration|发票     n=8 p50=1.8ms p95=2.2ms p99=2.3ms min=1.8ms max=2.3ms mean=1.9ms total=84
+bench: search_timeline queen_gamma  zzz_no_such_token_xyz    n=8 p50=1.6ms p95=1.8ms p99=1.8ms min=1.5ms max=1.9ms mean=1.6ms total=0
+bench: peak RSS=79953920 bytes heap_alloc=20432248 bytes sys=75749656 bytes n_gc=974

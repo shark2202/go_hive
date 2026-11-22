@@ -51,7 +51,7 @@
 
 **P0**
 - ✅ cli：per-command help + `-` 名 usage error 2 **已于 2026-11-22 上午合并**（`eca1637`/`e543aab4`/`2bb0ec70`/`b8482989`，含 help 版面逐字与 cli_usage.go 拆分）；余 68 条 flag 级 help 文案（低收益，单列）。注：晚间重复派单已止损（lane 误改主树，已 revert）
-- 🔧 disk-contract：SC-04 权限宽严、SC-06 会话 meta/tasks/colony sidecar API 级双跑、文件名单侧清单逐名核实（~4h）；storage_compat 接可选 sweep（2h）
+- ✅ disk-contract：SC-04 权限已对齐（sessions 树 0600）、SC-06 sidecar API 双跑 0 差异、SC-08 24 名核完；`make storage-sweep` 已接入（`f9b10724`）
 
 **P1**
 - ⬜ tools：输出 golden 扩面收敛 12 条例外（6–8h）；`run_playbook` 折叠控制参数口径（2h）；`exa_search` 扁平化另立车道（4h）
@@ -73,8 +73,8 @@
 
 **今日新增（不在登记册）**
 - 🔧 resume-guards 两项（cold_interrupted 生产者、resume 首帧）—— lane 在跑
-- ⏳ D1 govulncheck（工具链 go1.26.11 已装，待批准）；⬜ prep-mcp-alias 已预实现待批准
-- ⬜ module-inventory 51 unported 逐条 triage（至少 6 条疑似假标，6–8h）
+- ✅ D1 govulncheck：已批准并合并（go.mod→1.26.11），wave-66 govulncheck 0 OSV；⬜ prep-mcp-alias 已预实现待批准
+- ✅ module-inventory 51 条 triage 完成（`528bdcd6`）：假标 11 / partial 17 / oos 2 / 真缺口 21；C12 216/27/9/21
 - ⬜ perf-recall 15k 报告（lane 在跑，今晚出）
 - 🌐 91 第三方集成未验证
 

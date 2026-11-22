@@ -1,0 +1,36 @@
+{
+  "binary": "/var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//perf-recall-15k/bin/hive",
+  "home": "/var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//perf-recall-15k/empty-home",
+  "label": "empty",
+  "warmup_ms": 319.188,
+  "runs": [
+    {
+      "label": "empty",
+      "run": 0,
+      "port": 8810,
+      "ready_ms": 47.786,
+      "rss_ready_kb": 33232,
+      "rss_after_2s_kb": 34528,
+      "log": "/var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T/perf-opt-evidence/canon2/serve-empty-run0.txt"
+    },
+    {
+      "label": "empty",
+      "run": 1,
+      "port": 8811,
+      "ready_ms": 67.38,
+      "rss_ready_kb": 34832,
+      "rss_after_2s_kb": 34832,
+      "log": "/var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T/perf-opt-evidence/canon2/serve-empty-run1.txt"
+    },
+    {
+      "label": "empty",
+      "run": 2,
+      "port": 8812,
+      "ready_ms": 27.145,
+      "rss_ready_kb": 33104,
+      "rss_after_2s_kb": 34240,
+      "log": "/var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T/perf-opt-evidence/canon2/serve-empty-run2.txt"
+    }
+  ],
+  "median_ready_ms": 47.786
+}

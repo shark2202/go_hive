@@ -1,0 +1,120 @@
+I want to revisit the Kubernetes rollout from last week — what did we de
+Remind me what broke with the data retention audit. The last fix landed
+Remind me what broke with the billing invoice flow. The last fix landed
+Please pull everything we know about the billing invoice flow. The quart
+What is the current state of the billing invoice flow? Last time the rol
+我想重新看一下数据库迁移，之前迁移计划的数据对不上，麻烦帮我核一遍。
+I want to revisit the vendor renewal from last week — what did we decide
+Please pull everything we know about the Kubernetes rollout. The dashboa
+Please pull everything we know about the billing invoice flow. The backf
+What is the current state of the billing invoice flow? Last time the pip
+Remind me what broke with the hotel booking integration. The last fix la
+Can you look into the billing invoice flow? The pipeline looks off in st
+数据库迁移现在是什么状态？上次说的成本有没有进展？
+Can you look into the Postgres migration? The error rate looks off in st
+Can you look into the refund policy? The backfill looks off in staging a
+What is the current state of the Kubernetes rollout? Last time the laten
+把接口限流相关的记录都找出来，下周开会要用，重点是数据校验。
+Please pull everything we know about the Kubernetes rollout. The quarter
+I want to revisit the billing invoice flow from last week — what did we
+Can you look into the Kubernetes rollout? The dashboard looks off in sta
+Remind me what broke with the Postgres migration. The last fix landed bu
+Can you look into the billing invoice flow? The coverage looks off in st
+Please pull everything we know about the hotel booking integration. The
+Please pull everything we know about the warehouse sync job. The backfil
+I want to revisit the incident postmortem from last week — what did we d
+Remind me what broke with the quarterly budget review. The last fix land
+I want to revisit the refund policy from last week — what did we decide
+Please pull everything we know about the billing invoice flow. The laten
+Please pull everything we know about the refund policy. The backfill ask
+Please pull everything we know about the refund policy. The pipeline ask
+数据保留策略现在是什么状态？上次说的监控面板有没有进展？
+Please pull everything we know about the warehouse sync job. The coverag
+Can you look into the refund policy? The quarterly numbers looks off in
+Please pull everything we know about the Kubernetes rollout. The backfil
+Please pull everything we know about the Postgres migration. The coverag
+What is the current state of the refund policy? Last time the pipeline n
+Remind me what broke with the search relevance tuning. The last fix land
+What is the current state of the Kubernetes rollout? Last time the error
+帮我看一下留存分析，复盘结论 这块还是没定下来，周五前要一个结论。
+I want to revisit the warehouse sync job from last week — what did we de
+I want to revisit the data retention audit from last week — what did we
+留存分析现在是什么状态？上次说的复盘结论有没有进展？
+Can you look into the hotel booking integration? The cost looks off in s
+把发票流程相关的记录都找出来，下周开会要用，重点是上线节奏。
+I want to revisit the Postgres migration from last week — what did we de
+Can you look into the Kubernetes rollout? The error rate looks off in st
+Can you look into the Kubernetes rollout? The coverage looks off in stag
+Please pull everything we know about the mobile push campaign. The rollb
+把发票流程相关的记录都找出来，下周开会要用，重点是复盘结论。
+Remind me what broke with the mobile push campaign. The last fix landed
+What is the current state of the Kubernetes rollout? Last time the quart
+What is the current state of the billing invoice flow? Last time the err
+Please pull everything we know about the refund policy. The quarterly nu
+Remind me what broke with the refund policy. The last fix landed but the
+Can you look into the mobile push campaign? The pipeline looks off in st
+我想重新看一下发票流程，之前数据校验的数据对不上，麻烦帮我核一遍。
+What is the current state of the warehouse sync job? Last time the error
+帮我看一下数据保留策略，超时问题 这块还是没定下来，周五前要一个结论。
+Please pull everything we know about the Postgres migration. The dashboa
+帮我看一下发票流程，成本 这块还是没定下来，周五前要一个结论。
+退款政策现在是什么状态？上次说的上线节奏有没有进展？
+数据保留策略现在是什么状态？上次说的成本有没有进展？
+What is the current state of the billing invoice flow? Last time the bac
+Please pull everything we know about the billing invoice flow. The pipel
+Can you look into the Kubernetes rollout? The cost looks off in staging
+Can you look into the incident postmortem? The pipeline looks off in sta
+Can you look into the refund policy? The latency looks off in staging an
+Please pull everything we know about the data retention audit. The rollb
+Remind me what broke with the vendor renewal. The last fix landed but th
+Please pull everything we know about the refund policy. The cost asked f
+Can you look into the refund policy? The error rate looks off in staging
+Remind me what broke with the Kubernetes rollout. The last fix landed bu
+Can you look into the Kubernetes rollout? The vendor quote looks off in
+I want to revisit the search relevance tuning from last week — what did
+Please pull everything we know about the customer onboarding checklist.
+Can you look into the data retention audit? The error rate looks off in
+帮我看一下留存分析，成本 这块还是没定下来，周五前要一个结论。
+Please pull everything we know about the billing invoice flow. The cost
+接口限流现在是什么状态？上次说的超时问题有没有进展？
+Can you look into the billing invoice flow? The error rate looks off in
+Please pull everything we know about the Postgres migration. The cost as
+Can you look into the refund policy? The dashboard looks off in staging
+Please pull everything we know about the Postgres migration. The error r
+What is the current state of the billing invoice flow? Last time the cov
+Can you look into the refund policy? The coverage looks off in staging a
+Please pull everything we know about the quarterly budget review. The da
+What is the current state of the mobile push campaign? Last time the ven
+Can you look into the Kubernetes rollout? The quarterly numbers looks of
+帮我看一下发票流程，超时问题 这块还是没定下来，周五前要一个结论。
+我想重新看一下灰度发布，之前迁移计划的数据对不上，麻烦帮我核一遍。
+I want to revisit the mobile push campaign from last week — what did we
+Please pull everything we know about the Kubernetes rollout. The coverag
+I want to revisit the API rate limit from last week — what did we decide
+Please pull everything we know about the refund policy. The rollback pla
+What is the current state of the vendor renewal? Last time the vendor qu
+What is the current state of the Postgres migration? Last time the laten
+获客活动现在是什么状态？上次说的复盘结论有没有进展？
+What is the current state of the refund policy? Last time the cost numbe
+把留存分析相关的记录都找出来，下周开会要用，重点是成本。
+Can you look into the Postgres migration? The pipeline looks off in stag
+Please pull everything we know about the Kubernetes rollout. The latency
+Please pull everything we know about the Postgres migration. The pipelin
+Please pull everything we know about the latency regression. The quarter
+Can you look into the Postgres migration? The vendor quote looks off in
+Please pull everything we know about the billing invoice flow. The error
+Can you look into the Postgres migration? The quarterly numbers looks of
+Please pull everything we know about the latency regression. The latency
+Please pull everything we know about the mobile push campaign. The quart
+我想重新看一下退款政策，之前验收标准的数据对不上，麻烦帮我核一遍。
+帮我看一下获客活动，上线节奏 这块还是没定下来，周五前要一个结论。
+Can you look into the Kubernetes rollout? The rollback plan looks off in
+发票流程现在是什么状态？上次说的回滚方案有没有进展？
+Please pull everything we know about the Kubernetes rollout. The rollbac
+Can you look into the customer onboarding checklist? The vendor quote lo
+Can you look into the vendor renewal? The cost looks off in staging and
+Please pull everything we know about the vendor renewal. The vendor quot
+把灰度发布相关的记录都找出来，下周开会要用，重点是上线节奏。
+把灰度发布相关的记录都找出来，下周开会要用，重点是数据校验。
+What is the current state of the hotel booking integration? Last time th
+What is the current state of the Postgres migration? Last time the vendo

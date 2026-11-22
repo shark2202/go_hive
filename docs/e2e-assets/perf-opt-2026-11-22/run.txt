@@ -1,0 +1,104 @@
+== environment ==
+date:    2026-11-22T11:38:39Z
+commit:  bee24b810ea3c90aec586e7977182ae64a2f2cc4
+branch:  perf-opt
+host:    Darwin 25.6.0 arm64
+cpu:     Apple M5
+mem:     17179869184 bytes
+go:      go version go1.26.11 darwin/arm64
+load:    { 4.49 4.90 4.81 }
+module:  /Users/mac/.wt/perf-opt/go_hive/go-hive
+turns:   15000 (seed 20261122), runs/serve=3
+home:    /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//perf-recall-15k/home-15000
+== build harness + hive binary ==
+== reusing generated home /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//perf-recall-15k/home-15000 ==
+== data sizes ==
+home: /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//perf-recall-15k/home-15000
+ 59M	/var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//perf-recall-15k/home-15000
+queen_alpha sessions=120 event_lines=88069 size=21124KiB
+queen_beta sessions=100 event_lines=73566 size=17732KiB
+queen_gamma sessions=80 event_lines=59311 size=14184KiB
+events.jsonl lines (all):   220946
+timeline.jsonl lines (all): 891
+session dirs (all):         300
+== bench (recall index, warm queries, search tools, RSS) ==
+bench: direct build queen_alpha     161.6 ms 
+bench: direct build queen_beta      128.7 ms 
+bench: direct build queen_gamma     102.7 ms 
+bench: index queen_alpha    2954681 bytes turns=6000
+bench: index queen_beta     2462918 bytes turns=5000
+bench: index queen_gamma    1974615 bytes turns=4000
+bench: cold first query 296.5 ms (results=10, index available at 151.8 ms), post-build query 15.5 ms (results=10)
+bench: warm recall queries (queen_alpha scope) n=120 p50=12.7ms p95=13.5ms p99=14.1ms min=11.9ms max=14.3ms mean=12.7ms non_empty=114/120 (load { 4.49 4.90 4.81 } -> { 4.37 4.87 4.80 })
+bench: warm by scope queen_alpha  turns= 6000 n=20 p50=12.4ms p95=13.5ms p99=13.5ms min=11.9ms max=13.5ms mean=12.5ms
+bench: warm by scope queen_beta   turns= 5000 n=20 p50=10.9ms p95=16.7ms p99=92.8ms min=10.3ms max=111.8ms mean=15.9ms
+bench: warm by scope queen_gamma  turns= 4000 n=20 p50=8.6ms p95=13.0ms p99=73.9ms min=7.8ms max=89.1ms mean=12.6ms
+bench: index load+parse replica n=20 p50=9.9ms p95=10.2ms p99=10.2ms min=9.7ms max=10.2ms mean=9.9ms
+bench: search_messages queen_alpha  (?i)postgres|kubernetes  n=8 p50=199.3ms p95=211.4ms p99=211.7ms min=188.5ms max=211.7ms mean=199.0ms matches=6364
+bench: search_messages queen_alpha  (?i)refund policy        n=8 p50=170.7ms p95=182.7ms p99=186.6ms min=162.4ms max=187.6ms mean=171.5ms matches=3244
+bench: search_messages queen_alpha  zzz_no_such_token_xyz    n=8 p50=124.4ms p95=127.3ms p99=127.6ms min=122.4ms max=127.6ms mean=125.0ms matches=0
+bench: search_timeline queen_alpha  kubernetes|postgres|迁移|退款 n=8 p50=3.0ms p95=3.7ms p99=3.9ms min=2.9ms max=4.0ms mean=3.1ms total=138
+bench: search_timeline queen_alpha  rollout|migration|发票     n=8 p50=2.7ms p95=2.8ms p99=2.8ms min=2.7ms max=2.8ms mean=2.7ms total=125
+bench: search_timeline queen_alpha  zzz_no_such_token_xyz    n=8 p50=2.4ms p95=2.5ms p99=2.5ms min=2.4ms max=2.5ms mean=2.4ms total=0
+bench: search_messages queen_beta   (?i)postgres|kubernetes  n=8 p50=162.4ms p95=164.1ms p99=164.5ms min=161.6ms max=164.6ms mean=162.6ms matches=5582
+bench: search_messages queen_beta   (?i)refund policy        n=8 p50=135.0ms p95=139.3ms p99=140.5ms min=130.5ms max=140.8ms mean=135.1ms matches=2650
+bench: search_messages queen_beta   zzz_no_such_token_xyz    n=8 p50=107.7ms p95=111.4ms p99=111.7ms min=100.7ms max=111.8ms mean=107.4ms matches=0
+bench: search_timeline queen_beta   kubernetes|postgres|迁移|退款 n=8 p50=2.4ms p95=3.2ms p99=3.5ms min=2.4ms max=3.5ms mean=2.6ms total=103
+bench: search_timeline queen_beta   rollout|migration|发票     n=8 p50=2.2ms p95=2.4ms p99=2.5ms min=2.2ms max=2.6ms mean=2.2ms total=96
+bench: search_timeline queen_beta   zzz_no_such_token_xyz    n=8 p50=2.0ms p95=2.0ms p99=2.0ms min=1.9ms max=2.0ms mean=2.0ms total=0
+bench: search_messages queen_gamma  (?i)postgres|kubernetes  n=8 p50=128.3ms p95=130.3ms p99=130.5ms min=126.0ms max=130.6ms mean=128.4ms matches=4396
+bench: search_messages queen_gamma  (?i)refund policy        n=8 p50=105.4ms p95=107.4ms p99=107.5ms min=102.4ms max=107.5ms mean=105.2ms matches=2133
+bench: search_messages queen_gamma  zzz_no_such_token_xyz    n=8 p50=83.9ms p95=85.1ms p99=85.2ms min=82.8ms max=85.2ms mean=84.0ms matches=0
+bench: search_timeline queen_gamma  kubernetes|postgres|迁移|退款 n=8 p50=2.0ms p95=2.5ms p99=2.6ms min=1.9ms max=2.6ms mean=2.1ms total=81
+bench: search_timeline queen_gamma  rollout|migration|发票     n=8 p50=1.8ms p95=2.0ms p99=2.1ms min=1.8ms max=2.1ms mean=1.8ms total=84
+bench: search_timeline queen_gamma  zzz_no_such_token_xyz    n=8 p50=1.6ms p95=1.6ms p99=1.6ms min=1.5ms max=1.6ms mean=1.6ms total=0
+bench: cpu profile (20 warm queries) -> /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//perf-opt-evidence/canon2/cpu.pprof
+bench: peak RSS=79855616 bytes heap_alloc=41765648 bytes sys=75487512 bytes n_gc=1001
+== CPU profile attribution (optional extra 20 warm queries) ==
+== serve cold start: empty home ==
+servebench: empty  warmup=0 port=8900 ready=   319.2ms (excluded from median)
+servebench: empty  run=0 port=8810 ready=    47.8ms rss_ready= 33232kB rss_2s= 34528kB err=""
+servebench: empty  run=1 port=8811 ready=    67.4ms rss_ready= 34832kB rss_2s= 34832kB err=""
+servebench: empty  run=2 port=8812 ready=    27.1ms rss_ready= 33104kB rss_2s= 34240kB err=""
+servebench: empty  median ready 47.8 ms over 3 runs
+== serve cold start: 15000-turn home ==
+servebench: 15k    warmup=0 port=8910 ready=    50.0ms (excluded from median)
+servebench: 15k    run=0 port=8820 ready=    44.6ms rss_ready= 35312kB rss_2s= 35872kB err=""
+servebench: 15k    run=1 port=8821 ready=    45.6ms rss_ready= 35168kB rss_2s= 35904kB err=""
+servebench: 15k    run=2 port=8822 ready=    25.4ms rss_ready= 35024kB rss_2s= 35984kB err=""
+servebench: 15k    median ready 44.6 ms over 3 runs
+== summary ==
+perf-recall-15k summary (all numbers from bench.json / serve-*.json / gen.json)
+
+index: files=3 turns=15000 bytes=7392214 (7.05 MB)
+
+cold build (direct BuildRecallIndex):
+  queen_alpha     161.6 ms 
+  queen_beta      128.7 ms 
+  queen_gamma     102.7 ms 
+  total           393.1 ms
+first query after upgrade (index absent, 3s wait cap):
+  first_query_ms=296.5 results=10 index_available_ms=151.8 post_build_query_ms=15.5 post_build_results=10
+
+warm recall queries: n=120 p50=12.7ms p95=13.5ms p99=14.1ms min=11.9ms max=14.3ms mean=12.7ms (non_empty=114/120)
+  by scope queen_alpha  turns= 6000 n=20 p50=12.4ms p95=13.5ms p99=13.5ms min=11.9ms max=13.5ms mean=12.5ms
+  by scope queen_beta   turns= 5000 n=20 p50=10.9ms p95=16.7ms p99=92.8ms min=10.3ms max=111.8ms mean=15.9ms
+  by scope queen_gamma  turns= 4000 n=20 p50=8.6ms p95=13.0ms p99=73.9ms min=7.8ms max=89.1ms mean=12.6ms
+index load+parse replica: n=20 p50=9.9ms p95=10.2ms p99=10.2ms min=9.7ms max=10.2ms mean=9.9ms
+search_messages overall: n=72 p50=128.3ms p95=199.2ms p99=211.0ms min=82.8ms max=211.7ms mean=135.3ms
+search_timeline overall: n=72 p50=2.2ms p95=3.0ms p99=3.7ms min=1.5ms max=4.0ms mean=2.3ms
+bench process peak RSS: 79855616 bytes (76 MB), heap_alloc=41765648 bytes
+host load (vm.loadavg): before={ 4.49 4.90 4.81 } after_warm={ 4.37 4.87 4.80 }
+
+serve cold start (time to /api/health 200):
+  empty  median=    47.8 ms warmup=319.2 ms runs=47.8ms, 67.4ms, 27.1ms
+  15k    median=    44.6 ms warmup=50.0 ms runs=44.6ms, 45.6ms, 25.4ms
+  rss_ready: empty=33232kB 15k=35312kB (ps rss of the serve process)
+
+against the upstream v1.0.15 claims:
+  cold build ~19 s / 15,000 turns -> measured 393 ms total (48.33x faster)
+  warm recall query ~30 ms        -> measured p50=12.7 ms p95=13.5 ms p99=14.1 ms
+  recall limit 3 s (first query)  -> measured first_query_ms=296.5 (index ready at 151.8 ms)
+  index file size                 -> 7.05 MB for 15000 turns across 3 scopes
+
+raw evidence: /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T//perf-opt-evidence/canon2

@@ -206,3 +206,92 @@ bash go_hive/scripts/perf_recall_15k.sh --reuse-home    # 复用已生成 home �
   + `serve-empty-run*.txt`、`serve-15k.json|txt` + `serve-15k-run*.txt`、`summary.txt`、`run.txt`。
 - harness 子命令：`gen` / `bench` / `servebench` / `report`（`report` 从 JSON 生成 `summary.txt`，
   本文数字可直接从这些 JSON 复算）。
+
+## 10. 优化后对比：term counts 缓存（lane `perf-opt`，2026-11-22）
+
+> lane `perf-opt`（分支 `perf-opt`，工作树 `.wt/perf-opt`，基线 `d9aab9cf`）。§4 定位的瓶颈
+> ——「每次查询对全部轮次重算 term counts（~90%）」——已消除；本节数字全部来自本 lane 复测，
+> 证据目录 `go_hive/docs/e2e-assets/perf-opt-2026-11-22/`。索引文件格式/版本、recall 语义、
+> 匹配与打分结果、`HIVE_PAST_RECALL_TIMEOUT` 均未改动（逐条等价证明见 §10.3）。
+> 本 lane 的产品代码改动：新增 `go-hive/internal/memory/recall_counts.go`（进程内逐轮计数
+> 缓存），`past_conversations.go` 打分改读该缓存形式，`recall_index.go` 在 refresh/rebuild
+> 落地后 prune 过时会话；另新增等价性测试、`e2e/paritydump` 与 `scripts/perf_recall_parity.sh`
+> （均为证据工具，不进产品构建）。
+
+**实现一句话**：按 `(home, scope, owner, session, ordinal)` 缓存每轮 term counts；失效信号是
+该会话 `events.jsonl` 的大小——与索引 refresh 跳过会话的条件同源（append-only：大小未变=内容
+未变），大小一变即丢弃该会话并重算；refresh/rebuild 写盘后 prune 已消失会话。计数以「排序术语
+blob + offsets + counts」的指针无关形式保存，前缀频次=二分查找+少量命中键，取代逐键扫 map。
+索引文件仍是原格式（所以本节的旧/新二进制可以共用同一份索引）。
+
+### 10.1 warm 查询（同负载 A/B，主结果）
+
+同一 home、同一脚本、同负载（loadavg ~3.8–4.3）交替跑 d9aab9cf 二进制与优化后二进制
+（`ab/bench-{base,new}-same-load.json|txt`）：
+
+| 指标 | 基线 d9aab9cf | 优化后 | 变化 |
+|---|---|---|---|
+| warm 查询 p50 | 120.7 ms | **12.8 ms** | 9.4× |
+| warm 查询 p95 | 128.5 ms | **13.8 ms** | 9.3× |
+| warm 查询 p99 | 133.9 ms | **14.5 ms** | 9.2× |
+| 建索引后首个查询（含一次性缓存填充） | 131.8 ms | **15.2 ms** | 8.7× |
+| 升级首查（含等索引；两版同量级） | 295.8 ms | 302.5 ms | 持平 |
+| 索引读取+解析（未改动路径） | 10.2 ms | 10.1 ms | 0% |
+
+同脚本 canonical 复跑（`bench.json`，load 4.49→4.90，与 §0 原记录的 5.92→5.56 同量级）：
+**p50 12.7 / p95 13.5 / p99 14.1 ms**（基线原记录 123.8 / 171.0 / 220.9，约 **9.7×** 快），
+低于本 lane 的 <50 ms 目标、也低于上游声称的 ~30 ms；120 次查询非空结果 114 次且与基线逐条
+一致（§10.3）。升级首查 296.5 ms（索引 151.8 ms 可用），仍远低于 3 s 上限。canonical 共复跑
+4 次（load 4.5–6.9），warm p50 12.7–20.5 ms（p95 13.5–29.0 ms）——跑间差异随宿主负载，与 §8
+记录的基线波动同性质；上表同负载 A/B 是受控对比。
+
+### 10.2 冷建 / 搜索 / 内存 / serve 不回退
+
+| 轴 | 基线 | 优化后 | 判定（±10%） |
+|---|---|---|---|
+| 冷建 direct 合计 | 388.5 ms（§3，load 5.9）；同负载 A/B 490.0 ms | 393.0 ms（canonical，load 4.5）；同负载 A/B **373.3 ms** | 通过（canonical +1.2%，A/B 更快；4 次复跑 393–602 ms 随瞬时争抢，冷建路径未改） |
+| `search_messages` alpha 三模式 p50 | 231.7 / 182.4 / 169.2 ms（§5）；A/B 196.5 / 159.0 / 134.3 | 199.3 / 170.7 / 124.4（canonical）；A/B 189.9 / 161.8 / 127.2 | 通过（持平～更快；搜索路径未改） |
+| `search_timeline` alpha p50 | 2.8 ms | 2.4–3.0 ms | 通过 |
+| bench 进程峰值 RSS | 70.9 MB（§6）；A/B 71.3 MB | 79.9 MB（canonical）；A/B 80.0 MB | +12–13%（缓存常驻 ~17 MB @15k 轮；见 §10.4 上限） |
+| `hive serve` 冷启动 median（空/15k） | 48.8 / 68.6 ms | 47.8 / 44.6 ms | 通过；serve RSS 33–36 MB 不变 |
+| 索引文件 | 7.05 MB / 15,000 轮 | 7.05 MB（格式/版本未改） | 不变 |
+
+### 10.3 等价性证据（旧实现逐条相等）
+
+1. **端到端 dump 对比**（`scripts/perf_recall_parity.sh`）：同一 dump 工具（`e2e/paritydump`）
+   分别链接 `d9aab9cf` 导出的基线与工作树，在 15k home 的字节级同源副本上跑同一查询集
+   （`parity/queries.txt`，120 条语料派生查询）× 3 个 scope × {默认, 排除首会话} =
+   **720 条记录、7,194 个返回 turn**；两份 JSONL **逐字节相同**
+   （sha256 `8ba735ba17622096c1dc0431c3e07d673be8a2eb6b2a328a1de3d86ccf58ff9f`，
+   `parity/parity-report.txt` 明文 `PARITY: PASS`；含每条 turn 的分数）。
+2. **包内测试**（`internal/memory/recall_counts_test.go`，均带 `// Parity:`）：排序频次与旧
+   map 频次在普通/前缀/中文/数字/撇号术语上逐一相等；缓存路径与未缓存 reference（原
+   `pastRecallTurnCounts` + `pastRecallChoose` 路径）在 cold/warm/ExcludeSession/会话增长/
+   会话删除/多 home 隔离下逐条 `DeepEqual`（含 Score）；miss/hit 计数断言证明命中路径被覆盖。
+3. 索引格式未变：旧、新二进制共用同一索引文件，上述对比即在同一索引上完成。
+
+### 10.4 瓶颈迁移（pprof，`pprof-cum.txt`）
+
+优化后 20 次 warm 查询的 profile：`loadRecallIndex`（索引文件读取+JSON 解析）**61.5%**、
+`madvise` 26.9%；逐轮计频（`pastRecallTurnCounts`/`pastRecallTermCounts`/regexp）与打分不再
+出现在 top（cum <10 ms/20 次）。剩余成本 ≈ 每查询重读解析 2.95 MB 索引 JSON（9.9 ms p50
+replica）——后续如要继续提速，下一个目标是索引读取/增量格式，不在本 lane 范围。
+
+缓存边界：进程内、按 owner 上限 `50000` 轮（超出整体丢弃、按需重填）；进程重启或首次触达某
+scope 的首个查询付一次性重建（6,000 轮 ≈ 90 ms，见 §10.1 升级首查），此后约 13 ms/查询。
+
+### 10.5 复现
+
+```bash
+cd /Users/mac/.wt/perf-opt
+bash go_hive/scripts/perf_recall_15k.sh --reuse-home --out go_hive/docs/e2e-assets/perf-opt-2026-11-22
+bash go_hive/scripts/perf_recall_parity.sh --home "$TMPDIR/perf-recall-15k/home-15000" \
+     --out go_hive/docs/e2e-assets/perf-opt-2026-11-22/parity
+bash go_hive/scripts/perf_recall_parity.sh --base-ref d9aab9cf --help   # 详见脚本头注释
+```
+
+- 本 lane 证据目录：`go_hive/docs/e2e-assets/perf-opt-2026-11-22/`（canonical 全脚本输出的
+  `env/bench/summary/pprof/serve-*`；`ab/` 为同负载 A/B 对测；`parity/` 为等价性对比与
+  压缩后的两份 JSONL dump）。
+- 等价性脚本可独立复跑：它用 `git archive` 导出 `--base-ref`（默认 `d9aab9cf`）、复制当前的
+  dump 源码到导出树、分别构建并在 home 的两个同源副本上 dump、逐字节比较。

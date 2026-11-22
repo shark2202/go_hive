@@ -26,18 +26,19 @@
 |---|---|---|
 | **G1 字段级逐字** | 2026-11-22 | 净面清零；残余全部为已登记例外 / 待拍板项（见处理方案） |
 | **G2 无损替换 RC** | 2026-11-22 | 净面清零；slot 每版 v1/v2/v3 迁移 57 项 PASS；回滚路径已验 |
-| **G3 商业外发布** | 2026-12-18 | 内部项闭环（installer-verify 含 Docker 真机 20/20）；外部 3 项待环境；govulncheck 待批准 |
+| **G3 商业外发布** | 2026-12-18 | 内部项闭环（installer-verify 含 Docker 真机 20/20；govulncheck 23→0 已转绿）；外部 3 项待环境 |
 
 ## 4. 门禁与实测数字
 
 | 门禁 | 通过标准 | 当前（实测） |
 |---|---|---|
-| 九道 make 门禁 | 全 0 | **全绿**（wave-62） |
-| parity | 0 缺注解 | **5,709/5,709** |
+| 九道 make 门禁 | 全 0 | **全绿**（wave-66，含 govulncheck 0 OSV） |
+| parity | 0 缺注解 | **5,722/5,722** |
 | parity refs | 0 missing | 全解析 |
-| compat-check | 12/12 | **12/12**（C12：273 条 = 205 ported / 10 partial / 7 oos / 51 unported） |
+| compat-check | 12/12 | **12/12**（C12：273 条 = 216 ported / 27 partial / 9 oos / 21 unported；triage 修正 11 假标） |
 | QC | 9/9 | **9/9** |
 | arch | 7 生成物一致 | **82 包 / 219 边 / 8 层 / 1 info** |
+| govulncheck | 0 OSV | **0（go1.26.11，同 scanner/DB 23→0）** |
 | 冻结面 | allowlist 逐条理由 | OK |
 | slot | 2h 一版 | 今日 10 版（00–18）；最新 `20261122-18` |
 | 发布镜像 | 可拉取 | `shark2202/go_hive` 与 slot/CI 同步（每次 publish 校验 ls-remote） |
@@ -48,7 +49,7 @@
 - **语义**：`judge-parity.md`（J2 已对齐）· `memory-notes-parity.md`（1.0.15 全族）· `session-titles-parity.md` · `stall-check-parity.md` · `goal-marshal-parity.md`
 - **特性**：`docs/e2e-assets/`（dashboard-memory-1015 5 截图 · installer-verify Docker · reliability 27/27 · longmemeval 60q/200q · memory-notes 探针）
 - **迁移**：`dist/slots/*/compat.json`（v1/v2/v3）· `docs/exports-baseline-decision.md`
-- **性能**：`perf-recall-15k`（lane 在跑，落 `docs/perf-recall-15k.md`）
+- **性能**：`docs/perf-recall-15k.md`（15k 轮：冷建 388.5ms、warm p50 **12.7ms**（perf-opt 9.7×，p95 13.5ms）、索引 7.05MB、RSS +12%）
 
 ## 6. 与 Python 上游的关系
 

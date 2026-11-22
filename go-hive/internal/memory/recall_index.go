@@ -116,7 +116,11 @@ func BuildRecallIndex(homeRoot string, ref ScopeRef) error {
 		index.Sessions[session] = recallIndexSession{EventsSize: recallSessionEventsSize(dir)}
 		index.Turns = append(index.Turns, indexTurnsForSession(dir, session)...)
 	}
-	return writeRecallIndex(RecallIndexPath(homeRoot, ref), index)
+	if err := writeRecallIndex(RecallIndexPath(homeRoot, ref), index); err != nil {
+		return err
+	}
+	recallCountsPrune(homeRoot, ref, index)
+	return nil
 }
 
 // refreshRecallIndex brings the index up to date with every session but skip
@@ -206,6 +210,7 @@ func recallIndexForQuery(homeRoot string, ref ScopeRef, skip string, deadline ti
 			}()
 			if refreshed {
 				_ = writeRecallIndex(path, index)
+				recallCountsPrune(homeRoot, ref, index)
 			}
 		}
 		return index, true
