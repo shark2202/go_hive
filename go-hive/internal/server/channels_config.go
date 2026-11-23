@@ -1,24 +1,20 @@
 package server
 
-// The `channels` section: optional channel packages upstream starts through
+// The `channels` section: optional channel plugins upstream starts through
 // the `hive.channels` entry-point group when channels.<name>.enabled is true.
 //
-// The Go port has no channel plugin host: it cannot discover entry points or
-// run a channel's lifecycle, so an enabled flag has nothing to start. The
-// section is still read the way upstream reads it (an object, each value an
-// object, `enabled` truthy), so the field has a real reader and a serve-time
-// notice can say plainly that a configured channel will not run — instead of
-// silently pretending the flag took effect.
+// The Go host (internal/channels) discovers these entries itself and starts
+// one stdio subprocess per enabled one; this file keeps the field-level reader
+// the rest of the server uses. A missing or non-object section reads as none,
+// a non-object entry is skipped, and `enabled` keeps Python truthiness.
 //
 // Parity: framework/server/channels.py::start_channels (the settings read and
 // the enabled gate), handle_list_channels (GET /api/channels keeps the same
-// shape; with no host there are no installed channels to list, exactly as a
-// Python process with no channel packages installed answers []).
+// shape; with no host the list is empty, exactly as a Python process with no
+// channel packages installed answers []).
 
 import (
-	"sort"
-	"strings"
-
+	"github.com/shark2202/go_hive/go-hive/internal/channels"
 	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
 )
 
@@ -36,26 +32,13 @@ type ChannelSection struct {
 //
 // Parity: framework/server/channels.py::start_channels
 func ChannelSections(config map[string]any) []ChannelSection {
-	raw, ok := config["channels"].(map[string]any)
-	if !ok || len(raw) == 0 {
+	plugins := channels.Plugins(config)
+	if len(plugins) == 0 {
 		return nil
 	}
-	names := make([]string, 0, len(raw))
-	for name := range raw {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-
-	sections := make([]ChannelSection, 0, len(names))
-	for _, name := range names {
-		entry, ok := raw[name].(map[string]any)
-		if !ok {
-			continue
-		}
-		sections = append(sections, ChannelSection{
-			Name:    name,
-			Enabled: pyTruthy(entry["enabled"]),
-		})
+	sections := make([]ChannelSection, 0, len(plugins))
+	for _, plugin := range plugins {
+		sections = append(sections, ChannelSection{Name: plugin.Name, Enabled: plugin.Enabled})
 	}
 	return sections
 }
@@ -63,18 +46,4 @@ func ChannelSections(config map[string]any) []ChannelSection {
 // ChannelSectionsFromHome is ChannelSections over HIVE_HOME/configuration.json.
 func ChannelSectionsFromHome(home hivehome.Home) []ChannelSection {
 	return ChannelSections(HiveConfig(home))
-}
-
-// UnhostedChannels lists the configured channels that ask to run. Each one is
-// a configuration the Go runtime reads but cannot act on; the serve startup
-// prints one line per name so the operator learns the flag is inert here.
-func UnhostedChannels(home hivehome.Home) []string {
-	sections := ChannelSectionsFromHome(home)
-	names := make([]string, 0, len(sections))
-	for _, section := range sections {
-		if section.Enabled && strings.TrimSpace(section.Name) != "" {
-			names = append(names, section.Name)
-		}
-	}
-	return names
 }

@@ -1,5 +1,5 @@
 %% go_hive 分层依赖图（生成物，勿手改）
-%% 源：architecture/model.yaml + go list -json ./... · commit 949e39b29f9c
+%% 源：architecture/model.yaml + go list -json ./... · commit 5154313071a3
 %% 只画包级 import 边；箭头 A --> B 读作 A imports B（A 依赖 B）。
 flowchart TB
   subgraph layer_entry["入口层（entry）"]
@@ -113,6 +113,10 @@ flowchart TB
     n_internal_storage["internal/storage"]
     n_internal_version["internal/version"]
   end
+  subgraph layer_unmapped["未映射层（unmapped）"]
+    direction TB
+    n_internal_channels["internal/channels"]
+  end
   n_cmd_hive --> n_internal_cli
   n_cmd_hive_browser --> n_internal_cli
   n_cmd_hive_cred --> n_internal_cli
@@ -158,6 +162,7 @@ flowchart TB
   n_internal_cli --> n_internal_agents
   n_internal_cli --> n_internal_arghelp
   n_internal_cli --> n_internal_atomicfs
+  n_internal_cli --> n_internal_channels
   n_internal_cli --> n_internal_charts
   n_internal_cli --> n_internal_colony
   n_internal_cli --> n_internal_credentials
@@ -259,6 +264,7 @@ flowchart TB
   n_internal_server --> n_internal_agents
   n_internal_server --> n_internal_atomicfs
   n_internal_server --> n_internal_attachments
+  n_internal_server --> n_internal_channels
   n_internal_server --> n_internal_claudecode
   n_internal_server --> n_internal_colony
   n_internal_server --> n_internal_credentials
@@ -365,3 +371,5 @@ flowchart TB
   class n_internal_attachments,n_internal_charts,n_internal_credentials,n_internal_globaldb,n_internal_hiveconf,n_internal_llm,n_internal_maintenance,n_internal_mcpregistry,n_internal_mcpregistry_nativecli,n_internal_memory,n_internal_pipeline,n_internal_senders,n_internal_skills,n_internal_soul,n_internal_tools,n_internal_tools_builtin,n_internal_tools_integrationkit,n_internal_tools_integrations,n_internal_tools_integrations_ai,n_internal_tools_integrations_cloudflare,n_internal_tools_integrations_collab,n_internal_tools_integrations_commerce,n_internal_tools_integrations_crm,n_internal_tools_integrations_data,n_internal_tools_integrations_devops,n_internal_tools_integrations_enrichment,n_internal_tools_integrations_excel,n_internal_tools_integrations_gworkspace,n_internal_tools_integrations_infra,n_internal_tools_integrations_pdf,n_internal_tools_integrations_schedchat,n_internal_tools_integrations_social,n_internal_tools_integrations_webintel,n_internal_visionfallback style_capability;
   classDef style_foundation fill:#f1f5f9,stroke:#475569,color:#0f172a;
   class n_internal_arghelp,n_internal_atomicfs,n_internal_envcontract,n_internal_eventbus,n_internal_hiveclock,n_internal_hivehome,n_internal_logging,n_internal_platform,n_internal_pyenv,n_internal_quality,n_internal_ratelimit,n_internal_resources,n_internal_runtimelogs,n_internal_schemas,n_internal_storage,n_internal_version style_foundation;
+  classDef style_unmapped fill:#ffe4e6,stroke:#be123c,color:#0f172a;
+  class n_internal_channels style_unmapped;

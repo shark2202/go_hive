@@ -93,6 +93,10 @@ type AppDeps struct {
 	// stale catalog rather than inventing tools.
 	QueenToolCatalog    func(queenID string, session *Session) map[string][]map[string]any
 	QueenLifecycleTools func(queenID string, session *Session) []map[string]any
+	// ChannelStates reports the process channel host's configured-channel
+	// states for GET /api/channels. Nil means this build runs no host, and the
+	// route answers with the upstream empty list (no installed channels).
+	ChannelStates func() map[string]map[string]any
 }
 
 type App struct {
@@ -218,7 +222,7 @@ func NewApp(deps AppDeps) *App {
 	})
 	RegisterLocalCredentialRoutes(mux, LocalCredentialRouteDeps{Home: deps.Home})
 	RegisterRuntimeLogRoutes(mux, RuntimeLogRouteDeps{})
-	RegisterChannelRoutes(mux, ChannelRouteDeps{Home: deps.Home})
+	RegisterChannelRoutes(mux, ChannelRouteDeps{Home: deps.Home, States: deps.ChannelStates})
 	RegisterPromptRoutes(mux, PromptRouteDeps{Home: deps.Home})
 	RegisterMemoryRoutes(mux, MemoryRouteDeps{Home: deps.Home})
 	RegisterMessageRoutes(mux, MessageRouteDeps{Home: deps.Home})

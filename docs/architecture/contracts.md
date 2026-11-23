@@ -1,6 +1,6 @@
 # 接口与契约（生成物，勿手改）
 
-> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` 的 `contracts:` / `disk_formats:`，加上 `internal/server` 路由注册与 `internal/eventbus` 常量生成。commit: `949e39b29f9c`
+> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` 的 `contracts:` / `disk_formats:`，加上 `internal/server` 路由注册与 `internal/eventbus` 常量生成。commit: `5154313071a3`
 > 契约是模块之间「靠什么约束交互」的清单：谁提供、谁消费、定义在哪、保证什么、失败怎么表现、变更属于加法还是破坏、由什么机制强制。
 > `providers` / `consumers` 里的 `ext:` 前缀表示外部消费面（前端、运维、MCP server、外部调用方），不是仓库内的包。
 
@@ -438,7 +438,7 @@
 
 | 方法 | 路径 | handler | 来源 |
 | --- | --- | --- | --- |
-| GET | `/` | `app.handleSPA` | `internal/server/app.go:331` |
+| GET | `/` | `app.handleSPA` | `internal/server/app.go:335` |
 | DELETE | `/api/agents` | `handleDeleteAgent` | `internal/server/routes_agents.go:35` |
 | PATCH | `/api/agents/metadata` | `handleUpdateAgentMetadata` | `internal/server/routes_agents.go:38` |
 | GET | `/api/browser/contexts` | `handleBrowserPanelContexts` | `internal/server/routes_browser_panel.go:86` |
@@ -531,7 +531,7 @@
 | GET | `/api/global/data/tables/{table}/rows` | `handleGlobalTableRows` | `internal/server/routes_colony_workers_global.go:734` |
 | PATCH | `/api/global/data/tables/{table}/rows` | `handleGlobalUpdateRowRoute` | `internal/server/routes_colony_workers_global.go:746` |
 | POST | `/api/global/data/tables/{table}/rows` | `handleGlobalInsertRow` | `internal/server/routes_colony_workers_global.go:743` |
-| GET | `/api/health` | `app.handleHealth` | `internal/server/app.go:175` |
+| GET | `/api/health` | `app.handleHealth` | `internal/server/app.go:179` |
 | GET | `/api/health/resources` | `handleHealthResources` | `internal/server/routes_app_extra.go:146` |
 | GET | `/api/maintenance/janitor/report` | `handleJanitorReport` | `internal/server/routes_maintenance.go:80` |
 | POST | `/api/maintenance/janitor/run` | `handleJanitorRun` | `internal/server/routes_maintenance.go:77` |
@@ -662,7 +662,7 @@
 | GET | `/api/skills/scopes` | `deps.handleListScopes` | `internal/server/routes_skills.go:75` |
 | POST | `/api/skills/upload` | `deps.handleUploadSkill` | `internal/server/routes_skills.go:77` |
 | GET | `/api/skills/{skill_name}` | `deps.handleGetSkillDetail` | `internal/server/routes_skills.go:78` |
-| GET | `/api/startup-status` | `app.handleStartupStatus` | `internal/server/app.go:176` |
+| GET | `/api/startup-status` | `app.handleStartupStatus` | `internal/server/app.go:180` |
 
 > 覆盖说明：未被路由表覆盖的 HandleFunc 注册（无方法前缀或跨行写法）：mux.HandleFunc("/", s.handleRequest)
 

@@ -30,3 +30,5 @@
 - slot-20261123-06.md — 2026-11-23 07:18  · 1.0.27-go.1 · HEAD cf750d6e · compat=ok
 - slot-20261123-08.md — 2026-11-23 08:02  · 1.0.27-go.1 · HEAD f9eb5720 · compat=ok
 - slot-20261123-10.md — 2026-11-23 10:02  · 1.0.27-go.1 · HEAD c5fc9557 · compat=ok
+- slot-20261123-12.md — 2026-11-23 12:02  · 1.0.27-go.1 · HEAD 32749fac · compat=ok
+- governance-20261123-1205.md — 2026-11-23 12:05  · 6h 治理汇报

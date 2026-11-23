@@ -278,31 +278,9 @@ func (r *Runner) defaultServe(args *parsedArgs) int {
 	if err != nil {
 		fmt.Fprintf(r.Stdout, "Warning: cannot resolve HIVE_HOME: %v\n", err)
 	}
-	// Runtime logs: install before the first storage step so early migration
-	// lines land in the same sinks upstream's configure_logging covers (it runs
-	// before create_app). The /api/runtime-logs route reads the process-wide
-	// ring; stderr still sees all, and the rotating server log file joins unless
-	// HIVE_NO_FILE_LOG is set.
-	installRuntimeLogBuffer(home)
-	// Storage prep first — upstream's SessionManager.__init__ migrates the
-	// home (v2 → v3 → colony sessions → tracker backfill) before any session
-	// or runtime exists. Each step is idempotent and non-fatal.
-	r.runStorageStartupMigrations(home)
-
-	// Grant newly-GA tools to existing queen/colony sidecars before any
-	// session (or preloaded colony) reads its allowlist. Mirrors create_app's
-	// startup pass; idempotent per sidecar via saved_on_version.
-	r.runGAToolMigration(home)
-
-	// The dashboard stores keys in the encrypted credential store while the
-	// ported tools read os.Getenv. Export the store before the app (and any
-	// tool registry) is built so saved credentials are live from the start.
-	hiveserver.SyncCredentialEnv(home)
-
-	// llm.aux_max_tokens governs every small utility call the process makes
-	// (recall selection, sentinel classification, judge, skill tests); install
-	// it before any session or reminder source exists.
-	llm.SetAuxMaxTokens(hiveserver.AuxMaxTokens(home))
+	// Storage, credentials and aux-token policy must be live before the app
+	// or any session exists; see prepareServeRuntime in loader_serve_setup.go.
+	r.prepareServeRuntime(home)
 
 	// MCP servers configured for this home are connected before any session
 	// exists: every catalogue built afterwards (queen chat, colony worker
@@ -310,13 +288,6 @@ func (r *Runner) defaultServe(args *parsedArgs) int {
 	// degrade to a warning and stay visible in GET /api/mcp/servers.
 	stopMCP := r.startMCPRuntime(home)
 	defer stopMCP()
-
-	// channels.<name>.enabled is a real configuration field upstream gates a
-	// channel plugin on. This runtime has no plugin host, so the flag cannot
-	// start anything: say so once at boot instead of ignoring it silently.
-	for _, name := range hiveserver.UnhostedChannels(home) {
-		fmt.Fprintf(r.Stdout, "Warning: channels.%s.enabled is set, but this runtime has no channel host; the channel will not run\n", name)
-	}
 
 	// Sentinel is process-wide: it owns the parked-queen ladder for every
 	// colony-queen chat session built below (nudge / done / escalate) and the
@@ -341,6 +312,13 @@ func (r *Runner) defaultServe(args *parsedArgs) int {
 	for _, colonyArg := range args.list("colony") {
 		r.loadPreloadedColonySession(colonyArg, manager, &liveMu, &live, home, args.str("model"))
 	}
+
+	// Channels: one stdio plugin subprocess per enabled channels.<name>, wired
+	// to the same session factory the routes use. Build before NewApp so the
+	// route reads host states; start after the app is assembled, before the
+	// listener is announced. A failing channel never takes serve down.
+	channelHost := newServeChannelHost(home, manager, createSession)
+	channelStates := channelHostStates(channelHost)
 
 	// Runtime logs: the ring and rotating server log were installed before
 	// storage prep, so the route and file sink already cover this point.
@@ -373,7 +351,11 @@ func (r *Runner) defaultServe(args *parsedArgs) int {
 		QueenMail:              queenMail,
 		SoulProbeAnswerFor:     soulProbeAnswerFor,
 		SoulReflect:            newSoulReflectFor(home, args.str("model")),
+		ChannelStates:          channelStates,
 	}))
+	if channelHost != nil {
+		defer startServeChannelHost(channelHost)()
+	}
 	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", host, port))
 	if err != nil {
 		fmt.Fprintf(r.Stdout, "Error: %v\n", err)
@@ -446,6 +428,11 @@ func (r *Runner) defaultServe(args *parsedArgs) int {
 				os.Exit(130)
 			}
 			fmt.Fprintf(r.Stdout, "\nReceived %s, shutting down gracefully… (press Ctrl+C again to force quit)\n", name)
+			// Channels stop before the server and its sessions, as upstream's
+			// on_shutdown insert(0, stop_channels) does.
+			if channelHost != nil {
+				channelHost.Stop()
+			}
 			go func() {
 				ctx, cancel := context.WithTimeout(context.Background(), time.Duration(shutdownGraceSeconds*float64(time.Second)))
 				defer cancel()

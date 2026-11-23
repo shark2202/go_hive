@@ -1,5 +1,5 @@
 // go_hive 分层依赖图（生成物，勿手改）
-// 源：architecture/model.yaml + go list -json ./... · commit 949e39b29f9c
+// 源：architecture/model.yaml + go list -json ./... · commit 5154313071a3
 // 箭头 A -> B 读作 A imports B。
 digraph go_hive {
   graph [rankdir=LR, fontname="Helvetica", nodesep=0.28, ranksep=0.9, splines=true];
@@ -124,6 +124,11 @@ digraph go_hive {
     "internal/storage" [fillcolor="white", color="#475569"];
     "internal/version" [fillcolor="white", color="#475569"];
   }
+  subgraph cluster_unmapped {
+    label="未映射层（unmapped）";
+    style="rounded,filled"; fillcolor="#ffe4e6"; color="#be123c"; fontsize=11;
+    "internal/channels" [fillcolor="white", color="#be123c"];
+  }
   "cmd/hive" -> "internal/cli";
   "cmd/hive-browser" -> "internal/cli";
   "cmd/hive-cred" -> "internal/cli";
@@ -169,6 +174,7 @@ digraph go_hive {
   "internal/cli" -> "internal/agents";
   "internal/cli" -> "internal/arghelp";
   "internal/cli" -> "internal/atomicfs";
+  "internal/cli" -> "internal/channels";
   "internal/cli" -> "internal/charts";
   "internal/cli" -> "internal/colony";
   "internal/cli" -> "internal/credentials";
@@ -270,6 +276,7 @@ digraph go_hive {
   "internal/server" -> "internal/agents";
   "internal/server" -> "internal/atomicfs";
   "internal/server" -> "internal/attachments";
+  "internal/server" -> "internal/channels";
   "internal/server" -> "internal/claudecode";
   "internal/server" -> "internal/colony";
   "internal/server" -> "internal/credentials";

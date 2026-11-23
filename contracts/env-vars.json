@@ -1360,7 +1360,7 @@
         "dev_reads": [],
         "test_reads": 2,
         "writes": [],
-        "mentions": 5,
+        "mentions": 8,
         "comments": 3
       },
       "notes": "py: `if os.environ.get(...)` before write_compaction_debug_log; go: same presence gate before the $HIVE_HOME/compaction_log/<ts>_<node>.md report."
@@ -1923,7 +1923,7 @@
           },
           {
             "file": "go_hive/go-hive/internal/cli/loader.go",
-            "line": 1116,
+            "line": 1171,
             "symbol": "runtimeOwnerPID",
             "parse": "string",
             "snippet": "owner := os.Getenv(\"HIVE_DESKTOP_PARENT_PID\")",
@@ -1935,7 +1935,7 @@
         "writes": [
           {
             "file": "go_hive/go-hive/internal/cli/loader.go",
-            "line": 1119,
+            "line": 1174,
             "scope": "runtime"
           }
         ],
@@ -2557,8 +2557,8 @@
             "scope": "test"
           }
         ],
-        "mentions": 299,
-        "comments": 106
+        "mentions": 307,
+        "comments": 109
       },
       "notes": "fallback ~/.hive on both; Go converts to an absolute path."
     },
@@ -3639,7 +3639,7 @@
         "dev_reads": [],
         "test_reads": 4,
         "writes": [],
-        "mentions": 14,
+        "mentions": 23,
         "comments": 9
       },
       "notes": "py: int(raw) only when raw.isdigit(), else 999_999; go: envPositiveInt trims and requires > 0, else the configured loop default. Zero/negative/padded values differ."
@@ -3723,7 +3723,7 @@
         "dev_reads": [],
         "test_reads": 0,
         "writes": [],
-        "mentions": 2,
+        "mentions": 4,
         "comments": 0
       },
       "notes": "default 40 on both (DefaultMaxVerbatimClientMessages). Go maps <=0 to nil (feature off) where Python keeps a positive-int list."
@@ -3951,7 +3951,7 @@
         "dev_reads": [],
         "test_reads": 0,
         "writes": [],
-        "mentions": 3,
+        "mentions": 5,
         "comments": 0
       },
       "notes": "default 6 on both (DefaultMicrocompactKeepRecent)."
@@ -3992,7 +3992,7 @@
         "test_reads": 2,
         "writes": [],
         "mentions": 13,
-        "comments": 8
+        "comments": 7
       },
       "notes": "py: `if not os.getenv(...)` — any non-empty value (incl. \"0\") turns the $HIVE_HOME/logs/hive-server.log handler off (20MB×3); go: same gate in internal/logging, wired into the serve logger by installRuntimeLogBuffer."
     },
@@ -4371,7 +4371,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/server/app.go",
-            "line": 493,
+            "line": 497,
             "symbol": "requestExecutorMax",
             "parse": "string",
             "snippet": "if value := os.Getenv(\"HIVE_REQUEST_EXECUTOR_MAX\"); value != \"\" {",

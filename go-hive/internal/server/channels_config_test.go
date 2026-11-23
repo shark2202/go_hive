@@ -49,16 +49,43 @@ func TestChannelSectionsReadsTheConfiguredShape(t *testing.T) {
 	}
 }
 
-// Parity: core/framework/server/channels.py::start_channels
-func TestUnhostedChannelsNamesTheEnabledOnes(t *testing.T) {
-	home := newFeatureHome(t)
-	writeFeatureConfig(t, home, map[string]any{"channels": map[string]any{
-		"mychat":  map[string]any{"enabled": true},
-		"offchat": map[string]any{"enabled": false},
-	}})
-	names := UnhostedChannels(home)
-	if len(names) != 1 || names[0] != "mychat" {
-		t.Fatalf("UnhostedChannels = %#v, want [mychat]", names)
+// Parity: core/framework/server/channels.py::handle_list_channels
+func TestTheChannelsRouteReportsHostStates(t *testing.T) {
+	states := map[string]map[string]any{
+		"running": {"state": "running"},
+		"off":     {"state": "off"},
+		"failed":  {"state": "failed", "error": "start failed: boom"},
+	}
+	mux := http.NewServeMux()
+	RegisterChannelRoutes(mux, ChannelRouteDeps{States: func() map[string]map[string]any { return states }})
+	server := httptest.NewServer(mux)
+	t.Cleanup(server.Close)
+
+	status, body := configDo(t, http.MethodGet, server.URL+"/api/channels", nil)
+	if status != 200 {
+		t.Fatalf("status = %d", status)
+	}
+	channels, ok := body["channels"].([]any)
+	if !ok || len(channels) != 3 {
+		t.Fatalf("body = %#v, want three channels", body)
+	}
+	names := make([]string, 0, len(channels))
+	for _, entry := range channels {
+		row, _ := entry.(map[string]any)
+		names = append(names, row["name"].(string))
+	}
+	want := []string{"failed", "off", "running"}
+	for index, name := range want {
+		if names[index] != name {
+			t.Fatalf("channels = %#v, want sorted %#v", names, want)
+		}
+	}
+	failed := channels[0].(map[string]any)
+	if failed["state"] != "failed" || failed["error"] != "start failed: boom" {
+		t.Fatalf("failed entry = %#v", failed)
+	}
+	if channels[1].(map[string]any)["state"] != "off" || channels[2].(map[string]any)["state"] != "running" {
+		t.Fatalf("entries = %#v", channels)
 	}
 }
 

@@ -1,0 +1,1893 @@
+{
+  "anchor_summary": {
+    "future": 1,
+    "future_missing": [
+      "go_hive/scripts/hive_channel_adapter.py"
+    ],
+    "future_present": 0,
+    "planned": 0,
+    "planned_missing": [],
+    "planned_present": 0,
+    "required": 22,
+    "required_verified": 22
+  },
+  "anchors": [
+    {
+      "kind": "file",
+      "label": "entry-point 组名",
+      "needles": [
+        "ENTRY_POINT_GROUP = \"hive.channels\""
+      ],
+      "path": "core/framework/server/channels.py",
+      "state": "verified",
+      "status": "required"
+    },
+    {
+      "kind": "file",
+      "label": "启动/停止超时",
+      "needles": [
+        "_START_TIMEOUT_S = 30.0"
+      ],
+      "path": "core/framework/server/channels.py",
+      "state": "verified",
+      "status": "required"
+    },
+    {
+      "kind": "file",
+      "label": "插件接口",
+      "needles": [
+        "class Channel(Protocol)"
+      ],
+      "path": "core/framework/server/channels.py",
+      "state": "verified",
+      "status": "required"
+    },
+    {
+      "kind": "file",
+      "label": "输出数据类",
+      "needles": [
+        "class QueenOutput"
+      ],
+      "path": "core/framework/server/channels.py",
+      "state": "verified",
+      "status": "required"
+    },
+    {
+      "kind": "file",
+      "label": "宿主能力对象",
+      "needles": [
+        "class ChannelHost"
+      ],
+      "path": "core/framework/server/channels.py",
+      "state": "verified",
+      "status": "required"
+    },
+    {
+      "kind": "file",
+      "label": "打开/恢复会话",
+      "needles": [
+        "async def open_session"
+      ],
+      "path": "core/framework/server/channels.py",
+      "state": "verified",
+      "status": "required"
+    },
+    {
+      "kind": "file",
+      "label": "投递消息",
+      "needles": [
+        "async def send("
+      ],
+      "path": "core/framework/server/channels.py",
+      "state": "verified",
+      "status": "required"
+    },
+    {
+      "kind": "file",
+      "label": "订阅输出",
+      "needles": [
+        "def subscribe("
+      ],
+      "path": "core/framework/server/channels.py",
+      "state": "verified",
+      "status": "required"
+    },
+    {
+      "kind": "file",
+      "label": "启动所有通道",
+      "needles": [
+        "async def start_channels"
+      ],
+      "path": "core/framework/server/channels.py",
+      "state": "verified",
+      "status": "required"
+    },
+    {
+      "kind": "file",
+      "label": "GET /api/channels",
+      "needles": [
+        "async def handle_list_channels"
+      ],
+      "path": "core/framework/server/channels.py",
+      "state": "verified",
+      "status": "required"
+    },
+    {
+      "kind": "file",
+      "label": "上游图片最长边",
+      "needles": [
+        "_MAX_IMAGE_SIDE = 2048"
+      ],
+      "path": "core/framework/server/channels.py",
+      "state": "verified",
+      "status": "required"
+    },
+    {
+      "kind": "file",
+      "label": "上游图片字节上限",
+      "needles": [
+        "_MAX_IMAGE_BYTES = 2 * 1024 * 1024"
+      ],
+      "path": "core/framework/server/channels.py",
+      "state": "verified",
+      "status": "required"
+    },
+    {
+      "kind": "file",
+      "label": "旧配置读取助手",
+      "needles": [
+        "func ChannelSections("
+      ],
+      "path": "go_hive/go-hive/internal/server/channels_config.go",
+      "state": "verified",
+      "status": "required"
+    },
+    {
+      "kind": "file",
+      "label": "GET /api/channels",
+      "needles": [
+        "func RegisterChannelRoutes("
+      ],
+      "path": "go_hive/go-hive/internal/server/routes_credentials_channels.go",
+      "state": "verified",
+      "status": "required"
+    },
+    {
+      "kind": "file",
+      "label": "路由状态接线",
+      "needles": [
+        "RegisterChannelRoutes(mux, ChannelRouteDeps{Home: deps.Home, States: deps.ChannelStates})"
+      ],
+      "path": "go_hive/go-hive/internal/server/app.go",
+      "state": "verified",
+      "status": "required"
+    },
+    {
+      "kind": "file",
+      "label": "serve 接线",
+      "needles": [
+        "channels.NewHost("
+      ],
+      "path": "go_hive/go-hive/internal/cli/loader_channels.go",
+      "state": "verified",
+      "status": "required"
+    },
+    {
+      "kind": "file",
+      "label": "协议真值",
+      "needles": [
+        "\"protocol\": \"hive-channel/1\""
+      ],
+      "path": "go_hive/contracts/channel-plugin-protocol.json",
+      "state": "verified",
+      "status": "required"
+    },
+    {
+      "kind": "tree",
+      "label": "协议包",
+      "needles": [
+        "ProtocolVersion = \"hive-channel/1\""
+      ],
+      "path": "go_hive/go-hive/internal/channels",
+      "state": "verified",
+      "status": "required"
+    },
+    {
+      "kind": "tree",
+      "label": "宿主结构",
+      "needles": [
+        "type Host struct"
+      ],
+      "path": "go_hive/go-hive/internal/channels",
+      "state": "verified",
+      "status": "required"
+    },
+    {
+      "kind": "tree",
+      "label": "会话后端接口",
+      "needles": [
+        "type SessionBackend interface"
+      ],
+      "path": "go_hive/go-hive/internal/channels",
+      "state": "verified",
+      "status": "required"
+    },
+    {
+      "kind": "file",
+      "label": "会话后端实现",
+      "needles": [
+        "func NewChannelBackend"
+      ],
+      "path": "go_hive/go-hive/internal/server/adapters_channels.go",
+      "state": "verified",
+      "status": "required"
+    },
+    {
+      "kind": "file",
+      "label": "事件映射",
+      "needles": [
+        "type channelSubscription"
+      ],
+      "path": "go_hive/go-hive/internal/server/adapters_channels_subscription.go",
+      "state": "verified",
+      "status": "required"
+    },
+    {
+      "kind": "file",
+      "label": "Python adapter 桥（后续）",
+      "needles": [
+        "hive.channels"
+      ],
+      "path": "go_hive/scripts/hive_channel_adapter.py",
+      "state": "missing",
+      "status": "future"
+    }
+  ],
+  "baseline": {
+    "go_head": "4412f401",
+    "protocol": "hive-channel/1",
+    "upstream": "1.0.15 · 6703b434"
+  },
+  "boundary": [
+    {
+      "host": "读 channels.<name>；spawn/hello/start/stop；超时、崩溃、状态",
+      "plugin": "不发现、不重启宿主；只响应 hello/start/stop",
+      "topic": "发现与生命周期"
+    },
+    {
+      "host": "读取 configuration.json 的 channels.<name>，原样放进 hello",
+      "plugin": "只读自己认识的键；不写回 configuration.json",
+      "topic": "配置"
+    },
+    {
+      "host": "创建 $HIVE_HOME/channels/<name>（MkdirAll 0755）并传入",
+      "plugin": "拥有目录内容；自行迁移/清理",
+      "topic": "状态目录"
+    },
+    {
+      "host": "open/resume/send/subscribe/unsubscribe/set_title；fork 跟随；colony 锁定",
+      "plugin": "只持有 session_id/subscription_id，不直接读写会话文件",
+      "topic": "queen 会话"
+    },
+    {
+      "host": "从事件总线提取 message/question/error/files/idle；保序、有界队列",
+      "plugin": "逐条消费 output；用 seq 缺口判断丢帧",
+      "topic": "输出提取"
+    },
+    {
+      "host": "不接触平台 SDK、token 刷新、重连",
+      "plugin": "拥有平台连接、鉴权、重连、心跳",
+      "topic": "平台连接"
+    },
+    {
+      "host": "不解析 @、thread、附件 URL",
+      "plugin": "把平台消息转成文本/图片；把 output 转成平台消息",
+      "topic": "消息格式"
+    },
+    {
+      "host": "不做平台级重试",
+      "plugin": "自己处理平台限流、退避、幂等",
+      "topic": "平台限流/重试"
+    },
+    {
+      "host": "解码 base64、按内容类型嗅探、跳过非图；4 MiB/张、最多 8 张",
+      "plugin": "提供 base64 字符串；渲染 output.files 路径",
+      "topic": "图片"
+    },
+    {
+      "host": "会话错误映射成 JSON-RPC error.data.kind",
+      "plugin": "平台错误留在插件内；协议错误按 code 处理",
+      "topic": "错误分类"
+    },
+    {
+      "host": "暴露 GET /api/channels；dashboard 可打开会话",
+      "plugin": "set_title；可选择不实现",
+      "topic": "人类监看"
+    },
+    {
+      "host": "超时、帧上限、进程终止；无沙箱、无进程组隔离",
+      "plugin": "同 uid、同文件系统/网络；必须自担平台凭据安全",
+      "topic": "安全隔离"
+    }
+  ],
+  "design_decisions": [
+    {
+      "decision": "新定义跨语言 ABI，而不是复刻 Python 对象调用",
+      "id": "D1",
+      "reason": "Go 与 Python 没有共享对象模型；stdio 帧是可测试、可跨语言的最小边界。",
+      "tradeoff": "放弃直接调用 in-process；接受插件需要适配或重写。"
+    },
+    {
+      "decision": "宿主先说 hello",
+      "id": "D2",
+      "reason": "config/state_dir 由宿主持有；插件在 hello 前没有可信配置。",
+      "tradeoff": "插件先说 hello 会迫使宿主等待未知状态。"
+    },
+    {
+      "decision": "JSON-RPC 2.0 风格 + 一行一个 JSON",
+      "id": "D3",
+      "reason": "请求/响应/通知语义现成；调试可见；无需 HTTP 端口。",
+      "tradeoff": "自定义二进制帧更快但难调试；HTTP 增加端口与生命周期。"
+    },
+    {
+      "decision": "start/stop 30s，与上游一致",
+      "id": "D4",
+      "reason": "保持可观察行为；超时即失败并回收进程。",
+      "tradeoff": "无超时会让 serve 卡死；更短会误杀慢平台。"
+    },
+    {
+      "decision": "保留五种 output kind",
+      "id": "D5",
+      "reason": "插件迁移成本最低；语义与上游 QueenOutput 一致。",
+      "tradeoff": "合并成 text/event 会丢 question/files 的结构。"
+    },
+    {
+      "decision": "每订阅有界队列 + 丢最旧 + seq 缺口",
+      "id": "D6",
+      "reason": "进程间没有可靠背压；有界内存必须定义丢帧策略；seq 让插件知道丢了。",
+      "tradeoff": "没有 overflow error/关闭订阅；插件需自己补偿，不能假设可靠。"
+    },
+    {
+      "decision": "图片用 base64 字符串内嵌",
+      "id": "D7",
+      "reason": "保持单连接、单帧、无临时文件协议；与 JSON 兼容；容忍 data: 前缀。",
+      "tradeoff": "二进制帧更省 33%，但需要第二套 framing；大图占帧。"
+    },
+    {
+      "decision": "错误用 code + data.kind",
+      "id": "D8",
+      "reason": "插件可按类别重试/提示；日志保留细节。",
+      "tradeoff": "只回字符串无法程序化处理。"
+    },
+    {
+      "decision": "不自动重启",
+      "id": "D9",
+      "reason": "与上游失败隔离语义一致；避免崩溃循环。",
+      "tradeoff": "自动重启会掩盖插件 bug，且需要退避策略。"
+    },
+    {
+      "decision": "每通道一个插件进程",
+      "id": "D10",
+      "reason": "隔离崩溃与内存；配置/状态目录天然分开。",
+      "tradeoff": "单进程多通道更省内存，但故障域更大。"
+    },
+    {
+      "decision": "Python entry point 用 adapter 桥接",
+      "id": "D11",
+      "reason": "原插件代码可复用；Go 不引入 cgo。",
+      "tradeoff": "原生 Go 插件长期更优，但要重写平台 SDK。"
+    },
+    {
+      "decision": "state_dir 固定 $HIVE_HOME/channels/<name>",
+      "id": "D12",
+      "reason": "与上游一致；备份/清理有确定位置。",
+      "tradeoff": "允许插件自选目录会让运维失控；实际 0755 而非 0700。"
+    },
+    {
+      "decision": "不移植 Pillow 缩放，按 4 MiB/8 张透传",
+      "id": "D13",
+      "reason": "Go 标准库没有等价缩放/EXIF 管线；先保证协议与传输可用。",
+      "tradeoff": "大图直接进模型，成本和上下文占用高于上游；需要后续补缩放。"
+    }
+  ],
+  "generated_at": "2026-11-23T12:27:11+08:00",
+  "headline": {
+    "call_timeout_ms": 60000,
+    "current_go_state": "main: no channel host (config read + serve warning + empty GET /api/channels); lane: internal/channels + adapters_channels*.go unmerged",
+    "error_kinds": 6,
+    "errors": 5,
+    "host": "Go process host in the parallel lane; not merged into main",
+    "max_frame_bytes": 16777216,
+    "max_image_bytes": 4194304,
+    "max_images_per_send": 8,
+    "methods": 11,
+    "output_kinds": [
+      "message",
+      "question",
+      "error",
+      "files",
+      "idle"
+    ],
+    "output_queue_capacity": 256,
+    "protocol": "hive-channel/1",
+    "start_timeout_ms": 30000,
+    "stop_timeout_ms": 30000,
+    "transport": "json-lines"
+  },
+  "implementation": [
+    {
+      "note": "仍在；internal/channels/config.go 承担实际发现",
+      "path": "go_hive/go-hive/internal/server/channels_config.go",
+      "responsibility": "旧配置助手：ChannelSections / UnhostedChannels",
+      "status": "present"
+    },
+    {
+      "note": "已存在；States 为空时返回 []",
+      "path": "go_hive/go-hive/internal/server/routes_credentials_channels.go",
+      "responsibility": "GET /api/channels 的 shape",
+      "status": "present"
+    },
+    {
+      "note": "ChannelStates 注入已合并",
+      "path": "go_hive/go-hive/internal/server/app.go",
+      "responsibility": "AppDeps.ChannelStates + 路由接线",
+      "status": "present"
+    },
+    {
+      "note": "channels.NewHost；shutdown 先停 channel",
+      "path": "go_hive/go-hive/internal/cli/loader_channels.go",
+      "responsibility": "serve 启动 host / 关闭顺序",
+      "status": "present"
+    },
+    {
+      "note": "已合并；targeted tests pass",
+      "path": "go_hive/go-hive/internal/channels/protocol.go",
+      "responsibility": "帧类型、协议版本、限制、错误",
+      "status": "present"
+    },
+    {
+      "note": "已合并；targeted tests pass",
+      "path": "go_hive/go-hive/internal/channels/config.go",
+      "responsibility": "Plugins / command/args/env/cwd 解析",
+      "status": "present"
+    },
+    {
+      "note": "已合并；targeted tests pass",
+      "path": "go_hive/go-hive/internal/channels/host.go",
+      "responsibility": "spawn、hello、start/stop、states、请求路由、订阅队列",
+      "status": "present"
+    },
+    {
+      "note": "已合并；targeted tests pass",
+      "path": "go_hive/go-hive/internal/channels/process.go",
+      "responsibility": "子进程、帧 I/O、请求配对、超时/终止",
+      "status": "present"
+    },
+    {
+      "note": "已合并；targeted tests pass",
+      "path": "go_hive/go-hive/internal/channels/backend.go",
+      "responsibility": "SessionBackend 接口 + 默认超时",
+      "status": "present"
+    },
+    {
+      "note": "已合并；targeted tests pass",
+      "path": "go_hive/go-hive/internal/server/adapters_channels.go",
+      "responsibility": "SessionBackend 的 server 实现",
+      "status": "present"
+    },
+    {
+      "note": "已合并；targeted tests pass",
+      "path": "go_hive/go-hive/internal/server/adapters_channels_subscription.go",
+      "responsibility": "事件总线 → Output，fork/队列",
+      "status": "present"
+    },
+    {
+      "note": "已合并；targeted tests pass",
+      "path": "go_hive/go-hive/internal/server/session.go",
+      "responsibility": "AddSessionListener / SetChannel / notifySessionLive",
+      "status": "present"
+    },
+    {
+      "note": "未编写；Go 错误信息已提示需要 adapter",
+      "path": "go_hive/scripts/hive_channel_adapter.py",
+      "responsibility": "Python entry point ↔ stdio 桥",
+      "status": "future"
+    },
+    {
+      "note": "已合并；fake plugin/超时/丢帧测试",
+      "path": "go_hive/go-hive/internal/channels/*_test.go",
+      "responsibility": "协议 conformance、超时/崩溃/队列丢帧",
+      "status": "present"
+    }
+  ],
+  "parity_matrix": [
+    {
+      "go": "internal/channels/config.go: Plugins；无 entry point",
+      "python": "importlib.metadata entry_points(group=\"hive.channels\")",
+      "semantic": "安装发现",
+      "status": "go_only",
+      "wire": "配置 channels.<name>.command"
+    },
+    {
+      "go": "已合并；配置段每个对象通道都列入 states",
+      "python": "channels.<name>.enabled 真值",
+      "semantic": "启用门控",
+      "status": "aligned",
+      "wire": "Plugins 的 truthy 判定"
+    },
+    {
+      "go": "已合并；宿主先说 hello",
+      "python": "entry_point.load()(host)",
+      "semantic": "工厂调用",
+      "status": "go_only",
+      "wire": "hello → welcome"
+    },
+    {
+      "go": "DefaultStartTimeout = 30s",
+      "python": "asyncio.wait_for(start(), 30s)",
+      "semantic": "启动超时",
+      "status": "aligned",
+      "wire": "start timeout 30s"
+    },
+    {
+      "go": "已合并",
+      "python": "异常记日志；failed；serve 继续",
+      "semantic": "故障隔离",
+      "status": "aligned",
+      "wire": "startOne 失败 → failed；不拖垮"
+    },
+    {
+      "go": "PluginConfig.Section 原样传递",
+      "python": "ChannelHost.config = 配置段",
+      "semantic": "配置传递",
+      "status": "aligned",
+      "wire": "hello.params.config"
+    },
+    {
+      "go": "MkdirAll 0755；不是 0700",
+      "python": "$HIVE_HOME/channels/<name>",
+      "semantic": "状态目录",
+      "status": "approximate",
+      "wire": "hello.params.state_dir"
+    },
+    {
+      "go": "ChannelBackend.OpenSession",
+      "python": "open_session(queen_id, session_id?, title?)",
+      "semantic": "打开会话",
+      "status": "aligned",
+      "wire": "open_session"
+    },
+    {
+      "go": "newestSuccessor + followSessionID",
+      "python": "superseded_by + SESSION_FORKED 跟随",
+      "semantic": "会话迁移",
+      "status": "aligned",
+      "wire": "output.session_id 变化，订阅不变"
+    },
+    {
+      "go": "ChannelBackend.Send",
+      "python": "send(session_id, text, display_text?)",
+      "semantic": "发送文本",
+      "status": "aligned",
+      "wire": "send.text/display_text"
+    },
+    {
+      "go": "Go-only：不移植 Pillow 缩放",
+      "python": "Pillow：>2048/>2MiB 转 JPEG；非图跳过",
+      "semantic": "图片",
+      "status": "approximate",
+      "wire": "send.images base64 字符串；4MiB/张、8 张；不缩放"
+    },
+    {
+      "go": "Host.subscribe；同会话替换",
+      "python": "subscribe(session_id, handler)",
+      "semantic": "订阅",
+      "status": "aligned",
+      "wire": "subscribe → subscription_id"
+    },
+    {
+      "go": "丢最旧；seq 缺口；不发 overflow error",
+      "python": "队列 + worker；严格 FIFO",
+      "semantic": "输出顺序",
+      "status": "approximate",
+      "wire": "每订阅 FIFO + seq；有界 256"
+    },
+    {
+      "go": "已合并；questions/files 为空时省略",
+      "python": "message/question/error/files/idle",
+      "semantic": "五种输出",
+      "status": "aligned",
+      "wire": "output.kind 同枚举"
+    },
+    {
+      "go": "已合并",
+      "python": "独立 worker，不阻塞 event bus",
+      "semantic": "慢 handler",
+      "status": "aligned",
+      "wire": "独立 goroutine + 队列"
+    },
+    {
+      "go": "空对象；未知 id 幂等",
+      "python": "unsubscribe(session_id)",
+      "semantic": "取消订阅",
+      "status": "approximate",
+      "wire": "unsubscribe(subscription_id)"
+    },
+    {
+      "go": "已合并",
+      "python": "set_title(session_id, title)",
+      "semantic": "命名",
+      "status": "aligned",
+      "wire": "set_title"
+    },
+    {
+      "go": "AskJudge；nil → null",
+      "python": "ChannelHost.judge → probability|null",
+      "semantic": "judge",
+      "status": "aligned",
+      "wire": "judge"
+    },
+    {
+      "go": "无进程组；2s 后 Process.Kill",
+      "python": "stop() + host.close()",
+      "semantic": "关闭",
+      "status": "approximate",
+      "wire": "stop request + close stdin + kill"
+    },
+    {
+      "go": "app.go ChannelStates 接线（lane）",
+      "python": "GET /api/channels → off/running/failed",
+      "semantic": "状态接口",
+      "status": "aligned",
+      "wire": "Host.States() 同 shape"
+    },
+    {
+      "go": "SetChannel + MergeSessionMeta",
+      "python": "通道会话不被 dashboard 抢走",
+      "semantic": "dashboard 隔离",
+      "status": "aligned",
+      "wire": "session.channel + meta.json"
+    },
+    {
+      "go": "未编写",
+      "python": "无（直接 import entry point）",
+      "semantic": "Python adapter 桥",
+      "status": "unimplemented",
+      "wire": "adapter 进程内代理 ChannelHost"
+    },
+    {
+      "go": "未编写",
+      "python": "无（上游没有）",
+      "semantic": "原生 Go 插件",
+      "status": "unimplemented",
+      "wire": "原生插件直接实现本协议"
+    }
+  ],
+  "protocol": {
+    "$defs": {
+      "error": {
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {
+            "properties": {
+              "kind": {
+                "enum": [
+                  "no_queen",
+                  "no_session",
+                  "session_locked",
+                  "queen_unavailable",
+                  "invalid_params",
+                  "internal"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind"
+            ],
+            "type": "object"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "error_response": {
+        "not": {
+          "required": [
+            "result"
+          ]
+        },
+        "properties": {
+          "error": {
+            "$ref": "#/$defs/error"
+          },
+          "id": {
+            "$ref": "#/$defs/id"
+          },
+          "jsonrpc": {
+            "const": "2.0"
+          }
+        },
+        "required": [
+          "jsonrpc",
+          "id",
+          "error"
+        ],
+        "type": "object"
+      },
+      "id": {
+        "oneOf": [
+          {
+            "type": "integer"
+          },
+          {
+            "minLength": 1,
+            "type": "string"
+          }
+        ]
+      },
+      "notification": {
+        "not": {
+          "required": [
+            "id"
+          ]
+        },
+        "properties": {
+          "jsonrpc": {
+            "const": "2.0"
+          },
+          "method": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "params": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "jsonrpc",
+          "method",
+          "params"
+        ],
+        "type": "object"
+      },
+      "output": {
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "message"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "text": {
+                  "minLength": 1
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "error"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "text": {
+                  "minLength": 1
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "question"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "questions": {
+                  "minItems": 1
+                }
+              },
+              "required": [
+                "questions"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "files"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "files": {
+                  "minItems": 1
+                }
+              },
+              "required": [
+                "files"
+              ]
+            }
+          }
+        ],
+        "properties": {
+          "files": {
+            "description": "files kind 的附件路径列表；其它 kind 省略。",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "kind": {
+            "description": "输出种类；决定 text/questions/files 哪个有内容。",
+            "enum": [
+              "message",
+              "question",
+              "error",
+              "files",
+              "idle"
+            ],
+            "type": "string"
+          },
+          "questions": {
+            "description": "question kind 的 ask_user 问题列表；其它 kind 省略。",
+            "items": {
+              "$ref": "#/$defs/question"
+            },
+            "type": "array"
+          },
+          "seq": {
+            "description": "宿主投递时按订阅从 1 递增；缺口表示队列满丢帧。",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "session_id": {
+            "description": "输出所属会话；queen 迁移后变为新 id，插件下次 send 应使用它。",
+            "type": "string"
+          },
+          "subscription_id": {
+            "description": "subscribe 返回的订阅 id。",
+            "type": "string"
+          },
+          "text": {
+            "description": "message/error 的文本；其它 kind 为空字符串。",
+            "type": "string"
+          }
+        },
+        "required": [
+          "subscription_id",
+          "session_id",
+          "kind",
+          "text",
+          "seq"
+        ],
+        "type": "object"
+      },
+      "question": {
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "options": {
+            "description": "多选问题的选项；上游原样传递。",
+            "items": {
+              "type": [
+                "string",
+                "object"
+              ]
+            },
+            "type": "array"
+          },
+          "prompt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "prompt"
+        ],
+        "type": "object"
+      },
+      "request": {
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "result"
+              ]
+            },
+            {
+              "required": [
+                "error"
+              ]
+            }
+          ]
+        },
+        "properties": {
+          "id": {
+            "$ref": "#/$defs/id"
+          },
+          "jsonrpc": {
+            "const": "2.0"
+          },
+          "method": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "params": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "jsonrpc",
+          "id",
+          "method",
+          "params"
+        ],
+        "type": "object"
+      },
+      "response": {
+        "not": {
+          "required": [
+            "error"
+          ]
+        },
+        "properties": {
+          "id": {
+            "$ref": "#/$defs/id"
+          },
+          "jsonrpc": {
+            "const": "2.0"
+          },
+          "result": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "jsonrpc",
+          "id",
+          "result"
+        ],
+        "type": "object"
+      },
+      "welcome": {
+        "properties": {
+          "capabilities": {
+            "description": "咨询性能力列表；未知字符串保留，宿主不据此裁剪 output。",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "plugin_version": {
+            "description": "插件版本；宿主只校验它非空，空或缺失会让 handshake failed。",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "plugin_version"
+        ],
+        "type": "object"
+      }
+    },
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "backpressure": {
+      "dispatcher": "每个订阅一个 goroutine，串行写管道。",
+      "event_bus": "宿主绝不阻塞会话事件总线；output 只入队。",
+      "loss_signal": "订阅内的 seq 缺口是唯一的丢帧信号；插件不能假设 output 可靠。",
+      "overflow_policy": "队列满时丢弃最旧的一条，保留最新；drops 计数写日志（首次及每 64 次）。不发 overflow error，也不关闭订阅。",
+      "queue_capacity": 256,
+      "slow_plugin": "只拖慢自己的订阅；不会拖住 queen、事件总线或其他通道。",
+      "stderr": "逐行转发到 serve 日志；宿主不保留 stderr 末尾作为 failed 详情。",
+      "write_lock": "stdout 写入全局串行，保证一行不被拆开。"
+    },
+    "compatibility": {
+      "additive_changes": "同一 major 内允许新增可选字段/方法；插件应容忍。",
+      "breaking_changes": "提升 major（hive-channel/2），不静默改变既有字段含义。",
+      "capabilities": "welcome.capabilities 是咨询性的；宿主不据此裁剪 output。",
+      "protocol_check": "宿主只校验 welcome.plugin_version 非空；hello.protocol 不参与双向协商。",
+      "python_entry_points": "Go 进程不能加载 Python entry point；需要 Python adapter 或原生 Go 插件。",
+      "unknown_fields": "忽略；不得因新增字段拒绝帧。",
+      "unknown_methods": "返回 -32601，data.kind=invalid_params；连接保持。",
+      "version": "hive-channel/1"
+    },
+    "description": "Go channel host 与 channel 插件进程之间的 stdio JSON-line 协议。宿主按 channels.<name>.command 启动插件子进程，双方在 stdin/stdout 上每行写一个 JSON 对象；stderr 只用于日志。该文件是生成器与 HTML 的唯一协议真值，字段与 internal/channels/protocol.go 对齐。",
+    "error_kinds": [
+      {
+        "kind": "no_queen",
+        "meaning": "queen 档案 id 不存在。",
+        "message": "No queen '<id>': check the queen id in the '<channel>' channel's settings"
+      },
+      {
+        "kind": "no_session",
+        "meaning": "会话不存在、无法恢复，或标题写入目标不存在。",
+        "message": "No session '<id>' / Session '<id>' can't be resumed"
+      },
+      {
+        "kind": "session_locked",
+        "meaning": "会话已 spawn colony，不能再作为通道会话发送。",
+        "message": "Session '<id>' is locked because it spawned a colony; open a new one"
+      },
+      {
+        "kind": "queen_unavailable",
+        "meaning": "queen 无法启动或会话创建未接线。",
+        "message": "The queen of session '<id>' can't be started"
+      },
+      {
+        "kind": "invalid_params",
+        "meaning": "参数错误、图片超限/非法 base64、method 不存在，或 Nothing to send。",
+        "message": "method ... is not supported / Nothing to send: ..."
+      },
+      {
+        "kind": "internal",
+        "meaning": "宿主内部异常或 panic 恢复。",
+        "message": "channel host panic: ... / channel host is stopping"
+      }
+    ],
+    "errors": [
+      {
+        "code": -32600,
+        "data_kinds": [],
+        "meaning": "保留的 JSON-RPC 错误码；当前宿主对参数错误统一用 -32602。",
+        "name": "invalid_request"
+      },
+      {
+        "code": -32601,
+        "data_kinds": [
+          "invalid_params"
+        ],
+        "meaning": "插件调用了宿主不支持的 method；data.kind 仍是 invalid_params。",
+        "name": "method_not_found"
+      },
+      {
+        "code": -32602,
+        "data_kinds": [
+          "invalid_params"
+        ],
+        "meaning": "参数字段缺失、类型错误、图片超限或 base64 非法的统一错误。",
+        "name": "invalid_params"
+      },
+      {
+        "code": -32603,
+        "data_kinds": [
+          "internal"
+        ],
+        "meaning": "宿主内部异常、panic 恢复或通道停止中收到的请求。",
+        "name": "internal_error"
+      },
+      {
+        "code": -32000,
+        "data_kinds": [
+          "no_queen",
+          "no_session",
+          "session_locked",
+          "queen_unavailable"
+        ],
+        "meaning": "会话/queen 相关失败；具体条件看 data.kind。宿主使用 CodeChannelError 作为统一 code。",
+        "name": "channel_error"
+      }
+    ],
+    "examples": [
+      {
+        "label": "hello → welcome",
+        "lines": [
+          "{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"method\":\"hello\",\"params\":{\"protocol\":\"hive-channel/1\",\"name\":\"mychat\",\"config\":{\"enabled\":true,\"command\":[\"python3\",\"-m\",\"hive_channel_adapter\"]},\"state_dir\":\"$HIVE_HOME/channels/mychat\"}}",
+          "{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"result\":{\"plugin_version\":\"0.4.0\",\"capabilities\":[\"images\",\"questions\",\"files\",\"judge\",\"titles\"]}}"
+        ]
+      },
+      {
+        "label": "start / stop",
+        "lines": [
+          "{\"jsonrpc\":\"2.0\",\"id\":\"2\",\"method\":\"start\",\"params\":{}}",
+          "{\"jsonrpc\":\"2.0\",\"id\":\"2\",\"result\":{}}",
+          "{\"jsonrpc\":\"2.0\",\"id\":\"9\",\"method\":\"stop\",\"params\":{}}",
+          "{\"jsonrpc\":\"2.0\",\"id\":\"9\",\"result\":{}}"
+        ]
+      },
+      {
+        "label": "插件打开会话并订阅",
+        "lines": [
+          "{\"jsonrpc\":\"2.0\",\"id\":\"p-1\",\"method\":\"open_session\",\"params\":{\"queen_id\":\"queen_growth\",\"title\":\"QQ group: Night owls\"}}",
+          "{\"jsonrpc\":\"2.0\",\"id\":\"p-1\",\"result\":{\"session_id\":\"s-7f3a\"}}",
+          "{\"jsonrpc\":\"2.0\",\"id\":\"p-2\",\"method\":\"subscribe\",\"params\":{\"session_id\":\"s-7f3a\"}}",
+          "{\"jsonrpc\":\"2.0\",\"id\":\"p-2\",\"result\":{\"subscription_id\":\"sub_1\"}}"
+        ]
+      },
+      {
+        "label": "发送消息与图片",
+        "lines": [
+          "{\"jsonrpc\":\"2.0\",\"id\":\"p-3\",\"method\":\"send\",\"params\":{\"session_id\":\"s-7f3a\",\"text\":\"[Ann(42)]: look at this\",\"display_text\":\"look at this\",\"images\":[\"data:image/png;base64,iVBORw0KGgo...\"]}}",
+          "{\"jsonrpc\":\"2.0\",\"id\":\"p-3\",\"result\":{\"session_id\":\"s-7f3a\"}}"
+        ]
+      },
+      {
+        "label": "output: message / question / files",
+        "lines": [
+          "{\"jsonrpc\":\"2.0\",\"method\":\"output\",\"params\":{\"subscription_id\":\"sub_1\",\"session_id\":\"s-7f3a\",\"kind\":\"message\",\"text\":\"Let me look.\",\"seq\":1}}",
+          "{\"jsonrpc\":\"2.0\",\"method\":\"output\",\"params\":{\"subscription_id\":\"sub_1\",\"session_id\":\"s-7f3a\",\"kind\":\"question\",\"text\":\"\",\"questions\":[{\"id\":\"q1\",\"prompt\":\"Which city?\",\"options\":[\"Shanghai\",\"Beijing\"]}],\"seq\":2}}",
+          "{\"jsonrpc\":\"2.0\",\"method\":\"output\",\"params\":{\"subscription_id\":\"sub_1\",\"session_id\":\"s-7f3a\",\"kind\":\"files\",\"text\":\"\",\"files\":[\"$HIVE_HOME/queens/queen_growth/sessions/s-7f3a/data/attachments/fox.png\"],\"seq\":3}}"
+        ]
+      },
+      {
+        "label": "错误响应",
+        "lines": [
+          "{\"jsonrpc\":\"2.0\",\"id\":\"p-4\",\"method\":\"send\",\"params\":{\"session_id\":\"s-dead\",\"text\":\"hello\"}}",
+          "{\"jsonrpc\":\"2.0\",\"id\":\"p-4\",\"error\":{\"code\":-32000,\"message\":\"No session 's-dead'\",\"data\":{\"kind\":\"no_session\"}}}"
+        ]
+      }
+    ],
+    "handshake": {
+      "call_timeout_ms": 60000,
+      "first_speaker": "host",
+      "first_speaker_reason": "config 与 state_dir 由宿主持有，插件在收到 hello 前不应假设任何配置",
+      "hello_timeout_ms": 10000,
+      "order": [
+        "宿主按 channels.<name>.command 启动插件进程，建立 stdin/stdout/stderr 管道",
+        "宿主发送 hello 请求（protocol/name/config/state_dir）",
+        "插件回复 welcome（plugin_version 必填，capabilities 可选）",
+        "宿主发送 start 请求；插件在 30s 内返回，之后进入 running",
+        "插件按需发送 open_session / subscribe / send 等请求，宿主推送 output 通知",
+        "宿主发送 stop 请求；插件在 30s 内返回，宿主关闭 stdin 并在 2s 后杀死进程"
+      ],
+      "protocol_mismatch": "宿主只校验 welcome.plugin_version 非空；没有在 welcome 里回读 protocol 字段。hello.protocol 是版本声明，不是双向校验。",
+      "start_timeout_ms": 30000,
+      "stop_timeout_ms": 30000
+    },
+    "images": {
+      "accepted_media_types": "由 http.DetectContentType 嗅探；只接受 image/* 前缀",
+      "base64_overhead": "约 4/3；4 MiB 原图约 5.6 MiB 文本，仍低于 16 MiB 帧上限。",
+      "max_decoded_bytes": 4194304,
+      "max_images_per_send": 8,
+      "normalization": "不做缩放/转码；非图片字节跳过并记日志；全部跳过且无文本时返回 invalid_params（Nothing to send）",
+      "output_files": "output.files 传运行时绝对路径（字符串数组），不传 base64；插件从磁盘读取。",
+      "send_encoding": "base64 字符串；可带 data:...;base64, 前缀，也容忍省略 padding 的 raw 标准字母表",
+      "upstream_gap": "上游 Pillow 路径的 2 MiB / 2048px 缩放未移植；Go 侧只按 4 MiB 解码上限约束。"
+    },
+    "lifecycle": {
+      "api_states": [
+        "off",
+        "running",
+        "failed"
+      ],
+      "call_timeout_ms": 60000,
+      "crash": "运行期进程退出 → failed，error 含 exit error；关闭该 runtime 的订阅。",
+      "disabled": "enabled 非真 → 状态 off；不 spawn。配置里每个对象通道都会出现在 states 中（上游只列已安装 entry point）。",
+      "handshake_failure": "hello 超时、error、welcome 无 plugin_version → failed，进程终止。",
+      "handshake_timeout_ms": 10000,
+      "missing_command": "enabled 真但没有 command → failed，错误说明 Go host 需要 stdio 插件，Python entry point 需要 adapter。",
+      "restart": "不自动重启；崩溃即 failed，与上游 channel 失败不拖垮 serve 的语义一致。",
+      "shutdown_order": "CLI 在 serve 返回路径 defer channelHost.Stop()；上游把 stop_channels 插到会话停止之前，Go 侧目前只保证在 serve 退出时调用 Stop，会话停止顺序需在合入时核对。",
+      "spawn_failure": "command 不存在/不可执行/cwd 错 → failed，error 含 spawn 原因。",
+      "start_failure": "start 返回 error 或 30s 超时 → failed；abortStart 用 500ms 停进程。",
+      "start_timeout_ms": 30000,
+      "startup_order": "宿主按配置名排序，逐个 spawn/hello/start；在 HTTP listener 公布之前完成，因此首个 GET /api/channels 就能看到状态。",
+      "states": [
+        "off",
+        "starting",
+        "running",
+        "stopping",
+        "failed"
+      ],
+      "stop": "Host.Stop 逐通道 stop（30s），关闭全部订阅，等待 goroutines；不自动重启。",
+      "stop_timeout_ms": 30000
+    },
+    "limits": {
+      "call_timeout_ms": 60000,
+      "handshake_timeout_ms": 10000,
+      "max_frame_bytes": 16777216,
+      "max_image_bytes": 4194304,
+      "max_images_per_send": 8,
+      "output_queue_capacity": 256,
+      "start_timeout_ms": 30000,
+      "stop_timeout_ms": 30000
+    },
+    "methods": [
+      {
+        "direction": "host_to_plugin",
+        "kind": "request",
+        "name": "hello",
+        "params": {
+          "properties": {
+            "config": {
+              "description": "channels.<name> 配置段原样传递（含 enabled、command 等 Go 宿主键）；插件只读取自己认识的键。可能含密钥，禁止写日志。",
+              "type": "object"
+            },
+            "name": {
+              "description": "通道名，等于 configuration.json 的 channels.<name> 键。",
+              "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$",
+              "type": "string"
+            },
+            "protocol": {
+              "const": "hive-channel/1",
+              "description": "协议版本；插件按自己支持的版本处理。宿主不回读 welcome.protocol。"
+            },
+            "state_dir": {
+              "description": "宿主创建并交给插件的目录：$HIVE_HOME/channels/<name>；实际权限来自 MkdirAll(0755) 与 umask。",
+              "type": "string"
+            }
+          },
+          "required": [
+            "protocol",
+            "name",
+            "config",
+            "state_dir"
+          ],
+          "type": "object"
+        },
+        "result": {
+          "$ref": "#/$defs/welcome"
+        },
+        "summary": "宿主宣告协议版本、通道名、配置段与状态目录。",
+        "timeout_ms": 10000
+      },
+      {
+        "direction": "plugin_to_host",
+        "kind": "response",
+        "name": "welcome",
+        "responds_to": "hello",
+        "result": {
+          "$ref": "#/$defs/welcome"
+        },
+        "summary": "hello 的成功结果（不是独立请求）。宿主只要求 plugin_version 非空；capabilities 不参与门控。"
+      },
+      {
+        "direction": "host_to_plugin",
+        "kind": "request",
+        "name": "start",
+        "params": {
+          "description": "空对象；配置已在 hello 中给出。",
+          "properties": {},
+          "type": "object"
+        },
+        "result": {
+          "description": "空对象表示已启动；超时或 error 都会让宿主标记 failed 并终止进程。",
+          "properties": {},
+          "type": "object"
+        },
+        "summary": "启动通道。插件应把平台连接等工作交给后台任务后尽快返回，或在本调用内完成并在 30s 内返回。",
+        "timeout_ms": 30000
+      },
+      {
+        "direction": "host_to_plugin",
+        "kind": "request",
+        "name": "stop",
+        "params": {
+          "description": "空对象。",
+          "properties": {},
+          "type": "object"
+        },
+        "result": {
+          "description": "空对象表示已停止；超时后宿主关闭 stdin，等待 2s，再杀死进程。",
+          "properties": {},
+          "type": "object"
+        },
+        "summary": "停止通道。宿主在关闭会话之前调用，避免通道在关闭中途 resume 会话。",
+        "timeout_ms": 30000
+      },
+      {
+        "direction": "plugin_to_host",
+        "kind": "request",
+        "name": "open_session",
+        "params": {
+          "properties": {
+            "queen_id": {
+              "description": "queen 档案 id；不存在时返回 no_queen。",
+              "type": "string"
+            },
+            "session_id": {
+              "description": "上次使用的会话 id；宿主会沿 superseded_by 找到最新后继并恢复。",
+              "type": "string"
+            },
+            "title": {
+              "description": "新建会话时写入的标题；恢复时忽略。",
+              "type": "string"
+            }
+          },
+          "required": [
+            "queen_id"
+          ],
+          "type": "object"
+        },
+        "result": {
+          "properties": {
+            "session_id": {
+              "description": "可直接用于 send/subscribe 的会话 id；queen 迁移会话后可能不同于请求值。",
+              "type": "string"
+            }
+          },
+          "required": [
+            "session_id"
+          ],
+          "type": "object"
+        },
+        "summary": "为一个外部会话（群聊/私聊）打开对应的 queen 会话；已有 session_id 时优先恢复。",
+        "timeout_ms": 60000
+      },
+      {
+        "direction": "plugin_to_host",
+        "kind": "request",
+        "name": "send",
+        "params": {
+          "properties": {
+            "correlation_id": {
+              "description": "标记本次 client_input_received 事件；不传则宿主生成一个。",
+              "type": "string"
+            },
+            "display_text": {
+              "description": "dashboard 上替代 text 显示的文本；不传则显示 text。",
+              "type": "string"
+            },
+            "images": {
+              "description": "base64 字符串（可带 data: 前缀）。宿主解码后按内容类型嗅探；非图片跳过；超过 4 MiB 或非 base64 返回 invalid_params。",
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 8,
+              "type": "array"
+            },
+            "session_id": {
+              "description": "目标会话；不存在或不可恢复时返回 no_session。",
+              "type": "string"
+            },
+            "text": {
+              "description": "送入模型的文本；与 images 至少有一个能产生内容。",
+              "type": "string"
+            }
+          },
+          "required": [
+            "session_id"
+          ],
+          "type": "object"
+        },
+        "result": {
+          "properties": {
+            "session_id": {
+              "description": "实际收到消息的会话 id；queen 迁移后可能与请求值不同，后续调用应使用它。",
+              "type": "string"
+            }
+          },
+          "required": [
+            "session_id"
+          ],
+          "type": "object"
+        },
+        "summary": "把用户消息（可带图片）送进会话；必要时恢复已停止的会话。",
+        "timeout_ms": 60000
+      },
+      {
+        "direction": "plugin_to_host",
+        "kind": "request",
+        "name": "subscribe",
+        "params": {
+          "properties": {
+            "session_id": {
+              "description": "要监听的会话 id。",
+              "type": "string"
+            }
+          },
+          "required": [
+            "session_id"
+          ],
+          "type": "object"
+        },
+        "result": {
+          "properties": {
+            "subscription_id": {
+              "description": "本次订阅的 id（形如 sub_1）；同一通道对同一会话再次 subscribe 会替换旧订阅，旧 id 失效。",
+              "type": "string"
+            }
+          },
+          "required": [
+            "subscription_id"
+          ],
+          "type": "object"
+        },
+        "summary": "订阅一个会话的 queen 输出；返回 subscription_id，宿主随后推送 output 通知。",
+        "timeout_ms": 60000
+      },
+      {
+        "direction": "plugin_to_host",
+        "kind": "request",
+        "name": "unsubscribe",
+        "params": {
+          "properties": {
+            "subscription_id": {
+              "description": "subscribe 返回的 id。",
+              "type": "string"
+            }
+          },
+          "required": [
+            "subscription_id"
+          ],
+          "type": "object"
+        },
+        "result": {
+          "description": "空对象；宿主不回报是否真的移除。",
+          "properties": {},
+          "type": "object"
+        },
+        "summary": "停止接收某个订阅的输出。未知 id 是幂等空操作。",
+        "timeout_ms": 60000
+      },
+      {
+        "direction": "plugin_to_host",
+        "kind": "request",
+        "name": "set_title",
+        "params": {
+          "properties": {
+            "session_id": {
+              "description": "目标会话。",
+              "type": "string"
+            },
+            "title": {
+              "description": "新标题；空字符串表示清除。",
+              "type": "string"
+            }
+          },
+          "required": [
+            "session_id",
+            "title"
+          ],
+          "type": "object"
+        },
+        "result": {
+          "description": "空对象表示已写入。",
+          "properties": {},
+          "type": "object"
+        },
+        "summary": "在 dashboard 给会话命名或清除标题；自动标题不会覆盖用户标题。",
+        "timeout_ms": 60000
+      },
+      {
+        "direction": "plugin_to_host",
+        "kind": "request",
+        "name": "judge",
+        "params": {
+          "properties": {
+            "criteria": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "description": "可选：描述 true/false 判定标准的键值对。",
+              "type": "object"
+            },
+            "question": {
+              "description": "要判断的问题；空字符串返回 invalid_params。",
+              "type": "string"
+            },
+            "state": {
+              "description": "judge 读取的状态字典。",
+              "type": "object"
+            }
+          },
+          "required": [
+            "question",
+            "state"
+          ],
+          "type": "object"
+        },
+        "result": {
+          "properties": {
+            "probability": {
+              "description": "0..1 的概率；null 表示未配置 judge 或当前无法回答（原因写日志）。",
+              "maximum": 1,
+              "minimum": 0,
+              "type": [
+                "number",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "probability"
+          ],
+          "type": "object"
+        },
+        "summary": "调用配置的 judge 模型，对 question 在给定 state 下回答 yes 的概率打分。",
+        "timeout_ms": 60000
+      },
+      {
+        "direction": "host_to_plugin",
+        "kind": "notification",
+        "name": "output",
+        "params": {
+          "$ref": "#/$defs/output"
+        },
+        "result": null,
+        "summary": "宿主把 queen 在订阅会话中的输出推给插件；按 subscription 严格有序，seq 从 1 递增。",
+        "timeout_ms": null
+      }
+    ],
+    "oneOf": [
+      {
+        "$ref": "#/$defs/request"
+      },
+      {
+        "$ref": "#/$defs/notification"
+      },
+      {
+        "$ref": "#/$defs/response"
+      },
+      {
+        "$ref": "#/$defs/error_response"
+      }
+    ],
+    "ordering": {
+      "files": "files output 只在该次 attach_file 成功后产生，且每个订阅内按事件顺序排列。",
+      "fork": "queen 迁移会话时，订阅保持不变，后续 output 的 session_id 变为新 id；插件应使用新 id 发送。",
+      "omitempty": "questions/files 为空时不出现在 JSON 中；接收方按空数组处理。",
+      "per_subscription": "严格 FIFO；同一订阅的 output 不并发、不重排。",
+      "responses": "响应可按 id 乱序返回；请求方按 id 配对。",
+      "send": "宿主按请求并发处理；同一会话的 send 不额外串行。插件若需要顺序，必须自己排队。",
+      "seq": "每个订阅从 1 单调递增；seq 缺口表示队列满时丢弃了旧帧。",
+      "subscribe_replace": "同一通道对同一会话再次 subscribe：旧订阅关闭，旧 id 失效，新 id 生效。"
+    },
+    "output": {
+      "always_present": [
+        "subscription_id",
+        "session_id",
+        "kind",
+        "text",
+        "seq"
+      ],
+      "kind_order": [
+        "message",
+        "question",
+        "error",
+        "files",
+        "idle"
+      ],
+      "kinds": {
+        "error": {
+          "meaning": "模型调用失败；dashboard 显示的同一错误文本。queen 等待下一条消息。",
+          "required": [
+            "text"
+          ],
+          "text": "非空错误文本"
+        },
+        "files": {
+          "meaning": "queen 用 attach_file 交付的文件；路径指向会话 data/attachments 下的副本。",
+          "required": [
+            "files"
+          ],
+          "text": "空字符串"
+        },
+        "idle": {
+          "meaning": "queen 完成并等待下一条消息；用于结束 typing 指示，可忽略。",
+          "required": [],
+          "text": "空字符串"
+        },
+        "message": {
+          "meaning": "一个完成的模型回合文本；工具调用前已写完的文本会先到，不等整轮结束。",
+          "required": [
+            "text"
+          ],
+          "text": "非空文本"
+        },
+        "question": {
+          "meaning": "queen 通过 ask_user 提问；下一条 send 即回答。问题不会再作为 message 重发。",
+          "required": [
+            "questions"
+          ],
+          "text": "空字符串"
+        }
+      },
+      "optional": [
+        "questions",
+        "files"
+      ],
+      "seq": "宿主在投递时从 1 开始按订阅单调递增；questions/files 为空时因 omitempty 省略。"
+    },
+    "protocol": "hive-channel/1",
+    "schema": "hive-channel-plugin-protocol/v1",
+    "security": {
+      "frame_bounds": "单帧 16 MiB；图片解码 4 MiB/张、最多 8 张。",
+      "isolation": "无沙箱、无 seccomp、无独立用户；插件与宿主同 uid，可读写同一文件系统与网络。",
+      "process_shutdown": "宿主先发 stop，关闭 stdin，等待 2s，再 Process.Kill；没有独立进程组，子进程的孙进程可能残留。",
+      "recommendation": "不可信插件应放到独立用户/容器/VM；本协议本身不提供权限隔离。",
+      "secrets": "hello.config 可能含 token/密钥；宿主不得打印，插件不得写日志。",
+      "state_dir": "宿主用 os.MkdirAll(stateDir, 0o755) 创建；实际权限受 umask 影响，不是 0700。",
+      "stderr": "逐行转发；不进入协议 stdout；不保留 failed 诊断尾部。",
+      "trust": "channels.<name>.command 是 configuration.json 中的本地命令，等同用户主动执行的代码。"
+    },
+    "status": "lane-implemented-unmerged",
+    "title": "hive-channel/1 frame",
+    "transport": {
+      "encoding": "utf-8",
+      "framing": "json-lines",
+      "kind": "stdio",
+      "line_terminator": "\\n",
+      "max_frame_bytes": 16777216,
+      "notes": [
+        "一行一个完整 JSON 对象；行内换行由 json.Marshal 转义，不会拆帧。",
+        "空行、非法 JSON、jsonrpc 不是 \"2.0\"、既无 method 也无 result/error 的行都是协议违规；宿主记录并杀死插件进程。",
+        "单行超过 max_frame_bytes 时宿主不再读取，标记 failed 并杀死进程。",
+        "JSON-RPC 2.0 风格：请求带 id，响应回显同一 id，通知不带 id。"
+      ],
+      "stderr": "自由日志；宿主逐行转发到 serve 日志，不进入协议",
+      "stdout": "只允许协议帧；不得写日志或调试文本"
+    }
+  },
+  "requirements": [
+    {
+      "acceptance": "重启 serve 后仍能恢复；queen 迁移会话后订阅继续；dashboard 新建会话不抢走通道会话。",
+      "id": "R-CH-01",
+      "source": "channels.py 模块 docstring；open_session 的 resume/superseded_by 逻辑",
+      "status": "upstream",
+      "title": "外部 chat 的每个对话 = 一个可恢复的 queen 会话"
+    },
+    {
+      "acceptance": "安装第三方包即可被发现；未安装时 GET /api/channels 为空。",
+      "id": "R-CH-02",
+      "source": "ENTRY_POINT_GROUP = \"hive.channels\"；工厂 entry_point.load()(ChannelHost)",
+      "status": "upstream",
+      "title": "插件通过 entry point 安装，不修改 hive 主仓"
+    },
+    {
+      "acceptance": "enabled 真值才启动；缺省/非对象/假值显示 off。",
+      "id": "R-CH-03",
+      "source": "configuration.json.channels.<name>.enabled；start_channels 的门控",
+      "status": "upstream",
+      "title": "逐通道启停，enabled 是唯一开关"
+    },
+    {
+      "acceptance": "一个通道失败，其他通道和 HTTP/会话继续工作；错误出现在 GET /api/channels。",
+      "id": "R-CH-04",
+      "source": "start_channels 捕获 load/start 异常；30s 超时；failed 状态",
+      "status": "upstream",
+      "title": "插件故障隔离：失败不拖垮 serve"
+    },
+    {
+      "acceptance": "同一会话 FIFO；慢 handler 不阻塞事件总线；handler 异常不静默后续输出。",
+      "id": "R-CH-05",
+      "source": "QueenOutput + _Subscription 队列/worker；message/question/error/files/idle",
+      "status": "upstream",
+      "title": "queen 输出按顺序、按会话送到插件"
+    },
+    {
+      "acceptance": "dashboard 能打开同一会话；频道标题不被自动标题覆盖。",
+      "id": "R-CH-06",
+      "source": "ChannelHost._claim 写 session.channel / meta.json；set_title；dashboard 不碰通道会话",
+      "status": "upstream",
+      "title": "人类监看：dashboard 与聊天应用看到同一个会话"
+    },
+    {
+      "acceptance": "上游：大图缩到 2048/2 MiB，不可读图片跳过；Go lane：4 MiB/8 张、不缩放；attach_file 成功后 files 输出。",
+      "id": "R-CH-07",
+      "source": "send(images=...) 的 Pillow 管线；attach_file 的 files 输出",
+      "status": "upstream",
+      "title": "图片与附件可用"
+    },
+    {
+      "acceptance": "目录存在且可写；插件不把状态散落到仓库或主目录。",
+      "id": "R-CH-08",
+      "source": "ChannelHost.state_dir = $HIVE_HOME/channels/<name>",
+      "status": "upstream",
+      "title": "插件有自己的状态目录"
+    },
+    {
+      "acceptance": "未配置 judge 时返回 null；每次调用是一次 vendor 请求。",
+      "id": "R-CH-09",
+      "source": "ChannelHost.judge(question, state, criteria=None) → probability|null",
+      "status": "upstream",
+      "title": "judge 能力可由通道调用"
+    },
+    {
+      "acceptance": "定义 stdio JSON-line 协议、进程生命周期、错误/图片/背压边界，或明确不实现。",
+      "id": "R-CH-10",
+      "source": "Go 不能加载 Python entry point；CGO_ENABLED=0",
+      "status": "go-merged",
+      "title": "Go 端口必须给出可执行的跨语言宿主方案"
+    }
+  ],
+  "risks": [
+    {
+      "impact": "现有 Python 插件不能直接接 Go host；文档若称“兼容”会误导。",
+      "mitigation": "adapter 桥或原生 Go 插件；协议版本显式。",
+      "risk": "新 ABI 不是上游协议",
+      "status": "open"
+    },
+    {
+      "impact": "单张 4 MiB 变 ~5.6 MiB 文本；多图可能顶满 16 MiB 帧。",
+      "mitigation": "限制每消息图片数；客户端先压缩；必要时调大帧上限。",
+      "risk": "4 MiB / 8 张图片 + base64",
+      "status": "design"
+    },
+    {
+      "impact": "上游 2048px/2 MiB 缩放未移植，大图直接进模型，成本和上下文占用更高。",
+      "mitigation": "插件侧先缩放；后续补 Go 图像管线。",
+      "risk": "不缩放图片",
+      "status": "open"
+    },
+    {
+      "impact": "只有 code + data.kind；没有 retryable/detail，traceback 只在 stderr 日志。",
+      "mitigation": "插件按 kind 分类；日志关联通道名；不要依赖错误文本。",
+      "risk": "错误信息有损",
+      "status": "design"
+    },
+    {
+      "impact": "配置里的 command 等同用户代码；插件可读 HIVE_HOME、密钥、网络。",
+      "mitigation": "只安装可信插件；独立用户/容器；未来 capability token。",
+      "risk": "无沙箱",
+      "status": "accepted"
+    },
+    {
+      "impact": "只 Kill 直接子进程；插件的孙进程可能残留（尤其平台 SDK 起子进程）。",
+      "mitigation": "插件自己管理子进程；必要时外部 supervisor。",
+      "risk": "无进程组回收",
+      "status": "open"
+    },
+    {
+      "impact": "welcome 只要求 plugin_version；hello.protocol 不回读，版本漂移不会被宿主发现。",
+      "mitigation": "adapter/插件自检；未来加 protocol 回读与协商。",
+      "risk": "协议版本只单向声明",
+      "status": "open"
+    },
+    {
+      "impact": "满队列丢最旧，只有 seq 缺口，没有 overflow error/关闭订阅。",
+      "mitigation": "插件监控 seq；平台侧补偿；日志看 dropped 计数。",
+      "risk": "有界队列会丢帧",
+      "status": "design"
+    },
+    {
+      "impact": "Go host 不能加载 entry point；没有 adapter 时 enabled 通道会 failed。",
+      "mitigation": "实现 adapter；或为平台写原生 stdio 插件。",
+      "risk": "Python adapter 缺失",
+      "status": "future"
+    },
+    {
+      "impact": "协议可能“文档正确、实现各写各的”。",
+      "mitigation": "golden frames + fake plugin + 超时/崩溃/丢帧用例。",
+      "risk": "无 conformance 测试",
+      "status": "open"
+    },
+    {
+      "impact": "main 有 host；targeted tests 通过；Python adapter 仍未实现。",
+      "mitigation": "在 wave-84 全量 CI/QC 后再宣传可用；补 adapter 后再宣称兼容现有插件。",
+      "risk": "宿主已合并",
+      "status": "resolved"
+    }
+  ],
+  "schema": "hive-channels-host/v1",
+  "stats": {
+    "error_kinds": 6,
+    "errors": 5,
+    "future_anchors": 1,
+    "future_present": 0,
+    "methods": 11,
+    "output_kinds": 5,
+    "planned_anchors": 0,
+    "planned_present": 0,
+    "required_anchors": 22,
+    "upstream_lines": 548
+  },
+  "upstream": {
+    "channel_methods": [
+      "start",
+      "stop"
+    ],
+    "entry_point_group": "hive.channels",
+    "entry_points_observed": {
+      "count": 0,
+      "note": "measured in this workspace with importlib.metadata; a deployment with installed channel packages may differ"
+    },
+    "host_methods": [
+      {
+        "args": [
+          "question",
+          "state"
+        ],
+        "async": true,
+        "name": "judge"
+      },
+      {
+        "args": [
+          "queen_id"
+        ],
+        "async": true,
+        "name": "open_session"
+      },
+      {
+        "args": [
+          "session_id",
+          "text"
+        ],
+        "async": true,
+        "name": "send"
+      },
+      {
+        "args": [
+          "session_id",
+          "handler"
+        ],
+        "async": false,
+        "name": "subscribe"
+      },
+      {
+        "args": [
+          "session_id"
+        ],
+        "async": false,
+        "name": "unsubscribe"
+      },
+      {
+        "args": [
+          "session_id",
+          "title"
+        ],
+        "async": false,
+        "name": "set_title"
+      },
+      {
+        "args": [],
+        "async": false,
+        "name": "close"
+      }
+    ],
+    "image_max_bytes": 2097152,
+    "image_max_side": 2048,
+    "output_fields": {
+      "files": {
+        "annotation": "list[Path]",
+        "default": "field(default_factory=list)"
+      },
+      "kind": {
+        "annotation": "Literal['message', 'question', 'error', 'files', 'idle']",
+        "default": null
+      },
+      "questions": {
+        "annotation": "list[dict[str, Any]]",
+        "default": "field(default_factory=list)"
+      },
+      "session_id": {
+        "annotation": "str",
+        "default": null
+      },
+      "text": {
+        "annotation": "str",
+        "default": "''"
+      }
+    },
+    "output_kinds": [
+      "message",
+      "question",
+      "error",
+      "files",
+      "idle"
+    ],
+    "source": "core/framework/server/channels.py",
+    "source_lines": 548,
+    "start_timeout_s": 30.0,
+    "wire_methods": [
+      "judge",
+      "open_session",
+      "send",
+      "subscribe",
+      "unsubscribe",
+      "set_title"
+    ]
+  }
+}

@@ -1,12 +1,12 @@
 {
   "schema": "hive-api-routes/1",
   "description": "Frozen HTTP route tables. The contract reference is the Python hive checkout (reference=python@<commit>); go_hive is the target being aligned (target=go_hive@<commit>). Static extraction; path parameters are compared by shape, original spelling preserved.",
-  "reference_id": "python@e9893059b5f48e10914c937ceabc167b5b34d2e8",
-  "target_id": "go_hive@e9893059b5f48e10914c937ceabc167b5b34d2e8",
+  "reference_id": "python@4412f401e363f9d1f5f3ecc1d707c5cf27e9c9d3",
+  "target_id": "go_hive@4412f401e363f9d1f5f3ecc1d707c5cf27e9c9d3",
   "reference": {
     "implementation": "python",
     "version": "1.0.15",
-    "commit": "e9893059b5f48e10914c937ceabc167b5b34d2e8",
+    "commit": "4412f401e363f9d1f5f3ecc1d707c5cf27e9c9d3",
     "last_core_commit": "265d93d17ab9ad62520ce05b841ecbfc42439ae7",
     "last_tools_commit": "72eb6d7bb9f833ac221ed17ad6c334f5944d89bb",
     "source_root": "core/framework/server"
@@ -14,13 +14,13 @@
   "target": {
     "implementation": "go_hive",
     "version": "1.0.27-go.1",
-    "commit": "e9893059b5f48e10914c937ceabc167b5b34d2e8",
+    "commit": "4412f401e363f9d1f5f3ecc1d707c5cf27e9c9d3",
     "source_root": "go_hive/go-hive/internal/server"
   },
-  "generated_at": "2026-11-22T23:25:04+08:00",
+  "generated_at": "2026-11-23T12:30:18+08:00",
   "python": {
     "version": "1.0.15",
-    "commit": "e9893059b5f48e10914c937ceabc167b5b34d2e8",
+    "commit": "4412f401e363f9d1f5f3ecc1d707c5cf27e9c9d3",
     "source_root": "core/framework/server",
     "route_count": 222,
     "routes": [
@@ -1808,7 +1808,7 @@
   },
   "go": {
     "version": "1.0.27-go.1",
-    "commit": "e9893059b5f48e10914c937ceabc167b5b34d2e8",
+    "commit": "4412f401e363f9d1f5f3ecc1d707c5cf27e9c9d3",
     "source_root": "go_hive/go-hive/internal/server",
     "route_count": 225,
     "routes": [
@@ -1817,7 +1817,7 @@
         "path": "/",
         "path_shape": "<spa>",
         "handler": "app.handleSPA",
-        "source": "go_hive/go-hive/internal/server/app.go:331",
+        "source": "go_hive/go-hive/internal/server/app.go:335",
         "kind": "spa_fallback"
       },
       {
@@ -2561,7 +2561,7 @@
         "path": "/api/health",
         "path_shape": "/api/health",
         "handler": "app.handleHealth",
-        "source": "go_hive/go-hive/internal/server/app.go:175",
+        "source": "go_hive/go-hive/internal/server/app.go:179",
         "kind": "api"
       },
       {
@@ -3619,7 +3619,7 @@
         "path": "/api/startup-status",
         "path_shape": "/api/startup-status",
         "handler": "app.handleStartupStatus",
-        "source": "go_hive/go-hive/internal/server/app.go:176",
+        "source": "go_hive/go-hive/internal/server/app.go:180",
         "kind": "api"
       }
     ],

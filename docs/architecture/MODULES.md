@@ -1,6 +1,6 @@
 # 模块清单（生成物，勿手改）
 
-> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` + `go list` 生成。commit: `949e39b29f9c`
+> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` + `go list` 生成。commit: `5154313071a3`
 > 修改分层或职责请改 `architecture/model.yaml`，不要编辑本文件。
 
 ## 分层统计
@@ -15,8 +15,9 @@
 | 执行原语层（`runtime`） | 3 | 唯一的执行原语 AgentLoop：一次 turn 内的模型调用、工具批处理、压缩、预算与停泊。 |
 | 能力层（`capability`） | 34 | 可被循环调用的能力：工具、集成、LLM 传输、记忆、技能、soul、凭据、出站消息。 |
 | 基础层（`foundation`） | 16 | 无业务语义的底座：事件总线、文件存储、schema、原子写、目录布局、限速、质量门禁。 |
+| 未映射层（`unmapped`） | 1 | 生成器为 model.yaml 尚未登记的包临时创建的层；补齐后应消失。 |
 
-共 87 个包、235 条包间 import 边。
+共 88 个包、237 条包间 import 边。
 
 ## 模块表
 
@@ -38,9 +39,9 @@
 | `e2e/stallgw` | harness | stream stall e2e 的确定性假上游网关（可注入停滞）。 | 0 | 1 |  |
 | `internal/release` | harness | 发布脚本（release_slot 等）的回归测试。 | 0 | 0 |  |
 | `internal/toolgolden` | harness | 工具结果文本的规范化，用于两侧运行时对照。 | 0 | 0 |  |
-| `internal/cli` | assembly | 装配根：解析命令与配置，构造 home、ToolRegistry、MCP runtime、ChatRuntime、ColonyRuntime，并注册 serve/chat/queen/colony/session/skill/mcp/janitor 子命令。 | 32 | 4 |  |
+| `internal/cli` | assembly | 装配根：解析命令与配置，构造 home、ToolRegistry、MCP runtime、ChatRuntime、ColonyRuntime，并注册 serve/chat/queen/colony/session/skill/mcp/janitor 子命令。 | 33 | 4 |  |
 | `internal/runtimehealth` | transport | 进程与宿主机资源健康快照，供 /api/health/resources 使用。 | 0 | 1 |  |
-| `internal/server` | transport | HTTP/SSE 传输层：路由注册、会话管理、ChatRuntime 的 turn 队列、colony/tracker/sentinel 适配器与事件桥。 | 38 | 2 |  |
+| `internal/server` | transport | HTTP/SSE 传输层：路由注册、会话管理、ChatRuntime 的 turn 队列、colony/tracker/sentinel 适配器与事件桥。 | 39 | 2 |  |
 | `internal/server/uiembed` | transport | embed_ui 构建标签下的前端静态资源；未带标签时返回空，让服务端回退到磁盘目录。 | 0 | 1 |  |
 | `internal/agents` | orchestration | Agent 规格与发现：读取 agents 目录、worker 元数据与能力描述。 | 2 | 3 |  |
 | `internal/claudecode` | orchestration | Claude Code queen 运行时：会话记录与收件箱、claude -p 回合、转录读取与进程树管理。 | 3 | 1 |  |
@@ -109,6 +110,7 @@
 | `internal/schemas` | foundation | 跨包共享的数据结构与序列化约定（报告、计划、工具 schema）。 | 0 | 6 |  |
 | `internal/storage` | foundation | 会话与检查点的文件存储（part JSON、cursor、index），写入走原子替换。 | 3 | 3 |  |
 | `internal/version` | foundation | 版本字符串与构建信息。 | 0 | 3 |  |
+| `internal/channels` | unmapped | 未在 architecture/model.yaml 中登记（生成器占位）。 | 0 | 2 |  |
 
 ## 分层检查
 
@@ -128,4 +130,4 @@
 
 ---
 
-共 87 个包；层的定义与业务能力对照见 `docs/architecture/README.md` 与 `docs/architecture/capability-tech-crosswalk.md`。
+共 88 个包；层的定义与业务能力对照见 `docs/architecture/README.md` 与 `docs/architecture/capability-tech-crosswalk.md`。

@@ -1,9 +1,9 @@
 {
- "wave": 83,
- "at": "2026-11-23 11:37",
- "head": "582afba1",
+ "wave": 84,
+ "at": "2026-11-23 12:38",
+ "head": "88f05ff7",
  "ci": 0,
  "qc": 0,
  "publish": 0,
- "note": "wave-83: CI 0 / QC 9/9 / journey 6/6; mirror 582afba1"
+ "note": "channels host stdio + docs merged; CI 0, QC 11/11, journey 6/6"
 }

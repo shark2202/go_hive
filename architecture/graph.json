@@ -1,18 +1,18 @@
 {
   "schema_version": 1,
   "module": "github.com/shark2202/go_hive/go-hive",
-  "generated_at_commit": "949e39b29f9c",
+  "generated_at_commit": "5154313071a3",
   "generated_from": "architecture/model.yaml + go list -json ./... + internal/server mux.HandleFunc + internal/eventbus event_type.go",
   "stats": {
-    "packages": 87,
-    "package_edges": 235,
+    "packages": 88,
+    "package_edges": 237,
     "capabilities": 12,
     "capability_edges": 85,
-    "layers": 8,
+    "layers": 9,
     "contracts": 34,
     "http_routes": 225,
     "event_types": 77,
-    "warnings": 1
+    "warnings": 2
   },
   "layers": [
     {
@@ -173,6 +173,16 @@
         "internal/version"
       ],
       "package_count": 16
+    },
+    {
+      "id": "unmapped",
+      "name": "未映射层",
+      "depth": 99,
+      "description": "生成器为 model.yaml 尚未登记的包临时创建的层；补齐后应消失。",
+      "packages": [
+        "internal/channels"
+      ],
+      "package_count": 1
     }
   ],
   "nodes": [
@@ -377,7 +387,7 @@
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 32,
+      "direct_dependencies": 33,
       "dependents": 4
     },
     {
@@ -401,7 +411,7 @@
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 38,
+      "direct_dependencies": 39,
       "dependents": 2
     },
     {
@@ -1221,6 +1231,18 @@
       "dependents": 3
     },
     {
+      "id": "pkg:internal/channels",
+      "kind": "technical",
+      "package": "internal/channels",
+      "layer": "unmapped",
+      "responsibility": "未在 architecture/model.yaml 中登记（生成器占位）。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 0,
+      "dependents": 2
+    },
+    {
       "id": "cap:goal-outcome",
       "capability": "goal-outcome",
       "kind": "business",
@@ -1887,6 +1909,11 @@
     },
     {
       "from": "pkg:internal/cli",
+      "to": "pkg:internal/channels",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli",
       "to": "pkg:internal/charts",
       "kind": "depends"
     },
@@ -2388,6 +2415,11 @@
     {
       "from": "pkg:internal/server",
       "to": "pkg:internal/attachments",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server",
+      "to": "pkg:internal/channels",
       "kind": "depends"
     },
     {
@@ -4494,6 +4526,11 @@
     ]
   },
   "warnings": [
+    {
+      "code": "unmapped_package",
+      "severity": "warning",
+      "message": "包 internal/channels 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
+    },
     {
       "code": "no_importer",
       "severity": "info",

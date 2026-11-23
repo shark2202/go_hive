@@ -447,12 +447,21 @@ func NewSession(id string, bus *eventbus.EventBus) *Session {
 	}
 }
 
+// SessionLiveListener is called when a session registers as live (upstream
+// SessionManager.add_session_listener). Channel subscriptions use it to
+// re-attach after a stopped session is resumed.
+//
+// Parity: framework/server/session_manager.py::SessionManager.add_session_listener
+type SessionLiveListener func(*Session)
+
 // Parity: framework/server/session_manager.py::SessionManager (stop_session)
 type SessionManager struct {
-	mu       sync.Mutex
-	sessions map[string]*Session
-	order    []string
-	loading  map[string]struct{}
+	mu           sync.Mutex
+	sessions     map[string]*Session
+	order        []string
+	loading      map[string]struct{}
+	listeners    map[uint64]SessionLiveListener
+	nextListener uint64
 	// queenMail is the process's queen-mail service, the same instance the
 	// /api/queen-mail routes use. Mirrors upstream's SessionManager.queen_mail:
 	// the chat tools and the deliverer must share one service or daily limits,
@@ -465,6 +474,30 @@ func NewSessionManager() *SessionManager {
 	return &SessionManager{
 		sessions: map[string]*Session{},
 		loading:  map[string]struct{}{},
+	}
+}
+
+// AddSessionListener registers fn for each session added afterwards. The
+// returned function removes it. Listeners run without the manager lock and
+// should return quickly.
+//
+// Parity: framework/server/session_manager.py::SessionManager.add_session_listener
+func (m *SessionManager) AddSessionListener(fn SessionLiveListener) func() {
+	if m == nil || fn == nil {
+		return func() {}
+	}
+	m.mu.Lock()
+	if m.listeners == nil {
+		m.listeners = map[uint64]SessionLiveListener{}
+	}
+	m.nextListener++
+	id := m.nextListener
+	m.listeners[id] = fn
+	m.mu.Unlock()
+	return func() {
+		m.mu.Lock()
+		delete(m.listeners, id)
+		m.mu.Unlock()
 	}
 }
 
@@ -523,6 +556,7 @@ func (m *SessionManager) AddSession(session *Session) {
 	// A session created with a colony already attached (the colony fork path)
 	// binds its queen before the first turn can call run_worker.
 	session.BindChatColony()
+	m.notifySessionLive(session)
 	// The chat runtime's live tool tier is the phase's tool surface: attach it
 	// once per registration so /live_tools and the phase-aware routes read the
 	// phase state, as upstream (QueenPhaseState owns the tiers). This wraps the
@@ -538,6 +572,20 @@ func (m *SessionManager) AddSession(session *Session) {
 	// upstream's queen writes at session start (identity, the session_start
 	// reminder, loop start, iteration 0 and the context readout).
 	session.QueenLoopFresh = emitSessionStartEvents(session)
+}
+
+// notifySessionLive tells listeners a session just went live. The snapshot is
+// taken under the lock; callbacks run without it.
+func (m *SessionManager) notifySessionLive(session *Session) {
+	m.mu.Lock()
+	listeners := make([]SessionLiveListener, 0, len(m.listeners))
+	for _, listener := range m.listeners {
+		listeners = append(listeners, listener)
+	}
+	m.mu.Unlock()
+	for _, listener := range listeners {
+		listener(session)
+	}
 }
 
 // Parity: framework/server/session_manager.py::SessionManager.list_sessions

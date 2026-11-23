@@ -74,9 +74,9 @@
 
 | 键 | 类型 | 默认 | env 覆盖 | Python 读取点 | Go 读取点 | 状态 |
 |---|---|---|---|---|---|---|
-| `channels.<name>.enabled` | bool | false | — | `core/framework/server/channels.py:501` | `go_hive/go-hive/internal/server/channels_config.go:38` (+1) | go_partial |
+| `channels.<name>.enabled` | bool | false | — | `core/framework/server/channels.py:501` | `go_hive/go-hive/internal/server/channels_config.go:34` (+2) | go_partial |
 
-- `channels.<name>.enabled`：partial: no plugin host, so the flag cannot start a channel — the Go port has no entry-point discovery or channel lifecycle. Field-level parity instead: Go reads the section with upstream's shape (object, per-channel object, truthy enabled), preserves it on every configuration write, keeps GET /api/channels' upstream response shape (empty with no installed channels), and names enabled channels in a serve-time no-effect warning. Recorded in contracts/config-support-ledger.json.
+- `channels.<name>.enabled`：partial: Go reads the section with upstream's shape and starts one stdio plugin subprocess per enabled channel when command/args are configured; Python hive.channels entry-point discovery is not implemented, so entry-point-only channels remain unavailable. GET /api/channels reports running/off/failed. Recorded in contracts/config-support-ledger.json.
 
 ### 2.2 `judge`
 
@@ -505,7 +505,7 @@
 
 ### go_partial（1）
 
-- `channels.<name>.enabled` — partial: no plugin host, so the flag cannot start a channel — the Go port has no entry-point discovery or channel lifecycle. Field-level parity instead: Go reads the section with upstream's shape (object, per-channel object, truthy enabled), preserves it on every configuration write, keeps GET /api/channels' upstream response shape (empty with no installed channels), and names enabled channels in a serve-time no-effect warning. Recorded in contracts/config-support-ledger.json.
+- `channels.<name>.enabled` — partial: Go reads the section with upstream's shape and starts one stdio plugin subprocess per enabled channel when command/args are configured; Python hive.channels entry-point discovery is not implemented, so entry-point-only channels remain unavailable. GET /api/channels reports running/off/failed. Recorded in contracts/config-support-ledger.json.
 
 ### go_only（4）
 

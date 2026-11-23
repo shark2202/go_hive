@@ -1003,9 +1003,10 @@ CONFIG_KEYS: list[dict] = [
         "path": "channels.<name>.enabled", "type": "bool", "default": False, "env": None,
         "py": [{"file": "core/framework/server/channels.py", "contains": "settings = get_hive_config().get(\"channels\") or {}"}],
         "go": [{"file": "go_hive/go-hive/internal/server/channels_config.go", "contains": "func ChannelSections("},
-               {"file": "go_hive/go-hive/internal/cli/loader.go", "contains": "for _, name := range hiveserver.UnhostedChannels(home) {"}],
+               {"file": "go_hive/go-hive/internal/cli/loader.go", "contains": "newServeChannelHost(home, manager, createSession)"},
+               {"file": "go_hive/go-hive/internal/channels/host.go", "contains": "func NewHost("}],
         "status": "go_partial",
-        "notes": "partial: no plugin host, so the flag cannot start a channel — the Go port has no entry-point discovery or channel lifecycle. Field-level parity instead: Go reads the section with upstream's shape (object, per-channel object, truthy enabled), preserves it on every configuration write, keeps GET /api/channels' upstream response shape (empty with no installed channels), and names enabled channels in a serve-time no-effect warning. Recorded in contracts/config-support-ledger.json.",
+        "notes": "partial: Go reads the section with upstream's shape and starts one stdio plugin subprocess per enabled channel when command/args are configured; Python hive.channels entry-point discovery is not implemented, so entry-point-only channels remain unavailable. GET /api/channels reports running/off/failed. Recorded in contracts/config-support-ledger.json.",
     },
     {
         "path": "rate_limits", "type": "object (dotted platform.action.window)", "default": "built-in table", "env": "HIVE_RATE_<PLATFORM>_<ACTION>_<WINDOW>",

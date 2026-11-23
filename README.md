@@ -194,6 +194,7 @@ P0 集成后（2026-11-18）整树 `make ci` 实测退出码 0：`fmt-check`、`
 | [14-quality-assurance.md](14-quality-assurance.md) | parity 契约、离线构建、静态检查、CI、缺口 |
 | [15-test-parity-matrix.md](15-test-parity-matrix.md) | Go 测试文件 ↔ Python 测试的逐包矩阵 |
 | [STATUS.md](STATUS.md) | 进度看板与并行团队说明 |
+| [docs/channels-host.html](docs/channels-host.html) | channels 插件宿主：Host/插件分界、stdio JSON-line 协议、entry-point 兼容、Go 现状与差异 |
 
 上游分析（Python，仅作参考）：[01](01-project-overview.md)、[02](02-architecture.md)、[03](03-agent-loop.md)、[04](04-colony-runtime.md)、[05](05-tools-and-integrations.md)、[06](06-server-and-frontend.md)、[07](07-memory-and-skills.md)、[08](08-storage-and-data.md)、[09](09-engineering.md)、[10](10-assessment.md)，以及单页 [hive-features.html](hive-features.html)。
 

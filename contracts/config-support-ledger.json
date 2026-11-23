@@ -303,7 +303,7 @@
           "contains": "func AuxMaxTokens() int {"
         },
         {
-          "file": "go_hive/go-hive/internal/cli/loader.go",
+          "file": "go_hive/go-hive/internal/cli/loader_serve_setup.go",
           "contains": "llm.SetAuxMaxTokens(hiveserver.AuxMaxTokens(home))"
         }
       ],
@@ -388,7 +388,7 @@
     {
       "path": "channels.<name>.enabled",
       "status": "partial",
-      "reason": "No plugin host, so the flag cannot start a channel: the Go port has no entry-point discovery or channel lifecycle. Field-level parity instead — Go reads the section with upstream's shape (object, per-channel object, truthy enabled), preserves it on every configuration write, keeps GET /api/channels' upstream response shape, and names enabled channels in a serve-time no-effect warning.",
+      "reason": "Go reads the key and starts one stdio plugin subprocess per enabled channel when the channel config supplies command/args. Python hive.channels entry-point discovery is not implemented, so an entry-point-only channel remains unavailable; GET /api/channels reports running/off/failed and a failing channel is isolated from serve.",
       "anchors": [
         {
           "file": "go_hive/go-hive/internal/server/channels_config.go",
@@ -396,13 +396,19 @@
         },
         {
           "file": "go_hive/go-hive/internal/cli/loader.go",
-          "contains": "hiveserver.UnhostedChannels(home)"
+          "contains": "newServeChannelHost(home, manager, createSession)"
+        },
+        {
+          "file": "go_hive/go-hive/internal/channels/host.go",
+          "contains": "func NewHost("
         }
       ],
       "tests": [
         "TestChannelSectionsReadsTheConfiguredShape",
         "TestTheChannelsRouteKeepsTheUpstreamEmptyShape",
-        "TestConfigWritesPreserveChannelsAndCreatedAt"
+        "TestConfigWritesPreserveChannelsAndCreatedAt",
+        "TestHostStartsAPluginAndReportsRunning",
+        "TestHostReportsEnabledWithoutCommandFailed"
       ]
     },
     {
