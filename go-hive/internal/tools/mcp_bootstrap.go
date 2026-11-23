@@ -19,9 +19,11 @@ import (
 // did not.
 //
 // ToolNames carries the names the SERVER advertises (tools/list). The session
-// catalogue registers them under NamespacedMCPToolName(Namespace, Name, tool),
-// so consumers that compare against catalogue defs must namespace them first;
-// Namespace is the namespace the loader used (empty means the default "mcp").
+// catalogue registers them under MCPRegistryToolName(Namespace, Name, tool):
+// the bare name when Namespace is empty (the default, matching the Python
+// registry), the prefixed form when the operator configured mcp.namespace. So
+// consumers that compare against catalogue defs must map them through the same
+// helper first.
 type MCPServerStatus struct {
 	Name      string   `json:"name"`
 	Transport string   `json:"transport"`

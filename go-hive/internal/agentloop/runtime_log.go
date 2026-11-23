@@ -139,13 +139,13 @@ func (l *AgentLoop) logCompactionStep(agentCtx *AgentContext, conv *NodeConversa
 	}
 	ratioAfter := conv.UsageRatio()
 	level := CompactionLevel(ratioBefore, ratioAfter)
-	beforePct := int(ratioBefore*100 + 0.5)
-	afterPct := int(ratioAfter*100 + 0.5)
+	beforePct := compactionPercent(ratioBefore)
+	afterPct := compactionPercent(ratioAfter)
 	beforeK := 0
 	if maxContext > 0 {
-		beforeK = int(ratioBefore*float64(maxContext)/1000 + 0.5)
+		beforeK = compactionTokensK(ratioBefore * float64(maxContext))
 	}
-	afterK := int(float64(conv.EstimateTokens())/1000 + 0.5)
+	afterK := compactionTokensK(float64(conv.EstimateTokens()))
 	l.logRuntimeStep(agentCtx, runtimelogs.StepInput{
 		NodeID:    agentCtx.AgentID,
 		StepIndex: -1,

@@ -132,14 +132,22 @@ func DefaultToolsFor(id string) []string {
 
 func DefaultSkillsFor(id string) map[string]struct{} {
 	loadDefaultQueens()
+	return PresetSkillsFromProfile(defaultQueens[id])
+}
+
+// PresetSkillsFromProfile extracts a profile's `default_preset_skills` list.
+// Custom queens carry the list in their on-disk profile.yaml; built-in queens
+// are covered by DefaultSkillsFor, whose embedded profiles are the same shape.
+// A missing or malformed list yields an empty (non-nil) set, matching
+// queen_profiles.py::default_skills_for.
+func PresetSkillsFromProfile(profile map[string]any) map[string]struct{} {
 	out := map[string]struct{}{}
-	profile, ok := defaultQueens[id]
-	if !ok {
+	if profile == nil {
 		return out
 	}
 	values, _ := profile["default_preset_skills"].([]any)
 	for _, value := range values {
-		if text, ok := value.(string); ok {
+		if text, ok := value.(string); ok && text != "" {
 			out[text] = struct{}{}
 		}
 	}

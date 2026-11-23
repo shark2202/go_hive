@@ -1,6 +1,6 @@
 # 模块清单（生成物，勿手改）
 
-> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` + `go list` 生成。commit: `9684ec82eea5`
+> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` + `go list` 生成。commit: `949e39b29f9c`
 > 修改分层或职责请改 `architecture/model.yaml`，不要编辑本文件。
 
 ## 分层统计
@@ -16,7 +16,7 @@
 | 能力层（`capability`） | 34 | 可被循环调用的能力：工具、集成、LLM 传输、记忆、技能、soul、凭据、出站消息。 |
 | 基础层（`foundation`） | 16 | 无业务语义的底座：事件总线、文件存储、schema、原子写、目录布局、限速、质量门禁。 |
 
-共 87 个包、234 条包间 import 边。
+共 87 个包、235 条包间 import 边。
 
 ## 模块表
 
@@ -44,11 +44,11 @@
 | `internal/server/uiembed` | transport | embed_ui 构建标签下的前端静态资源；未带标签时返回空，让服务端回退到磁盘目录。 | 0 | 1 |  |
 | `internal/agents` | orchestration | Agent 规格与发现：读取 agents 目录、worker 元数据与能力描述。 | 2 | 3 |  |
 | `internal/claudecode` | orchestration | Claude Code queen 运行时：会话记录与收件箱、claude -p 回合、转录读取与进程树管理。 | 3 | 1 |  |
-| `internal/colony` | orchestration | Colony 运行时：worker 生命周期与并发闸门、run_worker 批量派发、report_to_parent 回报、playbook 驱动、目标验收与改进信号。 | 13 | 4 |  |
+| `internal/colony` | orchestration | Colony 运行时：worker 生命周期与并发闸门、run_worker 批量派发、report_to_parent 回报、playbook 驱动、目标验收与改进信号。 | 14 | 4 |  |
 | `internal/host` | orchestration | Host 组合根：把 colony 运行时、事件总线与 run 注册表装成可 Start/Spawn 的宿主，供传输层调用。 | 7 | 1 |  |
 | `internal/longmemeval` | orchestration | LongMemEval 基准运行器：数据集读取、题目选择、会话播种、判分与结果汇总（内部评测工具）。 | 4 | 2 |  |
 | `internal/playbook` | orchestration | Playbook 定义与带并发上限的 lane 执行器。 | 1 | 2 |  |
-| `internal/queen` | orchestration | Queen 档案与身份定义（queen_profiles 的 Go 移植）。 | 0 | 3 |  |
+| `internal/queen` | orchestration | Queen 档案与身份定义（queen_profiles 的 Go 移植）。 | 0 | 4 |  |
 | `internal/queenmail` | orchestration | Queen 之间的信件引擎：信件存储、待投递队列、queens/mail.jsonl 审计日志与 hive MCP stdio 面。 | 3 | 3 |  |
 | `internal/sentinel` | orchestration | Queen 停泊期的自治监督：nudge / escalate 判定、升级投递、入站回复路由与恢复。 | 6 | 2 |  |
 | `internal/session` | orchestration | 会话记录与磁盘布局：状态、transcript、游标、fork 与冷恢复。 | 3 | 4 |  |

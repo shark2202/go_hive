@@ -15,7 +15,11 @@ package server
 
 import (
 	"sort"
+	"strings"
 
+	"github.com/shark2202/go_hive/go-hive/internal/agentloop"
+	"github.com/shark2202/go_hive/go-hive/internal/colony"
+	"github.com/shark2202/go_hive/go-hive/internal/llm"
 	"github.com/shark2202/go_hive/go-hive/internal/tools"
 )
 
@@ -120,9 +124,16 @@ func (p *PhaseToolSurface) phaseTool(tool tools.Tool) bool {
 	return !shim
 }
 
+// colonyPhase reports the live phase through the same label the chat runtime
+// stamps on iterations. A surface without a runtime has no phase to gate.
+func (p *PhaseToolSurface) colonyPhase() bool {
+	return p != nil && p.runtime != nil && chatPhaseLabel(p.runtime.deps) == QueenPhaseColony
+}
+
 // GetCurrentTools returns the eager (callable-now) tools of the phase, minus
 // the loop's synthetic ask_user (the handler reports that as framework_added)
-// and the advertised-without-executor shims.
+// and the advertised-without-executor shims. suggest_colony is the one
+// synthetic the phase list itself gates: independent only.
 func (p *PhaseToolSurface) GetCurrentTools() []tools.Tool {
 	if p == nil {
 		return nil
@@ -131,11 +142,26 @@ func (p *PhaseToolSurface) GetCurrentTools() []tools.Tool {
 	if tier := p.tier(); tier != nil {
 		source = tier.GetCurrentTools()
 	}
-	out := make([]tools.Tool, 0, len(source))
+	out := make([]tools.Tool, 0, len(source)+1)
+	present := false
 	for _, tool := range source {
+		if tool.Name == agentloop.SuggestColonyToolName {
+			if p.colonyPhase() {
+				continue
+			}
+			present = true
+		}
 		if p.phaseTool(tool) {
 			out = append(out, tool)
 		}
+	}
+	if !p.colonyPhase() && !present {
+		def := agentloop.BuildSuggestColonyTool()
+		out = append(out, tools.Tool{
+			Name:        def.Name,
+			Description: def.Description,
+			Parameters:  def.Parameters,
+		})
 	}
 	return out
 }
@@ -280,6 +306,56 @@ func (p *PhaseToolSurface) FilteredIndependentTools() []tools.Tool {
 	for _, tool := range p.mcpToolStubs() {
 		if p.allows(tool.Name) {
 			out = append(out, tool)
+		}
+	}
+	return out
+}
+
+// toolsForTurn advertises the session tools for one turn. The colony-runtime
+// lifecycle tools (run_worker, get_worker_status, inject_message,
+// stop_worker) are colony-gated: without a bound colony the queen does not see
+// the defs at all (a direct call still returns an actionable no-colony error
+// from the executor), matching upstream's colony-phase tool list.
+//
+// Parity: framework/tools/queen_lifecycle_tools.py::register_queen_lifecycle_tools
+// (the colony-runtime tools only reach a colony-phase registry)
+func (r *ChatRuntime) toolsForTurn() []llm.ToolDef {
+	runtime := r.boundColonyRuntime()
+	if runtime != nil {
+		return filterToolsForPhase(filterToolsByColonyAllowlist(runtime, r.tools), QueenPhaseColony)
+	}
+	out := make([]llm.ToolDef, 0, len(r.tools))
+	for _, def := range r.tools {
+		if def.Name == colony.RunWorkerToolName || colonyBoundQueenTool(def.Name) {
+			continue
+		}
+		out = append(out, def)
+	}
+	return filterToolsForPhase(out, chatPhaseLabel(r.deps))
+}
+
+// filterToolsForPhase applies the synthetic phase partition: suggest_colony is
+// advertised in the independent (DM) phase only — a colony-phase queen fans out
+// with run_worker instead. The definition comes from the loop's synthetic
+// builder when the catalogue did not carry it (grouped surface), so the
+// independent request always matches upstream's phase list.
+//
+// Parity: framework/agents/queen/nodes/__init__.py::_QUEEN_INDEPENDENT_TOOLS
+// Parity: framework/server/queen_orchestrator.py::_phase_tools
+func filterToolsForPhase(tools []llm.ToolDef, phase string) []llm.ToolDef {
+	colonyPhase := strings.TrimSpace(phase) == QueenPhaseColony
+	out := make([]llm.ToolDef, 0, len(tools)+1)
+	seen := make(map[string]struct{}, len(tools)+1)
+	for _, def := range tools {
+		if def.Name == agentloop.SuggestColonyToolName && colonyPhase {
+			continue
+		}
+		seen[def.Name] = struct{}{}
+		out = append(out, def)
+	}
+	if !colonyPhase {
+		if _, present := seen[agentloop.SuggestColonyToolName]; !present {
+			out = append(out, agentloop.BuildSuggestColonyTool())
 		}
 	}
 	return out

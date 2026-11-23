@@ -1,6 +1,6 @@
 # 待拍板决策清单（2026-11-22）
 
-> **状态（2026-11-22 19:2x）：D1 = 批准（go.mod→1.26.11，合并中）；D3 = 批准标准版（别名层，合并中）；D2 = 选 A（维持 $HIVE_HOME 基准，无需改代码）。**
+> **状态（2026-11-23）：D1 = 批准（go.mod→1.26.11，合并中）；D3 = 终选 B′（MCP 默认裸名，2026-11-23 拍板；worktree `.wt/mcp-bare-default` 实现）；D2 = 选 A（维持 $HIVE_HOME 基准，无需改代码）。**
 
 > 本页只汇总**需要用户决策**的三项，其余对齐/修复由流水线自主推进。
 > 每项给出：现状实测、选项、推荐、影响面、回滚方式。决策前不做改动。
@@ -53,3 +53,11 @@ Python 以 CWD 为基准（吃任何 CWD 下的 exports/），Go 以 `$HIVE_HOME
 
 **为什么需要你**：这不是 bug 修复，是**对外可见命名方案**的取舍，且改动面覆盖契约与全部 MCP 工具名。
 **回滚**：A 只加别名可随时撤；B/C 需契约版本化，回滚需反向迁移。
+
+**决策记录（2026-11-23，用户拍板终选 B′）**：
+
+- **默认裸名**：`mcp.namespace` 默认值改为空。namespace 为空时注册键 = server 侧原始工具名，**不折叠、不消毒**（`x-y` 与 `x_y` 并存，同 Python `core/framework/loader/tool_registry.py::register_mcp_server`）。
+- **冲突语义不变**：跨 server 同名工具仍按现有 preserve / first-wins；裸名模式下 `mcpAliases` 恒等（不记录别名）。
+- **前缀模式保留**：显式设非空 `mcp.namespace` 时行为与旧版一致（`mcp__<ns>__<srv>__<tool>` + `[^A-Za-z0-9_]`→`_` + 裸名回退别名）。它是 Go-only 可选模式，不再是默认，也不再是契约描述的主路径。
+- **证据**：`docs/mcp-namespace-residuals.md`（R1/R2 在默认模式已一致）、`docs/e2e-assets/mcp-bare-default/REPORT.md`（13 用例实测 + 模式矩阵）、`contracts/config-keys.json`（`mcp.namespace` default `""`）、`contracts/tool-definitions.json` 与 `tool_surface_flat.json` 无 MCP 名漂移。
+- **回滚**：`configuration.json` 写 `"mcp": {"namespace": "mcp"}` 即回到前缀/折叠/别名回退的旧行为；或 revert 本分支提交。无数据迁移。

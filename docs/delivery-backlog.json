@@ -337,7 +337,7 @@
         "label": "MCP 命名空间残余三组已用 Python 参考实跑对照并登记（R1 折叠不可逆/R2 >64 无截断/R3 序列化与畸形载荷）",
         "hours": 3,
         "done": true,
-        "note": "DONE 2026-11-22：13 用例冻结（mcp_namespace_parity_test.go）+ docs/mcp-namespace-residuals.md；折叠字符集属冻结契约不修，长名上限双侧缺位。"
+        "note": "DONE 2026-11-22：13 用例冻结（mcp_namespace_parity_test.go）+ docs/mcp-namespace-residuals.md；折叠字符集属冻结契约不修，长名上限双侧缺位。 | DONE 2026-11-23：D3 终选 B′ —— mcp.namespace 默认改空，默认注册裸名（不折叠/不消毒），13 用例默认模式与 Python 全一致；前缀模式（显式 namespace）保留旧行为，R1/R2 降级为可选模式登记。证据 docs/e2e-assets/mcp-bare-default/REPORT.md。"
       },
       {
         "id": "memory-notes-1.0.15-parity",

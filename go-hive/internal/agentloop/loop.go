@@ -43,6 +43,16 @@ type TurnResult struct {
 	// deterministic doom loop stops the turn instead of returning to the model.
 	// Nil means the turn ended on a model answer or an ordinary error.
 	ParkReason *ParkReason
+	// PendingColonySuggestion is the payload of a successful suggest_colony
+	// intercept (DM popup): {colony_id, reason}. Non-nil means the turn parked
+	// on the user (host park reason colony_suggestion) and the host must emit
+	// COLONY_SUGGESTION_REQUESTED with this payload.
+	PendingColonySuggestion map[string]any
+	// PendingColonyPivot is the payload of a successful
+	// task_create(new_colony=true) intercept: {goal, handoff, tasks,
+	// source_phase}. It is the rich stash the accept path seeds the new
+	// colony from; the emitted event carries goal/handoff/task_count only.
+	PendingColonyPivot map[string]any
 }
 
 // Parity: framework/agent_loop/agent_loop.py _GRACE_TERMINAL_TOOLS,
@@ -92,6 +102,15 @@ type AgentLoop struct {
 	// injected after a stream watchdog trip. The chat runtime publishes the
 	// stream-level diagnostic events from it; nil is a no-op.
 	OnStreamStallNudge func(nudge StreamStallNudge)
+
+	// OnContextCompacted, when set, observes every compaction the loop
+	// completed with the upstream CONTEXT_COMPACTED payload. The chat runtime
+	// publishes the event on the session bus, whose reflection subscriber
+	// starts one long memory pass before the compacted turns are forgotten.
+	// Nil is a no-op.
+	//
+	// Parity: framework/agent_loop/internals/compaction.py::log_compaction
+	OnContextCompacted func(payload ContextCompacted)
 
 	// DoomLoop watches for identical consecutive tool calls and returns one
 	// advisory reminder per streak. It never interrupts the turn.
@@ -355,11 +374,15 @@ func (l *AgentLoop) compactConversationIfNeeded(ctx context.Context, agentCtx *A
 		maxContext = DefaultMaxContextTokens
 	}
 	spec := agentCtx.AgentSpec
-	// The debug report needs the pre-compaction state even when compaction
-	// later fails; the inventory is cheap and the gate is opt-in.
+	// The event needs the pre-compaction state; the debug report uses the
+	// same manifest. Upstream builds it only once the conversation is over
+	// the window (ratio_before >= 1.0), and only then attaches it to the
+	// CONTEXT_COMPACTED payload.
+	//
+	// Parity: framework/agent_loop/internals/compaction.py::compact (pre_inventory gate)
 	ratioBefore := conv.UsageRatio()
-	preInventory := []map[string]any(nil)
-	if compactionDebugEnabled() {
+	var preInventory []map[string]any
+	if ratioBefore >= 1.0 {
 		preInventory = BuildMessageInventory(conv)
 	}
 	summary, err := LlmCompact(ctx, agentCtx.LLM, conv.Messages(), LlmCompactOptions{
@@ -372,12 +395,21 @@ func (l *AgentLoop) compactConversationIfNeeded(ctx context.Context, agentCtx *A
 	if err := conv.Compact(summary, CompactOptions{}); err != nil {
 		return
 	}
-	l.fireReminder(POST_COMPACT, reminderCtx, conv, "")
+	// log_compaction runs at the end of upstream's compact(), before _compact
+	// fires the POST_COMPACT reminder: the event's after-values describe the
+	// summary state, not the re-announced reminders.
+	ratioAfter := conv.UsageRatio()
+	afterTokens := conv.EstimateTokens()
 	// Parity: framework/agent_loop/internals/compaction.py::log_compaction.
 	l.logCompactionStep(agentCtx, conv, ratioBefore, maxContext)
-	if compactionDebugEnabled() {
-		writeCompactionReport(agentCtx, ratioBefore, conv.UsageRatio(), preInventory)
+	if l.OnContextCompacted != nil {
+		l.OnContextCompacted(BuildContextCompacted(
+			ratioBefore, ratioAfter, afterTokens, conv.maxContextTokens, preInventory))
 	}
+	if compactionDebugEnabled() {
+		writeCompactionReport(agentCtx, ratioBefore, ratioAfter, preInventory)
+	}
+	l.fireReminder(POST_COMPACT, reminderCtx, conv, "")
 }
 
 // writeCompactionReport is the HIVE_COMPACTION_DEBUG sink: best-effort, and a
@@ -645,6 +677,11 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 		var graceSkippedIdx []int
 		var deferredIdx []int
 		pending := make([]pendingToolCall, 0, len(toolCalls))
+		started := make([]bool, len(toolCalls))
+		// colonyPark is this batch's framework-level colony dispatch verdict;
+		// a successful call ends the turn after the batch, as upstream's
+		// user_input_requested does (see dispatchColonyCall).
+		var colonyPark colonyDispatchOutcome
 
 		// Schema-driven coercion of the model's arguments before dispatch —
 		// the same point upstream heals them (see tool_coercion_wire.go).
@@ -683,6 +720,12 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 			if agentCtx.Observer != nil {
 				agentCtx.Observer.ToolCallStarted(call)
 			}
+			// Framework-level colony dispatch: suggest_colony and
+			// task_create(new_colony=true) never reach the executor.
+			if park, handled := l.dispatchColonyCall(agentCtx, call, i, results, started, colonyPark); handled {
+				colonyPark = park
+				continue
+			}
 			pending = append(pending, pendingToolCall{index: i, call: call})
 		}
 
@@ -690,53 +733,15 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 
 		toolFailure, doomLoopReminder, doomPark := l.observeToolBatch(agentCtx, pending, results)
 
-		started := make([]bool, len(toolCalls))
 		for _, item := range pending {
 			started[item.index] = true
 		}
 
-		if len(graceSkippedIdx) > 0 {
-			l.bumpBy("grace_iteration_skipped", len(graceSkippedIdx))
-			for _, i := range graceSkippedIdx {
-				results[i] = ToolResult{Content: graceSkipMessage}
-			}
-		}
+		l.applyBatchSkips(reminderCtx, conv, results, graceSkippedIdx, deferredIdx, limitHit, lifetimeLimitHit, lifetimeBudget, hardLimit, names)
 
-		if limitHit {
-			deferMessage := hardStopDeferMessage
-			if lifetimeLimitHit {
-				deferMessage = lifetimeBudgetDeferMessage
-			}
-			l.bumpBy("tool_budget_deferred", len(deferredIdx))
-			for _, i := range deferredIdx {
-				results[i] = ToolResult{Content: deferMessage}
-			}
-			l.injectToolBudgetStop(reminderCtx, conv, len(deferredIdx), lifetimeBudget, hardLimit, lifetimeLimitHit, names)
-		}
-
-		tail := ""
-		if l.Hub != nil {
-			tail = l.Hub.Fire(POST_TOOL_USE, reminderCtx, names, "")
-		}
-		// Parity: framework/agent_loop/agent_loop.py::_render_tool_budget_checkpoint
-		// (the soft checkpoint rides the batch tail and never defers work).
-		var checkpoint string
-		checkpoint, softBudgetReminders = l.softBudgetCheckpointBlock(
-			reminderCtx, names, toolCallCount, softInterval, hardLimit, softBudgetReminders)
-		if checkpoint != "" {
-			if tail == "" {
-				tail = checkpoint
-			} else {
-				tail = tail + "\n\n" + checkpoint
-			}
-		}
-		if doomLoopReminder != "" {
-			if tail == "" {
-				tail = doomLoopReminder
-			} else {
-				tail = tail + "\n\n" + doomLoopReminder
-			}
-		}
+		var tail string
+		tail, softBudgetReminders = l.toolBatchTail(
+			reminderCtx, names, toolCallCount, softInterval, hardLimit, softBudgetReminders, doomLoopReminder)
 		records, err := l.storeToolBatch(ctx, agentCtx, conv, toolCalls, results, tail, started, timings, coercedInputs)
 		if err != nil {
 			return TurnResult{Success: false, InnerTurns: inner, ToolResults: result.ToolResults}, err
@@ -755,6 +760,13 @@ func (l *AgentLoop) ExecuteTurn(ctx context.Context, agentCtx *AgentContext, con
 		// advisory-only reminder.
 		if doomPark.parked {
 			return l.parkOnDoomLoop(result, inner, completion, doomPark)
+		}
+
+		// A successful framework-level colony dispatch parks the turn on the
+		// user exactly like ask_user: the popup is open, and the next user
+		// message (or the accept/dismiss route) drives the following turn.
+		if parkTurnOnColonyDispatch(&result, colonyPark, inner) {
+			return result, nil
 		}
 
 		// Parity: framework/agent_loop/agent_loop.py::_run_turn_loop —

@@ -35,8 +35,8 @@ func compactionDebugEnabled() bool { return envNonEmpty("HIVE_COMPACTION_DEBUG")
 // a sub-1-point drop is prune-only, a drop to <= 60% is an LLM summary, and
 // anything else is structural.
 func CompactionLevel(beforeRatio, afterRatio float64) string {
-	beforePct := int(beforeRatio*100 + 0.5)
-	afterPct := int(afterRatio*100 + 0.5)
+	beforePct := compactionPercent(beforeRatio)
+	afterPct := compactionPercent(afterRatio)
 	switch {
 	case afterPct >= beforePct-1:
 		return "prune_only"

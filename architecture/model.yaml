@@ -931,9 +931,9 @@ contracts:
     kind: "tool-schema"
     providers: ["internal/tools"]
     consumers: ["internal/agentloop", "internal/server", "internal/colony"]
-    definition: "internal/tools/mcp_registry.go:NamespacedMCPToolName"
-    guarantee: "MCP 工具注册名固定 mcp__<server>__<tool>；server/tool 中非 [A-Za-z0-9_] 字符折叠为 _；命名空间阻止远端 read_file 覆盖内置工具。"
-    failure_behavior: "清洗后为空回退 server/tool；同名冲突按加载顺序 shadow 并记日志（preserve 模式跳过）；调用失败归一为 is_error 工具结果。"
+    definition: "internal/tools/mcp_registry.go:MCPRegistryToolName（+ NamespacedMCPToolName）"
+    guarantee: "MCP 工具默认注册为 server 侧裸名（不折叠、不消毒，与 Python 参考一致，D3 终选 B'）；仅当配置 mcp.namespace 非空时启用前缀模式 mcp__<namespace>__<server>__<tool>，其中非 [A-Za-z0-9_] 字符折叠为 _，前缀/服务器名阻止远端 read_file 覆盖内置工具。"
+    failure_behavior: "前缀模式清洗后为空回退 namespace/server/tool；同名冲突（裸名或折叠键）按加载顺序 shadow 并记日志（preserve 模式跳过）；裸名模式下 mcpAliases 恒等；调用失败归一为 is_error 工具结果。"
     compatibility: "additive"
     enforcement: ["compile", "test"]
     owner_layer: "capability"

@@ -1042,10 +1042,10 @@ CONFIG_KEYS: list[dict] = [
         "notes": "go_only: confirmed no upstream counterpart — Python configures MCP servers through the registry (`hive mcp add`) and .mcp.json, and never reads an `mcp` block from configuration.json. Go reads it as the operator pin: enabled gates the whole subsystem (default true).",
     },
     {
-        "path": "mcp.namespace", "type": "string", "default": "mcp__", "env": None,
+        "path": "mcp.namespace", "type": "string", "default": "", "env": None,
         "py": [],
         "go": [{"file": "go_hive/go-hive/internal/cli/mcp_config.go", "contains": "Namespace      string          `json:\"namespace\"`"}],
-        "status": "go_only", "notes": "go_only: confirmed no upstream counterpart. Tool-name namespace; blank keeps the default \"mcp__\".",
+        "status": "go_only", "notes": "go_only: confirmed no upstream counterpart. Empty (the default) registers the server's own bare tool names, matching Python's registry keys (core/framework/loader/tool_registry.py::register_mcp_server); a non-empty value opts into the Go-only prefixed <namespace>__<server>__<tool> form with [^A-Za-z0-9_] folded to _.",
     },
     {
         "path": "mcp.timeout_seconds", "type": "number", "default": 240.0, "env": "HIVE_MCP_CALL_RESULT_TIMEOUT",

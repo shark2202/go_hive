@@ -1,0 +1,1956 @@
+{
+  "events": [
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:55 (const); go_hive/go-hive/internal/eventbus/emit.go:316 (emitter); go_hive/go-hive/frontend/src/api/credentials.ts:55 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:client_credential_form_requested",
+      "name": "client_credential_form_requested",
+      "notes": "all three layers present; emitter sites=1; frontend refs=5",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:169 (CLIENT_CREDENTIAL_FORM_REQUESTED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:54 (const); go_hive/go-hive/internal/eventbus/emit.go:324 (emitter); go_hive/go-hive/frontend/src/api/types.ts:271 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:client_input_committed",
+      "name": "client_input_committed",
+      "notes": "all three layers present; emitter sites=1; frontend refs=8",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:161 (CLIENT_INPUT_COMMITTED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:53 (const); go_hive/go-hive/internal/colony/seed.go:74 (emitter); go_hive/go-hive/frontend/src/api/types.ts:270 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:client_input_received",
+      "name": "client_input_received",
+      "notes": "all three layers present; emitter sites=2; frontend refs=9",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:153 (CLIENT_INPUT_RECEIVED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:52 (const); go_hive/go-hive/internal/eventbus/emit.go:304 (emitter); go_hive/go-hive/frontend/src/api/types.ts:269 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:client_input_requested",
+      "name": "client_input_requested",
+      "notes": "all three layers present; emitter sites=2; frontend refs=11",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:152 (CLIENT_INPUT_REQUESTED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:50 (const); go_hive/go-hive/internal/eventbus/emit.go:277 (emitter); go_hive/go-hive/frontend/src/api/types.ts:268 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:client_output_delta",
+      "name": "client_output_delta",
+      "notes": "all three layers present; emitter sites=2; frontend refs=7",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:147 (CLIENT_OUTPUT_DELTA)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:51 (const); go_hive/go-hive/internal/eventbus/emit.go:289 (emitter); go_hive/go-hive/frontend/src/api/types.ts:264 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:client_reasoning",
+      "name": "client_reasoning",
+      "notes": "all three layers present; emitter sites=1; frontend refs=7",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:151 (CLIENT_REASONING)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:103 (const); go_hive/go-hive/internal/cli/loader.go:1004 (emitter); go_hive/go-hive/frontend/src/api/types.ts:289 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:colony_created",
+      "name": "colony_created",
+      "notes": "all three layers present; emitter sites=1; frontend refs=3",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:243 (COLONY_CREATED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:56 (const); go_hive/go-hive/internal/eventbus/emit.go:358 (emitter); go_hive/go-hive/frontend/src/api/types.ts:273 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:colony_suggestion_requested",
+      "name": "colony_suggestion_requested",
+      "notes": "all three layers present; emitter sites=1; frontend refs=3",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:176 (COLONY_SUGGESTION_REQUESTED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:24 (const); go_hive/go-hive/internal/eventbus/emit.go:126 (emitter); go_hive/go-hive/frontend/src/api/types.ts:255 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:constraint_violation",
+      "name": "constraint_violation",
+      "notes": "all three layers present; emitter sites=1; frontend refs=1",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:126 (CONSTRAINT_VIOLATION)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:91 (const); go_hive/go-hive/internal/server/chat_context_compacted.go:47 (emitter); go_hive/go-hive/frontend/src/api/types.ts:283 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:context_compacted",
+      "name": "context_compacted",
+      "notes": "all three layers present; emitter sites=1; frontend refs=3",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:222 (CONTEXT_COMPACTED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:90 (const); go_hive/go-hive/frontend/src/api/types.ts:282 (frontend)",
+      "go_const": true,
+      "go_emitter": false,
+      "id": "event:context_compaction_started",
+      "name": "context_compaction_started",
+      "notes": "missing: Go emitter; frontend refs=3",
+      "owner": "eventbus",
+      "status": "partial",
+      "upstream_anchor": "core/framework/host/event_bus.py:221 (CONTEXT_COMPACTION_STARTED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:92 (const); go_hive/go-hive/internal/server/chat_turn_emitter.go:157 (emitter); go_hive/go-hive/frontend/src/api/types.ts:284 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:context_usage_updated",
+      "name": "context_usage_updated",
+      "notes": "all three layers present; emitter sites=2; frontend refs=4",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:223 (CONTEXT_USAGE_UPDATED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:138 (const); go_hive/go-hive/frontend/src/api/types.ts:309 (frontend)",
+      "go_const": true,
+      "go_emitter": false,
+      "id": "event:credential_provider_connected",
+      "name": "credential_provider_connected",
+      "notes": "missing: Go emitter; 1 non-Publish reference(s) — may be a direct queue, not an Emit*/Publish emitter; frontend refs=4",
+      "owner": "eventbus",
+      "status": "partial",
+      "upstream_anchor": "core/framework/host/event_bus.py:304 (CREDENTIAL_PROVIDER_CONNECTED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:139 (const); go_hive/go-hive/frontend/src/api/types.ts:310 (frontend)",
+      "go_const": true,
+      "go_emitter": false,
+      "id": "event:credential_provider_disconnected",
+      "name": "credential_provider_disconnected",
+      "notes": "missing: Go emitter; 1 non-Publish reference(s) — may be a direct queue, not an Emit*/Publish emitter; frontend refs=5",
+      "owner": "eventbus",
+      "status": "partial",
+      "upstream_anchor": "core/framework/host/event_bus.py:305 (CREDENTIAL_PROVIDER_DISCONNECTED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:104 (const); go_hive/go-hive/frontend/src/api/types.ts:290 (frontend)",
+      "go_const": true,
+      "go_emitter": false,
+      "id": "event:credentials_required",
+      "name": "credentials_required",
+      "notes": "missing: Go emitter; frontend refs=6",
+      "owner": "eventbus",
+      "status": "partial",
+      "upstream_anchor": "core/framework/host/event_bus.py:244 (CREDENTIALS_REQUIRED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:142 (const); go_hive/go-hive/frontend/src/api/types.ts:313 (frontend)",
+      "go_const": true,
+      "go_emitter": false,
+      "id": "event:crm_changed",
+      "name": "crm_changed",
+      "notes": "missing: Go emitter; 2 non-Publish reference(s) — may be a direct queue, not an Emit*/Publish emitter; frontend refs=2",
+      "owner": "eventbus",
+      "status": "partial",
+      "upstream_anchor": "core/framework/host/event_bus.py:308 (CRM_CHANGED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:97 (const); go_hive/go-hive/internal/colony/improvement.go:155 (emitter); go_hive/go-hive/frontend/src/api/models.ts:3 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:custom",
+      "name": "custom",
+      "notes": "all three layers present; emitter sites=1; frontend refs=8",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:229 (CUSTOM)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:99 (const); go_hive/go-hive/internal/colony/worker_escalation.go:48 (emitter); go_hive/go-hive/frontend/src/api/types.ts:287 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:escalation_requested",
+      "name": "escalation_requested",
+      "notes": "all three layers present; emitter sites=2; frontend refs=1",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:232 (ESCALATION_REQUESTED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:7 (const); go_hive/go-hive/internal/colony/run.go:480 (emitter); go_hive/go-hive/frontend/src/api/types.ts:247 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:execution_completed",
+      "name": "execution_completed",
+      "notes": "all three layers present; emitter sites=3; frontend refs=9",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:107 (EXECUTION_COMPLETED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:8 (const); go_hive/go-hive/internal/colony/run.go:482 (emitter); go_hive/go-hive/frontend/src/api/types.ts:248 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:execution_failed",
+      "name": "execution_failed",
+      "notes": "all three layers present; emitter sites=3; frontend refs=4",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:108 (EXECUTION_FAILED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:9 (const); go_hive/go-hive/internal/eventbus/emit.go:524 (emitter); go_hive/go-hive/frontend/src/api/types.ts:249 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:execution_paused",
+      "name": "execution_paused",
+      "notes": "all three layers present; emitter sites=1; frontend refs=4",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:109 (EXECUTION_PAUSED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:10 (const); go_hive/go-hive/internal/eventbus/emit.go:532 (emitter); go_hive/go-hive/frontend/src/api/types.ts:250 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:execution_resumed",
+      "name": "execution_resumed",
+      "notes": "all three layers present; emitter sites=1; frontend refs=1",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:110 (EXECUTION_RESUMED)"
+    },
+    {
+      "frontend_handler": false,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:11 (const)",
+      "go_const": true,
+      "go_emitter": false,
+      "id": "event:execution_resurrected",
+      "name": "execution_resurrected",
+      "notes": "missing: Go emitter, frontend handler",
+      "owner": "eventbus",
+      "status": "go_const_only",
+      "upstream_anchor": "core/framework/host/event_bus.py:235 (EXECUTION_RESURRECTED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:6 (const); go_hive/go-hive/internal/colony/run.go:461 (emitter); go_hive/go-hive/frontend/src/api/types.ts:246 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:execution_started",
+      "name": "execution_started",
+      "notes": "all three layers present; emitter sites=3; frontend refs=10",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:106 (EXECUTION_STARTED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:23 (const); go_hive/go-hive/frontend/src/api/types.ts:254 (frontend)",
+      "go_const": true,
+      "go_emitter": false,
+      "id": "event:goal_achieved",
+      "name": "goal_achieved",
+      "notes": "missing: Go emitter; frontend refs=1",
+      "owner": "eventbus",
+      "status": "partial",
+      "upstream_anchor": "core/framework/host/event_bus.py:125 (GOAL_ACHIEVED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:22 (const); go_hive/go-hive/internal/eventbus/emit.go:117 (emitter); go_hive/go-hive/frontend/src/api/types.ts:253 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:goal_progress",
+      "name": "goal_progress",
+      "notes": "all three layers present; emitter sites=1; frontend refs=1",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:124 (GOAL_PROGRESS)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:68 (const); go_hive/go-hive/internal/eventbus/emit.go:398 (emitter); go_hive/go-hive/frontend/src/api/types.ts:280 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:judge_verdict",
+      "name": "judge_verdict",
+      "notes": "all three layers present; emitter sites=1; frontend refs=1",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:194 (JUDGE_VERDICT)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:40 (const); go_hive/go-hive/internal/eventbus/emit.go:195 (emitter); go_hive/go-hive/frontend/src/api/types.ts:263 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:llm_reasoning_delta",
+      "name": "llm_reasoning_delta",
+      "notes": "all three layers present; emitter sites=1; frontend refs=5",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:139 (LLM_REASONING_DELTA)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:39 (const); go_hive/go-hive/internal/eventbus/emit.go:176 (emitter); go_hive/go-hive/frontend/src/api/types.ts:262 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:llm_text_delta",
+      "name": "llm_text_delta",
+      "notes": "all three layers present; emitter sites=1; frontend refs=7",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:138 (LLM_TEXT_DELTA)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:41 (const); go_hive/go-hive/internal/eventbus/emit.go:240 (emitter); go_hive/go-hive/frontend/src/api/types.ts:265 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:llm_turn_complete",
+      "name": "llm_turn_complete",
+      "notes": "all three layers present; emitter sites=1; frontend refs=9",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:140 (LLM_TURN_COMPLETE)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:78 (const); go_hive/go-hive/internal/eventbus/bus.go:181 (emitter); go_hive/go-hive/frontend/src/api/types.ts:322 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:loop_state_changed",
+      "name": "loop_state_changed",
+      "notes": "all three layers present; emitter sites=2; frontend refs=4",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:209 (LOOP_STATE_CHANGED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:124 (const); go_hive/go-hive/frontend/src/pages/colony-chat.tsx:2281 (frontend)",
+      "go_const": true,
+      "go_emitter": false,
+      "id": "event:missed_triggers",
+      "name": "missed_triggers",
+      "notes": "missing: Go emitter; frontend refs=1",
+      "owner": "eventbus",
+      "status": "partial",
+      "upstream_anchor": "core/framework/host/event_bus.py:277 (MISSED_TRIGGERS)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:63 (const); go_hive/go-hive/internal/eventbus/emit.go:390 (emitter); go_hive/go-hive/frontend/src/api/types.ts:277 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:node_input_blocked",
+      "name": "node_input_blocked",
+      "notes": "all three layers present; emitter sites=1; frontend refs=1",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:189 (NODE_INPUT_BLOCKED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:62 (const); go_hive/go-hive/internal/eventbus/emit.go:366 (emitter); go_hive/go-hive/frontend/src/api/types.ts:276 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:node_internal_output",
+      "name": "node_internal_output",
+      "notes": "all three layers present; emitter sites=1; frontend refs=2",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:188 (NODE_INTERNAL_OUTPUT)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:35 (const); go_hive/go-hive/internal/eventbus/emit.go:168 (emitter); go_hive/go-hive/frontend/src/api/types.ts:260 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:node_loop_completed",
+      "name": "node_loop_completed",
+      "notes": "all three layers present; emitter sites=1; frontend refs=2",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:135 (NODE_LOOP_COMPLETED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:34 (const); go_hive/go-hive/internal/eventbus/emit.go:160 (emitter); go_hive/go-hive/frontend/src/api/types.ts:259 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:node_loop_iteration",
+      "name": "node_loop_iteration",
+      "notes": "all three layers present; emitter sites=1; frontend refs=6",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:134 (NODE_LOOP_ITERATION)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:33 (const); go_hive/go-hive/internal/eventbus/emit.go:148 (emitter); go_hive/go-hive/frontend/src/api/types.ts:258 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:node_loop_started",
+      "name": "node_loop_started",
+      "notes": "all three layers present; emitter sites=1; frontend refs=5",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:133 (NODE_LOOP_STARTED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:70 (const); go_hive/go-hive/internal/eventbus/emit.go:411 (emitter); go_hive/go-hive/frontend/src/api/types.ts:281 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:node_retry",
+      "name": "node_retry",
+      "notes": "all three layers present; emitter sites=1; frontend refs=2",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:197 (NODE_RETRY)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:64 (const); go_hive/go-hive/internal/eventbus/emit.go:374 (emitter); go_hive/go-hive/frontend/src/api/types.ts:278 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:node_stalled",
+      "name": "node_stalled",
+      "notes": "all three layers present; emitter sites=1; frontend refs=1",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:190 (NODE_STALLED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:65 (const); go_hive/go-hive/internal/colony/worker_doom_loop.go:41 (emitter); go_hive/go-hive/frontend/src/api/types.ts:279 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:node_tool_doom_loop",
+      "name": "node_tool_doom_loop",
+      "notes": "all three layers present; emitter sites=2; frontend refs=1",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:191 (NODE_TOOL_DOOM_LOOP)"
+    },
+    {
+      "frontend_handler": false,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:14 (const); go_hive/go-hive/internal/eventbus/emit.go:107 (emitter)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:payment_required",
+      "name": "payment_required",
+      "notes": "missing: frontend handler; emitter sites=1",
+      "owner": "eventbus",
+      "status": "partial",
+      "upstream_anchor": "core/framework/host/event_bus.py:117 (PAYMENT_REQUIRED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:113 (const); go_hive/go-hive/internal/server/session_start_events.go:63 (emitter); go_hive/go-hive/frontend/src/api/types.ts:302 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:queen_identity_selected",
+      "name": "queen_identity_selected",
+      "notes": "all three layers present; emitter sites=1; frontend refs=4",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:258 (QUEEN_IDENTITY_SELECTED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:111 (const); go_hive/go-hive/internal/server/queen_phase_state.go:238 (emitter); go_hive/go-hive/frontend/src/api/types.ts:291 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:queen_phase_changed",
+      "name": "queen_phase_changed",
+      "notes": "all three layers present; emitter sites=1; frontend refs=6",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:255 (QUEEN_PHASE_CHANGED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:80 (const); go_hive/go-hive/internal/eventbus/emit.go:473 (emitter); go_hive/go-hive/frontend/src/api/types.ts:320 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:reminder_injected",
+      "name": "reminder_injected",
+      "notes": "all three layers present; emitter sites=1; frontend refs=4",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:213 (REMINDER_INJECTED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:107 (const); go_hive/go-hive/internal/server/session_fork_handoff.go:274 (emitter); go_hive/go-hive/frontend/src/api/types.ts:314 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:session_forked",
+      "name": "session_forked",
+      "notes": "all three layers present; emitter sites=1; frontend refs=2",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:250 (SESSION_FORKED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:135 (const); go_hive/go-hive/frontend/src/api/types.ts:308 (frontend)",
+      "go_const": true,
+      "go_emitter": false,
+      "id": "event:session_snapshot",
+      "name": "session_snapshot",
+      "notes": "missing: Go emitter; 1 non-Publish reference(s) — may be a direct queue, not an Emit*/Publish emitter; frontend refs=6",
+      "owner": "eventbus",
+      "status": "partial",
+      "upstream_anchor": "core/framework/host/event_bus.py:291 (SESSION_SNAPSHOT)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:109 (const); go_hive/go-hive/internal/server/session_titles.go:256 (emitter); go_hive/go-hive/frontend/src/api/types.ts:315 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:session_title_updated",
+      "name": "session_title_updated",
+      "notes": "all three layers present; emitter sites=1; frontend refs=2",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:252 (SESSION_TITLE_UPDATED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:58 (const); go_hive/go-hive/internal/server/routes_skills.go:1311 (emitter); go_hive/go-hive/frontend/src/api/types.ts:275 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:skill_install_decided",
+      "name": "skill_install_decided",
+      "notes": "all three layers present; emitter sites=1; frontend refs=3",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:185 (SKILL_INSTALL_DECIDED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:57 (const); go_hive/go-hive/frontend/src/api/types.ts:274 (frontend)",
+      "go_const": true,
+      "go_emitter": false,
+      "id": "event:skill_install_requested",
+      "name": "skill_install_requested",
+      "notes": "missing: Go emitter; frontend refs=3",
+      "owner": "eventbus",
+      "status": "partial",
+      "upstream_anchor": "core/framework/host/event_bus.py:182 (SKILL_INSTALL_REQUESTED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:17 (const); go_hive/go-hive/internal/eventbus/emit.go:136 (emitter); go_hive/go-hive/frontend/src/api/types.ts:251 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:state_changed",
+      "name": "state_changed",
+      "notes": "all three layers present; emitter sites=1; frontend refs=1",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:120 (STATE_CHANGED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:18 (const); go_hive/go-hive/frontend/src/api/types.ts:252 (frontend)",
+      "go_const": true,
+      "go_emitter": false,
+      "id": "event:state_conflict",
+      "name": "state_conflict",
+      "notes": "missing: Go emitter; frontend refs=1",
+      "owner": "eventbus",
+      "status": "partial",
+      "upstream_anchor": "core/framework/host/event_bus.py:121 (STATE_CONFLICT)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:74 (const); go_hive/go-hive/internal/eventbus/emit.go:434 (emitter); go_hive/go-hive/frontend/src/api/types.ts:318 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:stream_inactive",
+      "name": "stream_inactive",
+      "notes": "all three layers present; emitter sites=1; frontend refs=2",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:204 (STREAM_INACTIVE)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:75 (const); go_hive/go-hive/internal/eventbus/emit.go:462 (emitter); go_hive/go-hive/frontend/src/api/types.ts:319 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:stream_nudge_sent",
+      "name": "stream_nudge_sent",
+      "notes": "all three layers present; emitter sites=1; frontend refs=2",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:205 (STREAM_NUDGE_SENT)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:28 (const); go_hive/go-hive/frontend/src/api/types.ts:256 (frontend)",
+      "go_const": true,
+      "go_emitter": false,
+      "id": "event:stream_started",
+      "name": "stream_started",
+      "notes": "missing: Go emitter; frontend refs=1",
+      "owner": "eventbus",
+      "status": "partial",
+      "upstream_anchor": "core/framework/host/event_bus.py:129 (STREAM_STARTED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:29 (const); go_hive/go-hive/frontend/src/api/types.ts:257 (frontend)",
+      "go_const": true,
+      "go_emitter": false,
+      "id": "event:stream_stopped",
+      "name": "stream_stopped",
+      "notes": "missing: Go emitter; frontend refs=1",
+      "owner": "eventbus",
+      "status": "partial",
+      "upstream_anchor": "core/framework/host/event_bus.py:130 (STREAM_STOPPED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:73 (const); go_hive/go-hive/internal/eventbus/emit.go:423 (emitter); go_hive/go-hive/frontend/src/api/types.ts:317 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:stream_ttft_exceeded",
+      "name": "stream_ttft_exceeded",
+      "notes": "all three layers present; emitter sites=1; frontend refs=2",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:203 (STREAM_TTFT_EXCEEDED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:115 (const); go_hive/go-hive/internal/colony/playbook_notify.go:45 (emitter); go_hive/go-hive/frontend/src/api/types.ts:293 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:subagent_report",
+      "name": "subagent_report",
+      "notes": "all three layers present; emitter sites=4; frontend refs=3",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:261 (SUBAGENT_REPORT)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:128 (const); go_hive/go-hive/internal/tasks/events.go:123 (emitter); go_hive/go-hive/frontend/src/api/types.ts:303 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:task_created",
+      "name": "task_created",
+      "notes": "all three layers present; emitter sites=1; frontend refs=6",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:280 (TASK_CREATED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:130 (const); go_hive/go-hive/internal/tasks/events.go:160 (emitter); go_hive/go-hive/frontend/src/api/types.ts:305 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:task_deleted",
+      "name": "task_deleted",
+      "notes": "all three layers present; emitter sites=1; frontend refs=3",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:282 (TASK_DELETED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:132 (const); go_hive/go-hive/frontend/src/api/types.ts:307 (frontend)",
+      "go_const": true,
+      "go_emitter": false,
+      "id": "event:task_list_reattach_mismatch",
+      "name": "task_list_reattach_mismatch",
+      "notes": "missing: Go emitter; frontend refs=1",
+      "owner": "eventbus",
+      "status": "partial",
+      "upstream_anchor": "core/framework/host/event_bus.py:284 (TASK_LIST_REATTACH_MISMATCH)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:131 (const); go_hive/go-hive/frontend/src/api/types.ts:306 (frontend)",
+      "go_const": true,
+      "go_emitter": false,
+      "id": "event:task_list_reset",
+      "name": "task_list_reset",
+      "notes": "missing: Go emitter; 1 non-Publish reference(s) — may be a direct queue, not an Emit*/Publish emitter; frontend refs=3",
+      "owner": "eventbus",
+      "status": "partial",
+      "upstream_anchor": "core/framework/host/event_bus.py:283 (TASK_LIST_RESET)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:129 (const); go_hive/go-hive/internal/tasks/events.go:139 (emitter); go_hive/go-hive/frontend/src/api/tasks.ts:70 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:task_updated",
+      "name": "task_updated",
+      "notes": "all three layers present; emitter sites=1; frontend refs=6",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:281 (TASK_UPDATED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:46 (const); go_hive/go-hive/internal/eventbus/bus.go:209 (emitter); go_hive/go-hive/frontend/src/api/types.ts:267 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:tool_call_completed",
+      "name": "tool_call_completed",
+      "notes": "all three layers present; emitter sites=2; frontend refs=10",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:144 (TOOL_CALL_COMPLETED)"
+    },
+    {
+      "frontend_handler": false,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:82 (const); go_hive/go-hive/internal/eventbus/emit.go:485 (emitter)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:tool_call_replay_detected",
+      "name": "tool_call_replay_detected",
+      "notes": "missing: frontend handler; emitter sites=1",
+      "owner": "eventbus",
+      "status": "partial",
+      "upstream_anchor": "core/framework/host/event_bus.py:214 (TOOL_CALL_REPLAY_DETECTED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:45 (const); go_hive/go-hive/internal/eventbus/bus.go:201 (emitter); go_hive/go-hive/frontend/src/api/types.ts:266 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:tool_call_started",
+      "name": "tool_call_started",
+      "notes": "all three layers present; emitter sites=3; frontend refs=8",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:143 (TOOL_CALL_STARTED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:140 (const); go_hive/go-hive/frontend/src/api/types.ts:311 (frontend)",
+      "go_const": true,
+      "go_emitter": false,
+      "id": "event:tool_catalog_refreshed",
+      "name": "tool_catalog_refreshed",
+      "notes": "missing: Go emitter; 2 non-Publish reference(s) — may be a direct queue, not an Emit*/Publish emitter; frontend refs=4",
+      "owner": "eventbus",
+      "status": "partial",
+      "upstream_anchor": "core/framework/host/event_bus.py:306 (TOOL_CATALOG_REFRESHED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:141 (const); go_hive/go-hive/frontend/src/api/types.ts:312 (frontend)",
+      "go_const": true,
+      "go_emitter": false,
+      "id": "event:tools_config_changed",
+      "name": "tools_config_changed",
+      "notes": "missing: Go emitter; 1 non-Publish reference(s) — may be a direct queue, not an Emit*/Publish emitter; frontend refs=3",
+      "owner": "eventbus",
+      "status": "partial",
+      "upstream_anchor": "core/framework/host/event_bus.py:307 (TOOLS_CONFIG_CHANGED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:119 (const); go_hive/go-hive/internal/server/queen_lifecycle_triggers.go:243 (emitter); go_hive/go-hive/frontend/src/api/types.ts:297 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:trigger_activated",
+      "name": "trigger_activated",
+      "notes": "all three layers present; emitter sites=3; frontend refs=4",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:265 (TRIGGER_ACTIVATED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:118 (const); go_hive/go-hive/frontend/src/api/types.ts:296 (frontend)",
+      "go_const": true,
+      "go_emitter": false,
+      "id": "event:trigger_available",
+      "name": "trigger_available",
+      "notes": "missing: Go emitter; 1 non-Publish reference(s) — may be a direct queue, not an Emit*/Publish emitter; frontend refs=3",
+      "owner": "eventbus",
+      "status": "partial",
+      "upstream_anchor": "core/framework/host/event_bus.py:264 (TRIGGER_AVAILABLE)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:120 (const); go_hive/go-hive/internal/server/queen_lifecycle_triggers.go:202 (emitter); go_hive/go-hive/frontend/src/api/types.ts:298 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:trigger_deactivated",
+      "name": "trigger_deactivated",
+      "notes": "all three layers present; emitter sites=2; frontend refs=2",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:266 (TRIGGER_DEACTIVATED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:121 (const); go_hive/go-hive/internal/server/trigger_runtime.go:172 (emitter); go_hive/go-hive/frontend/src/api/types.ts:299 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:trigger_fired",
+      "name": "trigger_fired",
+      "notes": "all three layers present; emitter sites=1; frontend refs=4",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:267 (TRIGGER_FIRED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:122 (const); go_hive/go-hive/frontend/src/api/types.ts:300 (frontend)",
+      "go_const": true,
+      "go_emitter": false,
+      "id": "event:trigger_removed",
+      "name": "trigger_removed",
+      "notes": "missing: Go emitter; 1 non-Publish reference(s) — may be a direct queue, not an Emit*/Publish emitter; frontend refs=2",
+      "owner": "eventbus",
+      "status": "partial",
+      "upstream_anchor": "core/framework/host/event_bus.py:268 (TRIGGER_REMOVED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:123 (const); go_hive/go-hive/internal/server/routes_session_triggers.go:332 (emitter); go_hive/go-hive/frontend/src/api/types.ts:301 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:trigger_updated",
+      "name": "trigger_updated",
+      "notes": "all three layers present; emitter sites=1; frontend refs=1",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:269 (TRIGGER_UPDATED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:95 (const); go_hive/go-hive/internal/eventbus/emit.go:540 (emitter); go_hive/go-hive/frontend/src/api/types.ts:285 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:webhook_received",
+      "name": "webhook_received",
+      "notes": "all three layers present; emitter sites=1; frontend refs=1",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:226 (WEBHOOK_RECEIVED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:102 (const); go_hive/go-hive/frontend/src/api/types.ts:288 (frontend)",
+      "go_const": true,
+      "go_emitter": false,
+      "id": "event:worker_colony_loaded",
+      "name": "worker_colony_loaded",
+      "notes": "missing: Go emitter; frontend refs=2",
+      "owner": "eventbus",
+      "status": "partial",
+      "upstream_anchor": "core/framework/host/event_bus.py:238 (WORKER_COLONY_LOADED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:85 (const); go_hive/go-hive/internal/eventbus/emit.go:505 (emitter); go_hive/go-hive/frontend/src/api/types.ts:294 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:worker_completed",
+      "name": "worker_completed",
+      "notes": "all three layers present; emitter sites=1; frontend refs=1",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:217 (WORKER_COMPLETED)"
+    },
+    {
+      "frontend_handler": true,
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:86 (const); go_hive/go-hive/internal/eventbus/emit.go:513 (emitter); go_hive/go-hive/frontend/src/api/types.ts:295 (frontend)",
+      "go_const": true,
+      "go_emitter": true,
+      "id": "event:worker_failed",
+      "name": "worker_failed",
+      "notes": "all three layers present; emitter sites=1; frontend refs=1",
+      "owner": "eventbus",
+      "status": "ported",
+      "upstream_anchor": "core/framework/host/event_bus.py:218 (WORKER_FAILED)"
+    }
+  ],
+  "known_gaps": [
+    {
+      "commit": "f23550cb (merge 72e7ce0c)",
+      "go_anchor": "go_hive/go-hive/internal/agentloop/synthetic_tools.go:535",
+      "id": "gap:suggest_colony_dispatch",
+      "lane": "colony-suggestion-dispatch",
+      "notes": "Dispatch intercept, park reason, event payload and phase tool surface landed. The DM accept path still does not compact the source into a colony queen seed (separate open gap).",
+      "owner": "agentloop",
+      "status": "fixed",
+      "tests": "internal/agentloop/colony_dispatch_test.go; internal/server/chat_colony_dispatch_test.go",
+      "title": "suggest_colony has no Go dispatch/intercept",
+      "upstream_anchor": "core/framework/agent_loop/agent_loop.py:5076"
+    },
+    {
+      "commit": "f23550cb (merge 72e7ce0c)",
+      "go_anchor": "go_hive/go-hive/internal/cli/session_tools_task_pivot.go:101",
+      "id": "gap:task_create_new_colony_pivot",
+      "lane": "colony-suggestion-dispatch",
+      "notes": "The colony phase now exposes new_colony and the agentloop intercept/pending-pivot/event path landed. The lean-handoff accept endpoint is still 501 (separate open gap).",
+      "owner": "tasks",
+      "status": "fixed",
+      "tests": "internal/cli/colony_pivot_accept_test.go; internal/agentloop/colony_dispatch_test.go",
+      "title": "task_create(new_colony=true) pivot has no production Go handler",
+      "upstream_anchor": "core/framework/server/queen_orchestrator.py:929"
+    },
+    {
+      "commit": "",
+      "go_anchor": "go_hive/go-hive/internal/cli/loader.go:895",
+      "id": "gap:colony_pivot_lean_handoff",
+      "lane": "",
+      "notes": "Accepting a colony-phase pivot currently returns 501. Upstream builds a sibling colony from goal/handoff/tasks, with no transcript copy, no compaction and no spawn lock.",
+      "owner": "server",
+      "status": "open",
+      "tests": "internal/cli/colony_pivot_accept_test.go::TestCreateColonyFromSourceRefusesColonyPivotAcceptPath",
+      "title": "colony pivot accept (lean-handoff sibling colony) is not implemented",
+      "upstream_anchor": "core/framework/server/routes_sessions.py:494"
+    },
+    {
+      "commit": "",
+      "go_anchor": "go_hive/go-hive/internal/cli/colony_worker_definition.go:31",
+      "id": "gap:dm_fork_seed_compaction",
+      "lane": "",
+      "notes": "Go creates metadata/worker.json and a fresh colony session only; upstream copytree's the queen session and schedules a background compaction into an inherited seed. Memories are not copied on either side (queen-scope memories stay shared).",
+      "owner": "server",
+      "status": "open",
+      "tests": "internal/cli/colony_pivot_accept_test.go::TestCreateColonyFromSourceWakesSourceQueenAndPublishesColonyCreated",
+      "title": "DM fork into a colony does not copy/compact the source session",
+      "upstream_anchor": "core/framework/server/routes_execution.py:2105"
+    },
+    {
+      "commit": "f18d9e23 (merge 22170ab2)",
+      "go_anchor": "go_hive/go-hive/internal/colony/skills_surface.go:135",
+      "id": "gap:worker_skills_scope",
+      "lane": "skills-worker-scope",
+      "notes": "Worker surface now discovers framework/preset/user plus queen and colony scopes, with colony overriding same-name lower scopes.",
+      "owner": "skills",
+      "status": "fixed",
+      "tests": "TestWorkerCatalogCoversFrameworkUserAndColonyVisibility",
+      "title": "colony worker skill catalog missed framework/user scopes",
+      "upstream_anchor": "core/framework/skills/manager.py:187"
+    },
+    {
+      "commit": "f18d9e23 (merge 22170ab2)",
+      "go_anchor": "go_hive/go-hive/internal/queen/profiles.go:143",
+      "id": "gap:queen_preset_defaults",
+      "lane": "skills-worker-scope",
+      "notes": "Role-default preset skills are applied when building the worker catalog.",
+      "owner": "skills",
+      "status": "fixed",
+      "tests": "TestWorkerCatalogAppliesQueenProfileDefaultPresetSkills; TestPresetSkillsFromProfileReadsCustomList",
+      "title": "queen profile default_preset_skills not wired into worker catalog",
+      "upstream_anchor": "core/framework/agents/queen/queen_profiles.py:165"
+    },
+    {
+      "commit": "61acecb9 (merge 76c0835b)",
+      "go_anchor": "go_hive/go-hive/internal/server/chat_context_compacted.go:27",
+      "id": "gap:compaction_long_reflection",
+      "lane": "memory-compaction-reflect",
+      "notes": "The loop now computes the upstream payload and the session bus subscription runs one long reflection; proactive microcompaction emits nothing.",
+      "owner": "memory",
+      "status": "fixed",
+      "tests": "TestContextCompactedTriggersLongReflectionOnce; TestCompactionPublishesContextCompactedOnce; TestBuildContextCompactedFieldsMatchUpstream",
+      "title": "compaction did not publish context_compacted / run long reflection",
+      "upstream_anchor": "core/framework/agents/queen/reflection_agent.py:1017"
+    },
+    {
+      "commit": "",
+      "go_anchor": "go_hive/go-hive/internal/server/routes_memories_extra.go:19",
+      "id": "gap:memory_cloud_sync_schedule_push",
+      "lane": "",
+      "notes": "Go MemoryRouteDeps only carries Home; no SchedulePush seam and no cloud-sync implementation is wired. Upstream only pushes global/ and agents/queens/ paths via _maybe_sync_memory.",
+      "owner": "memory",
+      "status": "open",
+      "tests": "",
+      "title": "memory routes do not schedule a cloud-sync push",
+      "upstream_anchor": "core/framework/server/routes_memories.py:42"
+    },
+    {
+      "commit": "abd646b7 (merge bb1bf6b1)",
+      "go_anchor": "go_hive/contracts/config-support-ledger.json:599",
+      "id": "gap:env_ledger_anchor",
+      "lane": "wave83-fix",
+      "notes": "The hand-maintained config-support-ledger anchor now points at writeCompactionReport(agentCtx, ratioBefore, ratioAfter, preInventory).",
+      "owner": "governance",
+      "status": "fixed",
+      "tests": "TestCompactionDebugLogRunsOnTheLiveCompactionPath",
+      "title": "HIVE_COMPACTION_DEBUG ledger anchor went stale after loop split",
+      "upstream_anchor": "core/framework/agent_loop/internals/compaction.py:1007"
+    }
+  ],
+  "metadata": {
+    "frontend_root": "go_hive/go-hive/frontend/src",
+    "generator": "scripts/gen_coverage_registry.py",
+    "go_root": "go_hive/go-hive",
+    "manifests": {
+      "events": "30a7ef9f8b59cec03bd5a3d8b3afe9d3c0c5f5556b2f042293cabad46caf3e26",
+      "phase": "8b3b20225a9b2818dd02f03f6bcb384b7e4b57c657ad5984756591ada1ac879b",
+      "synthetic": "6a8206bdea61c7a16c93cb36e495746508bc58e8de9ac24c82853e5e44fcc6b2",
+      "tests": "380b6d70a3a0018a13b0c3aab2c8c552849c8114c0e0f72c5fcd4b86315ee343"
+    },
+    "note": "No wall-clock timestamp is emitted; reruns are byte-identical for identical inputs.",
+    "upstream": [
+      "core/",
+      "tools/"
+    ]
+  },
+  "phase_gates": [
+    {
+      "go_anchor": "",
+      "id": "phase_tool:crm_summary",
+      "name": "crm_summary",
+      "notes": "Python phases: colony, independent",
+      "owner": "queen",
+      "phases": [
+        "colony",
+        "independent"
+      ],
+      "status": "missing",
+      "upstream_anchor": "core/framework/agents/queen/nodes/__init__.py:143 (phase list); core/framework/agents/queen/nodes/__init__.py:144 (phase list)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/colony/playbook_tools.go:139 (tool_def); go_hive/go-hive/internal/colony/playbook_tools.go:124 (builder); go_hive/go-hive/internal/cli/tool_surface_flat.go:488 (registration)",
+      "id": "phase_tool:get_playbook_status",
+      "name": "get_playbook_status",
+      "notes": "Python phases: colony; Go tool exists but has no explicit phase-list gate",
+      "owner": "queen",
+      "phases": [
+        "colony"
+      ],
+      "status": "port_ungated",
+      "upstream_anchor": "core/framework/agents/queen/nodes/__init__.py:101 (phase list)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/server/queen_lifecycle_tools.go:121 (dispatch); go_hive/go-hive/internal/server/queen_lifecycle_tools.go:198 (tool_def); go_hive/go-hive/internal/server/queen_lifecycle_tools.go:34 (builder)",
+      "id": "phase_tool:get_worker_status",
+      "name": "get_worker_status",
+      "notes": "Python phases: colony; Go tool exists but has no explicit phase-list gate",
+      "owner": "queen",
+      "phases": [
+        "colony"
+      ],
+      "status": "port_ungated",
+      "upstream_anchor": "core/framework/agents/queen/nodes/__init__.py:92 (phase list)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/server/queen_lifecycle_tools.go:123 (dispatch); go_hive/go-hive/internal/server/queen_lifecycle_tools.go:226 (tool_def); go_hive/go-hive/internal/server/queen_lifecycle_tools.go:36 (builder)",
+      "id": "phase_tool:inject_message",
+      "name": "inject_message",
+      "notes": "Python phases: colony; Go tool exists but has no explicit phase-list gate",
+      "owner": "queen",
+      "phases": [
+        "colony"
+      ],
+      "status": "port_ungated",
+      "upstream_anchor": "core/framework/agents/queen/nodes/__init__.py:93 (phase list)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/colony/playbook_tools.go:171 (tool_def); go_hive/go-hive/internal/colony/playbook_tools.go:126 (builder); go_hive/go-hive/internal/cli/tool_surface_flat.go:489 (registration)",
+      "id": "phase_tool:list_playbook_runs",
+      "name": "list_playbook_runs",
+      "notes": "Python phases: colony; Go tool exists but has no explicit phase-list gate",
+      "owner": "queen",
+      "phases": [
+        "colony"
+      ],
+      "status": "port_ungated",
+      "upstream_anchor": "core/framework/agents/queen/nodes/__init__.py:103 (phase list)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/cli/session_tools_queen_mail.go:99 (dispatch); go_hive/go-hive/internal/queenmail/mcp_stdio.go:268 (dispatch); go_hive/go-hive/internal/cli/session_tools_queen_mail.go:62 (tool_def); go_hive/go-hive/internal/cli/session_tools_queen_mail.go:22 (builder)",
+      "id": "phase_tool:list_queens",
+      "name": "list_queens",
+      "notes": "Python phases: colony, independent; Go tool exists but has no explicit phase-list gate",
+      "owner": "queen",
+      "phases": [
+        "colony",
+        "independent"
+      ],
+      "status": "port_ungated",
+      "upstream_anchor": "core/framework/agents/queen/nodes/__init__.py:73 (phase list); core/framework/agents/queen/nodes/__init__.py:135 (phase list)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/server/queen_lifecycle_tools.go:137 (dispatch); go_hive/go-hive/internal/server/queen_lifecycle_tools.go:328 (tool_def); go_hive/go-hive/internal/server/queen_lifecycle_tools.go:50 (builder)",
+      "id": "phase_tool:list_triggers",
+      "name": "list_triggers",
+      "notes": "Python phases: colony; Go tool exists but has no explicit phase-list gate",
+      "owner": "queen",
+      "phases": [
+        "colony"
+      ],
+      "status": "port_ungated",
+      "upstream_anchor": "core/framework/agents/queen/nodes/__init__.py:114 (phase list)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/cli/session_tools_queen_mail.go:104 (dispatch); go_hive/go-hive/internal/queenmail/mcp_stdio.go:272 (dispatch); go_hive/go-hive/internal/cli/session_tools_queen_mail.go:67 (tool_def); go_hive/go-hive/internal/cli/session_tools_queen_mail.go:24 (builder)",
+      "id": "phase_tool:message_queen",
+      "name": "message_queen",
+      "notes": "Python phases: colony, independent; Go tool exists but has no explicit phase-list gate",
+      "owner": "queen",
+      "phases": [
+        "colony",
+        "independent"
+      ],
+      "status": "port_ungated",
+      "upstream_anchor": "core/framework/agents/queen/nodes/__init__.py:74 (phase list); core/framework/agents/queen/nodes/__init__.py:136 (phase list)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/server/queen_lifecycle_tools.go:139 (dispatch); go_hive/go-hive/internal/server/queen_lifecycle_tools.go:314 (tool_def); go_hive/go-hive/internal/server/queen_lifecycle_tools.go:52 (builder)",
+      "id": "phase_tool:remove_trigger",
+      "name": "remove_trigger",
+      "notes": "Python phases: colony; Go tool exists but has no explicit phase-list gate",
+      "owner": "queen",
+      "phases": [
+        "colony"
+      ],
+      "status": "port_ungated",
+      "upstream_anchor": "core/framework/agents/queen/nodes/__init__.py:113 (phase list)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/colony/playbook_tools.go:94 (tool_def); go_hive/go-hive/internal/agentloop/colony_parallel_nudge.go:20 (builder); go_hive/go-hive/internal/colony/playbook_tools.go:58 (builder)",
+      "id": "phase_tool:run_playbook",
+      "name": "run_playbook",
+      "notes": "Python phases: colony; Go tool exists but has no explicit phase-list gate",
+      "owner": "queen",
+      "phases": [
+        "colony"
+      ],
+      "status": "port_ungated",
+      "upstream_anchor": "core/framework/agents/queen/nodes/__init__.py:100 (phase list)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/colony/overseer_tools.go:145 (dispatch); go_hive/go-hive/internal/colony/queen_tools.go:80 (tool_def); go_hive/go-hive/internal/colony/queen_tools.go:28 (builder)",
+      "id": "phase_tool:run_worker",
+      "name": "run_worker",
+      "notes": "Python phases: colony; Go tool exists but has no explicit phase-list gate",
+      "owner": "queen",
+      "phases": [
+        "colony"
+      ],
+      "status": "port_ungated",
+      "upstream_anchor": "core/framework/agents/queen/nodes/__init__.py:104 (phase list)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/agentloop/search_tools.go:54 (dispatch); go_hive/go-hive/internal/agentloop/search_tools.go:71 (dispatch); go_hive/go-hive/internal/tools/tiers.go:427 (tool_def); go_hive/go-hive/internal/agentloop/search_tools.go:11 (builder)",
+      "id": "phase_tool:search_tools",
+      "name": "search_tools",
+      "notes": "Python phases: colony, independent; Go tool exists but has no explicit phase-list gate",
+      "owner": "queen",
+      "phases": [
+        "colony",
+        "independent"
+      ],
+      "status": "port_ungated",
+      "upstream_anchor": "core/framework/agents/queen/nodes/__init__.py:66 (phase list); core/framework/agents/queen/nodes/__init__.py:133 (phase list)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/server/queen_lifecycle_tools.go:135 (dispatch); go_hive/go-hive/internal/server/queen_lifecycle_tools.go:281 (tool_def); go_hive/go-hive/internal/server/queen_lifecycle_tools.go:48 (builder)",
+      "id": "phase_tool:set_trigger",
+      "name": "set_trigger",
+      "notes": "Python phases: colony; Go tool exists but has no explicit phase-list gate",
+      "owner": "queen",
+      "phases": [
+        "colony"
+      ],
+      "status": "port_ungated",
+      "upstream_anchor": "core/framework/agents/queen/nodes/__init__.py:112 (phase list)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/colony/playbook_tools.go:155 (tool_def); go_hive/go-hive/internal/colony/playbook_tools.go:125 (builder); go_hive/go-hive/internal/cli/tool_surface_flat.go:490 (registration)",
+      "id": "phase_tool:stop_playbook",
+      "name": "stop_playbook",
+      "notes": "Python phases: colony; Go tool exists but has no explicit phase-list gate",
+      "owner": "queen",
+      "phases": [
+        "colony"
+      ],
+      "status": "port_ungated",
+      "upstream_anchor": "core/framework/agents/queen/nodes/__init__.py:102 (phase list)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/server/queen_lifecycle_tools.go:129 (dispatch); go_hive/go-hive/internal/server/queen_lifecycle_tools.go:162 (tool_def); go_hive/go-hive/internal/server/queen_lifecycle_tools.go:42 (builder)",
+      "id": "phase_tool:stop_worker",
+      "name": "stop_worker",
+      "notes": "Python phases: colony; Go tool exists but has no explicit phase-list gate",
+      "owner": "queen",
+      "phases": [
+        "colony"
+      ],
+      "status": "port_ungated",
+      "upstream_anchor": "core/framework/agents/queen/nodes/__init__.py:105 (phase list)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/agentloop/colony_dispatch.go:102 (dispatch); go_hive/go-hive/internal/agentloop/colony_dispatch.go:33 (builder); go_hive/go-hive/internal/agentloop/synthetic_tools.go:305 (builder); go_hive/go-hive/internal/agentloop/synthetic_tools.go:535 (registration)",
+      "id": "phase_tool:suggest_colony",
+      "name": "suggest_colony",
+      "notes": "Python phases: independent; Go tool exists but has no explicit phase-list gate",
+      "owner": "queen",
+      "phases": [
+        "independent"
+      ],
+      "status": "port_ungated",
+      "upstream_anchor": "core/framework/agents/queen/nodes/__init__.py:49 (phase list)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/agentloop/colony_dispatch.go:104 (dispatch); go_hive/go-hive/internal/tasks/session_tools.go:765 (tool_def); go_hive/go-hive/internal/agentloop/colony_dispatch.go:39 (builder); go_hive/go-hive/internal/tasks/names.go:6 (builder)",
+      "id": "phase_tool:task_create",
+      "name": "task_create",
+      "notes": "Python phases: colony, independent; Go tool exists but has no explicit phase-list gate",
+      "owner": "queen",
+      "phases": [
+        "colony",
+        "independent"
+      ],
+      "status": "port_ungated",
+      "upstream_anchor": "core/framework/agents/queen/nodes/__init__.py:56 (phase list); core/framework/agents/queen/nodes/__init__.py:126 (phase list)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/tasks/session_tools.go:786 (tool_def); go_hive/go-hive/internal/tasks/names.go:9 (builder)",
+      "id": "phase_tool:task_get",
+      "name": "task_get",
+      "notes": "Python phases: colony, independent; Go tool exists but has no explicit phase-list gate",
+      "owner": "queen",
+      "phases": [
+        "colony",
+        "independent"
+      ],
+      "status": "port_ungated",
+      "upstream_anchor": "core/framework/agents/queen/nodes/__init__.py:59 (phase list); core/framework/agents/queen/nodes/__init__.py:129 (phase list)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/tasks/session_tools.go:779 (tool_def); go_hive/go-hive/internal/tasks/names.go:8 (builder)",
+      "id": "phase_tool:task_list",
+      "name": "task_list",
+      "notes": "Python phases: colony, independent; Go tool exists but has no explicit phase-list gate",
+      "owner": "queen",
+      "phases": [
+        "colony",
+        "independent"
+      ],
+      "status": "port_ungated",
+      "upstream_anchor": "core/framework/agents/queen/nodes/__init__.py:58 (phase list); core/framework/agents/queen/nodes/__init__.py:128 (phase list)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/tasks/session_tools.go:772 (tool_def); go_hive/go-hive/internal/tasks/names.go:7 (builder)",
+      "id": "phase_tool:task_update",
+      "name": "task_update",
+      "notes": "Python phases: colony, independent; Go tool exists but has no explicit phase-list gate",
+      "owner": "queen",
+      "phases": [
+        "colony",
+        "independent"
+      ],
+      "status": "port_ungated",
+      "upstream_anchor": "core/framework/agents/queen/nodes/__init__.py:57 (phase list); core/framework/agents/queen/nodes/__init__.py:127 (phase list)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/tracker/tools.go:985 (tool_def)",
+      "id": "phase_tool:tracker_query",
+      "name": "tracker_query",
+      "notes": "Python phases: colony; Go tool exists but has no explicit phase-list gate",
+      "owner": "queen",
+      "phases": [
+        "colony"
+      ],
+      "status": "port_ungated",
+      "upstream_anchor": "core/framework/agents/queen/nodes/__init__.py:122 (phase list)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/tracker/tools.go:932 (tool_def)",
+      "id": "phase_tool:tracker_register_writable",
+      "name": "tracker_register_writable",
+      "notes": "Python phases: colony; Go tool exists but has no explicit phase-list gate",
+      "owner": "queen",
+      "phases": [
+        "colony"
+      ],
+      "status": "port_ungated",
+      "upstream_anchor": "core/framework/agents/queen/nodes/__init__.py:120 (phase list)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/tracker/tools.go:906 (tool_def)",
+      "id": "phase_tool:tracker_sql",
+      "name": "tracker_sql",
+      "notes": "Python phases: colony; Go tool exists but has no explicit phase-list gate",
+      "owner": "queen",
+      "phases": [
+        "colony"
+      ],
+      "status": "port_ungated",
+      "upstream_anchor": "core/framework/agents/queen/nodes/__init__.py:119 (phase list)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/tracker/tools.go:965 (tool_def)",
+      "id": "phase_tool:tracker_upsert",
+      "name": "tracker_upsert",
+      "notes": "Python phases: colony; Go tool exists but has no explicit phase-list gate",
+      "owner": "queen",
+      "phases": [
+        "colony"
+      ],
+      "status": "port_ungated",
+      "upstream_anchor": "core/framework/agents/queen/nodes/__init__.py:121 (phase list)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/skills/agent_tools.go:163 (dispatch); go_hive/go-hive/internal/skills/agent_tools.go:66 (tool_def); go_hive/go-hive/internal/skills/agent_tools.go:35 (builder)",
+      "id": "phase_tool:write_skill",
+      "name": "write_skill",
+      "notes": "Python phases: colony, independent; Go tool exists but has no explicit phase-list gate",
+      "owner": "queen",
+      "phases": [
+        "colony",
+        "independent"
+      ],
+      "status": "port_ungated",
+      "upstream_anchor": "core/framework/agents/queen/nodes/__init__.py:70 (phase list); core/framework/agents/queen/nodes/__init__.py:110 (phase list)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/cli/session_tools_task_pivot.go:101 (PivotHandler)",
+      "id": "phase_pivot:new_session",
+      "name": "new_session",
+      "notes": "DM pivot wired in the CLI session catalogue",
+      "owner": "tasks",
+      "phases": [
+        "independent"
+      ],
+      "status": "ported",
+      "upstream_anchor": "core/framework/agents/queen/nodes/__init__.py:617 (prompt); core/framework/server/queen_orchestrator.py:923 (PivotHandler)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/cli/session_tools_task_pivot.go:71 (PivotHandler)",
+      "id": "phase_pivot:new_colony",
+      "name": "new_colony",
+      "notes": "Colony-phase pivot wired in the CLI session catalogue (tasks.NewColonyPivotField); the lean-handoff accept endpoint remains 501 (gap:colony_pivot_lean_handoff)",
+      "owner": "tasks",
+      "phases": [
+        "colony"
+      ],
+      "status": "ported",
+      "upstream_anchor": "core/framework/agents/queen/nodes/__init__.py:617 (prompt); core/framework/server/queen_orchestrator.py:929 (PivotHandler)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/queen/static_prompt.go:39 (PhasePrompt)",
+      "id": "phase_prompt:independent",
+      "name": "independent",
+      "notes": "Go PhasePrompt entry point exists; prompt text parity is covered by golden tests",
+      "owner": "queen",
+      "phases": [
+        "independent"
+      ],
+      "status": "ported",
+      "upstream_anchor": "core/framework/agents/queen/nodes/__init__.py:168 (role prompt)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/queen/static_prompt.go:55 (PhasePrompt)",
+      "id": "phase_prompt:colony",
+      "name": "colony",
+      "notes": "Go PhasePrompt entry point exists; prompt text parity is covered by golden tests",
+      "owner": "queen",
+      "phases": [
+        "colony"
+      ],
+      "status": "ported",
+      "upstream_anchor": "core/framework/agents/queen/nodes/__init__.py:206 (role prompt)"
+    }
+  ],
+  "schema_version": 1,
+  "summary": {
+    "events": {
+      "emitter_missing": 20,
+      "frontend_missing": 3,
+      "go": 77,
+      "go_const_only": 1,
+      "go_only": 0,
+      "missing_go_const": 0,
+      "partial": 21,
+      "ported": 55,
+      "python": 77
+    },
+    "known_gaps": {
+      "fixed": 6,
+      "in_fix": 0,
+      "open": 3,
+      "total": 9
+    },
+    "phase_gates": {
+      "builder_only": 0,
+      "explicit_phase_lists_in_go": false,
+      "missing": 1,
+      "phase_tools": 25,
+      "pivot_missing": 0,
+      "pivot_ported": 2,
+      "port_ungated": 24,
+      "prompt_only": 0
+    },
+    "rows_total": 141,
+    "synthetic_dispatch": {
+      "builder_only": 2,
+      "dispatch_port": 10,
+      "missing": 1,
+      "total": 13
+    },
+    "test_mapping": {
+      "directories": 22,
+      "go_tests": 5896,
+      "go_tests_no_parity_ref": 12,
+      "mapped": 10,
+      "missing": 0,
+      "parity_refs": 6136,
+      "python_tests": 6212
+    }
+  },
+  "synthetic_dispatch": [
+    {
+      "go_anchor": "go_hive/go-hive/internal/agentloop/loop.go:990 (dispatch); go_hive/go-hive/internal/agentloop/tool_batch_store.go:50 (dispatch); go_hive/go-hive/internal/colony/overseer_tools.go:149 (dispatch); go_hive/go-hive/internal/server/chat_runtime.go:1439 (dispatch)",
+      "id": "synthetic:ask_user",
+      "notes": "",
+      "owner": "agentloop",
+      "sources": [
+        "agent_loop dispatch",
+        "synthetic builder"
+      ],
+      "status": "dispatch_port",
+      "tool": "ask_user",
+      "upstream_anchor": "core/framework/agent_loop/agent_loop.py:4869 (dispatch branch); core/framework/agent_loop/internals/synthetic_tools.py:134 (build_ask_user_tool)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/tools/integrations/extras_registry.go:102 (tool_def); go_hive/go-hive/internal/tools/integrations/extras_registry.go:107 (tool_def)",
+      "id": "synthetic:attach_file",
+      "notes": "",
+      "owner": "agentloop",
+      "sources": [
+        "agent_loop dispatch"
+      ],
+      "status": "dispatch_port",
+      "tool": "attach_file",
+      "upstream_anchor": "core/framework/agent_loop/agent_loop.py:6651 (dispatch branch)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/agentloop/synthetic_tools.go:273 (builder); go_hive/go-hive/internal/agentloop/dynamic_tools.go:18 (registration); go_hive/go-hive/internal/cli/tool_surface_flat.go:174 (registration); go_hive/go-hive/internal/server/phase_tool_surface.go:36 (registration)",
+      "id": "synthetic:collect_result",
+      "notes": "builder/definition only; no same-name dispatch/intercept in Go",
+      "owner": "agentloop",
+      "sources": [
+        "agent_loop dispatch",
+        "synthetic builder"
+      ],
+      "status": "builder_only",
+      "tool": "collect_result",
+      "upstream_anchor": "core/framework/agent_loop/agent_loop.py:6550 (dispatch branch); core/framework/agent_loop/internals/synthetic_tools.py:191 (build_collect_result_tool)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/agentloop/dynamic_tools.go:15 (registration); go_hive/go-hive/internal/cli/tool_surface_flat.go:175 (registration); go_hive/go-hive/internal/server/phase_tool_surface.go:37 (registration)",
+      "id": "synthetic:credentials",
+      "notes": "name registered in Go but no callable tool definition",
+      "owner": "agentloop",
+      "sources": [
+        "agent_loop dispatch"
+      ],
+      "status": "missing",
+      "tool": "credentials",
+      "upstream_anchor": "core/framework/agent_loop/agent_loop.py:4987 (dispatch branch)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/agentloop/loop.go:1017 (dispatch); go_hive/go-hive/internal/agentloop/tool_batch_store.go:50 (dispatch); go_hive/go-hive/internal/agentloop/escalate.go:45 (builder); go_hive/go-hive/internal/agentloop/synthetic_tools.go:391 (builder)",
+      "id": "synthetic:escalate",
+      "notes": "",
+      "owner": "agentloop",
+      "sources": [
+        "agent_loop dispatch",
+        "synthetic builder"
+      ],
+      "status": "dispatch_port",
+      "tool": "escalate",
+      "upstream_anchor": "core/framework/agent_loop/agent_loop.py:5338 (dispatch branch); core/framework/agent_loop/internals/synthetic_tools.py:328 (build_escalate_tool)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/colony/runtime.go:1112 (dispatch); go_hive/go-hive/internal/agentloop/worker_stall.go:332 (tool_def); go_hive/go-hive/internal/agentloop/synthetic_tools.go:434 (builder); go_hive/go-hive/internal/agentloop/worker_stall.go:45 (builder)",
+      "id": "synthetic:report_to_parent",
+      "notes": "",
+      "owner": "agentloop",
+      "sources": [
+        "agent_loop dispatch",
+        "synthetic builder"
+      ],
+      "status": "dispatch_port",
+      "tool": "report_to_parent",
+      "upstream_anchor": "core/framework/agent_loop/agent_loop.py:5378 (dispatch branch); core/framework/agent_loop/internals/synthetic_tools.py:380 (build_report_to_parent_tool)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/agentloop/search_tools.go:54 (dispatch); go_hive/go-hive/internal/agentloop/search_tools.go:71 (dispatch); go_hive/go-hive/internal/tools/tiers.go:427 (tool_def); go_hive/go-hive/internal/agentloop/search_tools.go:11 (builder)",
+      "id": "synthetic:search_tools",
+      "notes": "",
+      "owner": "agentloop",
+      "sources": [
+        "agent_loop dispatch"
+      ],
+      "status": "dispatch_port",
+      "tool": "search_tools",
+      "upstream_anchor": "core/framework/agent_loop/agent_loop.py:6565 (dispatch branch)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/sentinel/sentinel_tool.go:75 (tool_def); go_hive/go-hive/internal/sentinel/sentinel_tool.go:44 (builder); go_hive/go-hive/internal/agentloop/dynamic_tools.go:16 (registration); go_hive/go-hive/internal/cli/tool_surface_flat.go:177 (registration)",
+      "id": "synthetic:sentinel_setup",
+      "notes": "",
+      "owner": "agentloop",
+      "sources": [
+        "agent_loop dispatch"
+      ],
+      "status": "dispatch_port",
+      "tool": "sentinel_setup",
+      "upstream_anchor": "core/framework/agent_loop/agent_loop.py:5050 (dispatch branch)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/agentloop/synthetic_tools.go:354 (builder)",
+      "id": "synthetic:set_output",
+      "notes": "builder/definition only; no same-name dispatch/intercept in Go",
+      "owner": "agentloop",
+      "sources": [
+        "agent_loop dispatch",
+        "synthetic builder"
+      ],
+      "status": "builder_only",
+      "tool": "set_output",
+      "upstream_anchor": "core/framework/agent_loop/agent_loop.py:4860 (dispatch branch); core/framework/agent_loop/internals/synthetic_tools.py:294 (build_set_output_tool)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/agentloop/colony_dispatch.go:102 (dispatch); go_hive/go-hive/internal/agentloop/colony_dispatch.go:33 (builder); go_hive/go-hive/internal/agentloop/synthetic_tools.go:305 (builder); go_hive/go-hive/internal/agentloop/synthetic_tools.go:535 (registration)",
+      "id": "synthetic:suggest_colony",
+      "notes": "phase-gated synthetic (builders map only)",
+      "owner": "agentloop",
+      "sources": [
+        "agent_loop dispatch",
+        "synthetic builder",
+        "phase builder registry"
+      ],
+      "status": "dispatch_port",
+      "tool": "suggest_colony",
+      "upstream_anchor": "core/framework/agent_loop/agent_loop.py:5076 (dispatch branch); core/framework/agent_loop/internals/synthetic_tools.py:234 (build_suggest_colony_tool); core/framework/agent_loop/internals/synthetic_tools.py:544 (SYNTHETIC_PHASE_TOOL_BUILDERS)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/agentloop/colony_dispatch.go:104 (dispatch); go_hive/go-hive/internal/tasks/session_tools.go:765 (tool_def); go_hive/go-hive/internal/agentloop/colony_dispatch.go:39 (builder); go_hive/go-hive/internal/tasks/names.go:6 (builder)",
+      "id": "synthetic:task_create",
+      "notes": "branch guard: new_colony=true; new_colony pivot absent at HEAD; see gap:task_create_new_colony_pivot",
+      "owner": "agentloop",
+      "sources": [
+        "agent_loop dispatch"
+      ],
+      "status": "dispatch_port",
+      "tool": "task_create",
+      "upstream_anchor": "core/framework/agent_loop/agent_loop.py:5178 (dispatch branch)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/tools/builtin/builtin.go:137 (dispatch); go_hive/go-hive/internal/tools/builtin/builtin.go:328 (tool_def); go_hive/go-hive/internal/tools/builtin/builtin.go:26 (builder)",
+      "id": "synthetic:terminal_exec",
+      "notes": "",
+      "owner": "agentloop",
+      "sources": [
+        "agent_loop dispatch"
+      ],
+      "status": "dispatch_port",
+      "tool": "terminal_exec",
+      "upstream_anchor": "core/framework/agent_loop/agent_loop.py:6673 (dispatch branch)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/agentloop/loop.go:1029 (dispatch); go_hive/go-hive/internal/tools/builtin/terminal_tools.go:129 (tool_def); go_hive/go-hive/internal/tools/builtin/terminal_tools.go:17 (builder)",
+      "id": "synthetic:terminal_job_logs",
+      "notes": "",
+      "owner": "agentloop",
+      "sources": [
+        "agent_loop dispatch"
+      ],
+      "status": "dispatch_port",
+      "tool": "terminal_job_logs",
+      "upstream_anchor": "core/framework/agent_loop/agent_loop.py:6616 (dispatch branch)"
+    }
+  ],
+  "test_mapping": [
+    {
+      "go_anchor": "go_hive/go-hive/internal/agentloop/ (first: go_hive/go-hive/internal/agentloop/ask_user_turn_test.go)",
+      "go_packages": [
+        "internal/agentloop"
+      ],
+      "go_tests": 472,
+      "id": "tests:core/framework/agent_loop/tests",
+      "notes": "",
+      "owner": "qa",
+      "parity_refs": 531,
+      "path": "core/framework/agent_loop/tests",
+      "python_tests": 5,
+      "status": "mapped",
+      "upstream_anchor": "core/framework/agent_loop/tests/ (5 def test_)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/queen/ (first: go_hive/go-hive/internal/queen/identity_test.go)",
+      "go_packages": [
+        "internal/queen"
+      ],
+      "go_tests": 21,
+      "id": "tests:core/framework/agents/queen/tests",
+      "notes": "",
+      "owner": "qa",
+      "parity_refs": 134,
+      "path": "core/framework/agents/queen/tests",
+      "python_tests": 13,
+      "status": "mapped",
+      "upstream_anchor": "core/framework/agents/queen/tests/ (13 def test_)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/credentials/ (first: go_hive/go-hive/internal/credentials/bootstrap_test.go)",
+      "go_packages": [
+        "internal/credentials"
+      ],
+      "go_tests": 88,
+      "id": "tests:core/framework/credentials/aden/tests",
+      "notes": "Go tests exist but none cite this Python directory",
+      "owner": "qa",
+      "parity_refs": 0,
+      "path": "core/framework/credentials/aden/tests",
+      "python_tests": 37,
+      "status": "go_tests_no_parity_ref",
+      "upstream_anchor": "core/framework/credentials/aden/tests/ (37 def test_)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/credentials/ (first: go_hive/go-hive/internal/credentials/bootstrap_test.go)",
+      "go_packages": [
+        "internal/credentials"
+      ],
+      "go_tests": 88,
+      "id": "tests:core/framework/credentials/tests",
+      "notes": "",
+      "owner": "qa",
+      "parity_refs": 54,
+      "path": "core/framework/credentials/tests",
+      "python_tests": 63,
+      "status": "mapped",
+      "upstream_anchor": "core/framework/credentials/tests/ (63 def test_)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/globaldb/ (first: go_hive/go-hive/internal/globaldb/grid_query_test.go)",
+      "go_packages": [
+        "internal/globaldb"
+      ],
+      "go_tests": 23,
+      "id": "tests:core/framework/global_db/tests",
+      "notes": "",
+      "owner": "qa",
+      "parity_refs": 23,
+      "path": "core/framework/global_db/tests",
+      "python_tests": 23,
+      "status": "mapped",
+      "upstream_anchor": "core/framework/global_db/tests/ (23 def test_)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/runtimehealth/ (first: go_hive/go-hive/internal/runtimehealth/runtime_health_test.go)",
+      "go_packages": [
+        "internal/runtimehealth"
+      ],
+      "go_tests": 3,
+      "id": "tests:core/framework/runtime/tests",
+      "notes": "Go tests exist but none cite this Python directory",
+      "owner": "qa",
+      "parity_refs": 0,
+      "path": "core/framework/runtime/tests",
+      "python_tests": 2,
+      "status": "go_tests_no_parity_ref",
+      "upstream_anchor": "core/framework/runtime/tests/ (2 def test_)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/server/ (first: go_hive/go-hive/internal/server/access_log_test.go)",
+      "go_packages": [
+        "internal/server"
+      ],
+      "go_tests": 1043,
+      "id": "tests:core/framework/server/tests",
+      "notes": "",
+      "owner": "qa",
+      "parity_refs": 996,
+      "path": "core/framework/server/tests",
+      "python_tests": 293,
+      "status": "mapped",
+      "upstream_anchor": "core/framework/server/tests/ (293 def test_)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/tasks/ (first: go_hive/go-hive/internal/tasks/bench_test.go)",
+      "go_packages": [
+        "internal/tasks"
+      ],
+      "go_tests": 122,
+      "id": "tests:core/framework/tasks/tests",
+      "notes": "",
+      "owner": "qa",
+      "parity_refs": 159,
+      "path": "core/framework/tasks/tests",
+      "python_tests": 134,
+      "status": "mapped",
+      "upstream_anchor": "core/framework/tasks/tests/ (134 def test_)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/ (first: go_hive/go-hive/internal/agentloop/ask_user_turn_test.go)",
+      "go_packages": [
+        "internal"
+      ],
+      "go_tests": 5889,
+      "id": "tests:core/tests",
+      "notes": "cross-cutting aggregate; overlaps package rows",
+      "owner": "qa",
+      "parity_refs": 2324,
+      "path": "core/tests",
+      "python_tests": 2458,
+      "status": "mapped",
+      "upstream_anchor": "core/tests/ (2458 def test_)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/e2e/ (first: go_hive/go-hive/e2e/concept_flows_real_helpers_test.go)",
+      "go_packages": [
+        "e2e"
+      ],
+      "go_tests": 7,
+      "id": "tests:core/tests/e2e",
+      "notes": "",
+      "owner": "qa",
+      "parity_refs": 31,
+      "path": "core/tests/e2e",
+      "python_tests": 2,
+      "status": "mapped",
+      "upstream_anchor": "core/tests/e2e/ (2 def test_)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/e2e/ (first: go_hive/go-hive/e2e/concept_flows_real_helpers_test.go)",
+      "go_packages": [
+        "e2e"
+      ],
+      "go_tests": 7,
+      "id": "tests:core/tests/live",
+      "notes": "Go tests exist but none cite this Python directory",
+      "owner": "qa",
+      "parity_refs": 0,
+      "path": "core/tests/live",
+      "python_tests": 3,
+      "status": "go_tests_no_parity_ref",
+      "upstream_anchor": "core/tests/live/ (3 def test_)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/tools/ (first: go_hive/go-hive/internal/tools/category_additions_test.go)",
+      "go_packages": [
+        "internal/tools"
+      ],
+      "go_tests": 183,
+      "id": "tests:tools/src/aden_tools/tools/attio_tool/tests",
+      "notes": "Go tests exist but none cite this Python directory",
+      "owner": "qa",
+      "parity_refs": 0,
+      "path": "tools/src/aden_tools/tools/attio_tool/tests",
+      "python_tests": 51,
+      "status": "go_tests_no_parity_ref",
+      "upstream_anchor": "tools/src/aden_tools/tools/attio_tool/tests/ (51 def test_)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/tools/ (first: go_hive/go-hive/internal/tools/category_additions_test.go)",
+      "go_packages": [
+        "internal/tools"
+      ],
+      "go_tests": 183,
+      "id": "tests:tools/src/aden_tools/tools/google_docs_tool/tests",
+      "notes": "Go tests exist but none cite this Python directory",
+      "owner": "qa",
+      "parity_refs": 0,
+      "path": "tools/src/aden_tools/tools/google_docs_tool/tests",
+      "python_tests": 26,
+      "status": "go_tests_no_parity_ref",
+      "upstream_anchor": "tools/src/aden_tools/tools/google_docs_tool/tests/ (26 def test_)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/tools/ (first: go_hive/go-hive/internal/tools/category_additions_test.go)",
+      "go_packages": [
+        "internal/tools"
+      ],
+      "go_tests": 183,
+      "id": "tests:tools/src/aden_tools/tools/google_sheets_tool/tests",
+      "notes": "Go tests exist but none cite this Python directory",
+      "owner": "qa",
+      "parity_refs": 0,
+      "path": "tools/src/aden_tools/tools/google_sheets_tool/tests",
+      "python_tests": 58,
+      "status": "go_tests_no_parity_ref",
+      "upstream_anchor": "tools/src/aden_tools/tools/google_sheets_tool/tests/ (58 def test_)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/tools/ (first: go_hive/go-hive/internal/tools/category_additions_test.go)",
+      "go_packages": [
+        "internal/tools"
+      ],
+      "go_tests": 183,
+      "id": "tests:tools/src/aden_tools/tools/hubspot_tool/tests",
+      "notes": "Go tests exist but none cite this Python directory",
+      "owner": "qa",
+      "parity_refs": 0,
+      "path": "tools/src/aden_tools/tools/hubspot_tool/tests",
+      "python_tests": 38,
+      "status": "go_tests_no_parity_ref",
+      "upstream_anchor": "tools/src/aden_tools/tools/hubspot_tool/tests/ (38 def test_)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/tools/ (first: go_hive/go-hive/internal/tools/category_additions_test.go)",
+      "go_packages": [
+        "internal/tools"
+      ],
+      "go_tests": 183,
+      "id": "tests:tools/src/aden_tools/tools/intercom_tool/tests",
+      "notes": "Go tests exist but none cite this Python directory",
+      "owner": "qa",
+      "parity_refs": 0,
+      "path": "tools/src/aden_tools/tools/intercom_tool/tests",
+      "python_tests": 49,
+      "status": "go_tests_no_parity_ref",
+      "upstream_anchor": "tools/src/aden_tools/tools/intercom_tool/tests/ (49 def test_)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/tools/ (first: go_hive/go-hive/internal/tools/category_additions_test.go)",
+      "go_packages": [
+        "internal/tools"
+      ],
+      "go_tests": 183,
+      "id": "tests:tools/src/aden_tools/tools/linear_tool/tests",
+      "notes": "Go tests exist but none cite this Python directory",
+      "owner": "qa",
+      "parity_refs": 0,
+      "path": "tools/src/aden_tools/tools/linear_tool/tests",
+      "python_tests": 46,
+      "status": "go_tests_no_parity_ref",
+      "upstream_anchor": "tools/src/aden_tools/tools/linear_tool/tests/ (46 def test_)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/tools/ (first: go_hive/go-hive/internal/tools/category_additions_test.go)",
+      "go_packages": [
+        "internal/tools"
+      ],
+      "go_tests": 183,
+      "id": "tests:tools/src/aden_tools/tools/pushover_tool/tests",
+      "notes": "Go tests exist but none cite this Python directory",
+      "owner": "qa",
+      "parity_refs": 0,
+      "path": "tools/src/aden_tools/tools/pushover_tool/tests",
+      "python_tests": 6,
+      "status": "go_tests_no_parity_ref",
+      "upstream_anchor": "tools/src/aden_tools/tools/pushover_tool/tests/ (6 def test_)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/tools/ (first: go_hive/go-hive/internal/tools/category_additions_test.go)",
+      "go_packages": [
+        "internal/tools"
+      ],
+      "go_tests": 183,
+      "id": "tests:tools/tests",
+      "notes": "",
+      "owner": "qa",
+      "parity_refs": 1206,
+      "path": "tools/tests",
+      "python_tests": 447,
+      "status": "mapped",
+      "upstream_anchor": "tools/tests/ (447 def test_)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/credentials/ (first: go_hive/go-hive/internal/credentials/bootstrap_test.go)",
+      "go_packages": [
+        "internal/credentials"
+      ],
+      "go_tests": 88,
+      "id": "tests:tools/tests/credentials",
+      "notes": "Go tests exist but none cite this Python directory",
+      "owner": "qa",
+      "parity_refs": 0,
+      "path": "tools/tests/credentials",
+      "python_tests": 8,
+      "status": "go_tests_no_parity_ref",
+      "upstream_anchor": "tools/tests/credentials/ (8 def test_)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/tools/integrations/ (first: go_hive/go-hive/internal/tools/integrations/account_alias_test.go)",
+      "go_packages": [
+        "internal/tools/integrations"
+      ],
+      "go_tests": 653,
+      "id": "tests:tools/tests/integrations",
+      "notes": "Go tests exist but none cite this Python directory",
+      "owner": "qa",
+      "parity_refs": 0,
+      "path": "tools/tests/integrations",
+      "python_tests": 20,
+      "status": "go_tests_no_parity_ref",
+      "upstream_anchor": "tools/tests/integrations/ (20 def test_)"
+    },
+    {
+      "go_anchor": "go_hive/go-hive/internal/tools/ (first: go_hive/go-hive/internal/tools/category_additions_test.go)",
+      "go_packages": [
+        "internal/tools"
+      ],
+      "go_tests": 183,
+      "id": "tests:tools/tests/tools",
+      "notes": "",
+      "owner": "qa",
+      "parity_refs": 1086,
+      "path": "tools/tests/tools",
+      "python_tests": 2430,
+      "status": "mapped",
+      "upstream_anchor": "tools/tests/tools/ (2430 def test_)"
+    }
+  ]
+}

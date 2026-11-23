@@ -1833,7 +1833,8 @@
       "type": "integer",
       "description": "Most recent N runs (default 20)."
      }
-    }
+    },
+    "required": []
    }
   },
   "remove_trigger": {
@@ -1907,7 +1908,8 @@
       "type": "object",
       "description": "Optional JSON object passed to the script's run(args) entrypoint."
      }
-    }
+    },
+    "required": []
    }
   },
   "set_trigger": {

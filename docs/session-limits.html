@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hive 会话寿命与运行上限 · 压缩 / 记忆 / 调参</title>
+<style>
+:root{--bg:#0b0f14;--panel:#121923;--panel2:#0f1620;--line:#233041;--text:#e6edf3;--muted:#8b9bb0;--accent:#f0b429;--accent2:#58a6ff;--ok:#3fb950;--warn:#d29922;--bad:#f85149;--code:#0a0e13}
+*{box-sizing:border-box} body{margin:0;background:linear-gradient(180deg,#0b0f14,#0d131b 55%,#0b0f14);color:var(--text);font:14.5px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;overflow-wrap:anywhere}
+a{color:var(--accent2);text-decoration:none} a:hover{text-decoration:underline}
+.wrap{max-width:1280px;margin:0 auto;padding:44px 26px 80px}
+header{border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:28px}
+.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+h1{font-size:30px;line-height:1.25;margin:10px 0 10px;letter-spacing:-.02em} h1 span{color:var(--accent)}
+.lede{color:var(--muted);max-width:1080px;font-size:15px} .meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:15px;color:var(--muted);font-size:12.5px} .meta b{color:var(--text)}
+section{margin:38px 0} h2{font-size:22px;margin:0 0 8px} h2 .num{color:var(--accent);font-size:14px;margin-right:8px} h3{font-size:15.5px;margin:22px 0 8px;color:#cfdae6}
+p{color:#c6d2df;margin:8px 0} .sub{color:var(--muted);font-size:12.5px}
+.grid{display:grid;gap:12px} .g4{grid-template-columns:repeat(4,minmax(0,1fr))} .grid>*{min-width:0}
+@media(max-width:900px){.g4{grid-template-columns:1fr 1fr}} @media(max-width:560px){.g4{grid-template-columns:1fr}.wrap{padding:30px 16px 60px}h1{font-size:24px}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:15px;min-width:0} .card .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700} .card .v{font-size:20px;font-weight:800;margin-top:5px;letter-spacing:-.01em} .card .d{color:var(--muted);font-size:12px;margin-top:5px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:14px 0;background:var(--panel2);max-width:100%}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed} th,td{border-bottom:1px solid var(--line);padding:9px 10px;vertical-align:top;text-align:left;overflow-wrap:anywhere;word-break:break-word} th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;background:#0d141d;position:sticky;top:0;z-index:1} tr:hover td{background:#121a25} tr:last-child td{border-bottom:0}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--code);border:1px solid #1e2937;border-radius:5px;padding:1px 4px;color:#d7e3f0;overflow-wrap:anywhere}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#cfe0f2;max-width:100%}
+.pill{display:inline-flex;align-items:center;font-size:11px;border-radius:999px;padding:2px 8px;border:1px solid var(--line);color:var(--muted);white-space:normal} .pill.ok{color:var(--ok);border-color:#1d3b26;background:#0f1a13} .pill.warn{color:var(--warn);border-color:#3d3013;background:#1a150a} .pill.info{color:var(--accent2);border-color:#17324d;background:#0d1622}
+.callout{border-left:3px solid var(--accent);background:#161207;padding:11px 14px;border-radius:0 9px 9px 0;margin:14px 0;color:#e8d9b4;overflow-wrap:anywhere} .callout.bad{border-color:var(--bad);background:#1a0f0f;color:#f2c7c7} .callout.info{border-color:var(--accent2);background:#0d1622;color:#cfe3ff}
+.toc{display:flex;flex-wrap:wrap;gap:7px;margin-top:18px} .toc a{font-size:12px;border:1px solid var(--line);background:var(--panel);padding:5px 9px;border-radius:999px;color:var(--muted)} .toc a:hover{color:var(--text);text-decoration:none}
+ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin-top:44px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:12px}
+figure.diagram{background:var(--code);border:1px solid var(--line);border-radius:12px;padding:14px;overflow-x:auto;margin:16px 0;max-width:100%}
+figure.diagram figcaption{color:var(--muted);font-size:12px;margin-top:8px}
+@media(max-width:560px){table{font-size:12px}th,td{padding:7px 6px}.toc a{padding:8px 12px;font-size:13px;min-height:44px;display:inline-flex;align-items:center}}
+</style></head><body><div class="wrap">
+<header><div class="eyebrow">Hive · Session Lifetime &amp; Limits</div><h1>会话寿命与运行上限 <span>压缩 · 记忆 · 调参</span></h1><p class="lede">Queen DM 和 colony 会话没有 TTL，也没有“最大轮数”；真正约束它们的是单轮迭代、上下文窗口、记忆容量和存储保留。本页给出一张可复用的边界表：哪些值是配置项、哪些是运行时参数、哪些写死在代码里，以及 Go 与 Python 目前是否一致。</p><div class="meta"><span>生成：<b>2026-11-23 10:58 CST</b></span><span>上游基线：<b>1.0.15 · 6703b434</b></span><span>Go HEAD：<b>01918e5b</b></span><span>口径：<b>以代码为准</b></span><span>产物：<b>HTML + session-limits.json</b></span></div><div class="toc"><a href="#s00">结论卡片</a><a href="#s01">会话寿命</a><a href="#s02">单轮与上下文</a><a href="#s03">压缩流水线</a><a href="#s04">记忆容量</a><a href="#s05">存储保留</a><a href="#s06">动态调参</a><a href="#s07">几十年前提</a><a href="#s08">Go 差异</a><a href="#s09">代码索引</a><a href="#s10">复用与维护</a></div></header>
+
+<section id="s00"><h2><span class="num">00</span>结论卡片</h2>
+
+<div class="grid g4">
+<div class="card"><div class="k">Queen 单轮迭代</div><div class="v">999,999</div><div class="d">Python 默认；HIVE_MAX_ITER 只压不升</div></div>
+<div class="card"><div class="k">Worker 迭代 / 收尾</div><div class="v">3 + 1</div><div class="d">默认 3 轮工作 + 1 轮强制报告</div></div>
+<div class="card"><div class="k">上下文窗口</div><div class="v">180,000</div><div class="d">≈100,000 tokens 触发压缩（56%）</div></div>
+<div class="card"><div class="k">摘要输出上限</div><div class="v">8,192</div><div class="d">硬常量，非配置项</div></div>
+<div class="card"><div class="k">逐字保留用户消息</div><div class="v">40</div><div class="d">环境变量 <code>HIVE_MAX_VERBATIM_CLIENT_MSGS</code></div></div>
+<div class="card"><div class="k">记忆容量 / 作用域</div><div class="v">200 × 4096B</div><div class="d">硬常量；每文件 4KB</div></div>
+<div class="card"><div class="k">反思节拍</div><div class="v">6 / 4</div><div class="d">每 6 回合 short；每 4 次 short 一次 long</div></div>
+<div class="card"><div class="k">保留清理</div><div class="v">手动</div><div class="d">janitor 无调度器；活跃会话硬保护</div></div>
+</div>
+</section>
+<section id="s01"><h2><span class="num">01</span>会话能活多久</h2>
+
+<p>会话本身没有 <b>TTL、最大轮数或最大寿命</b>：会话是磁盘目录（meta/state/events/conversations/parts/checkpoints），进程退出后可以 resume；Go/Python 都支持跨重启、跨版本迁移。真正的上限发生在“单轮迭代、上下文窗口、记忆容量、存储保留”四层。</p>
+<div class="tablewrap"><table><colgroup><col style="width:18%"><col style="width:24%"><col style="width:34%"><col style="width:24%"></colgroup><thead><tr><th>会话类型</th><th>能活多久</th><th>单轮上限</th><th>额外增长点</th></tr></thead><tbody><tr><td>Queen DM</td><td>无期限；重启用 resume</td><td>999,999 次迭代（HIVE_MAX_ITER 可压低）</td><td>conversations/parts、events、日志</td></tr>
+<tr><td>Colony queen</td><td>无期限；与 DM 同机制</td><td>999,999 次迭代</td><td>tracker.db、worker 工位、playbook 运行记录</td></tr>
+<tr><td>Worker</td><td>短生命周期（被派生的任务）</td><td>3 + 1 收尾（可被 queen 按次覆盖）</td><td>工位转录/data，默认 14 天后可被 janitor 深清</td></tr>
+</tbody></table></div>
+<div class="callout info">“几十年”在代码层可行，但进程必须重启后 resume 会话；触发器、webhook HTTP 服务、timer goroutine 都在会话进程内，机器重启后要重新加载会话才恢复。</div>
+</section>
+<section id="s02"><h2><span class="num">02</span>单轮与上下文上限</h2>
+<div class="tablewrap"><table><colgroup><col style="width:26%"><col style="width:20%"><col style="width:24%"><col style="width:30%"></colgroup><thead><tr><th>参数</th><th>默认</th><th>作用域</th><th>可调性</th></tr></thead><tbody><tr><td><code>max_iterations</code></td><td>999,999（queen）/ 3（worker）</td><td>queen：一次 turn 内模型↔工具循环；worker：一次任务</td><td>queen 仅 &lt;code&gt;HIVE_MAX_ITER&lt;/code&gt; 压低；worker 可每次 spawn 覆盖（1–1000）</td></tr>
+<tr><td><code>grace_iterations</code></td><td>1（worker）/ 0（queen）</td><td>迭代耗尽后的收尾轮</td><td>worker 可覆盖 0–3；queen 代码固定</td></tr>
+<tr><td><code>max_context_tokens</code></td><td>180,000</td><td>上下文预算；决定压缩触发点</td><td>配置 &lt;code&gt;queen_llm.&amp;lt;id&amp;gt;.max_context_tokens&lt;/code&gt; / &lt;code&gt;llm.max_context_tokens&lt;/code&gt; / 模型目录 / worker spawn 覆盖 1k–1M</td></tr>
+<tr><td><code>compaction_buffer_tokens</code></td><td>8,000</td><td>压缩预留的绝对头部空间</td><td>LoopConfig 代码常量；queen 配置不传（worker 覆盖白名单也不含）</td></tr>
+<tr><td><code>compaction_buffer_ratio</code></td><td>0.4</td><td>按窗口比例预留头部空间</td><td>代码常量；触发点随 max_context_tokens 间接变化</td></tr>
+<tr><td><code>compaction_warning_buffer_tokens</code></td><td>12,000</td><td>压缩预警线</td><td>代码常量</td></tr>
+</tbody></table></div>
+<div class="callout">触发公式：<code>trigger = max_context_tokens − (compaction_buffer_tokens + compaction_buffer_ratio × max_context_tokens)</code>。默认 180k → <b>100,000</b> tokens（56%）。worker 默认 180k 同公式 → 100,000（56%）。</div>
+</section>
+<section id="s03"><h2><span class="num">03</span>压缩流水线：能继续聊，但不是无损</h2>
+
+<figure class="diagram"><pre>每轮 iteration 前 → needs_compaction(估算)
+  ├─ 0a 超长用户消息：>100k 字符先截断（保留头 4k + 尾 4k）
+  ├─ 0  microcompact：只清可重取的工具结果，保留最近 6 条
+  ├─ 1  prune：删除旧工具结果，保留任务状态
+  ├─ 2  LLM 摘要：递归对折 ≤10 层；输出 ≤8,192 tokens；
+  │      保留 ≤40 条逐字用户消息；连续 3 次失败 → 断路器；30s 内不重复压缩
+  └─ 3  应急确定性摘要（LLM 不可用/摘要失败时）</pre>
+<figcaption>压缩流水线（两侧同构）；压缩完成后发 <code>context_compacted</code>，并立即触发一次 long memory reflection。</figcaption></figure>
+<p><b>保真度边界：</b>压缩不是“无损归档”。旧对话会变成摘要，逐字细节只对最近 40 条用户消息（可用 <code>HIVE_MAX_VERBATIM_CLIENT_MSGS</code> 调整）和最近 6 条可重取工具结果保留。要长期保留的事实必须写入 memory / skill / 文档，而不是指望聊天记录。</p>
+<div class="tablewrap"><table><colgroup><col style="width:26%"><col style="width:18%"><col style="width:56%"></colgroup><thead><tr><th>护栏</th><th>值</th><th>可调性</th></tr></thead><tbody><tr><td>摘要输出上限</td><td>8,192 tokens</td><td>硬常量 &lt;code&gt;LLM_COMPACT_SUMMARY_MAX_TOKENS&lt;/code&gt;</td></tr>
+<tr><td>递归深度</td><td>10</td><td>硬常量 &lt;code&gt;LLM_COMPACT_MAX_DEPTH&lt;/code&gt;</td></tr>
+<tr><td>逐字用户消息</td><td>40</td><td>环境变量 &lt;code&gt;HIVE_MAX_VERBATIM_CLIENT_MSGS&lt;/code&gt;</td></tr>
+<tr><td>连续失败断路器</td><td>3</td><td>硬常量 &lt;code&gt;MAX_CONSECUTIVE_FAILURES&lt;/code&gt;</td></tr>
+<tr><td>重压缩最小间隔</td><td>30s</td><td>硬常量</td></tr>
+<tr><td>微压缩保留</td><td>6</td><td>环境变量 &lt;code&gt;HIVE_MICROCOMPACT_KEEP_RECENT&lt;/code&gt;</td></tr>
+</tbody></table></div>
+</section>
+<section id="s04"><h2><span class="num">04</span>记忆容量与反思节拍</h2>
+
+<div class="tablewrap"><table><colgroup><col style="width:28%"><col style="width:24%"><col style="width:48%"></colgroup><thead><tr><th>项目</th><th>默认</th><th>可调性</th></tr></thead><tbody><tr><td>每作用域文件数</td><td>200</td><td>硬常量 &lt;code&gt;MAX_FILES&lt;/code&gt;；无 env/config</td></tr>
+<tr><td>每文件字节数</td><td>4096 (4KB)</td><td>硬常量 &lt;code&gt;MAX_FILE_SIZE_BYTES&lt;/code&gt;；owner PUT 超限 400</td></tr>
+<tr><td>short reflection 节拍</td><td>每 6 个完成回合</td><td>配置 &lt;code&gt;memory_reflection.every_turns&lt;/code&gt;</td></tr>
+<tr><td>long reflection 节拍</td><td>每 4 次 short</td><td>配置 &lt;code&gt;memory_reflection.long_every&lt;/code&gt;</td></tr>
+<tr><td>反思模型</td><td>worker</td><td>配置 &lt;code&gt;memory_reflection.model&lt;/code&gt;（worker|main）</td></tr>
+<tr><td>压缩后反思</td><td>立即 long</td><td>事件驱动，不可配置</td></tr>
+<tr><td>记忆读取模式</td><td>index / wait / background</td><td>配置 &lt;code&gt;memory_recall.mode&lt;/code&gt;（默认 index）</td></tr>
+</tbody></table></div>
+<div class="callout">记忆是“摘要+容量上限”的长期层：写满 200 个文件后，reflection 只能淘汰/合并；跨几十年不可能完整保留每次对话。</div>
+</section>
+<section id="s05"><h2><span class="num">05</span>存储与保留：真正会先满的是磁盘</h2>
+
+<p>retention janitor <b>只支持手动触发</b>（CLI 或 <code>POST /api/maintenance/janitor/run</code>），没有调度器。活跃会话（SessionManager live）硬阻断；其它目录要通过年龄/安全门。</p>
+<div class="tablewrap"><table><colgroup><col style="width:12%"><col style="width:42%"><col style="width:18%"><col style="width:28%"></colgroup><thead><tr><th>层级</th><th>对象</th><th>默认窗口</th><th>处置</th></tr></thead><tbody><tr><td>Tier 1</td><td>events / llm / compaction 日志、工具产物、轮转日志</td><td>7–30 天</td><td>直接删除（无归档价值）</td></tr>
+<tr><td>Tier 2</td><td>已结束 worker 转录（conversations + data）</td><td>14 天</td><td>archive 模式：归档或删除；保留 result.json 墓碑</td></tr>
+<tr><td>Tier 3</td><td>冷 queen 会话</td><td>30 天</td><td>只清 orphan spillover、重写 events（丢弃 context_usage_updated），不删对话</td></tr>
+</tbody></table></div>
+<div class="callout bad">queen 的 conversations/parts 与 colony 的 tracker.db <b>不会自动瘦身</b>；几十年不手动跑 janitor/归档，磁盘会持续增长。活跃 grace=48h，events 重写阈值=1,000,000 bytes。</div>
+</section>
+<section id="s06"><h2><span class="num">06</span>动态调参：三层入口</h2>
+<div class="tablewrap"><table><colgroup><col style="width:18%"><col style="width:26%"><col style="width:18%"><col style="width:38%"></colgroup><thead><tr><th>层级</th><th>参数</th><th>默认</th><th>怎么改</th></tr></thead><tbody><tr><td>配置（configuration.json）</td><td>queen/worker 上下文窗口</td><td>180,000</td><td><code>queen_llm.&lt;id&gt;.max_context_tokens</code> / <code>worker_llm.max_context_tokens</code> / <code>llm.max_context_tokens</code>；模型目录可兜底</td></tr>
+<tr><td>配置</td><td>反思节拍</td><td>6 / 4</td><td><code>memory_reflection.every_turns</code> / <code>long_every</code> / <code>model</code></td></tr>
+<tr><td>配置</td><td>保留窗口</td><td>7–30 天</td><td><code>retention.*</code> 段；也支持 <code>HIVE_RETENTION_*</code></td></tr>
+<tr><td>环境变量</td><td>queen 迭代上限（只压不升）</td><td>999,999</td><td><code>HIVE_MAX_ITER</code>，正整数</td></tr>
+<tr><td>环境变量</td><td>逐字用户消息</td><td>40</td><td><code>HIVE_MAX_VERBATIM_CLIENT_MSGS</code></td></tr>
+<tr><td>环境变量</td><td>微压缩保留条数</td><td>6</td><td><code>HIVE_MICROCOMPACT_KEEP_RECENT</code></td></tr>
+<tr><td>运行时按次</td><td>worker 迭代/收尾/预算/窗口</td><td>3/1</td><td><code>run_worker</code> 的 <code>loop_config_overrides</code>；白名单：<code>grace_iterations</code>, <code>max_context_tokens</code>, <code>max_iterations</code>, <code>tool_call_budget</code>, <code>tool_call_lifetime_budget</code>；边界见下表</td></tr>
+<tr><td>代码常量</td><td>压缩触发 buffer / 预警</td><td>8,000 + 0.4×window</td><td>改 &lt;code&gt;LoopConfig&lt;/code&gt; 默认值（发版）；queen 配置不传</td></tr>
+<tr><td>代码常量</td><td>摘要上限 / 递归 / 断路器</td><td>8,192 / 10 / 3</td><td>改 &lt;code&gt;compaction.py&lt;/code&gt; 常量（发版）</td></tr>
+<tr><td>代码常量</td><td>记忆容量</td><td>200 × 4096B</td><td>改 &lt;code&gt;queen_memory_v2.py&lt;/code&gt; / &lt;code&gt;internal/memory/memory.go&lt;/code&gt;（发版）</td></tr>
+</tbody></table></div><div class="tablewrap"><table><colgroup><col style="width:40%"><col style="width:30%"><col style="width:30%"></colgroup><thead><tr><th>worker 覆盖键</th><th>下限</th><th>上限</th></tr></thead><tbody><tr><td><code>grace_iterations</code></td><td>0</td><td>3</td></tr>
+<tr><td><code>max_context_tokens</code></td><td>1000</td><td>1000000</td></tr>
+<tr><td><code>max_iterations</code></td><td>1</td><td>1000</td></tr>
+<tr><td><code>tool_call_budget</code></td><td>0</td><td>200</td></tr>
+<tr><td><code>tool_call_lifetime_budget</code></td><td>0</td><td>2000</td></tr>
+</tbody></table></div>
+</section>
+<section id="s07"><h2><span class="num">07</span>“连续运行几十年”的前提</h2>
+
+<ol>
+<li><b>进程可恢复</b>：机器重启后 <code>hive serve</code> 重新加载会话；否则会话只是磁盘上的静止数据，触发器/timer/webhook 都不会跑。</li>
+<li><b>定期跑 janitor + 自己归档</b>：queen parts、tracker.db、worker 工位不会自动瘦身；events 重写也只在 janitor 跑时发生。</li>
+<li><b>接受摘要化</b>：几十年对话不可能逐字保留；长期事实要写 memory/skill/文档。</li>
+<li><b>模型/协议演进</b>：换模型、换 provider、schema 升级都要迁移验证（v1→v3 home 已有双跑证据）。</li>
+<li><b>成本</b>：每次压缩、每 6 回合反思、每轮系统提示都在烧 token；长跑是持续成本。</li>
+<li><b>触发器/队列</b>：timer 是会话内 sleep-until-due，missed ticks 上限 100；webhook 队列无界、无背压，长跑要自己控流量。</li>
+</ol>
+</section>
+<section id="s08"><h2><span class="num">08</span>Go 与 Python 的现状差异</h2>
+<div class="tablewrap"><table><colgroup><col style="width:22%"><col style="width:26%"><col style="width:34%"><col style="width:18%"></colgroup><thead><tr><th>项目</th><th>Python</th><th>Go 现状</th><th>判定</th></tr></thead><tbody><tr><td>queen 单轮 max_iterations</td><td>999,999</td><td>50（DefaultLoopConfig 起步；仅 HIVE_MAX_ITER 覆盖）</td><td><span class="pill warn">待修：事件却写 999,999</span></td></tr>
+<tr><td>queen tool-call 硬停</td><td>30 × 5 = 150</td><td>预算 30 / 硬停 50</td><td><span class="pill warn">登记候选：Go 更严</span></td></tr>
+<tr><td>worker 迭代 / 收尾</td><td>3 + 1</td><td>3 + 1（默认同值）</td><td><span class="pill ok">一致</span></td></tr>
+<tr><td>上下文窗口 / 压缩 buffer</td><td>180,000 / 8,000+0.4</td><td>180,000 / 8,000+0.4</td><td><span class="pill ok">一致</span></td></tr>
+<tr><td>摘要上限 / 深度 / 逐字条数</td><td>8,192 / 10 / 40</td><td>8,192 / 10 / 40</td><td><span class="pill ok">一致</span></td></tr>
+<tr><td>记忆容量</td><td>200 × 4096B</td><td>200 × 4096B</td><td><span class="pill ok">一致</span></td></tr>
+</tbody></table></div>
+</section>
+<section id="s09"><h2><span class="num">09</span>代码索引（生成器会校验）</h2>
+<div class="tablewrap"><table><colgroup><col style="width:44%"><col style="width:34%"><col style="width:22%"></colgroup><thead><tr><th>文件</th><th>符号 / 字符串</th><th>说明</th></tr></thead><tbody><tr><td><code>core/framework/agent_loop/internals/types.py</code></td><td><code>class LoopConfig</code></td><td>LoopConfig 默认值</td></tr>
+<tr><td><code>core/framework/agent_loop/internals/types.py</code></td><td><code>compaction_buffer_ratio</code></td><td>压缩触发比例</td></tr>
+<tr><td><code>core/framework/agents/queen/agent.py</code></td><td><code>queen_loop_config = {</code></td><td>queen 循环配置</td></tr>
+<tr><td><code>core/framework/agents/queen/agent.py</code></td><td><code>queen_colony_loop_config = {</code></td><td>colony queen 配置</td></tr>
+<tr><td><code>core/framework/agents/queen/worker_definition.py</code></td><td><code>DEFAULT_LOOP_CONFIG</code></td><td>worker 循环配置</td></tr>
+<tr><td><code>core/framework/host/colony_runtime.py</code></td><td><code>_LOOP_OVERRIDE_BOUNDS</code></td><td>per-spawn 覆盖边界</td></tr>
+<tr><td><code>core/framework/host/colony_runtime.py</code></td><td><code>_ALLOWED_WORKER_LOOP_OVERRIDES</code></td><td>覆盖白名单</td></tr>
+<tr><td><code>core/framework/server/queen_orchestrator.py</code></td><td><code>HIVE_MAX_ITER</code></td><td>queen 迭代上限环境变量</td></tr>
+<tr><td><code>core/framework/config.py</code></td><td><code>def get_queen_max_context_tokens</code></td><td>queen 上下文窗口解析</td></tr>
+<tr><td><code>core/framework/config.py</code></td><td><code>def get_worker_max_context_tokens</code></td><td>worker 上下文窗口解析</td></tr>
+<tr><td><code>core/framework/config.py</code></td><td><code>class MemoryReflectionConfig</code></td><td>反思节拍默认值</td></tr>
+<tr><td><code>core/framework/config.py</code></td><td><code>class RetentionConfig</code></td><td>保留策略默认值</td></tr>
+<tr><td><code>core/framework/agent_loop/internals/compaction.py</code></td><td><code>LLM_COMPACT_SUMMARY_MAX_TOKENS</code></td><td>摘要输出上限</td></tr>
+<tr><td><code>core/framework/agent_loop/internals/compaction.py</code></td><td><code>HIVE_MAX_VERBATIM_CLIENT_MSGS</code></td><td>逐字保留环境变量</td></tr>
+<tr><td><code>core/framework/agent_loop/internals/compaction.py</code></td><td><code>MAX_CONSECUTIVE_FAILURES</code></td><td>摘要断路器</td></tr>
+<tr><td><code>core/framework/agents/queen/queen_memory_v2.py</code></td><td><code>MAX_FILES</code></td><td>记忆文件上限</td></tr>
+<tr><td><code>core/framework/maintenance/retention.py</code></td><td><code>Tier 3</code></td><td>冷 queen 会话清理</td></tr>
+<tr><td><code>go_hive/go-hive/internal/agentloop/loop_config.go</code></td><td><code>func DefaultLoopConfig</code></td><td>Go 循环默认值</td></tr>
+<tr><td><code>go_hive/go-hive/internal/server/chat_memory_wiring.go</code></td><td><code>HIVE_MAX_ITER</code></td><td>Go queen 迭代上限</td></tr>
+<tr><td><code>go_hive/go-hive/internal/server/session_start_events.go</code></td><td><code>queenAutonomousMaxIterations</code></td><td>Go 事件中的 queen 迭代常量</td></tr>
+<tr><td><code>go_hive/go-hive/internal/agentloop/compaction.go</code></td><td><code>LLMCompactSummaryMaxTokens</code></td><td>Go 摘要上限</td></tr>
+<tr><td><code>go_hive/go-hive/internal/memory/memory.go</code></td><td><code>MaxFiles</code></td><td>Go 记忆容量</td></tr>
+<tr><td><code>go_hive/go-hive/internal/colony/worker_loop_config.go</code></td><td><code>workerLoopOverrideBounds</code></td><td>Go worker 覆盖边界</td></tr>
+</tbody></table></div>
+<p class="sub">生成器会对上表做锚点校验：文件缺失或符号消失时 <code>--check</code> 直接失败，避免文档随代码漂移。</p>
+</section>
+<section id="s10"><h2><span class="num">10</span>复用与维护</h2>
+
+<pre># 重新生成（写 HTML + JSON）
+python3 go_hive/scripts/gen_session_limits.py
+
+# CI / 本地校验：产物字节一致 + 代码锚点存在
+python3 go_hive/scripts/gen_session_limits.py --check</pre>
+<p>复用场景：① 回答“能聊多久 / 会不会爆上下文”；② 给客户做容量/成本评估；③ 调整 queen/worker 参数前查默认值与边界；④ 验收时核对 Go/Python 是否仍在同一条线上（本页第 08 节）。</p>
+<p class="sub">所有数字均从源码重算；HTML 是生成物，不要手改。基线：上游 1.0.15 <code>6703b434</code>，Go HEAD <code>01918e5b</code>。</p>
+</section>
+<footer>本页由 <code>go_hive/scripts/gen_session_limits.py</code> 生成；改动请改生成器或源码，不要手改 HTML。数字口径：配置默认值 + 代码常量 + 实测差异；不把“可配置”误写成“已对齐”。</footer>
+</div></body></html>

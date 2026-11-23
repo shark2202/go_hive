@@ -82,15 +82,16 @@ func browserSetupTool() tools.Tool {
 	return tools.Tool{
 		Name:        BrowserSetupToolName,
 		Description: BrowserSetupDescription,
-		// required: [] mirrors the Python request layer, which always
-		// publishes the key (framework/llm/litellm.py::_tool_to_openai_format)
-		// even when nothing is required. The wire wrapper drops
-		// additionalProperties, exactly as upstream does.
+		// Upstream's raw model-visible schema is exactly
+		// {type: object, properties: {}} plus the request-layer `required: []`
+		// (framework/llm/litellm.py::_tool_to_openai_format always publishes
+		// the key). Do NOT add `additionalProperties: false`: pydantic leaves
+		// the default out, and the live tool-contract recheck compares the raw
+		// definition byte for byte.
 		Parameters: map[string]any{
-			"type":                 "object",
-			"properties":           map[string]any{},
-			"additionalProperties": false,
-			"required":             []string{},
+			"type":       "object",
+			"properties": map[string]any{},
+			"required":   []string{},
 		},
 		ConcurrencySafe: true,
 	}

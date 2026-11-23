@@ -276,6 +276,38 @@ func (r *ChatRuntime) sedimentSoul(result memory.LoopResult) {
 	}
 }
 
+// configureMemoryScopes creates the session's global and queen memory scopes
+// and, when the session has a directory to persist passes in, the reflection
+// scheduler. Without a HIVE_HOME the runtime keeps its pre-memory behaviour
+// (no recall, no reflection) instead of guessing.
+//
+// Parity: core/framework/server/queen_orchestrator.py::initialize_memory_scopes,
+// core/framework/agents/queen/reflection_agent.py::subscribe_reflection_triggers
+func (r *ChatRuntime) configureMemoryScopes() {
+	homeRoot := r.deps.HomeRoot
+	if homeRoot == "" {
+		return
+	}
+	r.globalMemoryDir = memory.GlobalMemoryDir(homeRoot)
+	r.queenMemoryDir = memory.QueenMemoryDir(homeRoot, r.queenName)
+	_ = memory.InitMemoryDir(r.globalMemoryDir)
+	_ = memory.InitMemoryDir(r.queenMemoryDir)
+	if r.deps.Root == "" {
+		return
+	}
+	r.reflection = &memory.ReflectionScheduler{
+		SessionDir: r.deps.Root,
+		LLM:        r.memoryLLM,
+		GlobalDir:  r.globalMemoryDir,
+		QueenDir:   r.queenMemoryDir,
+		QueenID:    r.queenName,
+		Config:     func() memory.ReflectionConfig { return chatMemoryReflectionConfig(homeRoot) },
+		// A finished pass sediments its conclusions into her soul.
+		OnReflect: r.sedimentSoul,
+	}
+	r.reflection.InitializeReflectionState()
+}
+
 // chatMemoryReflectionConfig reads the memory_reflection section of
 // configuration.json, falling back to the same defaults as upstream.
 //

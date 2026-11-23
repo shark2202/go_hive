@@ -350,8 +350,9 @@ func (c *chatToolTier) loadedToolNames() []string {
 }
 
 // mcpToolNames maps the process loader's connected servers onto the names the
-// session catalogue advertises. The registry namespaces every MCP tool, so the
-// namespaced form is the only one that can collide with a real tool call.
+// session catalogue advertises. The registry registers the server's bare tool
+// names by default (Python parity); only an explicitly configured namespace
+// prefixes them, so the mapping has to use the loader's own namespace.
 func mcpToolNames() map[string]struct{} {
 	attacher := tools.ProcessMCP()
 	if attacher == nil {
@@ -362,12 +363,8 @@ func mcpToolNames() map[string]struct{} {
 		if !status.Connected {
 			continue
 		}
-		namespace := status.Namespace
-		if namespace == "" {
-			namespace = tools.MCPToolNamespace
-		}
 		for _, name := range status.ToolNames {
-			out[tools.NamespacedMCPToolName(namespace, status.Name, name)] = struct{}{}
+			out[tools.MCPRegistryToolName(status.Namespace, status.Name, name)] = struct{}{}
 		}
 	}
 	if len(out) == 0 {
@@ -377,8 +374,8 @@ func mcpToolNames() map[string]struct{} {
 }
 
 // isMCPTool treats the loader's connected set as authoritative, with the
-// registry's namespaced form as a fallback for a catalogue assembled without
-// the process loader (tests, an embedded host).
+// registry's prefixed form as a fallback for a catalogue assembled without the
+// process loader (tests, an embedded host).
 func isMCPTool(name string, connected map[string]struct{}) bool {
 	if _, ok := connected[name]; ok {
 		return true
@@ -386,6 +383,9 @@ func isMCPTool(name string, connected map[string]struct{}) bool {
 	return isNamespacedMCPTool(name)
 }
 
+// isNamespacedMCPTool recognises the optional prefix form. Bare MCP names are
+// recognised through the loader's connected set instead; a catalogue assembled
+// without the loader cannot tell a bare remote name from a builtin.
 func isNamespacedMCPTool(name string) bool {
 	prefix := tools.MCPToolNamespace + "__"
 	if !strings.HasPrefix(name, prefix) {

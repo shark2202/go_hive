@@ -8,6 +8,9 @@
 > 目标：用自建服务**替换 Hive Cloud（hive-backend + llm 代理 + 凭据代理）**，支持私有化部署，
 > 让 go_hive / 桌面客户端在 `HIVE_CLOUD_BASE` 指过来后，**客户端可观察契约**（API 路径/方法/字段/状态码/SSE 事件/错误文案）完全一致。
 > 证据基础：`go_hive/docs/cloud-dependencies.md`（依赖总账）+ 本目录 `docs/reverse-engineering.md`。
+> **API/SSE/WS 不变量**：全量端点（含 M2–M7、senders 的 inferred/unknown）登记在 `contracts/cloud-surface.json`，
+> 由 `scripts/gen_cloud_surface.py --check` 强制「路由集合 = implemented 集合 / observed 全覆盖 / SSE 事件一致 / WS 显式」；
+> 维护说明见 `docs/cloud-surface.md`，可读页 `docs/cloud-surface.html`。
 
 ## 1. 可行性判断（诚实口径）
 
@@ -42,6 +45,7 @@
 | M2 | Inbox L2（go_hive sentinel 真实 escalation→自建→回复回注闭环）+ 审计/限流 | 6h |
 | M3 | streamToken 轮换 L2 + `hive` LLM 凭据兼容（仅 token 校验面） | 4h |
 | M4 | CRM grid（`/v1/crm/*` 10 端点 + `grid_query` SQL 兼容层） | 8h |
+| M4.5 | senders cloud 兼容（`GET /v1/senders/runtime` + send-log/setup 客户端面的真实端点；先按 `contracts/cloud-surface.json` 的 inferred/unknown 清单补证据） | +6–8h |
 | M5 | LLM 代理（Anthropic Messages 透传 + images generations + 路由配置） | 10h |
 | M6 | 凭据代理（api.adenhq.com `/v1/credentials*` 兼容） | 6h |
 | M7 | 部署件（systemd/launchd、docker compose、备份/迁移、升级演练） | 6h |
@@ -58,7 +62,12 @@ go_hive/go-hive-cloud/
   internal/store/               # 每 team SQLite、语句门禁、方言翻译、变更/审计、收件箱表
   internal/httpapi/             # 路由、中间件、global-db / inbox / gateway / stream-token 处理器
   internal/httpapi/testdata/    # L1 golden
-  contracts/observed-contract.json     # 机器可读契约（契约覆盖测试解析它）
+  contracts/observed-contract.json     # 逆向观察契约（证据快照）
+  contracts/cloud-surface.json         # 全量 API/SSE/WS surface（canonical，门禁解析它）
+  docs/cloud-surface.md                # surface 维护规则与未知项
+  docs/cloud-surface.html              # 上述 JSON 的渲染页（生成物）
+  scripts/gen_cloud_surface.py         # 生成/校验 surface（--check）
+  scripts/check_cloud_surface.sh       # 门禁包装
   docs/reverse-engineering.md   # 逆向证据清单（端点/字段/错误/未知项）
   docs/private-deploy-architecture.md  # 自建服务设计（存储/认证/SSE/兼容策略）
   docs/m1-notes.md              # M1 实现规则、方言近似、契约歧义、未知项登记
@@ -90,6 +99,7 @@ go run ./cmd/hive-cloud serve --data-dir ./data --listen 127.0.0.1:8788
 gofmt -l .
 go vet ./...
 go test ./...            # L1 契约/golden/401/门禁/SSE/streamToken/契约覆盖
+python3 scripts/gen_cloud_surface.py --check   # 或 ./scripts/check_cloud_surface.sh
 ./scripts/smoke.sh       # L2a 真客户端 → evidence/globaldb-smoke.json
 ```
 

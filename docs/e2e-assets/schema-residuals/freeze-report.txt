@@ -1,0 +1,18 @@
+=== RUN   TestToolContractFreeze
+    tool_contract_freeze_test.go:134: contract 1.0: reference python 1.0.14 @ 4e737cbc, target go_hive 1.0.26-go.1 @ 1b9c458a
+    tool_contract_freeze_test.go:137: frozen: 59 reference tools + 103 go-only tools; live catalogue: 179 tools
+    tool_contract_freeze_test.go:180: A. reference vs live: name 48/59, description 48/59, input_schema 40/59, missing in Go 7, extra in Go 131
+    tool_contract_freeze_test.go:182: A. note: live here is the registry union of the session catalogue plus the queen lifecycle tools (search_timeline included via HIVE_MEMORY_TIMELINE); the manifest's Go side is the captured REQUEST layer, which is why the name count above differs from the manifest's shared count. Entries whose layers all live outside the session catalogue (the reflection side-agent's memory-file tools) are excluded from this section.
+    tool_contract_freeze_test.go:186: A. missing in Go (7): [ask_user collect_result credentials csv_sql search_tools sentinel_setup suggest_colony]
+    tool_contract_freeze_test.go:187: A. reflection-layer entries (not a session surface) (4): [delete_memory_file list_memory_files read_memory_file write_memory_file]
+    tool_contract_freeze_test.go:189: A. input_schema differs (8): [attach_file edit_file pdf_read read_file terminal_job_logs terminal_job_start terminal_pty_open terminal_pty_run]
+    tool_contract_freeze_test.go:190: A. Go-only (not in reference) (131): [airtable apify apollo arxiv asana attio aws_s3 azure_sql bigquery brevo browser_activate_tab browser_close browser_console browser_dialog_respond browser_evaluate browser_get_text browser_html browser_interact browser_navigate browser_open browser_reload browser_resize browser_screenshot browser_script browser_select] …
+    tool_contract_freeze_test.go:223: C. unified metric (authoritative): session reference 48/59 (4 reference entries outside the session surface), description 48/48, schema raw 40/48, schema normalized 48/48
+    tool_contract_freeze_test.go:258: B. frozen Go snapshot vs live: matched 144, missing 1, text differs 43, live names absent from the freeze 35
+    tool_contract_freeze_test.go:260: B. snapshot says present, live lacks it (1): [ask_user]
+    tool_contract_freeze_test.go:261: B. description/schema text differs (43): [arxiv attach_file credential_status csv_append csv_info csv_read csv_write edit_file exa_search excel excel_append excel_info excel_read excel_search excel_sheet_list excel_write get_account_info get_current_time image_generate list_browser_profiles list_skills list_triggers list_worker_questions pdf_read read_file] …
+    tool_contract_freeze_test.go:263: B. note: the frozen Go text is the captured REQUEST layer (context params like session_cwd stripped, required lists materialized) and was captured with a live home, so text drift mixes real surface changes with layer/environment differences; name drift is exact.
+    tool_contract_freeze_test.go:266: B. re-run `python3 go_hive/scripts/freeze_tool_contract.py build` after an intended surface change
+--- PASS: TestToolContractFreeze (0.01s)
+PASS
+ok  	github.com/shark2202/go_hive/go-hive/internal/cli	0.811s

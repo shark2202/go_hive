@@ -148,13 +148,13 @@
 
 | 键 | 类型 | 默认 | env 覆盖 | Python 读取点 | Go 读取点 | 状态 |
 |---|---|---|---|---|---|---|
-| `mcp.enabled` | bool | true | — | — | `go_hive/go-hive/internal/cli/mcp_config.go:68` | go_only |
-| `mcp.namespace` | string | mcp__ | — | — | `go_hive/go-hive/internal/cli/mcp_config.go:69` | go_only |
-| `mcp.timeout_seconds` | number | 240.0 | HIVE_MCP_CALL_RESULT_TIMEOUT | — | `go_hive/go-hive/internal/cli/mcp_config.go:70` (+1) | go_only |
-| `mcp.servers` | list \| object(name->spec) | [] | — | — | `go_hive/go-hive/internal/cli/mcp_config.go:71` | go_only |
+| `mcp.enabled` | bool | true | — | — | `go_hive/go-hive/internal/cli/mcp_config.go:74` | go_only |
+| `mcp.namespace` | string |  | — | — | `go_hive/go-hive/internal/cli/mcp_config.go:75` | go_only |
+| `mcp.timeout_seconds` | number | 240.0 | HIVE_MCP_CALL_RESULT_TIMEOUT | — | `go_hive/go-hive/internal/cli/mcp_config.go:76` (+1) | go_only |
+| `mcp.servers` | list \| object(name->spec) | [] | — | — | `go_hive/go-hive/internal/cli/mcp_config.go:77` | go_only |
 
 - `mcp.enabled`：go_only: confirmed no upstream counterpart — Python configures MCP servers through the registry (`hive mcp add`) and .mcp.json, and never reads an `mcp` block from configuration.json. Go reads it as the operator pin: enabled gates the whole subsystem (default true).
-- `mcp.namespace`：go_only: confirmed no upstream counterpart. Tool-name namespace; blank keeps the default "mcp__".
+- `mcp.namespace`：go_only: confirmed no upstream counterpart. Empty (the default) registers the server's own bare tool names, matching Python's registry keys (core/framework/loader/tool_registry.py::register_mcp_server); a non-empty value opts into the Go-only prefixed <namespace>__<server>__<tool> form with [^A-Za-z0-9_] folded to _.
 - `mcp.timeout_seconds`：env > file > 240s default, the general rule: internal/tools.MCPCallResultTimeout resolves HIVE_MCP_CALL_RESULT_TIMEOUT first, then the file value. Was file > env until the config-env-align lane; the reversal is fixed and pinned by TestMCPCallResultTimeoutPrecedence.
 - `mcp.servers`：go_only: confirmed no upstream counterpart. Accepts both the list and map shapes; a same-named registry entry is replaced by the file entry and `enabled: false` removes it from the load set.
 
@@ -172,9 +172,9 @@
 
 | 键 | 类型 | 默认 | env 覆盖 | Python 读取点 | Go 读取点 | 状态 |
 |---|---|---|---|---|---|---|
-| `memory_reflection.every_turns` | int >= 1 | 6 | — | `core/framework/config.py:1027` | `go_hive/go-hive/internal/server/chat_memory_wiring.go:293` | aligned |
-| `memory_reflection.long_every` | int >= 1 | 4 | — | `core/framework/config.py:1029` | `go_hive/go-hive/internal/server/chat_memory_wiring.go:294` | aligned |
-| `memory_reflection.model` | "main" \| "worker" | main | — | `core/framework/config.py:1045` | `go_hive/go-hive/internal/server/chat_memory_wiring.go:295` | aligned |
+| `memory_reflection.every_turns` | int >= 1 | 6 | — | `core/framework/config.py:1027` | `go_hive/go-hive/internal/server/chat_memory_wiring.go:325` | aligned |
+| `memory_reflection.long_every` | int >= 1 | 4 | — | `core/framework/config.py:1029` | `go_hive/go-hive/internal/server/chat_memory_wiring.go:326` | aligned |
+| `memory_reflection.model` | "main" \| "worker" | main | — | `core/framework/config.py:1045` | `go_hive/go-hive/internal/server/chat_memory_wiring.go:327` | aligned |
 
 - `memory_reflection.every_turns`：int (bool rejected), >=1; invalid keeps 6.
 - `memory_reflection.long_every`：same validation as every_turns.
@@ -510,7 +510,7 @@
 ### go_only（4）
 
 - `mcp.enabled` — go_only: confirmed no upstream counterpart — Python configures MCP servers through the registry (`hive mcp add`) and .mcp.json, and never reads an `mcp` block from configuration.json. Go reads it as the operator pin: enabled gates the whole subsystem (default true).
-- `mcp.namespace` — go_only: confirmed no upstream counterpart. Tool-name namespace; blank keeps the default "mcp__".
+- `mcp.namespace` — go_only: confirmed no upstream counterpart. Empty (the default) registers the server's own bare tool names, matching Python's registry keys (core/framework/loader/tool_registry.py::register_mcp_server); a non-empty value opts into the Go-only prefixed <namespace>__<server>__<tool> form with [^A-Za-z0-9_] folded to _.
 - `mcp.timeout_seconds` — env > file > 240s default, the general rule: internal/tools.MCPCallResultTimeout resolves HIVE_MCP_CALL_RESULT_TIMEOUT first, then the file value. Was file > env until the config-env-align lane; the reversal is fixed and pinned by TestMCPCallResultTimeoutPrecedence.
 - `mcp.servers` — go_only: confirmed no upstream counterpart. Accepts both the list and map shapes; a same-named registry entry is replaced by the file entry and `enabled: false` removes it from the load set.
 

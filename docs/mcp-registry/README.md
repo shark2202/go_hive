@@ -21,10 +21,10 @@
   `configuration.json` 的 `mcp.servers[]` 条目写 `enabled:false`，用来覆盖/剔除同名 registry 条目
   （操作者的显式声明优先于 UI 状态）。
 - **mode**：`mode:"cli"` 的 server 不进工具目录，只能通过 `hive mcp run` 从终端调用（两侧一致）。
-- **工具命名**：Go 把每个 server 工具注册为 `mcp__<namespace>__<server>__<tool>`，server/tool 中
-  `[^A-Za-z0-9_]` 折叠为 `_`（默认 namespace `mcp`，可用 `configuration.json mcp.namespace` 改）。
-  `installed.json` 的 `manifest.tools[].name` 仍写 **server 侧原名**；Python 不前缀，直接用原名，
-  因此跨实现迁移时不要把 Python 侧工具名写成带 `mcp__` 前缀的形态。
+- **工具命名**：默认注册 server 侧裸名（不折叠、不消毒，与 Python 参考一致，D3 终选 B′，2026-11-23）；
+  仅当 `configuration.json mcp.namespace` 显式非空时启用 Go-only 前缀模式
+  `mcp__<namespace>__<server>__<tool>`，server/tool 中 `[^A-Za-z0-9_]` 折叠为 `_`。
+  `installed.json` 的 `manifest.tools[].name` 始终写 **server 侧原名**；Python 不前缀，直接用原名。
 - **reload**：Python 没有 reload 路由，新 server 在下一个 queen 会话生效；Go 有
   `POST /api/mcp/reload`，重连连接池并 bump generation。
 - **超时**：Go 解析顺序 `HIVE_MCP_CALL_RESULT_TIMEOUT`（env）> `configuration.json mcp.timeout_seconds`

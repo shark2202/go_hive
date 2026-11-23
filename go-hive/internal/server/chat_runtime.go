@@ -150,10 +150,17 @@ type ChatRuntimeDeps struct {
 	// server. It is upstream's QueenPhaseState.mcp_tool_names_all — the set
 	// the per-queen allowlist gates and the live-tools diagnostic counts.
 	MCPToolNamesAll []string
-	// Phase reports the queen's current phase ("independent" / "colony") for
-	// the node_loop_iteration payload, mirroring the upstream loop's
+	// Phase reports the queen's current phase ("independent" / "colony") for the
+	// node_loop_iteration payload, mirroring the upstream loop's
 	// iteration_metadata_provider. Nil leaves the iteration phase-less.
 	Phase func() string
+	// Session is the live session record this runtime serves. It is optional
+	// (tests and embedded hosts build runtimes without one); when set, the
+	// colony pivot intercept stashes its rich payload on it, mirroring
+	// upstream's session.pending_colony_pivot, which the accept route
+	// (POST /api/sessions with colony_id + source_session_id) and the dismiss
+	// route read.
+	Session *Session
 	// Credentials reports the accounts connected in the session's home. It
 	// renders into the static prompt's ambient "# Credentials" block (provider
 	// names and counts, as upstream's summary does). Nil means "nothing
@@ -252,6 +259,9 @@ type ChatRuntime struct {
 	globalMemoryDir string
 	queenMemoryDir  string
 	reflection      *memory.ReflectionScheduler
+	// contextCompactedUnsub removes the session-bus subscription that turns a
+	// completed compaction into the queen's long memory reflection.
+	contextCompactedUnsub func()
 	// memoryLLM resolves the memory-work model (reflection, dated timeline)
 	// at each call: the worker_llm slot while memory_reflection.model is
 	// "worker", else this session's provider.
@@ -344,6 +354,19 @@ type ChatRuntime struct {
 	// a tool reported a missing credential (upstream: credentials(collect)).
 	// It survives until the next user message/trigger, like pendingQuestions.
 	pendingCredentialForm map[string]any
+	// pendingColonySuggestion is the suggest_colony payload the current turn
+	// parked on (the DM "Create Colony" popup). It survives until the next
+	// user message (the dismissal) starts a turn, and is persisted so a
+	// restarted runtime re-announces the popup.
+	//
+	// Parity: framework/agent_loop/agent_loop.py:823-825 (_pending_colony_suggestion)
+	pendingColonySuggestion map[string]any
+	// pendingColonyPivot is the task_create(new_colony=true) payload the
+	// current turn parked on. The same payload is stashed on Session
+	// (session.pending_colony_pivot) for the accept/dismiss routes.
+	//
+	// Parity: framework/agent_loop/agent_loop.py:829-831 (_pending_colony_pivot)
+	pendingColonyPivot map[string]any
 	// Implicit judge ledger: upstream publishes turn N's verdict when the park
 	// unblocks (the next message starts the turn that announces it). The chat
 	// runtime remembers the finished turn and settles it at the next turn
@@ -422,29 +445,9 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 	if runtime.queenName == "" {
 		runtime.queenName = "default"
 	}
-	// Parity: core/framework/server/queen_orchestrator.py::initialize_memory_scopes
 	// Memory scopes only exist under a HIVE_HOME; without one the runtime keeps
-	// its pre-memory behaviour (no recall, no reflection) instead of guessing.
-	if deps.HomeRoot != "" {
-		runtime.globalMemoryDir = memory.GlobalMemoryDir(deps.HomeRoot)
-		runtime.queenMemoryDir = memory.QueenMemoryDir(deps.HomeRoot, runtime.queenName)
-		_ = memory.InitMemoryDir(runtime.globalMemoryDir)
-		_ = memory.InitMemoryDir(runtime.queenMemoryDir)
-		// Parity: core/framework/agents/queen/reflection_agent.py::subscribe_reflection_triggers
-		if deps.Root != "" {
-			runtime.reflection = &memory.ReflectionScheduler{
-				SessionDir: deps.Root,
-				LLM:        runtime.memoryLLM,
-				GlobalDir:  runtime.globalMemoryDir,
-				QueenDir:   runtime.queenMemoryDir,
-				QueenID:    runtime.queenName,
-				Config:     func() memory.ReflectionConfig { return chatMemoryReflectionConfig(deps.HomeRoot) },
-				// A finished pass sediments its conclusions into her soul.
-				OnReflect: runtime.sedimentSoul,
-			}
-			runtime.reflection.InitializeReflectionState()
-		}
-	}
+	// its pre-memory behaviour (no recall, no reflection).
+	runtime.configureMemoryScopes()
 
 	loopLLM := runtime.pinnedLLM
 	if runtime.streamLLM != nil {
@@ -475,6 +478,15 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 		// thread, or a chat-app channel once one runs) is known as such by
 		// the tasks reminder source.
 		ChatAppProvider: chatAppProviderFromChannel(deps.Channel),
+		// The live phase gates the framework-level colony dispatch
+		// (suggest_colony in independent, task_create(new_colony=true) in
+		// colony). Reads through the same provider the emitter stamps on
+		// node_loop_iteration.
+		Phase: deps.Phase,
+		// The colony pivot sink stashes the rich payload on the session while
+		// the tool call is still being dispatched, so the accept route can
+		// never race the popup event.
+		PivotPayloadSink: runtime.sinkColonyPivot,
 	}
 	// Three-level runtime logs (L1 summary.json / L2 details.jsonl / L3
 	// tool_logs.jsonl): session-shaped roots (<storage>/sessions/<id>) get the
@@ -509,6 +521,8 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 	// configured, each image is captioned (viewport coordinates included) and
 	// dropped before the model sees the result.
 	runtime.loop.VisionCaptioner = deps.VisionCaptioner
+	// Bridge the loop's completed compaction to the session bus (reflection).
+	runtime.configureContextCompacted()
 	// The streaming completer owns the LLM stream watchdog; its budgets come
 	// from the loop config (upstream wires them from the same LoopConfig).
 	if runtime.streamLLM != nil {
@@ -786,6 +800,10 @@ func (r *ChatRuntime) Close() error {
 	// Teardown cancels the queen's reflection triggers and runs the final
 	// reflection: reflections run on the scheduler's own context, so this
 	// waits for one already in flight instead of aborting it mid-write.
+	if r.contextCompactedUnsub != nil {
+		r.contextCompactedUnsub()
+		r.contextCompactedUnsub = nil
+	}
 	if r.reflection != nil {
 		r.reflection.Close(memory.ReflectionCloseGrace)
 	}
@@ -940,6 +958,7 @@ func (r *ChatRuntime) runTurn(request chatTurnRequest) {
 	if request.clientInput || len(request.triggers) > 0 {
 		r.clearPendingQuestions()
 		r.clearPendingCredentialForm()
+		r.clearPendingColony()
 	}
 	if request.clientInput {
 		// Parity: framework/agent_loop/agent_loop.py::inject_event — a real
@@ -1023,11 +1042,11 @@ func (r *ChatRuntime) runTurn(request chatTurnRequest) {
 	}
 	// Parity: framework/agent_loop/agent_loop.py::_await_user_input — a turn
 	// that asked the user a question parks on ask_user, not turn_done, so the
-	// snapshot and idle nudge treat it as an external wait.
-	parkReason := agentloop.ParkReasonTurnDone
-	if pending := r.pendingParkReason(); pending != "" {
-		parkReason = pending
-	}
+	// snapshot and idle nudge treat it as an external wait. The framework
+	// colony dispatch outranks both: a suggest_colony or
+	// task_create(new_colony=true) call parks on the popup, whose event is the
+	// rich colony_suggestion_requested rather than client_input_requested.
+	parkReason := r.turnParkReason(result, emitter)
 	emitter.executionCompleted(result.InnerTurns, string(parkReason), r.parkQuestionsFor(parkReason))
 	r.noteImplicitJudgeVerdictDue(executionID)
 	// Parity: framework/agent_loop/agent_loop.py::execute — STOP fires after a
@@ -1155,10 +1174,7 @@ func (r *ChatRuntime) runOpeningTurn() {
 		r.setLastError(err)
 		return
 	}
-	parkReason := agentloop.ParkReasonTurnDone
-	if pending := r.pendingParkReason(); pending != "" {
-		parkReason = pending
-	}
+	parkReason := r.turnParkReason(result, emitter)
 	emitter.executionCompleted(result.InnerTurns, string(parkReason), r.parkQuestionsFor(parkReason))
 	r.noteImplicitJudgeVerdictDue(executionID)
 	if len(result.ToolResults) == 0 {
@@ -1453,43 +1469,6 @@ func (r *ChatRuntime) executeTool(req agentloop.ToolCallRequest) (agentloop.Tool
 		content = annotated
 	}
 	return agentloop.ToolResult{Content: content, IsError: isError, ImageContent: imageContent}, nil
-}
-
-// toolsForTurn advertises the session tools for one turn. The colony-runtime
-// lifecycle tools (run_worker, get_worker_status, inject_message,
-// stop_worker) are colony-gated: without a bound colony the queen does not see
-// the defs at all (a direct call still returns an actionable no-colony error
-// from the executor), matching upstream's colony-phase tool list.
-//
-// Parity: framework/tools/queen_lifecycle_tools.py::register_queen_lifecycle_tools
-// (the colony-runtime tools only reach a colony-phase registry)
-func (r *ChatRuntime) toolsForTurn() []llm.ToolDef {
-	runtime := r.boundColonyRuntime()
-	if runtime != nil {
-		return filterToolsByColonyAllowlist(runtime, r.tools)
-	}
-	out := make([]llm.ToolDef, 0, len(r.tools))
-	for _, def := range r.tools {
-		if def.Name == colony.RunWorkerToolName || colonyBoundQueenTool(def.Name) {
-			continue
-		}
-		out = append(out, def)
-	}
-	return out
-}
-
-// turnContextUsage builds the context readout the upstream loop publishes on
-// every context tick (iteration start, after each tool result, after the tool
-// batch), using the same char-based projection as the session-start block.
-func (r *ChatRuntime) turnContextUsage(trigger string) map[string]any {
-	if r == nil || r.conv == nil {
-		return nil
-	}
-	maxContextTokens := 0
-	if r.loop != nil {
-		maxContextTokens = r.loop.Config.MaxContextTokens
-	}
-	return composeContextUsage(r.conv, maxContextTokens, r.toolsForTurn(), trigger)
 }
 
 // BindColony attaches (or clears) this session's colony runtime. Attaching

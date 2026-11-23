@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://go_hive.local/contracts/queen-profile.schema.json",
+  "title": "Hive queen profile (queen_defaults/<queen_id>.yaml)",
+  "description": "One built-in queen persona + capability defaults; filename stem is the queen id. See docs/queen-profile-spec.md.",
+  "type": "object",
+  "required": [
+    "name", "title", "core_traits", "skills",
+    "hidden_background", "psychological_profile", "behavior_triggers", "world_lore",
+    "examples", "portrait",
+    "default_tool_categories", "default_preset_skills"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "name": {"type": "string", "minLength": 1},
+    "title": {"type": "string", "minLength": 1},
+    "core_traits": {"type": "string"},
+    "skills": {"type": "string"},
+    "hidden_background": {
+      "type": "object",
+      "required": ["past_wound", "deep_motive", "behavioral_mapping"],
+      "additionalProperties": false,
+      "properties": {
+        "past_wound": {"type": "string"},
+        "deep_motive": {"type": "string"},
+        "behavioral_mapping": {"type": "string"}
+      }
+    },
+    "psychological_profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "social_masks": {"type": "string"},
+        "anti_stereotype": {"type": "string"}
+      }
+    },
+    "behavior_triggers": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["trigger", "reaction"],
+        "additionalProperties": false,
+        "properties": {
+          "trigger": {"type": "string"},
+          "reaction": {"type": "string"}
+        }
+      }
+    },
+    "world_lore": {
+      "type": "object",
+      "required": ["habitat", "lexicon"],
+      "additionalProperties": false,
+      "properties": {
+        "habitat": {"type": "string"},
+        "lexicon": {"type": "string"}
+      }
+    },
+    "examples": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["user", "internal", "response"],
+        "additionalProperties": false,
+        "properties": {
+          "user": {"type": "string"},
+          "internal": {"type": "string"},
+          "response": {"type": "string"}
+        }
+      }
+    },
+    "portrait": {
+      "type": "object",
+      "required": ["cut", "face", "hair", "skin"],
+      "additionalProperties": false,
+      "properties": {
+        "cut": {"type": "string"},
+        "face": {"type": "string"},
+        "hair": {"type": "string"},
+        "skin": {"type": "string"},
+        "beard": {"type": "string"},
+        "brow": {"type": "string"},
+        "collar": {"type": "string"},
+        "eyes": {"type": "string"},
+        "glasses": {"type": "string"},
+        "mouth": {"type": "string"},
+        "neck": {"type": "string"},
+        "shirt": {"type": "string"}
+      }
+    },
+    "default_tool_categories": {"type": "array", "items": {"type": "string"}},
+    "default_preset_skills": {"type": "array", "items": {"type": "string"}}
+  }
+}

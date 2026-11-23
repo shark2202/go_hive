@@ -1,5 +1,9 @@
 # 02 · 总体架构
 
+> **本文描述上游 Hive（Python 参考实现）。**
+> go_hive 的对应实现：`internal/server`、`internal/agentloop`、`internal/colony`、`internal/host`、`internal/tools`。
+> 状态：已移植；差异登记见 `docs/alignment-differences.md`。
+
 ## 1. 分层视图
 
 ```
@@ -58,7 +62,7 @@
 
 ### 3.1 只有一个执行原语
 
-`AgentLoop`（`core/framework/agent_loop/agent_loop.py`，7,497 行）同时是：
+`AgentLoop`（`core/framework/agent_loop/agent_loop.py`，约 7,500 行；2026-11-23 实测 7,501）同时是：
 
 - Queen：长会话、近乎无限回合、大上下文、每回合 30 次工具调用预算（开 Colony 后 50）。
 - Worker：3 个工作回合 + 1 个宽限回合，每回合 30 次调用，生命周期 200 次，宽限回合只允许 `report_to_parent` / `tracker_upsert` / `task_update`。
@@ -156,3 +160,5 @@ Queen 通过 `run_worker(tasks=[...])` 一次提交 N 个任务，调用立即�
 - 扩展点：`Channel`/`ChannelHost`（聊天应用）、`TurnContext`/`TurnContextHost`（外部包注入上下文）
 
 `framework` 仍然是可导入的完整实现，但 `hive` 是承诺语义化版本的公开契约（见 `AGENTS.md`：不得在非大版本中重命名/删除导出或做不兼容行为变更）。
+
+Go 侧没有等价的惰性导出表：公开面是 Go 包路径，而不是 `core/hive/` 式的名字导出；SDK exports 的解析基准属待拍板 D2（见 `docs/alignment-differences.md` 与 `docs/exports-baseline-decision.md`）。

@@ -1,6 +1,6 @@
 # 处理方案报告（差异 → 方案 → 责任人 → 排期）
 
-> 更新：2026-11-22 18:40 CST · 与 [对齐目标报告](alignment-goals.md) / [差异报告](alignment-differences.md) 配套。
+> 更新：2026-11-23 · 与 [对齐目标报告](alignment-goals.md) / [差异报告](alignment-differences.md) 配套。
 > 原则：**验收只认实测**；可观测差异要么修、要么登记且带复查条件；依赖变更与产品口径类改动**必须用户拍板**。
 
 ## A. 本轮已处置（已闭环，留档可查）
@@ -28,7 +28,7 @@
 |---|---|---|
 | 浏览器 Skia vs PIL JPEG 字节、字体度量标签盒、alpha | 渲染库不同；几何/区域已对齐（≤1px） | 上游换渲染栈或出现字节级依赖场景 |
 | Go 扩展路由 5 条 + 别名 2 条 | 兼容与运维需要，契约内逐条登记 | 上游新增同名端点时复核 |
-| 14 条工具 schema 形状差 | nullable/oneOf 表达差异，语义等价 | 上游 schema 结构化改造时 |
+| ~~14 条工具 schema 形状差~~ **已闭环（round 9）** | 12 条 lifecycle 参考改记运行时层后逐字对齐；`browser_setup` 去 `additionalProperties`；`task_create` 安装 DM pivot overlay 后 raw/归一化均一致 | 归一化残差 **0**；raw 8 条仅数值字面/参考层 `session_cwd` 表示差（语义等价） |
 | MCP R1–R3（折叠不可逆/长名/序列化） | 见 D3；冻结契约保护 | D3 决策后重估 |
 | 版本双轨（go 后缀） | 既定口径，不进契约 | 外发布品牌决策时 |
 | 91 个第三方集成「未验证」 | 无凭据（2026-11-19 决定不阻塞） | 提供凭据或外发布尽调 |
@@ -54,7 +54,7 @@
 - ✅ disk-contract：SC-04 权限已对齐（sessions 树 0600）、SC-06 sidecar API 双跑 0 差异、SC-08 24 名核完；`make storage-sweep` 已接入（`f9b10724`）
 
 **P1**
-- ⬜ tools：输出 golden 扩面收敛 12 条例外（6–8h）；`run_playbook` 折叠控制参数口径（2h）；`exa_search` 扁平化另立车道（4h）
+- ⬜ tools：输出 golden 扩面收敛 12 条例外（6–8h）；`exa_search` 扁平化另立车道（4h）。**round 9 已闭环**：lifecycle 12 条运行时层基线 + `browser_setup`/`task_create` 收口（归一化残差 0）；`run_playbook` 折叠控制参数口径已在 round 5 下沉为独立 control 工具（§14.3）
 - ⬜ env-vars：Go-only 41 项已在差异报告逐类定性 ✅；剩余「高危开关设了有观测效果」实测（4h）
 - ⬜ config-json：go_partial 4 / unread 1 逐键接线或降级只读（4–6h）；PUT→重启→行为变化字段级实测扩面（4h）
 - ⬜ prompt-turn-context：colony 相位 base prompt live 抓包 P-08（4h）；worker/colony prompt 与提醒文案系统对照（6h）

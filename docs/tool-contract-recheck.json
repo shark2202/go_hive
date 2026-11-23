@@ -940,7 +940,7 @@
   ]
  },
  "divergence_note": "capture ran on branch tool-contract-recheck @ c8cca067; the python reference checkout (/Users/mac/hive, main) was at 889bbfde during the capture and advanced to 98b3a0ab afterwards (env/config contract + qc commits). None of those touch the tool surface: core/ is still a756b1e5, tools/src still 68b6c230f20e, and the captured Python tools[] is byte-identical to the frozen baseline.",
- "current_round": 8,
+ "current_round": 9,
  "rounds": [
   {
    "round": 1,
@@ -2551,6 +2551,71 @@
     "docs/tool-contract-diff.md §17",
     "go test ./internal/cli -run TestToolContractFreeze -v (section C line)",
     "go test ./internal/server -run TestQueenWorkerHealthSummary -v"
+   ]
+  },
+  {
+   "round": 9,
+   "label": "round 9 @ schema-residuals（lifecycle 运行时层重取基线；browser_setup / task_create / run_worker / playbook required 收口）",
+   "generated_at_utc": "2026-11-23T01:08:58Z",
+   "scope": "Rebase the 12 queen-lifecycle references onto the Python runtime layer (registered Tool objects projected through _tool_to_openai_format) and align the Go side byte for byte: browser_setup drops additionalProperties:false; run_worker parameter descriptions adopt the Python text; run_playbook / list_playbook_runs publish required: []; the freeze report installs the DM task_create pivot overlay so the comparison is the runtime surface the model receives.",
+   "baseline": {
+    "round": 8,
+    "note": "Round 8 (tool-surface-fixes) froze the live recheck as the single authoritative metric: present 47/54, description 47/47, raw 25/47, normalized 33/47, residual 14 (12 lifecycle layer + browser_setup + task_create)."
+   },
+   "recheck": {
+    "method": "live registry union, no dual-runtime capture; Python reference rebased onto the runtime layer by go_hive/docs/e2e-assets/schema-residuals/py_runtime_schema_probe.py",
+    "command": "go test ./internal/cli -run TestToolContractFreeze -v",
+    "python": {
+     "role": "reference",
+     "version": "1.0.14",
+     "commit": "4e737cbc63523ba5eeda84820c09f28ebd43a670",
+     "core_commit": "a756b1e51765bc75b0a40e362859452a0a54081b",
+     "tools_commit": "68b6c23095aef8bc9a0dcbc05aeb16e61b1ba8db",
+     "runtime_layer": "registered Tool objects (queen_lifecycle_tools.py + playbook_tools.py) projected via _tool_to_openai_format; probe output go_hive/docs/e2e-assets/schema-residuals/python-runtime-tools.json"
+    },
+    "go": {
+     "role": "target",
+     "worktree": "/Users/mac/hive/.wt/schema-residuals",
+     "branch": "schema-residuals",
+     "base": "f9eb5720",
+     "method": "newSessionToolCatalogue registry union + server.QueenLifecycleToolDefs, with the DM task_create pivot overlay installed"
+    },
+    "statistics": {
+     "reference_tools": 59,
+     "live_present": 48,
+     "outside_session": 4,
+     "description_verbatim": 48,
+     "input_schema_raw_verbatim": 40,
+     "input_schema_normalized_verbatim": 48,
+     "normalized_residual": [],
+     "raw_residual": [
+      "attach_file",
+      "edit_file",
+      "pdf_read",
+      "read_file",
+      "terminal_job_logs",
+      "terminal_job_start",
+      "terminal_pty_open",
+      "terminal_pty_run"
+     ],
+     "live_missing": [
+      "ask_user",
+      "collect_result",
+      "credentials",
+      "csv_sql",
+      "search_tools",
+      "sentinel_setup",
+      "suggest_colony"
+     ],
+     "normalized_residual_reasons": {}
+    }
+   },
+   "regressions": [],
+   "evidence": [
+    "docs/tool-contract-diff.md §18",
+    "docs/e2e-assets/schema-residuals/REPORT.md",
+    "docs/e2e-assets/schema-residuals/python-runtime-tools.json",
+    "go test ./internal/cli -run TestToolContractFreeze -v (section C line)"
    ]
   }
  ]

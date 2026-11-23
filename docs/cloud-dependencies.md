@@ -66,9 +66,26 @@ OAuth/ESP 投递在上游经 "Aden cloud connector"，Go 未实现、直接给�
 - Python hooks：`core/framework/cloud_sync_hooks.py::schedule_push`（kinds：memory / prompt / tool_allowlist / queen_profile / queen_avatar / skill_override）。**reconciler `framework.cloud_sync` 不在本仓库**（hook 捕获异常后静默 no-op）。
 - Go：镜像为可选 deps 钩子（`routes_queens.go:52`、`routes_queens_tools.go:50`），**全库无生产代码装配 → no-op**；C12 登记 `partial`。
 
-### 1.8 Aden cloud connector（发送器 OAuth/ESP）
+### 1.8 Aden cloud connector（发送器池、send-log、OAuth/ESP）
 
 - 上游发送器池从 Aden cloud 拉取、OAuth/ESP 投递走云端连接器；Go `internal/senders` 为**纯本地实现**（SMTP 投递），OAuth/ESP 路径返回引导错误（见 §0）。属"未实现的云能力"，不是隐藏依赖。
+- 上游 `tools/src/aden_tools/senders/` 通过同一个 `ADEN_API_KEY` 客户端访问 Aden cloud；base 取 `ADEN_API_URL`，缺省 `https://app.open-hive.com`（`registry.py:24`）。
+
+| 端点 / 客户端方法 | 用途 | 证据 |
+| --- | --- | --- |
+| `GET /v1/senders/runtime`（`list_team_senders()`） | 拉取团队发送器池（60s 缓存；OAuth 行只带 `integration_id`，token 按需走 `/v1/credentials/{id}`） | `tools/src/aden_tools/senders/registry.py:3,135` |
+| `reserve_send(payload)` | 发送前预留配额（有 daily_limit 时 fail-closed） | `senders/sendlog.py:96-114` |
+| `complete_send(send_id, outcome)` | 回报 provider 结果（status/provider_message_id/error） | `senders/sendlog.py:130-148` |
+| `sender_usage_today()` | 当日每发送器用量（`{sender_id: {sent_today}}`） | `senders/sendlog.py:153-168` |
+| `suppress_recipient(email, reason, note)` | 加入团队 do-not-contact 名单 | `senders/sendlog.py:171-179` |
+| `list_suppressions()` | 读取抑制名单 | `senders/sendlog.py:182-191` |
+| `list_sends(**filters)` | 发送审计（sender_id/to_email/colony_id/limit） | `senders/sendlog.py:194-203` |
+| `create_team_sender(payload)` | 创建设置好的发送器 | `senders/setup.py:347` |
+| `list_provider_verified_senders(provider, secret)` | provider 已验证地址探测（SendGrid 等） | `senders/setup.py:166` |
+
+- **除 `GET /v1/senders/runtime` 外，其余方法的 HTTP method/path 在开源仓库中不可恢复**：`core/framework/credentials/aden/client.py` 只实现 `/v1/credentials*`，senders 方法来自运行时扩展客户端。不得按猜测实现；机器可读登记见 `go_hive/go-hive-cloud/contracts/cloud-surface.json`（`status` 分别为 `inferred` 与 `unknown`）。
+- 私有化替代：SMTP relay（Go `internal/senders` 已支持）；若要兼容上游 agent 工具链，需要 M4.5 按真实云端点补 send-log/setup（见 `go-hive-cloud/README.md` §4）。
+
 
 ### 1.9 不是私有云（常见误报，澄清）
 
@@ -114,4 +131,5 @@ OAuth/ESP 投递在上游经 "Aden cloud connector"，Go 未实现、直接给�
 - 真实 Hive 云端 e2e（inbox 收回复、global-db 真读写）**无登录态未验证**（`hive-inbox.html` footer 同注）。
 - gateway ping 无关闭开关（登记）。
 - streamToken 刷新 Go 未实现（C12 out_of_scope）；aden 凭据代理 Go 未移植（unported）。
+- senders 的 8 个 send-log/setup 客户端方法（reserve/complete/usage/suppress/list/create/verified）HTTP 方法/路径未恢复，已在 `go-hive-cloud/contracts/cloud-surface.json` 登记为 `unknown`；`GET /v1/senders/runtime` 为 `inferred`。
 - 本页为总账；`hive-inbox.html` 是 Inbox 单服务深页（协议/数据模型/流程）。

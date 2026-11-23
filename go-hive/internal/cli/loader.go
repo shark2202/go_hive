@@ -584,8 +584,11 @@ func (r *Runner) createSessionWithRuntime(
 			Root:              sessionDir,
 			Bus:               record.EventBus,
 			SessionID:         sessionID,
-			QueenName:         record.QueenName,
-			HomeRoot:          home.Root,
+			// The live session record: the colony pivot intercept stashes
+			// session.pending_colony_pivot on it for the accept/dismiss routes.
+			Session:   record,
+			QueenName: record.QueenName,
+			HomeRoot:  home.Root,
 			// A prompt this create will deliver right after construction is
 			// upstream's drained injection: the cold-resume mid-turn guard
 			// must not park the session when fresh input is already headed in.
@@ -873,6 +876,32 @@ func (l *colonyLifecycle) CreateColonyFromSource(params hiveserver.CreateColonyF
 			Status:  http.StatusNotFound,
 		}
 	}
+	// Phase branch, as upstream _create_colony_from_source: a colony-phase
+	// queen's popup is the task_create(new_colony=true) lean-handoff pivot,
+	// not the DM transcript fork. Its accept path (a sibling colony seeded
+	// from the stashed goal/handoff/tasks, no compaction, no spawn lock) is
+	// not ported in this build; refuse explicitly rather than routing the
+	// pivot through the DM fork (which would lock the source and copy the
+	// wrong conversation).
+	phase := hiveserver.SessionPhaseLabel(source)
+	if phase == hiveserver.QueenPhaseColony {
+		if source.PendingColonyPivot() == nil {
+			return nil, &hiveserver.ColonyForkError{
+				Message: "source colony has no pending new_colony pivot — the popup must be opened via task_create(new_colony=true) first.",
+				Status:  http.StatusConflict,
+			}
+		}
+		return nil, &hiveserver.ColonyForkError{
+			Message: "the colony lean-handoff accept path is not implemented in this build; the pivot payload is stashed on the source session",
+			Status:  http.StatusNotImplemented,
+		}
+	}
+	if phase != hiveserver.QueenPhaseIndependent {
+		return nil, &hiveserver.ColonyForkError{
+			Message: fmt.Sprintf("source session must be in 'independent' or 'colony' phase to fork into a colony (currently '%s').", phase),
+			Status:  http.StatusConflict,
+		}
+	}
 	if source.ColonySpawned {
 		return nil, &hiveserver.ColonyForkError{
 			Message: "source session already spawned a colony — cannot fork again.",
@@ -941,7 +970,46 @@ func (l *colonyLifecycle) CreateColonyFromSource(params hiveserver.CreateColonyF
 		_ = os.RemoveAll(colonyPath)
 		return nil, &hiveserver.ColonyForkError{Message: "failed to persist colony spawn lock: " + lockErr.Error(), Status: http.StatusInternalServerError}
 	}
+
+	// 4. Unblock the source queen's suggest_colony call: the intercept parked
+	//    her turn on the popup, and this synthetic user message is what wakes
+	//    the wait (upstream's _inject_colony_confirmation). The message is
+	//    informational; the injection is the load-bearing part.
+	//
+	//    Parity: framework/server/routes_sessions.py::_inject_colony_confirmation
+	if queen := source.QueenExecutor.QueenNode(); queen != nil {
+		confirmation := "[Colony '" + colonyID + "' created — this session is now locked. " +
+			"The new colony queen takes over from here.]"
+		if injectErr := queen.InjectEvent(confirmation, true); injectErr != nil {
+			fmt.Fprintf(l.out, "Warning: failed to inject colony confirmation into %s: %v\n", source.ID, injectErr)
+		}
+	}
+
+	// 5. Publish COLONY_CREATED on the source bus so its UI renders the
+	//    system-message link to the new colony (upstream does this after the
+	//    injection, before the route responds).
+	//
+	//    Parity: framework/server/routes_sessions.py::_create_colony_from_source
+	publishColonyCreated(source, colonyID, colonyPath, session.ID, "in_progress")
 	return session, nil
+}
+
+// publishColonyCreated publishes the COLONY_CREATED frame a fork leaves on the
+// source session's bus. Best-effort: a missing bus only costs the source
+// conversation its system-message link.
+func publishColonyCreated(source *hiveserver.Session, colonyID, colonyPath, queenSessionID, compactionStatus string) {
+	if source == nil || source.EventBus == nil {
+		return
+	}
+	event := eventbus.NewAgentEvent(eventbus.EventColonyCreated, "queen")
+	event.Data = map[string]any{
+		"colony_id":         colonyID,
+		"colony_path":       colonyPath,
+		"queen_session_id":  queenSessionID,
+		"is_new":            true,
+		"compaction_status": compactionStatus,
+	}
+	source.EventBus.Publish(event)
 }
 
 func stopColonyRuntime(runtime hiveserver.ColonyRuntime) {

@@ -129,6 +129,20 @@ def visible(schema, ensure_required: bool = False):
     return strip_titles(schema)
 
 
+def ensure_required(schema):
+    """Materialize the request layer's `required` key on a Tool-object schema.
+
+    Queen lifecycle schemas are hand-written ``Tool(...)`` dicts: the request
+    layer (``_tool_to_openai_format``) always publishes ``required``, even as
+    ``[]``, while the Tool declaration may omit it. CONTEXT_PARAMS are NOT
+    stripped here — ``colony_id`` is a real model argument on
+    ``update_worker_profile``, not an injected context parameter.
+    """
+    schema = json.loads(json.dumps(schema or {}))
+    schema.setdefault("required", [])
+    return schema
+
+
 def dump_harness():
     sys.path.insert(0, str(REPO_ROOT / "core"))
     from framework.tools.harness_tools import build_harness_group  # noqa: PLC0415
@@ -235,10 +249,12 @@ def main() -> None:
         }
 
     # Queen lifecycle tools: the reference is the registered Tool object (the
-    # Tool Library layer has no schema for these names). All eight are
-    # byte-aligned with the Go definitions: run_playbook's former folded
-    # control parameters were removed when Python's standalone playbook-control
-    # tools became real definitions of the Go catalogue (§14).
+    # Tool Library layer has no schema for these names), projected through the
+    # request layer the model actually receives (`_tool_to_openai_format`
+    # materializes `required`). All eight are byte-aligned with the Go
+    # definitions: run_playbook's former folded control parameters were removed
+    # when Python's standalone playbook-control tools became real definitions
+    # of the Go catalogue (§14).
     for name, py in queen_lifecycle.items():
         status, reason = "aligned", ""
         tools[name] = {
@@ -248,7 +264,7 @@ def main() -> None:
             "apply_description": status == "aligned",
             "apply_parameters": status == "aligned",
             "description": py["description"],
-            "parameters": py["inputSchema"],
+            "parameters": ensure_required(py["inputSchema"]),
         }
 
     manifest = {

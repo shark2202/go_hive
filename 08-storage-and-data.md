@@ -1,5 +1,9 @@
 # 08 · 存储与数据
 
+> **本文描述上游 Hive（Python 参考实现）。**
+> go_hive 的对应实现：`internal/storage`、`internal/hivehome`、`internal/maintenance`。
+> 状态：已移植；差异登记见 `docs/alignment-differences.md`。
+
 ## 1. 设计原则
 
 Hive 不用外部数据库，全部状态落在 `HIVE_HOME`（默认 `~/.hive`，桌面端指向平台原生 userData 目录）。原则是：

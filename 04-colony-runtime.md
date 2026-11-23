@@ -1,5 +1,9 @@
 # 04 · Colony / Worker 运行时
 
+> **本文描述上游 Hive（Python 参考实现）。**
+> go_hive 的对应实现：`internal/colony`、`internal/host`、`internal/playbook`、`internal/triggers`。
+> 状态：部分（24 维对齐：12 已对齐 / 10 部分 / 2 未验证）；差异登记见 `docs/alignment-differences.md`。
+
 > 关键文件：
 > `core/framework/host/colony_runtime.py`（2,935 行）
 > `core/framework/host/worker.py`

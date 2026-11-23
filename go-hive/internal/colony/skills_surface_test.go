@@ -1,15 +1,47 @@
 package colony
 
 import (
+	"context"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/shark2202/go_hive/go-hive/internal/agentloop"
+	"github.com/shark2202/go_hive/go-hive/internal/eventbus"
 	"github.com/shark2202/go_hive/go-hive/internal/llm"
 	"github.com/shark2202/go_hive/go-hive/internal/skills"
 )
+
+// TestMain pins HOME/HIVE_HOME so the colony's new user/base skill scopes scan
+// a pristine tree instead of the developer's real ~/.agents/skills. Individual
+// tests override the pair with t.Setenv when they need a fixture home.
+// Parity-exempt: Go test-process isolation for the user/framework skill
+// scopes; upstream tests monkeypatch Path.home per test instead.
+func TestMain(m *testing.M) {
+	home, err := os.MkdirTemp("", "hive-colony-skills-home-")
+	if err != nil {
+		os.Exit(1)
+	}
+	prevHome, hadHome := os.LookupEnv("HOME")
+	prevHive, hadHive := os.LookupEnv("HIVE_HOME")
+	_ = os.Setenv("HOME", home)
+	_ = os.Setenv("HIVE_HOME", filepath.Join(home, ".hive"))
+	code := m.Run()
+	if hadHome {
+		_ = os.Setenv("HOME", prevHome)
+	} else {
+		_ = os.Unsetenv("HOME")
+	}
+	if hadHive {
+		_ = os.Setenv("HIVE_HOME", prevHive)
+	} else {
+		_ = os.Unsetenv("HIVE_HOME")
+	}
+	_ = os.RemoveAll(home)
+	os.Exit(code)
+}
 
 // Parity: tests/test_skill_resources.py::TestSkillResourceBaseDir.test_node_context_skill_dirs_set
 func TestWorkerSkillDirsAndCatalogComeFromColonySkillsFolder(t *testing.T) {
@@ -31,14 +63,25 @@ func TestWorkerSkillDirsAndCatalogComeFromColonySkillsFolder(t *testing.T) {
 		t.Fatal("worker context is nil")
 	}
 	wantDir := filepath.Join(colonyDir, "skills")
-	if len(worker.Context.SkillDirs) != 1 || worker.Context.SkillDirs[0] != wantDir {
-		t.Fatalf("SkillDirs = %#v, want [%s]", worker.Context.SkillDirs, wantDir)
+	if !slices.Contains(worker.Context.SkillDirs, wantDir) {
+		t.Fatalf("SkillDirs = %#v, want the colony root %s among them", worker.Context.SkillDirs, wantDir)
 	}
 	if !strings.Contains(worker.Context.SkillsCatalogPrompt, "<name>demo</name>") {
 		t.Fatalf("skills catalog prompt = %q", worker.Context.SkillsCatalogPrompt)
 	}
-	if catalog, ok := runtime.Skills(); !ok || len(catalog) != 1 || catalog[0].Name != "demo" {
-		t.Fatalf("colony catalog = %#v, ok=%v", catalog, ok)
+	catalog, ok := runtime.Skills()
+	if !ok {
+		t.Fatal("colony catalog unavailable")
+	}
+	byName := map[string]*skills.ParsedSkill{}
+	for _, skill := range catalog {
+		byName[skill.Name] = skill
+	}
+	if _, exists := byName["demo"]; !exists {
+		t.Fatalf("colony catalog = %#v, want demo", catalog)
+	}
+	if _, exists := byName["hive.worker-delegation"]; !exists {
+		t.Fatalf("colony catalog = %#v, want the framework worker-delegation skill", catalog)
 	}
 }
 
@@ -137,10 +180,13 @@ func TestWorkerSkillSurfaceSeesQueensScopeWithColonyOverride(t *testing.T) {
 	}
 	ctx := worker.Context
 
-	// The view_file allowlist covers both scopes; the colony's folder stays
-	// first so the read tools resolve a collision the same way the catalog does.
-	if len(ctx.SkillDirs) != 2 || ctx.SkillDirs[0] != colonySkillsDir || ctx.SkillDirs[1] != queenSkillsDir {
-		t.Fatalf("SkillDirs = %#v, want [%s %s]", ctx.SkillDirs, colonySkillsDir, queenSkillsDir)
+	// The view_file allowlist covers every discovered scope; the colony's
+	// folder still resolves before the queen's on a collision.
+	if !slices.Contains(ctx.SkillDirs, colonySkillsDir) || !slices.Contains(ctx.SkillDirs, queenSkillsDir) {
+		t.Fatalf("SkillDirs = %#v, want both %s and %s", ctx.SkillDirs, colonySkillsDir, queenSkillsDir)
+	}
+	if colonyIdx, queenIdx := slices.Index(ctx.SkillDirs, colonySkillsDir), slices.Index(ctx.SkillDirs, queenSkillsDir); queenIdx > colonyIdx {
+		t.Fatalf("SkillDirs = %#v, want the queen scope before the colony scope", ctx.SkillDirs)
 	}
 
 	// The catalog announces both scopes; the colony copy wins the collision.
@@ -204,8 +250,8 @@ func TestWorkerSkillSurfaceSeesQueensScopeWithColonyOverride(t *testing.T) {
 		t.Fatalf("reload: %v", err)
 	}
 	dirs, _ := stats["skill_dirs"].([]string)
-	if len(dirs) != 2 || dirs[0] != colonySkillsDir || dirs[1] != queenSkillsDir {
-		t.Fatalf("reload skill_dirs = %#v, want [%s %s]", dirs, colonySkillsDir, queenSkillsDir)
+	if !slices.Contains(dirs, colonySkillsDir) || !slices.Contains(dirs, queenSkillsDir) {
+		t.Fatalf("reload skill_dirs = %#v, want both %s and %s", dirs, colonySkillsDir, queenSkillsDir)
 	}
 }
 
@@ -234,8 +280,8 @@ func TestWorkerSkillSurfaceSeesQueenSkillsWithoutAColonySkillsFolder(t *testing.
 		t.Fatalf("catalog = %q, want the queen's skill", worker.Context.SkillsCatalogPrompt)
 	}
 	wantDir := filepath.Join(queenDir, "skills")
-	if len(worker.Context.SkillDirs) != 1 || worker.Context.SkillDirs[0] != wantDir {
-		t.Fatalf("SkillDirs = %#v, want [%s]", worker.Context.SkillDirs, wantDir)
+	if !slices.Contains(worker.Context.SkillDirs, wantDir) {
+		t.Fatalf("SkillDirs = %#v, want the queen root %s among them", worker.Context.SkillDirs, wantDir)
 	}
 }
 
@@ -277,15 +323,15 @@ func TestColonyReloadSkillsRefreshesInFlightWorkerCatalog(t *testing.T) {
 		t.Fatalf("catalog_chars = %#v", stats["catalog_chars"])
 	}
 	dirs, ok := stats["skill_dirs"].([]string)
-	if !ok || len(dirs) != 1 || dirs[0] != filepath.Join(colonyDir, "skills") {
+	if !ok || !slices.Contains(dirs, filepath.Join(colonyDir, "skills")) {
 		t.Fatalf("skill_dirs = %#v", stats["skill_dirs"])
 	}
 }
 
-// Parity-exempt: dropping the catalog when the folder disappears is the Go
-// memo's promise — an in-flight worker must not keep announcing a deleted
-// skill folder.
-func TestColonyReloadSkillsDropsACatalogWhoseFolderIsGone(t *testing.T) {
+// Parity-exempt: dropping a deleted skill folder is the Go memo's promise — an
+// in-flight worker must not keep announcing a skill that no longer exists. The
+// framework/user scopes survive, so only the colony copy disappears.
+func TestColonyReloadSkillsDropsADeletedColonySkill(t *testing.T) {
 	colonyDir := t.TempDir()
 	writeColonySkill(t, colonyDir, "demo", "demo skill")
 
@@ -305,7 +351,233 @@ func TestColonyReloadSkillsDropsACatalogWhoseFolderIsGone(t *testing.T) {
 	if _, err := runtime.ReloadSkills(); err != nil {
 		t.Fatalf("reload: %v", err)
 	}
-	if catalog := provider(); catalog != "" {
-		t.Fatalf("provider catalog = %q, want empty after the folder vanished", catalog)
+	if catalog := provider(); strings.Contains(catalog, "<name>demo</name>") {
+		t.Fatalf("provider catalog still announces the deleted demo skill: %q", catalog)
+	}
+}
+
+// writeSkillWithVisibility materialises one skill with an optional
+// metadata.visibility list, which phase filtering reads.
+func writeSkillWithVisibility(t *testing.T, skillsDir, name, description string, visibility []string, body string) {
+	t.Helper()
+	skillDir := filepath.Join(skillsDir, name)
+	if err := os.MkdirAll(skillDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	frontmatter := "---\nname: " + name + "\ndescription: " + description + "\n"
+	if len(visibility) > 0 {
+		frontmatter += "metadata:\n  visibility: [" + strings.Join(visibility, ", ") + "]\n"
+	}
+	frontmatter += "---\n\n" + body + "\n"
+	if err := os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte(frontmatter), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// writeQueenProfile writes a custom queen's profile.yaml under the given
+// queens/<id> home.
+func writeQueenProfile(t *testing.T, queenDir, body string) {
+	t.Helper()
+	if err := os.MkdirAll(queenDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(queenDir, "profile.yaml"), []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// Parity: framework/host/colony_runtime.py::_build_default_skills_config
+// Parity: framework/skills/manager.py::_apply_overrides
+//
+// A worker's catalog covers framework, user and colony scopes, and its prompt
+// is phase-filtered for "colony": a [colony] skill stays, an [independent] and
+// a [worker] skill drop out while the unfiltered read catalog still carries
+// them.
+func TestWorkerCatalogCoversFrameworkUserAndColonyVisibility(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("HIVE_HOME", filepath.Join(home, ".hive"))
+
+	userSkills := filepath.Join(home, ".agents", "skills")
+	writeSkillFile(t, userSkills, "user-local-skill", "user skill", "User procedure.")
+
+	colonyDir := filepath.Join(home, "colonies", "scope-colony")
+	colonySkills := filepath.Join(colonyDir, "skills")
+	writeSkillWithVisibility(t, colonySkills, "colony-phase-skill", "colony phase skill", []string{"colony"}, "Colony phase procedure.")
+	writeSkillWithVisibility(t, colonySkills, "independent-only", "independent skill", []string{"independent"}, "Independent procedure.")
+
+	runtime := NewColonyRuntime(RuntimeOptions{
+		StoragePath: colonyDir,
+		AgentSpec:   agentloop.AgentSpec{ID: "worker"},
+	})
+	worker := runtime.BuildWorker(WorkerBuildOptions{WorkerID: "w1", Task: "do it"})
+	if worker.Context == nil {
+		t.Fatal("worker context is nil")
+	}
+	prompt := worker.Context.SkillsCatalogPrompt
+	for _, want := range []string{
+		"<name>hive.worker-delegation</name>", // framework, visibility [colony]
+		"<name>hive.pdf</name>",               // framework, no visibility
+		"<name>user-local-skill</name>",       // ~/.agents/skills
+		"<name>colony-phase-skill</name>",     // colony_ui, visibility [colony]
+	} {
+		if !strings.Contains(prompt, want) {
+			t.Fatalf("catalog missing %s: %q", want, prompt)
+		}
+	}
+	for _, gone := range []string{
+		"<name>independent-only</name>",    // visibility [independent]
+		"<name>hive.error-recovery</name>", // visibility [worker]
+	} {
+		if strings.Contains(prompt, gone) {
+			t.Fatalf("catalog announced %s outside phase colony: %q", gone, prompt)
+		}
+	}
+	if !slices.Contains(worker.Context.SkillDirs, userSkills) {
+		t.Fatalf("SkillDirs = %#v, want the user scope %s among them", worker.Context.SkillDirs, userSkills)
+	}
+	if !slices.ContainsFunc(worker.Context.SkillDirs, func(dir string) bool {
+		return strings.HasSuffix(filepath.ToSlash(dir), "/_default_skills")
+	}) {
+		t.Fatalf("SkillDirs = %#v, want the bundled framework scope among them", worker.Context.SkillDirs)
+	}
+
+	// The read route is the post-override manager catalog, not the
+	// phase-filtered prompt: PhaseState only filters the prompt upstream.
+	catalog, ok := runtime.Skills()
+	if !ok {
+		t.Fatal("colony Skills() reported no catalog")
+	}
+	byName := map[string]*skills.ParsedSkill{}
+	for _, skill := range catalog {
+		byName[skill.Name] = skill
+	}
+	for _, want := range []string{"independent-only", "hive.error-recovery", "user-local-skill", "colony-phase-skill"} {
+		if _, exists := byName[want]; !exists {
+			t.Fatalf("read catalog missing %s: %#v", want, catalog)
+		}
+	}
+}
+
+// Parity: framework/host/colony_runtime.py::_build_default_skills_config
+//
+// A custom queen's on-disk profile opts one preset pack in by default; every
+// preset not named stays off. An empty list — and a colony with no queen
+// profile at all — enables nothing.
+func TestWorkerCatalogAppliesQueenProfileDefaultPresetSkills(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("HIVE_HOME", filepath.Join(home, ".hive"))
+
+	queenDir := filepath.Join(home, "queens", "queen_custom")
+	writeQueenProfile(t, queenDir, "title: Custom Queen\ndefault_preset_skills:\n  - hive.linkedin-automation\n")
+
+	runtime := NewColonyRuntime(RuntimeOptions{
+		StoragePath: filepath.Join(home, "colonies", "preset-colony"),
+		QueenDir:    queenDir,
+		AgentSpec:   agentloop.AgentSpec{ID: "worker"},
+	})
+	worker := runtime.BuildWorker(WorkerBuildOptions{WorkerID: "w1", Task: "do it"})
+	prompt := worker.Context.SkillsCatalogPrompt
+	if !strings.Contains(prompt, "<name>hive.linkedin-automation</name>") {
+		t.Fatalf("catalog missing the role-default preset: %q", prompt)
+	}
+	for _, gone := range []string{"<name>hive.x-automation</name>", "<name>hive.chart-creation-foundations</name>"} {
+		if strings.Contains(prompt, gone) {
+			t.Fatalf("catalog announced a preset the profile did not opt in (%s): %q", gone, prompt)
+		}
+	}
+
+	// An empty default_preset_skills list enables no preset at all.
+	writeQueenProfile(t, queenDir, "title: Custom Queen\ndefault_preset_skills: []\n")
+	emptyRuntime := NewColonyRuntime(RuntimeOptions{
+		StoragePath: filepath.Join(home, "colonies", "preset-colony-empty"),
+		QueenDir:    queenDir,
+		AgentSpec:   agentloop.AgentSpec{ID: "worker"},
+	})
+	emptyWorker := emptyRuntime.BuildWorker(WorkerBuildOptions{WorkerID: "w2", Task: "do it"})
+	emptyPrompt := emptyWorker.Context.SkillsCatalogPrompt
+	if strings.Contains(emptyPrompt, "<name>hive.linkedin-automation</name>") || strings.Contains(emptyPrompt, "<name>hive.x-automation</name>") {
+		t.Fatalf("empty default_preset_skills still enabled a preset: %q", emptyPrompt)
+	}
+
+	// No queen profile: empty set, same as upstream's unknown queen.
+	noQueen := NewColonyRuntime(RuntimeOptions{
+		StoragePath: filepath.Join(home, "colonies", "preset-colony-none"),
+		QueenDir:    filepath.Join(home, "queens", "queen_unknown"),
+		AgentSpec:   agentloop.AgentSpec{ID: "worker"},
+	})
+	noQueenPrompt := noQueen.BuildWorker(WorkerBuildOptions{WorkerID: "w3", Task: "do it"}).Context.SkillsCatalogPrompt
+	if strings.Contains(noQueenPrompt, "<name>hive.linkedin-automation</name>") || strings.Contains(noQueenPrompt, "<name>hive.x-automation</name>") {
+		t.Fatalf("a queen without a profile enabled a preset: %q", noQueenPrompt)
+	}
+}
+
+// Parity: framework/skills/manager.py::SkillDiscovery (later scopes win)
+//
+// A colony_ui skill overrides a framework skill of the same name in both the
+// announced catalog and the read catalog.
+func TestWorkerCatalogColonyScopeOverridesFrameworkSameName(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("HIVE_HOME", filepath.Join(home, ".hive"))
+
+	colonyDir := filepath.Join(home, "colonies", "override-colony")
+	colonySkills := filepath.Join(colonyDir, "skills")
+	writeSkillFile(t, colonySkills, "hive.worker-delegation", "colony override", "Colony copy of worker delegation.")
+
+	runtime := NewColonyRuntime(RuntimeOptions{
+		StoragePath: colonyDir,
+		AgentSpec:   agentloop.AgentSpec{ID: "worker"},
+	})
+	worker := runtime.BuildWorker(WorkerBuildOptions{WorkerID: "w1", Task: "do it"})
+	colonyCopy := filepath.Join(colonySkills, "hive.worker-delegation", "SKILL.md")
+	// macOS /var is a symlink to /private/var; ParsedSkill.Location is resolved.
+	if resolved, err := filepath.EvalSymlinks(colonyCopy); err == nil {
+		colonyCopy = resolved
+	}
+	if !strings.Contains(worker.Context.SkillsCatalogPrompt, colonyCopy) {
+		t.Fatalf("catalog did not resolve hive.worker-delegation to the colony copy (%s): %q", colonyCopy, worker.Context.SkillsCatalogPrompt)
+	}
+	catalog, ok := runtime.Skills()
+	if !ok {
+		t.Fatal("colony Skills() reported no catalog")
+	}
+	var got *skills.ParsedSkill
+	for _, skill := range catalog {
+		if skill.Name == "hive.worker-delegation" {
+			got = skill
+			break
+		}
+	}
+	if got == nil || got.SourceScope != "colony_ui" || got.Location != colonyCopy {
+		t.Fatalf("hive.worker-delegation = %#v, want the colony_ui copy at %s", got, colonyCopy)
+	}
+}
+
+// Parity: framework/host/colony_runtime.py::ColonyRuntime.start_overseer
+//
+// The persistent overseer carries the same phase-filtered catalog and read
+// roots a spawned worker gets, so the colony's client-facing queen can follow
+// framework procedures (e.g. worker-delegation) without a respawn.
+func TestOverseerCatalogUsesColonySkillHierarchy(t *testing.T) {
+	runtime := makeTestColony(t, newScriptedLLM(textResponse("idle"), textResponse("idle"), textResponse("idle")), eventbus.NewEventBus())
+	worker, err := runtime.StartOverseer(context.Background(), queenTestCaseSpec(), nil)
+	if err != nil {
+		t.Fatalf("StartOverseer: %v", err)
+	}
+	if worker.Context == nil {
+		t.Fatal("overseer context is nil")
+	}
+	if !strings.Contains(worker.Context.SkillsCatalogPrompt, "<name>hive.worker-delegation</name>") {
+		t.Fatalf("overseer catalog missing the framework worker-delegation skill: %q", worker.Context.SkillsCatalogPrompt)
+	}
+	if worker.Context.DynamicSkillsCatalogProvider == nil {
+		t.Fatal("overseer catalog has no dynamic provider")
+	}
+	if !slices.ContainsFunc(worker.Context.SkillDirs, func(dir string) bool {
+		return strings.HasSuffix(filepath.ToSlash(dir), "/_default_skills")
+	}) {
+		t.Fatalf("overseer SkillDirs = %#v, want the bundled framework scope among them", worker.Context.SkillDirs)
 	}
 }

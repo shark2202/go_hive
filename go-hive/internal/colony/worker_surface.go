@@ -241,8 +241,8 @@ func (r *ColonyRuntime) StoragePath() string {
 }
 
 // Skills returns the colony's skill catalog. The bool reports whether a
-// catalog is available at all; false mirrors upstream's absent
-// skills_manager (the route then renders an empty list).
+// catalog is available at all; a live runtime always has one (upstream's
+// SkillsManager is always constructed), while nil reports unavailable.
 func (r *ColonyRuntime) Skills() ([]*skills.ParsedSkill, bool) {
 	if r == nil || r.skillsProvider == nil {
 		return nil, false

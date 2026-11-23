@@ -1,0 +1,1 @@
+OK: 59 reference tools, 103 go-only tools, manifest/proto/doc consistent

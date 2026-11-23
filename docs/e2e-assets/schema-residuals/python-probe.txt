@@ -1,0 +1,15 @@
+registered lifecycle tools: 16
+captured 12/12 lifecycle tools + task_create pivot schema
+wrote /Users/mac/hive/.wt/schema-residuals/go_hive/docs/e2e-assets/schema-residuals/python-runtime-tools.json (55742 bytes)
+  get_playbook_status      sha256(parameters)=5e46b50c8112e01b phase={'independent': False, 'colony': True}
+  get_worker_status        sha256(parameters)=9cfcd4bdbd191890 phase={'independent': False, 'colony': True}
+  inject_message           sha256(parameters)=0732f1cd7a848555 phase={'independent': False, 'colony': True}
+  list_playbook_runs       sha256(parameters)=0fa808f6af2dd1ed phase={'independent': False, 'colony': True}
+  remove_trigger           sha256(parameters)=03cf56e363374c2e phase={'independent': False, 'colony': True}
+  reply_to_worker          sha256(parameters)=dee4c499d85efb5c phase={'independent': False, 'colony': False}
+  run_playbook             sha256(parameters)=24e1ccf401d18cfd phase={'independent': False, 'colony': True}
+  run_worker               sha256(parameters)=271c66222218e164 phase={'independent': False, 'colony': True}
+  set_trigger              sha256(parameters)=c3a17becd4977387 phase={'independent': False, 'colony': True}
+  stop_playbook            sha256(parameters)=d907131cb81f0ab7 phase={'independent': False, 'colony': True}
+  stop_worker              sha256(parameters)=ddf24001d80d9368 phase={'independent': False, 'colony': True}
+  update_worker_profile    sha256(parameters)=30c1e6bf521dfbee phase={'independent': False, 'colony': False}

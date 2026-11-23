@@ -156,8 +156,11 @@ func TestRunPlaybookToolDefParametersMatchUpstream(t *testing.T) {
 			t.Fatalf("parameter %q missing from %v", name, properties)
 		}
 	}
-	if required, present := def.Parameters["required"]; present {
-		t.Fatalf("run_playbook declares required = %#v; the Python Tool has no required list", required)
+	if required, present := def.Parameters["required"]; !present {
+		t.Fatal("run_playbook must publish the request-layer `required` list — the Python request layer " +
+			"(_tool_to_openai_format) always materializes it, even as []")
+	} else if list, ok := required.([]any); !ok || len(list) != 0 {
+		t.Fatalf("run_playbook required = %#v, want []", required)
 	}
 
 	// The three standalone control tools carry the run_id contract the folded
@@ -184,8 +187,10 @@ func TestRunPlaybookToolDefParametersMatchUpstream(t *testing.T) {
 	if len(listProps) != 2 {
 		t.Fatalf("%s properties = %v, want run_id + limit", ListPlaybookRunsToolName, listProps)
 	}
-	if _, present := listDef.Parameters["required"]; present {
-		t.Fatalf("%s declares required; the Python Tool has none", ListPlaybookRunsToolName)
+	if required, present := listDef.Parameters["required"]; !present {
+		t.Fatalf("%s must publish the request-layer `required` list ([] — the Python Tool has none)", ListPlaybookRunsToolName)
+	} else if list, ok := required.([]any); !ok || len(list) != 0 {
+		t.Fatalf("%s required = %#v, want []", ListPlaybookRunsToolName, required)
 	}
 }
 

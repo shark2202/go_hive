@@ -185,14 +185,15 @@ message GetCurrentTimeInput {
   optional string timezone = 1; // default "UTC"
 }
 
-// get_playbook_status — python:lifecycle
+// get_playbook_status — python:lifecycle_runtime
 message GetPlaybookStatusInput {
-  // no declared input schema: the tool takes free-form input
+  string run_id = 1; // The playbook run_id.
 }
 
-// get_worker_status — python:lifecycle
+// get_worker_status — python:lifecycle_runtime
 message GetWorkerStatusInput {
-  // no declared input schema: the tool takes free-form input
+  optional Focus focus = 1; // Aspect to inspect. Omit for a brief summary.
+  optional int64 last_n = 2; // Recent events per category (default 20). Only for activity, tools, full.
 }
 
 // image_generate — python:llm_request
@@ -206,9 +207,9 @@ message ImageGenerateInput {
   optional string size = 7; // default "1024x1024"
 }
 
-// inject_message — python:lifecycle
+// inject_message — python:lifecycle_runtime
 message InjectMessageInput {
-  // no declared input schema: the tool takes free-form input
+  string content = 1; // Message content to send to the graph
 }
 
 // list_browser_profiles — python:lifecycle
@@ -221,9 +222,10 @@ message ListMemoryFilesInput {
   optional string scope = 1; // Optional scope to inspect: 'global' or 'queen'.
 }
 
-// list_playbook_runs — python:lifecycle
+// list_playbook_runs — python:lifecycle_runtime
 message ListPlaybookRunsInput {
-  // no declared input schema: the tool takes free-form input
+  optional int64 limit = 1; // Most recent N runs (default 20).
+  optional string run_id = 2; // Fetch only this run.
 }
 
 // list_triggers — python:lifecycle
@@ -262,24 +264,41 @@ message ReadMemoryFileInput {
   optional string scope = 2; // Memory scope: 'global' or 'queen'. Defaults to 'global'.
 }
 
-// remove_trigger — python:lifecycle
+// remove_trigger — python:lifecycle_runtime
 message RemoveTriggerInput {
-  // no declared input schema: the tool takes free-form input
+  string trigger_id = 1; // ID of the trigger to deactivate
 }
 
-// reply_to_worker — python:lifecycle
+// reply_to_worker — python:lifecycle_runtime
 message ReplyToWorkerInput {
-  // no declared input schema: the tool takes free-form input
+  string reply = 1; // Guidance or answer text to hand back to the worker.
+  string request_id = 2; // The escalation request_id from list_worker_questions.
 }
 
-// run_playbook — python:lifecycle
+// run_playbook — python:lifecycle_runtime
 message RunPlaybookInput {
-  // no declared input schema: the tool takes free-form input
+  map<string, JsonValue> args = 1; // Optional JSON object passed to the script's run(args) entrypoint.
+  optional string playbook = 2; // Inline playbook script (Python). Saved to the colony library at playbooks/<meta-name>.play
+  optional string playbook_name = 3; // Re-run a SAVED playbook by its meta name (the colony library) — the normal way to resume o
+  optional string playbook_path = 4; // Path to a playbook script file on disk.
 }
 
-// run_worker — python:lifecycle
+// run_worker — python:lifecycle_runtime
 message RunWorkerInput {
-  // no declared input schema: the tool takes free-form input
+  optional string guidance = 1; // RESUME mode only: a single steering instruction injected as a user turn into every resumed
+  optional int64 max_iterations = 2; // Cap on each worker's AgentLoop iterations of useful work. After this is exhausted the fram
+  repeated string resume_worker_ids = 3; // RESUME mode (mutually exclusive with 'tasks'). worker_ids of workers that stopped before r
+  repeated RunWorkerTasks tasks = 4; // List of task specs to fan out. Each spec is {"task": "<description>", "data": {<optional s
+  optional double timeout = 5; // SOFT deadline in seconds. Workers still running at this point are messaged to call report_
+  optional int64 tool_call_lifetime_budget = 6; // Cap on each worker's CUMULATIVE tool calls across ALL its turns (distinct from max_iterati
+}
+
+// run_worker — python:lifecycle_runtime
+message RunWorkerTasks {
+  string task = 1; // Task description for the worker.
+  map<string, JsonValue> data = 2; // Optional structured input fields.
+  optional string goal = 3; // One sentence, in plain end-user language, describing what this worker is doing (e.g. 'Chec
+  repeated string preload_tools = 4; // Exact tool names to pre-load into this worker's eager toolset at spawn (skips its search_t
 }
 
 // search_files — python:mcp_catalog:files-tools
@@ -338,19 +357,23 @@ message SentinelSetupInput {
   optional string token = 9; // For store_token: the raw token value to store (kept encrypted).
 }
 
-// set_trigger — python:lifecycle
+// set_trigger — python:lifecycle_runtime
 message SetTriggerInput {
-  // no declared input schema: the tool takes free-form input
+  optional string task = 1; // The task/instructions for the worker when this trigger fires (e.g. 'Process inbox emails u
+  map<string, JsonValue> trigger_config = 2; // Config for the trigger. Timer: {cron: '*/5 * * * *'} or {interval_minutes: 5}. Only needed
+  string trigger_id = 3; // ID of the trigger to activate (from list_triggers) or a new custom ID
+  optional string trigger_type = 4; // Type of trigger ('timer'). Only needed for custom triggers.
 }
 
-// stop_playbook — python:lifecycle
+// stop_playbook — python:lifecycle_runtime
 message StopPlaybookInput {
-  // no declared input schema: the tool takes free-form input
+  string run_id = 1; // The playbook run_id to stop.
 }
 
-// stop_worker — python:lifecycle
+// stop_worker — python:lifecycle_runtime
 message StopWorkerInput {
-  // no declared input schema: the tool takes free-form input
+  optional double grace_seconds = 1; // Seconds to wait for workers to file a report_to_parent before force-stopping. Clamped to [
+  optional string reason = 2; // Why the workers are being stopped. Surfaced to each worker in the stop inject so its final
 }
 
 // suggest_colony — python:llm_request
@@ -500,9 +523,17 @@ message TerminalRgInput {
   optional string type_filter = 12;
 }
 
-// update_worker_profile — python:lifecycle
+// update_worker_profile — python:lifecycle_runtime
 message UpdateWorkerProfileInput {
-  // no declared input schema: the tool takes free-form input
+  optional string browser_profile = 1; // Chrome profile label this profile's browser tools target (from list_browser_profiles). Emp
+  string colony_id = 2;
+  optional int64 concurrency_hint = 3;
+  map<string, string> integrations = 4;
+  string profile_name = 5;
+  optional string prompt_override = 6;
+  optional string skill_name = 7;
+  optional string task = 8;
+  repeated string tool_filter = 9;
 }
 
 // web_scrape — python:mcp_catalog:hive_tools
@@ -548,6 +579,16 @@ enum Action {
   ACTION_COLLECT = 2;
   ACTION_ATTACH = 3;
   ACTION_DETACH = 4;
+}
+
+enum Focus {
+  FOCUS_UNSPECIFIED = 0;
+  FOCUS_ACTIVITY = 1;
+  FOCUS_MEMORY = 2;
+  FOCUS_TOOLS = 3;
+  FOCUS_ISSUES = 4;
+  FOCUS_PROGRESS = 5;
+  FOCUS_FULL = 6;
 }
 
 enum Context {

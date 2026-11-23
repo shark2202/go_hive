@@ -1,6 +1,6 @@
 # 接口与契约（生成物，勿手改）
 
-> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` 的 `contracts:` / `disk_formats:`，加上 `internal/server` 路由注册与 `internal/eventbus` 常量生成。commit: `9684ec82eea5`
+> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` 的 `contracts:` / `disk_formats:`，加上 `internal/server` 路由注册与 `internal/eventbus` 常量生成。commit: `949e39b29f9c`
 > 契约是模块之间「靠什么约束交互」的清单：谁提供、谁消费、定义在哪、保证什么、失败怎么表现、变更属于加法还是破坏、由什么机制强制。
 > `providers` / `consumers` 里的 `ext:` 前缀表示外部消费面（前端、运维、MCP server、外部调用方），不是仓库内的包。
 
@@ -375,11 +375,11 @@
 
 #### `tool-schema.mcp-namespace`
 
-- **定义**：`internal/tools/mcp_registry.go:NamespacedMCPToolName`
+- **定义**：`internal/tools/mcp_registry.go:MCPRegistryToolName（+ NamespacedMCPToolName）`
 - **提供方**：`internal/tools`
 - **消费方**：`internal/agentloop`、`internal/server`、`internal/colony`
-- **保证**：MCP 工具注册名固定 mcp__<server>__<tool>；server/tool 中非 [A-Za-z0-9_] 字符折叠为 _；命名空间阻止远端 read_file 覆盖内置工具。
-- **失败行为**：清洗后为空回退 server/tool；同名冲突按加载顺序 shadow 并记日志（preserve 模式跳过）；调用失败归一为 is_error 工具结果。
+- **保证**：MCP 工具默认注册为 server 侧裸名（不折叠、不消毒，与 Python 参考一致，D3 终选 B'）；仅当配置 mcp.namespace 非空时启用前缀模式 mcp__<namespace>__<server>__<tool>，其中非 [A-Za-z0-9_] 字符折叠为 _，前缀/服务器名阻止远端 read_file 覆盖内置工具。
+- **失败行为**：前缀模式清洗后为空回退 namespace/server/tool；同名冲突（裸名或折叠键）按加载顺序 shadow 并记日志（preserve 模式跳过）；裸名模式下 mcpAliases 恒等；调用失败归一为 is_error 工具结果。
 - **兼容规则**：`additive`
 - **强制手段**：编译器 / 接口实现、单元、集成或 e2e 测试
 - **所属层**：`capability`

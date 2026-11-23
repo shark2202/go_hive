@@ -32,6 +32,7 @@ type chatTurnEmitter struct {
 	streamID      string
 	nodeID        string
 	executionID   string
+	sessionID     string
 	model         string
 	maxIterations int
 	// stream links the emitter to the streaming adapter so the loop's
@@ -73,6 +74,7 @@ func (r *ChatRuntime) newTurnEmitter(executionID string) *chatTurnEmitter {
 		streamID:      chatStreamID,
 		nodeID:        chatNodeID,
 		executionID:   executionID,
+		sessionID:     r.sessionID,
 		model:         r.model,
 		maxIterations: maxIterations,
 		stream:        r.streamLLM,
@@ -156,6 +158,20 @@ func (e *chatTurnEmitter) emitContextUsage(trigger string) {
 	event.NodeID = eventbus.StrPtr(e.nodeID)
 	event.Data = payload
 	e.bus.Publish(event)
+}
+
+// turnContextUsage builds the context readout the upstream loop publishes on
+// every context tick (iteration start, after each tool result, after the tool
+// batch), using the same char-based projection as the session-start block.
+func (r *ChatRuntime) turnContextUsage(trigger string) map[string]any {
+	if r == nil || r.conv == nil {
+		return nil
+	}
+	maxContextTokens := 0
+	if r.loop != nil {
+		maxContextTokens = r.loop.Config.MaxContextTokens
+	}
+	return composeContextUsage(r.conv, maxContextTokens, r.toolsForTurn(), trigger)
 }
 
 // ToolResultStored publishes the per-tool context readout upstream emits right

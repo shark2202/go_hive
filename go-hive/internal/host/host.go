@@ -55,7 +55,7 @@ type Config struct {
 	// QueenDir is the owning queen's home (…/queens/<id>); when set, the
 	// colony's workers see her skill scope (queen_ui) alongside the colony's
 	// own (colony_ui), with the colony overriding the queen on collisions.
-	// Empty keeps the worker surface colony-only.
+	// Empty omits the queen_ui scope.
 	QueenDir string
 	// ToolProviderMap attributes tool names to providers for the tools route.
 	ToolProviderMap map[string]string

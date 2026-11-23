@@ -8,6 +8,11 @@ package tasks
 // locally.
 
 const (
+	// NewColonyPivotField is the colony-phase pivot argument on task_create.
+	// The dispatcher in internal/agentloop intercepts this argument before the
+	// executor runs.
+	NewColonyPivotField = "new_colony"
+
 	// NewSessionFieldDescription documents task_create's new_session argument.
 	NewSessionFieldDescription = "Whether to start this plan in a fresh session. Default false. This is the DM-phase pivot field; in COLONY phase the equivalent is `new_colony` (different field, same criteria — see `<pivot>` in the queen prompt for the universal contract).\n" +
 		"\n" +
@@ -32,4 +37,34 @@ const (
 		"- Anything already attempted or partially completed that the new context must not redo.\n" +
 		"\n" +
 		"The new context cannot look back — if a detail matters for finishing the task and is not already in a task subject/description, it MUST be in this handoff. Write it in full now, while you still have the whole conversation in view. Ignored when new_session is false."
+
+	// NewColonyFieldDescription documents task_create's new_colony argument.
+	// It is the colony-phase counterpart of NewSessionFieldDescription and is
+	// byte-exact from queen_orchestrator.py::_NEW_COLONY_DESC.
+	NewColonyFieldDescription = "Whether to spawn a NEW colony for this plan. Default false. " +
+		"This is the COLONY-phase pivot field; in DM the equivalent is " +
+		"`new_session` (different field, same criteria — see `<pivot>` " +
+		"in the queen prompt for the universal contract).\n\n" +
+		"Set true ONLY when the user has clearly pivoted to work that " +
+		"doesn't belong in THIS colony — a different goal, different " +
+		"tracker shape, different cadence. A colony is scoped by " +
+		"construction; off-goal work should live in its own colony, not " +
+		"be absorbed silently into this one.\n\n" +
+		"Examples of the boundary:\n" +
+		"- This colony tracks competitor pricing weekly; user says " +
+		"'also build a daily news digest' -> new colony (true): " +
+		"different goal AND different cadence.\n" +
+		"- This colony tracks competitor pricing; user says 'also add " +
+		"headcount tracking for these same competitors' -> same colony " +
+		"(false): same row shape, related signal.\n\n" +
+		"When true: a 'Create Colony' popup opens for the user with the " +
+		"slug field blank — they fill in the name and confirm. On " +
+		"accept, a fresh colony is spawned carrying ONLY your `handoff` " +
+		"brief and this `tasks` plan (no transcript, no compaction), " +
+		"and the user is navigated to it. This colony stays alive and " +
+		"untouched. On dismiss, the tool returns failure and you must " +
+		"call `ask_user` to decide what to do — do NOT silently add the " +
+		"off-goal tasks to this colony's list. After accept, end_turn " +
+		"immediately — you (this colony's queen) stay idle here, the " +
+		"new colony's queen takes over there."
 )

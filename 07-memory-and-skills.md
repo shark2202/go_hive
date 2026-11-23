@@ -1,8 +1,14 @@
 # 07 · 记忆与技能
 
-## 1. 记忆：三层结构
+> **本文描述上游 Hive（Python 参考实现）。**
+> go_hive 的对应实现：`internal/memory`、`internal/soul`、`internal/skills`。
+> 状态：已移植（LongMemEval 无 Go 分数，属外部验证缺口）；差异登记见 `docs/alignment-differences.md`。
 
-Queen 的记忆全部是**纯文件**，没有向量数据库。目录结构见 `agents/queen/queen_memory_v2.py`：
+## 1. 记忆：三层作用域（global / colony / agent）
+
+Queen 的记忆全部是**纯文件**，没有向量数据库。作用域分三层：`global`（全局）、`colony`（Colony）、`agent`（具体 agent）；目录上 `agents/` 再细分为 `queens/{name}`（Queen）与 `{agent}`（Worker）。目录结构见 `agents/queen/queen_memory_v2.py`：
+
+> 需求 / 设计 / 实现的完整规范：`docs/memory-management-spec.md`（含 Go 映射、API/配置表、已知差异）。
 
 ```
 ~/.hive/memories/
@@ -30,9 +36,22 @@ Queen 的记忆全部是**纯文件**，没有向量数据库。目录结构见 
 文件：`agents/queen/reflection_agent.py`、`queen_memory_v2.py`、`soul_reflection.py`
 
 - 触发是**计数**，不是时间冷却：每个完成的 queen turn 计数，达到 `memory_reflection.every_turns`（默认 6）跑一次短反思；每 `long_every`（默认 4）次短反思后再跑一次长反思（合并/去重/清理）；反思进行中到达的触发直接跳过；会话停止时补跑一次短反思；上下文压缩后（`CONTEXT_COMPACTED`）跑一次长反思。
+- Go 侧接线（lane `memory-compaction-reflect`，2026-11-23）：`internal/agentloop` 在 LLM 压缩成功路径发布 `context_compacted`（`level`/`usage_before`/`usage_after`/`tokens_before_k`/`tokens_after_k` 与上游 `log_compaction` 对齐，`ratio_before>=1.0` 才附 `message_inventory`），chat runtime 以 queen 流订阅并调用 `ReflectionScheduler.OnCompaction`；此前该事件无生产者、`OnCompaction` 无调用点。残余：Go 的完整压缩路径不含 microcompact/prune 阶段，proactive microcompaction 不发事件（与上游 `add_tool_result` 同）；`message_inventory` 的字符计数用 Go 字节长度，非 ASCII 与上游 Python 字符口径不同。
 - 短反思把值得长期保留的结论写成 Markdown 记忆文件（`write_memory_file` / `delete_memory_file` 工具）；长反思只整理已有文件，不发明新事实。
 - 写入是**按文件的增量更新**：每次只改相关文件，不会重写一份大记忆；单文件 4 KB、每个作用域 200 个文件的上限由工具强制。
 - 反思失败只写 `.reflection_error.txt` 与日志，不阻塞主对话。
+
+**为什么不是 queen 在对话里自己写：**
+
+- 她的主工具注册表里**没有**记忆写工具——`write_memory_file` / `delete_memory_file` / `read_memory_file` / `list_memory_files` 是反思代理的内部工具（不在 queen 的 registry，schema 由工具契约测试冻结）。她能主动搜历史（`search_messages`），不能主动改记忆。
+- 对话与策展分离：反思是独立 side agent（自己的提示词、工具集、模型槽 `memory_reflection.model`，默认 worker），fire-and-forget 运行；主回路保持快，`<soul>`/system prompt 的缓存前缀不被写操作扰动。
+- 质量门都在反思侧：去重、`type` 白名单、4 KB/200 文件限额、跨回合证据；主回路若每轮可写，就要在用户可见回合里判断"值不值得记、记到哪、怎么合并"，既慢又容易把噪声写进长期记忆。
+- 单一写入口 = 可审计：所有改动经 `memory_log.write/retire`，每作用域 `log.jsonl` 留 before/after + reason + evidence，删除可 `restore`；owner 写的文件她不能覆盖（`OwnerWritten`）。
+- 用户说"记住这个"不需要工具：该消息会被下一轮反思吸收（最迟会话停止前的补跑）；要立刻生效则由 **owner 通道**直接写。
+
+**owner 主动写通道**：`/api/memories`（list / file GET·POST·PUT·DELETE / history / restore / retired），写入以 `author="owner"` 记账，对应 Memory 页面。即"主动写入"有两种：反射代理的**自动主动**，和 owner 的**显式主动**；唯独没有"queen 对话中途直接写"。
+
+**边界（诚实口径）**：代码里没有针对 `memories/` 的终端写保护（技能目录的沙箱同样是登记待办），所以严格说 queen 用 `terminal_exec` 硬写文件技术上可行——但这不在设计通道里，也没有提示词引导；正常路径不会发生。
 
 ### 2.2 Recall（召回）
 
@@ -130,6 +149,8 @@ Queen 的记忆全部是**纯文件**，没有向量数据库。目录结构见 
 
 内置技能数量：12 个 default + 8 个 preset。
 
+**Go 注记（colony worker/overseer 目录）**：Go 侧的 colony 目录已按上游 `_build_default_skills_config` 组装，扫描顺序为 framework/default → preset → user（`~/.agents/skills`、external skills、`~/.hive/skills`）→ queen_ui → colony_ui（含旧版 `<colony>/.hive/skills`），后扫覆盖先扫（同名时 colony 覆盖 queen、queen 覆盖 user、user 覆盖 framework）。worker 与常驻 overseer 的目录提示都按 phase `colony` 过滤：`metadata.visibility` 缺省或包含 `colony` 才出现，`[independent]` / `[worker]` 不出现；`GET /api/sessions/{id}/colony/skills` 返回过滤后的完整 manager 目录，不做 phase 过滤，与上游读取 `_catalog._skills` 一致。preset 技能默认关闭，只有所属 queen 的 profile `default_preset_skills` 列出的才在内存启用（内置 13 个 queen 当前均为空；自定义 `profile.yaml` 可设置），未列出的 preset 保持关闭。
+
 ### 4.3 `write_skill`
 
 1.0.14 的关键变化：
@@ -181,7 +202,7 @@ Queen 的记忆全部是**纯文件**，没有向量数据库。目录结构见 
 **优点**
 
 - 纯文件 + 小文件上限，简单、可审计、可手动编辑。
-- 三层作用域清晰（global / colony / queen）。
+- 三层作用域清晰（global / colony / agent；queen 与 worker 同属 agents 下细分）。
 - 召回是「便宜、可失败、不阻塞」，工程上稳健。
 - LongMemEval 端到端评测与诚实的局限披露，在开源项目中少见。
 - 技能遵循开放规范，且有信任门控与审批流程。

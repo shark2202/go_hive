@@ -147,17 +147,17 @@ func attachFakeRuntime(t *testing.T, home hivehome.Home) *mcpRuntime {
 // capability (upstream registers server tools through its own loader); the
 // fake server replaces the subprocess upstream tests spawn.
 func TestMCPRuntimeLoadsToolsIntoSessionCatalogue(t *testing.T) {
-	server := newFakeMCPServer(t, "echo", "add")
+	server := newFakeMCPServer(t, "echo", "add", "x-y", "x_y")
 	home := hivehome.Home{Root: t.TempDir()}
 	writeConfiguration(t, home, `{"mcp":{"servers":{"demo":{"transport":"http","url":"`+server.server.URL+`"}}}}`)
 
 	runtime := attachFakeRuntime(t, home)
 	statuses := runtime.Status()
-	if len(statuses) != 1 || statuses[0].Name != "demo" || !statuses[0].Connected || statuses[0].Tools != 2 {
+	if len(statuses) != 1 || statuses[0].Name != "demo" || !statuses[0].Connected || statuses[0].Tools != 4 {
 		t.Fatalf("statuses = %+v", statuses)
 	}
-	if statuses[0].Namespace != tools.MCPToolNamespace {
-		t.Fatalf("status namespace = %q, want %q", statuses[0].Namespace, tools.MCPToolNamespace)
+	if statuses[0].Namespace != "" {
+		t.Fatalf("status namespace = %q, want empty (bare default)", statuses[0].Namespace)
 	}
 
 	root := filepath.Join(home.Root, "session")
@@ -166,25 +166,63 @@ func TestMCPRuntimeLoadsToolsIntoSessionCatalogue(t *testing.T) {
 	}
 	catalogue := newSessionToolCatalogue(root, builtin.New(root), home)
 	defs := catalogue.Defs()
-	if !hasToolDef(defs, "mcp__demo__echo") || !hasToolDef(defs, "mcp__demo__add") {
-		t.Fatalf("namespaced MCP tools missing from the session catalogue")
+	for _, want := range []string{"echo", "add", "x-y", "x_y"} {
+		if !hasToolDef(defs, want) {
+			t.Fatalf("bare MCP tool %q missing from the session catalogue", want)
+		}
 	}
-	if hasToolDef(defs, "echo") {
-		t.Fatal("server tool leaked into the catalogue without its namespace")
+	if hasToolDef(defs, "mcp__demo__echo") {
+		t.Fatal("default mode prefixed a bare server tool in the catalogue")
 	}
 
-	content, isError, err := catalogue.Execute(context.Background(), "mcp__demo__echo", map[string]any{"text": "hi"})
-	if err != nil || isError {
-		t.Fatalf("execute = %q, isError=%v, err=%v", content, isError, err)
+	for _, name := range []string{"echo", "x-y", "x_y"} {
+		content, isError, err := catalogue.Execute(context.Background(), name, map[string]any{"text": "hi"})
+		if err != nil || isError {
+			t.Fatalf("execute %q = %q, isError=%v, err=%v", name, content, isError, err)
+		}
+		if content != "pong:"+name {
+			t.Fatalf("execute %q content = %q", name, content)
+		}
 	}
-	if content != "pong:echo" {
-		t.Fatalf("execute content = %q", content)
-	}
-	if calls := server.callNames(); len(calls) != 1 || calls[0] != "echo" {
-		t.Fatalf("server calls = %v", calls)
+	if calls := server.callNames(); len(calls) != 3 || calls[0] != "echo" || calls[1] != "x-y" || calls[2] != "x_y" {
+		t.Fatalf("server calls = %v (want the remote names verbatim)", calls)
 	}
 	if args := server.firstArgs(); args["text"] != "hi" {
 		t.Fatalf("server args = %v", args)
+	}
+}
+
+// TestMCPRuntimePrefixModeWhenConfigured pins requirement 2 of the D3 decision:
+// a non-empty mcp.namespace keeps the historical prefixed, folded surface, so
+// an operator who relied on the old names does not regress.
+//
+// Parity-exempt: the namespace prefix is a Go-side integration switch; the
+// Python reference always registers bare names.
+func TestMCPRuntimePrefixModeWhenConfigured(t *testing.T) {
+	server := newFakeMCPServer(t, "echo")
+	home := hivehome.Home{Root: t.TempDir()}
+	writeConfiguration(t, home, `{"mcp":{"namespace":"mcp","servers":{"demo":{"transport":"http","url":"`+server.server.URL+`"}}}}`)
+
+	runtime := attachFakeRuntime(t, home)
+	statuses := runtime.Status()
+	if len(statuses) != 1 || statuses[0].Namespace != "mcp" {
+		t.Fatalf("statuses = %+v", statuses)
+	}
+
+	root := filepath.Join(home.Root, "session")
+	if err := os.MkdirAll(root, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	catalogue := newSessionToolCatalogue(root, builtin.New(root), home)
+	if !hasToolDef(catalogue.Defs(), "mcp__demo__echo") {
+		t.Fatalf("prefixed MCP tool missing in prefix mode: %+v", catalogue.Defs())
+	}
+	if hasToolDef(catalogue.Defs(), "echo") {
+		t.Fatal("bare name leaked into the catalogue in prefix mode")
+	}
+	content, isError, err := catalogue.Execute(context.Background(), "mcp__demo__echo", map[string]any{"text": "hi"})
+	if err != nil || isError || content != "pong:echo" {
+		t.Fatalf("execute = %q, isError=%v, err=%v", content, isError, err)
 	}
 }
 
@@ -202,19 +240,19 @@ func TestMCPRuntimeReachesColonyWorkerPool(t *testing.T) {
 		t.Fatal(err)
 	}
 	base, declared, execute := colonyWorkerToolSurface(colonyPath, builtin.New(colonyPath), home)
-	if !hasToolDef(declared, "mcp__demo__echo") {
-		t.Fatalf("worker tool pool has no MCP tool")
+	if !hasToolDef(declared, "echo") {
+		t.Fatalf("worker tool pool has no bare MCP tool")
 	}
 	// The real loader reports remote names in Status().ToolNames; promotion
-	// must still land the namespaced def in the worker base surface.
+	// must land the same bare name in the worker base surface.
 	merged := withMCPWorkerTools(base, declared)
-	if !hasToolDef(merged, "mcp__demo__echo") {
+	if !hasToolDef(merged, "echo") {
 		t.Fatalf("MCP tool did not reach the worker base surface: %+v", merged)
 	}
-	if hasToolDef(base, "mcp__demo__echo") {
+	if hasToolDef(base, "echo") {
 		t.Fatal("worker base surface already had the MCP tool before promotion")
 	}
-	result, err := execute(agentloop.ToolCallRequest{Name: "mcp__demo__echo", Input: map[string]any{}})
+	result, err := execute(agentloop.ToolCallRequest{Name: "echo", Input: map[string]any{}})
 	if err != nil || result.Content != "pong:echo" {
 		t.Fatalf("worker tool result = %+v, err = %v", result, err)
 	}
@@ -256,15 +294,16 @@ func TestMCPRuntimeDegradesWhenServerUnreachable(t *testing.T) {
 		t.Fatal(err)
 	}
 	catalogue := newSessionToolCatalogue(root, builtin.New(root), home)
-	if !hasToolDef(catalogue.Defs(), "mcp__demo__echo") {
-		t.Fatal("reachable server's tool did not load")
-	}
+	echoCount := 0
 	for _, def := range catalogue.Defs() {
-		if def.Name == "mcp__broken__echo" {
-			t.Fatal("unreachable server registered a tool")
+		if def.Name == "echo" {
+			echoCount++
 		}
 	}
-	if content, isError, err := catalogue.Execute(context.Background(), "mcp__demo__echo", nil); err != nil || isError || content != "pong:echo" {
+	if echoCount != 1 {
+		t.Fatalf("reachable server's bare tool loaded %d time(s), want 1", echoCount)
+	}
+	if content, isError, err := catalogue.Execute(context.Background(), "echo", nil); err != nil || isError || content != "pong:echo" {
 		t.Fatalf("reachable tool execute = %q, isError=%v, err=%v", content, isError, err)
 	}
 }
@@ -297,8 +336,8 @@ func TestReadMCPFileSettings(t *testing.T) {
 	if len(listSettings.Servers) != 1 || listSettings.Servers[0].Name != "listy" {
 		t.Fatalf("list-form servers = %+v", listSettings.Servers)
 	}
-	if listSettings.Namespace != tools.MCPToolNamespace {
-		t.Fatalf("default namespace = %q", listSettings.Namespace)
+	if listSettings.Namespace != "" {
+		t.Fatalf("default namespace = %q, want empty (bare registration)", listSettings.Namespace)
 	}
 
 	// A configuration without an "mcp" block leaves the default enabled state
@@ -306,8 +345,38 @@ func TestReadMCPFileSettings(t *testing.T) {
 	home3 := hivehome.Home{Root: t.TempDir()}
 	writeConfiguration(t, home3, `{"llm":{"model":"x"}}`)
 	bare := readMCPFileSettings(home3.ConfigurationFile())
-	if !bare.Enabled || bare.Namespace != tools.MCPToolNamespace || len(bare.Servers) != 0 {
+	if !bare.Enabled || bare.Namespace != "" || len(bare.Servers) != 0 {
 		t.Fatalf("bare settings = %+v", bare)
+	}
+}
+
+// TestMCPNamespaceDefaultsToBare pins the D3 final decision: the config default
+// is the empty namespace, so model-visible MCP names are the server's raw names
+// exactly like the Python reference. A non-empty value is the opt-in prefix
+// switch.
+//
+// Parity: core/framework/loader/tool_registry.py::register_mcp_server — Python
+// keys MCP tools by the bare mcp_tool.name (line 1053), with no configuration
+// knob for a namespace.
+func TestMCPNamespaceDefaultsToBare(t *testing.T) {
+	// Missing file and missing block both resolve to bare.
+	for name, content := range map[string]string{
+		"missing-block": `{"llm":{"model":"x"}}`,
+		"empty-block":   `{"mcp":{}}`,
+		"blank-key":     `{"mcp":{"namespace":"   "}}`,
+	} {
+		home := hivehome.Home{Root: t.TempDir()}
+		writeConfiguration(t, home, content)
+		if got := readMCPFileSettings(home.ConfigurationFile()).Namespace; got != "" {
+			t.Fatalf("%s: namespace = %q, want empty", name, got)
+		}
+	}
+
+	// An explicit non-empty value still selects the prefixed mode.
+	home := hivehome.Home{Root: t.TempDir()}
+	writeConfiguration(t, home, `{"mcp":{"namespace":"mcp"}}`)
+	if got := readMCPFileSettings(home.ConfigurationFile()).Namespace; got != "mcp" {
+		t.Fatalf("explicit namespace = %q, want mcp", got)
 	}
 }
 
@@ -332,7 +401,7 @@ func TestConfiguredMCPServersReadsRegistry(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	specs := configuredMCPServers(home, mcpFileSettings{Enabled: true, Namespace: tools.MCPToolNamespace})
+	specs := configuredMCPServers(home, mcpFileSettings{Enabled: true})
 	if len(specs) != 1 {
 		t.Fatalf("specs = %+v", specs)
 	}
@@ -372,8 +441,8 @@ func TestMCPRuntimeReloadReachesNewCatalogues(t *testing.T) {
 		t.Fatal(err)
 	}
 	before := newSessionToolCatalogue(root, builtin.New(root), home)
-	if !hasToolDef(before.Defs(), "mcp__demo__echo") {
-		t.Fatal("initial catalogue lacks the MCP tool")
+	if !hasToolDef(before.Defs(), "echo") {
+		t.Fatal("initial catalogue lacks the bare MCP tool")
 	}
 
 	writeConfiguration(t, home, `{"mcp":{"servers":{"other":{"transport":"http","url":"`+second.server.URL+`"}}}}`)
@@ -381,10 +450,10 @@ func TestMCPRuntimeReloadReachesNewCatalogues(t *testing.T) {
 		t.Fatalf("Reload: %v", err)
 	}
 	after := newSessionToolCatalogue(root, builtin.New(root), home)
-	if !hasToolDef(after.Defs(), "mcp__other__ping") {
+	if !hasToolDef(after.Defs(), "ping") {
 		t.Fatalf("reloaded server missing from a new catalogue")
 	}
-	if hasToolDef(after.Defs(), "mcp__demo__echo") {
+	if hasToolDef(after.Defs(), "echo") {
 		t.Fatal("removed server still registered in a new catalogue")
 	}
 }
@@ -408,23 +477,26 @@ func (f *fakeStatusAttacher) Generation() int64 { return 1 }
 // is Go-side (upstream's spawn_tools already list them).
 //
 // Status.ToolNames carries the names the SERVER advertises (the real loader
-// fills it from tools/list), while session/worker defs are namespaced — so this
-// fixture uses remote names exactly like production, and the comparison must
-// namespace them with the server's own namespace.
+// fills it from tools/list), while session/worker defs carry registry keys — so
+// this fixture uses remote names exactly like production, and the comparison
+// must map them through the server's own namespace: bare by default, prefixed
+// when the status declares one.
 func TestWithMCPWorkerToolsPromotesLoadedTools(t *testing.T) {
 	tools.SetProcessMCP(&fakeStatusAttacher{statuses: []tools.MCPServerStatus{
-		{Name: "demo", Connected: true, ToolNames: []string{"echo"}},
+		{Name: "demo", Connected: true, Namespace: "mcp", ToolNames: []string{"echo"}},
+		{Name: "flat", Connected: true, ToolNames: []string{"flat_ping"}},
 		{Name: "broken", Connected: false, ToolNames: []string{"nope"}},
 		{Name: "custom", Connected: true, Namespace: "remote", ToolNames: []string{"ping"}},
 	}})
 	t.Cleanup(func() { tools.SetProcessMCP(nil) })
 
-	base := []llm.ToolDef{{Name: "read_file"}, {Name: "mcp__demo__echo"}}
+	base := []llm.ToolDef{{Name: "read_file"}, {Name: "mcp__demo__echo"}, {Name: "flat_ping"}}
 	declared := []llm.ToolDef{
 		{Name: "read_file"},
 		{Name: "mcp__demo__echo"},
 		{Name: "mcp__broken__nope"},
 		{Name: "remote__custom__ping"},
+		{Name: "flat_ping"},
 		{Name: "integration_tool"},
 	}
 	merged := withMCPWorkerTools(base, declared)
@@ -432,10 +504,10 @@ func TestWithMCPWorkerToolsPromotesLoadedTools(t *testing.T) {
 	for _, def := range merged {
 		names[def.Name] = true
 	}
-	if !names["read_file"] || !names["mcp__demo__echo"] || !names["remote__custom__ping"] {
+	if !names["read_file"] || !names["mcp__demo__echo"] || !names["flat_ping"] || !names["remote__custom__ping"] {
 		t.Fatalf("loaded MCP tool missing from the worker base surface: %v", merged)
 	}
-	if len(merged) != 3 {
+	if len(merged) != 4 {
 		t.Fatalf("merged = %v", merged)
 	}
 	if names["mcp__broken__nope"] || names["integration_tool"] {

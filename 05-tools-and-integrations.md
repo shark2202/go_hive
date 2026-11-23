@@ -1,5 +1,9 @@
 # 05 · 工具与集成
 
+> **本文描述上游 Hive（Python 参考实现）。**
+> go_hive 的对应实现：`internal/tools`、`internal/mcpregistry`、`browserbridge`（独立 Go module）。
+> 状态：部分（工具/MCP 已对齐；第三方集成多为无凭据未验证）；差异登记见 `docs/alignment-differences.md`。
+
 ## 1. 工具的三个来源
 
 Agent 看到的永远只是普通函数调用，但这些调用来自三处：
@@ -26,7 +30,7 @@ Agent 看到的永远只是普通函数调用，但这些调用来自三处：
 
 这些工具「启动时不需要任何子进程」，是 Hive 相比「每个工具一个 MCP server」的显著简化。
 
-## 3. 104 个集成目录
+## 3. 集成目录（上游 104 个）
 
 `tools/src/aden_tools/tools/` 下的集成按域大致分为：
 
@@ -45,6 +49,8 @@ Agent 看到的永远只是普通函数调用，但这些调用来自三处：
 | 可观测性 | Langfuse、Prometheus、WandB |
 
 > 数量统计：`tools/src/aden_tools/tools/*/` 共 **104** 个目录。
+
+> **Go 侧口径（2026-11-23）**：104 是**上游目录数**（`tools/src/aden_tools/tools/*/`；`ls` 共 105 个条目 = 104 个集成目录 + `__init__.py`），不是 go_hive 的移植目标计数。Go 侧按工具契约计：`contracts/tool-definitions.json` 冻结两侧工具定义（reference 59 个工具），会话面 present 48/59（round 9 实测，`docs/tool-contract-diff.md` §18）；集成实现按 action 分组在 `internal/tools/integrations`（一个 Go 模块可覆盖多个上游目录），不承诺与上游目录一一对应。
 
 这些工具大多需要凭证，由 `framework/credentials/` 与 `aden_tools/credentials/` 统一管理，并支持 OAuth2 刷新。
 
@@ -148,7 +154,7 @@ Worker 有独立的 keep-set：`WORKER_ALWAYS_ENABLED_CATEGORIES`，可通过 `c
 
 **问题**
 
-- 104 个集成的质量、测试覆盖、凭证路径不可能完全一致；使用时需要逐个验证。
+- 上游 104 个集成的质量、测试覆盖、凭证路径不可能完全一致；使用时需要逐个验证。
 - 工具名/描述是 prompt 的一部分，任何改动都可能影响模型行为，但缺少「工具描述变更」的回归测试。
 - CLI 模式依赖 `mcp2cli` 与终端工具，链路比工具模式长，错误信息也更难定位。
 - 浏览器桥是单点：扩展未连接、端口占用、Chrome 升级都可能让依赖浏览器的 Worker 失败。
@@ -156,5 +162,5 @@ Worker 有独立的 keep-set：`WORKER_ALWAYS_ENABLED_CATEGORIES`，可通过 `c
 **建议**
 
 - 为工具描述建立快照测试（名称 + 首行描述），把 prompt 影响纳入 CI。
-- 为 104 个集成建立「最小可用矩阵」（无凭证 mock 测试 + live 测试分层），并在文档中标注成熟度。
+- 为上游 104 个集成建立「最小可用矩阵」（无凭证 mock 测试 + live 测试分层），并在文档中标注成熟度。
 - 给浏览器桥增加明确的健康检查与降级路径（例如自动回退到无浏览器工具）。

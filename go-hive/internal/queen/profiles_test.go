@@ -46,6 +46,26 @@ func TestNoQueenCarriesPresetSkillDefaults(t *testing.T) {
 	}
 }
 
+// Parity: framework/agents/queen/queen_profiles.py::default_skills_for
+//
+// A custom queen's on-disk profile carries its own default_preset_skills list;
+// a missing profile or key yields an empty (non-nil) set.
+func TestPresetSkillsFromProfileReadsCustomList(t *testing.T) {
+	got := PresetSkillsFromProfile(map[string]any{
+		"default_preset_skills": []any{"hive.linkedin-automation", "hive.x-automation", ""},
+	})
+	want := map[string]struct{}{
+		"hive.linkedin-automation": {},
+		"hive.x-automation":        {},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("PresetSkillsFromProfile = %#v, want %#v", got, want)
+	}
+	if empty := PresetSkillsFromProfile(nil); empty == nil || len(empty) != 0 {
+		t.Fatalf("PresetSkillsFromProfile(nil) = %#v, want an empty non-nil set", empty)
+	}
+}
+
 // Parity-exempt: no upstream test; a queen id from a URL/body must not escape
 // the queens root when LoadQueenProfile builds profile.yaml's path.
 func TestLoadQueenProfileRejectsTraversalID(t *testing.T) {

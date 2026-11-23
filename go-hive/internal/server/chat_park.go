@@ -44,12 +44,16 @@ func (r *ChatRuntime) persistParkState() {
 	r.mu.Lock()
 	questions := cloneParkQuestions(r.pendingQuestions)
 	credentialForm := cloneParkForm(r.pendingCredentialForm)
+	colonySuggestion := cloneAnyMap(r.pendingColonySuggestion)
+	colonyPivot := cloneAnyMap(r.pendingColonyPivot)
 	r.mu.Unlock()
 
 	if credentialForm != nil {
 		reason = agentloop.ParkReasonCredentialForm
 	} else if len(questions) > 0 {
 		reason = agentloop.ParkReasonAskUser
+	} else if colonySuggestion != nil || colonyPivot != nil {
+		reason = agentloop.ParkReasonColonySuggestion
 	}
 	if reason == "" {
 		reason = agentloop.ParkReasonUnknown
@@ -72,6 +76,16 @@ func (r *ChatRuntime) persistParkState() {
 		pending["questions"] = entries
 	} else {
 		pending["questions"] = nil
+	}
+	if colonySuggestion != nil {
+		pending["colony_suggestion"] = colonySuggestion
+	} else {
+		pending["colony_suggestion"] = nil
+	}
+	if colonyPivot != nil {
+		pending["colony_pivot"] = colonyPivot
+	} else {
+		pending["colony_pivot"] = nil
 	}
 	parkedAt := time.Now().UTC().Format(time.RFC3339Nano)
 	err := mutateConversationCursor(r.store, func(cursor map[string]any) {
@@ -219,6 +233,8 @@ func (r *ChatRuntime) announceRestoredPark() {
 	r.mu.Unlock()
 	reasonText := string(reason)
 	switch {
+	case r.restoreColonySuggestion(reason):
+		// colony_suggestion_requested re-announced from the cursor payload.
 	case form != nil:
 		r.bus.EmitCredentialFormRequested(chatStreamID, chatNodeID, nil, form)
 	case parkAnnouncesClientRequest(reasonText):
@@ -260,14 +276,23 @@ func (r *ChatRuntime) restoreParkState() bool {
 	}
 	questions := parkQuestionsFromCursor(pending["questions"])
 	credentialForm := parkFormFromCursor(pending["credential_form"])
+	colonySuggestion := parkMapFromCursor(pending["colony_suggestion"])
+	colonyPivot := parkMapFromCursor(pending["colony_pivot"])
 	r.mu.Lock()
 	r.pendingQuestions = questions
 	r.pendingCredentialForm = credentialForm
+	r.pendingColonySuggestion = colonySuggestion
+	r.pendingColonyPivot = colonyPivot
 	r.mu.Unlock()
+	if colonyPivot != nil && r.deps.Session != nil {
+		r.deps.Session.SetPendingColonyPivot(colonyPivot)
+	}
 	if credentialForm != nil {
 		reason = agentloop.ParkReasonCredentialForm
 	} else if len(questions) > 0 {
 		reason = agentloop.ParkReasonAskUser
+	} else if colonySuggestion != nil || colonyPivot != nil {
+		reason = agentloop.ParkReasonColonySuggestion
 	}
 	r.setParkState(reason, true)
 	return true
@@ -406,6 +431,16 @@ func parkFormFromCursor(raw any) map[string]any {
 		return nil
 	}
 	return cloneParkForm(form)
+}
+
+// parkMapFromCursor reads one colony park payload (suggestion or pivot) the
+// cursor persisted.
+func parkMapFromCursor(raw any) map[string]any {
+	value, ok := raw.(map[string]any)
+	if !ok || len(value) == 0 {
+		return nil
+	}
+	return cloneAnyMap(value)
 }
 
 // executeAskUser records the question the turn is parking on. The next user

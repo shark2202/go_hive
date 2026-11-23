@@ -71,8 +71,9 @@ type RuntimeOptions struct {
 	// worker_llm separately).
 	WorkerLLM llm.Completer
 	// SkillsProvider supplies the colony's skill catalog for the read surface
-	// (GET /colony/skills). Nil reports "catalog unavailable", matching
-	// upstream's absent skills_manager.
+	// (GET /colony/skills). Nil auto-wires the default colony hierarchy
+	// (framework + preset + user + queen_ui + colony_ui), matching upstream's
+	// always-constructed SkillsManager.
 	SkillsProvider func() ([]*skills.ParsedSkill, bool)
 	// QueenDir is the owning queen's home directory (…/queens/<queen_id>).
 	// When set, workers spawned by this colony see the queen's skill scope
@@ -80,9 +81,16 @@ type RuntimeOptions struct {
 	// overriding the queen's copy on a name collision — upstream's queen
 	// scope is visible to every colony she owns
 	// (framework/host/colony_runtime.py::_build_default_skills_config;
-	// 07-memory-and-skills.md §4.2). Empty keeps the worker surface
-	// colony-only, which is how the port behaved before this field existed.
+	// 07-memory-and-skills.md §4.2). Empty omits the queen_ui scope; the
+	// framework/preset/user/colony scopes still load.
 	QueenDir string
+	// DefaultPresetSkills is the in-memory set of preset-scope skills this
+	// colony enables by default (upstream SkillsManagerConfig
+	// .default_preset_skills). Nil means "resolve it from the owning queen's
+	// profile at QueenDir" (framework/agents/queen/queen_profiles.py::
+	// default_skills_for plus a custom profile.yaml); an explicit empty map
+	// disables every preset.
+	DefaultPresetSkills map[string]struct{}
 	// ToolProviderMap attributes tool names to providers for the tools read
 	// surface (upstream ColonyRuntime._tool_provider_map).
 	ToolProviderMap map[string]string
@@ -170,8 +178,12 @@ type ColonyRuntime struct {
 
 	workerLLM      llm.Completer
 	skillsProvider func() ([]*skills.ParsedSkill, bool)
-	// queenDir is the owning queen's home; empty keeps the worker skill
-	// surface colony-only (see RuntimeOptions.QueenDir).
+	// defaultPresetSkills is the preset-scope enable set applied to the worker
+	// catalog. It is resolved once at construction from the owning queen's
+	// profile (empty for a colony with no queen).
+	defaultPresetSkills map[string]struct{}
+	// queenDir is the owning queen's home; empty omits the queen_ui scope
+	// (see RuntimeOptions.QueenDir).
 	queenDir        string
 	toolProviderMap map[string]string
 	// skillsCatalogMu guards the memoised colony catalog prompt in-flight
@@ -281,6 +293,10 @@ func NewColonyRuntime(opts RuntimeOptions) *ColonyRuntime {
 	runtime.workerLLM = opts.WorkerLLM
 	runtime.skillsProvider = opts.SkillsProvider
 	runtime.queenDir = strings.TrimSpace(opts.QueenDir)
+	runtime.defaultPresetSkills = opts.DefaultPresetSkills
+	if runtime.defaultPresetSkills == nil {
+		runtime.defaultPresetSkills = defaultPresetSkillsForQueenDir(runtime.queenDir)
+	}
 	runtime.overseerTasks = newOverseerTaskSet(storage)
 	if runtime.skillsProvider == nil {
 		// No host passed a provider, but a colony that owns a skills/ folder
@@ -468,16 +484,7 @@ func (r *ColonyRuntime) buildWorkerContext(worker *Worker, spec agentloop.AgentS
 	// Colony skills are both discoverable (catalog prompt) and readable
 	// (SkillDirs turns view_file in the skill folder into skill content).
 	// write_skill's colony scope writes to exactly this folder.
-	if skillDirs := r.workerSkillDirs(); len(skillDirs) > 0 {
-		ctx.SkillDirs = skillDirs
-		ctx.SkillsCatalogPrompt = r.workerSkillsCatalogPrompt()
-		// Upstream spawns workers with dynamic_skills_catalog_provider set to
-		// the runtime's live catalog, so an in-flight worker picks up a reload
-		// on its next iteration instead of keeping the spawn-time prompt.
-		ctx.DynamicSkillsCatalogProvider = func() string {
-			return r.cachedSkillsCatalogPrompt()
-		}
-	}
+	r.attachWorkerSkillSurface(ctx)
 	// The worker's escalation channel is automatic: the tool doom-loop
 	// detector publishes through this sink (the worker itself has no escalate
 	// tool, matching upstream's parallel-worker surface). The queen session
@@ -852,6 +859,10 @@ func (r *ColonyRuntime) StartOverseer(ctx context.Context, queenSpec agentloop.A
 	worker.StoragePath = r.storagePath
 	worker.OutputFile = filepath.Join(r.storagePath, workerConversationsDir)
 	worker.Context = r.buildContext(worker, queenSpec)
+	// The overseer is the colony's client-facing queen and reads the same
+	// phase-filtered hierarchy its workers do (upstream start_overseer passes
+	// skills_catalog_prompt/skill_dirs and a dynamic provider).
+	r.attachWorkerSkillSurface(worker.Context)
 	// The overseer's conversation lives at the colony root (upstream keeps it
 	// at <colony>/conversations, not under a worker directory). A restarted
 	// colony reloads that transcript; only a fresh colony replays the seed.

@@ -73,8 +73,10 @@ type playbookRuntime interface {
 }
 
 // RunPlaybookToolDef is the upstream tool schema, byte-equal to Python's
-// registered Tool object: playbook / playbook_name / playbook_path / args and
-// no `required` list. The description is the Python reference text verbatim
+// registered Tool object as the model receives it: playbook / playbook_name /
+// playbook_path / args plus the request-layer `required: []` (upstream's
+// _tool_to_openai_format materializes the key even when the Tool declaration
+// omits it). The description is the Python reference text verbatim
 // (RunPlaybookDescription, byte-exact from the frozen contract).
 //
 // This definition used to carry the port's folded playbook-control parameters
@@ -111,6 +113,7 @@ func RunPlaybookToolDef() llm.ToolDef {
 					"description": "Optional JSON object passed to the script's run(args) entrypoint.",
 				},
 			},
+			"required": []any{},
 		},
 	}
 }
@@ -178,6 +181,7 @@ func PlaybookControlToolDefs() []llm.ToolDef {
 					"run_id": map[string]any{"type": "string", "description": "Fetch only this run."},
 					"limit":  map[string]any{"type": "integer", "description": "Most recent N runs (default 20)."},
 				},
+				"required": []any{},
 			},
 		},
 	}

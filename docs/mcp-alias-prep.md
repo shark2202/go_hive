@@ -4,6 +4,13 @@
 > `f0a1899e`。本页是 **待用户拍板** 的 D3 选项 A 预实现说明：保留 Go 前缀
 > 命名方案，只加“旧裸名 → 前缀名”的解析回退。**未合并、未改冻结契约字节**。
 >
+> **状态更新（2026-11-23）：D3 终选 B′ —— 默认注册 server 侧裸名（见
+> `docs/pending-decisions.md` §D3、`docs/mcp-namespace-residuals.md`）。本页的
+> “选项 A”不再是默认路径；别名层保留但只在显式 `mcp.namespace` 的前缀模式下
+> 有意义：裸名模式 `recordMCPAlias` 恒等、`mcpAliases` 为空
+> （`TestMCPBareDefaultAliasesStayIdentity`）。下文保留当初的预实现设计作为
+> 历史记录，实现现状以 `docs/e2e-assets/mcp-bare-default/REPORT.md` 为准。**
+>
 > 决策背景：`docs/pending-decisions.md` §D3、`docs/alignment-treatment-plan.md`
 > §B；命名与折叠事实：`docs/mcp-namespace-residuals.md` R1/R2。
 

@@ -1,6 +1,10 @@
 # 03 · AgentLoop 深入
 
-> 文件：`core/framework/agent_loop/agent_loop.py`（7,497 行）
+> **本文描述上游 Hive（Python 参考实现）。**
+> go_hive 的对应实现：`internal/agentloop`（循环主干与 internals）、`internal/server`（`chat_runtime*.go` 会话装配）。
+> 状态：部分（循环主干已移植；judge J3/J4 等残差）；差异登记见 `docs/alignment-differences.md`。
+
+> 文件：`core/framework/agent_loop/agent_loop.py`（约 7,500 行；2026-11-23 实测 7,501）
 > 这是全系统唯一执行原语，也是复杂度最高的文件。
 
 ## 1. 职责
@@ -196,7 +200,7 @@ SDK 用户可以实现 `JudgeProtocol` 自定义验收逻辑。
 
 **风险**
 
-- 单文件 7,497 行、两个方法各约 2,000 行，认知负担和回归风险都很高。
+- 单文件约 7,500 行（2026-11-23 实测 7,501）、两个方法各约 2,000 行，认知负担和回归风险都很高。
 - 大量行为由隐式约定（提醒文案、预算常量、白名单字段）决定，缺少显式的状态机文档。
 - 异步并发 + 文件写穿 + 事件总线三者交织，调试需要较强的心智模型。
 

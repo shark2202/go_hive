@@ -201,6 +201,9 @@ func (r *Runner) attachPreloadedChatRuntime(record *hiveserver.Session, manager 
 	// A session whose queen was not picked yet registers them and is refused
 	// when it writes.
 	onTurnStart := enableQueenSessionTools(tools, manager, record.ID, record, home)
+	// A preloaded colony session is a colony-phase queen: task_create exposes
+	// the new_colony pivot field, whose dispatch is intercepted in the loop.
+	enableColonyTaskPivot(tools)
 	// Same flat lazy split a created session gets (24 always-on + deferred),
 	// with the same searchable-manifest filter.
 	alwaysOnTools, deferredTools := tools.LazySurfaceDeps()
@@ -220,8 +223,11 @@ func (r *Runner) attachPreloadedChatRuntime(record *hiveserver.Session, manager 
 		Root:            sessionDir,
 		Bus:             record.EventBus,
 		SessionID:       record.ID,
-		QueenName:       record.QueenName,
-		HomeRoot:        home.Root,
+		// The live session record: the colony pivot intercept stashes
+		// session.pending_colony_pivot on it for the accept/dismiss routes.
+		Session:   record,
+		QueenName: record.QueenName,
+		HomeRoot:  home.Root,
 		// The session's chat channel ("" on the dashboard), read at each
 		// reminder render; a resumed queen-mail thread restored it above.
 		Channel: func() string { return record.Channel() },

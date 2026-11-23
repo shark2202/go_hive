@@ -109,11 +109,13 @@ terminal_output_get terminal_rg update_worker_profile write_skill
      `update_worker_profile`，以及 round-5 落为真实定义的 `get_playbook_status`、
      `stop_playbook`、`list_playbook_runs`；见 `docs/tool-contract-diff.md` §13/§14）——
      逐字 schema 以现场定义为准；
-  2. 其余 lifecycle-only 条目（`get_worker_status`、`inject_message`、`run_worker`、
-     `stop_worker`）在 Python Tool Library 里只渲染 name+description（无 input_schema，
-     manifest 里是空对象），Go 侧的真实 schema 是执行契约。这是层间不可比
-     （§11.4 已记录），不是缺陷；`write_skill` 属 `llm_request`+`lifecycle`，有真实
-     schema，按冻结契约应用。
+  2. lifecycle 层条目（`get_worker_status`、`inject_message`、`run_worker`、`stop_worker` 等）
+     自 round 9 起契约参考已改为**运行时层**：注册 `Tool` 对象经
+     `_tool_to_openai_format` 投影后的真实 schema（`contracts/tool-definitions.json`
+     `source: python:lifecycle_runtime`，见 `docs/tool-contract-diff.md` §18）。此前
+     「Tool Library 行无 schema → 保留现场定义」的层差已消失；`flatSurfaceKeepCurrentNames`
+     的 lifecycle 分支仍保留，但两侧 schema 现在逐字相同，等价于直接采用冻结条目。
+     `write_skill` 属 `llm_request`+`lifecycle`，有真实 schema，按冻结契约应用。
 
 ## 4. 执行路由（不改变既有实现）
 

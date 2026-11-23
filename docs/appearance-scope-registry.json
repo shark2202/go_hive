@@ -729,7 +729,7 @@
         {
           "path": "go_hive/go-hive/internal/tools/mcp_registry.go",
           "kind": "source",
-          "note": "命名空间拼接 NamespacedMCPToolName：mcp__<namespace>__<server>__<tool>，非法字符折叠为 _"
+          "note": "命名映射 MCPRegistryToolName：默认裸名（不折叠/不消毒，D3 B′，与 Python 同键）；显式 mcp.namespace 时 NamespacedMCPToolName 拼 mcp__<namespace>__<server>__<tool> 且非法字符折叠为 _"
         },
         {
           "path": "go_hive/go-hive/internal/server/mcp_tool_names_test.go",
@@ -738,7 +738,7 @@
         }
       ],
       "status": "partial",
-      "status_basis": "夹具双跑 + 真实第三方 server 双跑（everything-stdio 16 工具、time-stdio 3、everything-sse 16）：description 逐字、inputSchema 归一后与 server raw 16/16、3/3 相等且两侧同 sha；调用结果 8/8 逐字节（含错误、图片、structuredContent、resource_link）；kill -9 后两侧都恢复；disable→0 / enable 计数一致；unexpected_differences=0。明确例外：① 命名 Python 裸名 vs Go `mcp__<ns>__<server>__<tool>`（真实 server 上 16 个工具有 14 个被折叠改名）；② 同名冲突 Python first-wins vs Go 命名空间共存；③ reload Go 有 POST /api/mcp/reload，Python 下个会话生效；④ 超时优先级 Go env > mcp.timeout_seconds > 240s，Python 仅 env；⑤ transport `harness` 字面量仅 Python（Go 按 HarnessGroupNames 分派）。http transport 差异已定性：两侧模型路径都不支持标准 streamable HTTP（都请求 /mcp/v1，失败方式一致），标准 HTTP server 用 `hive mcp run` CLI 模式（两侧各 16 工具）。未验证项：命名折叠的 64 字符上限 / a-b 与 a_b 前缀撞车按 first-wins 的调用方影响未在 provider 侧验证。",
+      "status_basis": "夹具双跑 + 真实第三方 server 双跑（everything-stdio 16 工具、time-stdio 3、everything-sse 16）：description 逐字、inputSchema 归一后与 server raw 16/16、3/3 相等且两侧同 sha；调用结果 8/8 逐字节（含错误、图片、structuredContent、resource_link）；kill -9 后两侧都恢复；disable→0 / enable 计数一致；unexpected_differences=0。明确例外：① 命名：默认两侧同为裸名（D3 终选 B′，2026-11-23）；仅显式 mcp.namespace 时 Go 用 `mcp__<ns>__<server>__<tool>`（真实 server 上 16 个工具有 14 个被折叠改名，前缀模式专属）；② 同名冲突 Python first-wins vs Go 命名空间共存；③ reload Go 有 POST /api/mcp/reload，Python 下个会话生效；④ 超时优先级 Go env > mcp.timeout_seconds > 240s，Python 仅 env；⑤ transport `harness` 字面量仅 Python（Go 按 HarnessGroupNames 分派）。http transport 差异已定性：两侧模型路径都不支持标准 streamable HTTP（都请求 /mcp/v1，失败方式一致），标准 HTTP server 用 `hive mcp run` CLI 模式（两侧各 16 工具）。未验证项：命名折叠的 64 字符上限 / a-b 与 a_b 前缀撞车按 first-wins 的调用方影响未在 provider 侧验证。",
       "contract_state": "frozen_contract",
       "measured_now": "本次读取 mcp-crosscheck.md（含 §8 真实 server 双跑）：raw/两侧 16/16、3/3、16/16；schema 归一 16/16、3/3；调用 8/8 逐字节；unexpected=0；http 共享缺口与 5+3 条例外逐条登记。",
       "lane": "mcp-surface",

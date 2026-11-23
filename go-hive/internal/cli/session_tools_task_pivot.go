@@ -47,8 +47,47 @@ func (r *Runner) enableQueenTools(tools *sessionToolCatalogue, manager *hiveserv
 				return r.createChatSession(params, manager, liveMu, live, home, defaultModel)
 			},
 		})
+	} else if record != nil {
+		// Colony-phase queen: the pivot field is new_colony, and the
+		// dispatcher intercepts it before the executor (the handler below is
+		// a defensive stub, as upstream's _request_new_colony_with_plan).
+		enableColonyTaskPivot(tools)
 	}
 	return onTurnStart
+}
+
+// enableColonyTaskPivot swaps the colony queen's task_create definition for
+// the new_colony-bearing one. The call itself is handled framework-side in
+// internal/agentloop, which parks the turn and asks the frontend to open the
+// "Create Colony" popup; reaching this handler means the intercept did not
+// fire, so it surfaces that wiring bug instead of silently spawning.
+//
+// Parity: framework/server/queen_orchestrator.py::_request_new_colony_with_plan
+func enableColonyTaskPivot(tools *sessionToolCatalogue) {
+	if tools == nil || tools.taskTools == nil {
+		return
+	}
+	handler := &tasks.PivotHandler{
+		FieldName:          tasks.NewColonyPivotField,
+		FieldDescription:   tasks.NewColonyFieldDescription,
+		HandoffDescription: tasks.HandoffDescription,
+		Handle: func(goal string, handoff any, taskSpecs []any) map[string]any {
+			return map[string]any{
+				"success": false,
+				"error": "internal: task_create(new_colony=true) reached the executor instead of being " +
+					"handled by the agentloop synthetic intercept. This is a wiring bug — the intercept in " +
+					"internal/agentloop/colony_dispatch.go should fire first.",
+			}
+		},
+	}
+	tools.taskTools.setPivot(handler)
+	if def, ok := tools.taskTools.createDef(); ok {
+		for index := range tools.defs {
+			if tools.defs[index].Name == tasks.TaskCreate {
+				tools.defs[index] = def
+			}
+		}
+	}
 }
 
 // enableTaskPivot installs the queen's new_session handler on the catalogue and

@@ -12,7 +12,7 @@
 
 | 层 | 实现 | 验证 |
 | --- | --- | --- |
-| L1 契约 | `internal/httpapi` 15 条路由（13 契约端点 + `/health` + 内部扩展） | `go test ./...`：golden（`internal/httpapi/testdata/*.json`）、401 逐字、门禁、SSE、streamToken 往返、契约覆盖测试 |
+| L1 契约 | `internal/httpapi` 15 条路由（13 契约端点 + `/health` + 内部扩展）；路由集合与 `contracts/cloud-surface.json` 的 implemented 集合强制相等 | `go test ./...`：golden（`internal/httpapi/testdata/*.json`）、401 逐字、门禁、SSE、streamToken 往返、surface 覆盖测试 |
 | L2a 真客户端 | `harness/globaldb-smoke`（独立 module，`replace github.com/shark2202/go_hive/go-hive => ../../../go-hive`） | `scripts/smoke.sh` → `evidence/globaldb-smoke.json`，14 项检查全过 |
 | 门禁 | gofmt / go vet / go test | 见 §10 |
 
@@ -163,6 +163,7 @@ harness 单独构建：`cd harness/globaldb-smoke && go vet ./... && go build ./
 | `config.json` 的 `features{...}` 开关 | 未实现（配置文件只读 listen/data_dir/secrets/timeout/row-cap） |
 | Postgres 存储适配器 | M1b（缓存无驱动，登记待联网） |
 | 桌面端能否改云基址 | `UNKNOWN`（M0 已登记） |
+| 全量端点/SSE/WS 登记与未知项（含 senders 8 个 unknown-path 方法） | `contracts/cloud-surface.json` + `docs/cloud-surface.md`；`scripts/gen_cloud_surface.py --check` 强制 |
 
 ## 12. 证据
 

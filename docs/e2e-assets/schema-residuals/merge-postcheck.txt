@@ -1,0 +1,4 @@
+merge-postcheck: gofmt clean
+wiring_check: OK —— 21 个接线文件、68 项要求全部命中（root=/Users/mac/hive/.wt/schema-residuals/go_hive/go-hive）
+verdict=PASS
+一致：7 个生成物与 model.yaml + go list 完全一致（commit 9684ec82eea5）

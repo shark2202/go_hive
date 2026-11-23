@@ -4,7 +4,7 @@
  "provenance": {
   "purpose": "Python reference default session tool surface advertised by the Go catalogue (flat names, one tool per action)",
   "source": "go_hive/contracts/tool-definitions.json",
-  "source_sha256": "b896eda35cc2e94bb6e3ee200cd9147673c0d7ac8cc2d188c399b32beac931ea",
+  "source_sha256": "a1c457c94ef4ae5c3c58f9d3aaf3e46747db7c4686fb6e5a675a891509fcb9af",
   "reference": {
    "name": "python",
    "package": "aden-hive / hive (core/)",
@@ -302,7 +302,15 @@
    "description": "Check a playbook run by its run_id (the handle run_playbook returned). If still running, returns live progress (dispatched count, dead-lettered, phase, recent log lines). If finished, returns its run-log row. You usually DON'T need this — completion fires a [PLAYBOOK_COMPLETE] notification — use it only for an interim peek. (Use get_worker_status for an individual run_worker worker, not a playbook.)",
    "input_schema": {
     "type": "object",
-    "properties": {}
+    "properties": {
+     "run_id": {
+      "type": "string",
+      "description": "The playbook run_id."
+     }
+    },
+    "required": [
+     "run_id"
+    ]
    },
    "layers": [
     "lifecycle"
@@ -313,7 +321,25 @@
    "description": "Check on the loaded graph. Returns a brief prose summary by default. Use 'focus' to drill into specifics:\n- activity: current node, transitions, latest LLM output\n- memory: worker's accumulated buffer state\n- tools: running and recent tool calls\n- issues: retries, stalls, constraint violations\n- progress: goal criteria, token consumption\n- full: everything as JSON\nFor a PLAYBOOK (run_playbook), use get_playbook_status(run_id=...) instead — it reports the convergence run's progress by run_id.",
    "input_schema": {
     "type": "object",
-    "properties": {}
+    "properties": {
+     "focus": {
+      "type": "string",
+      "enum": [
+       "activity",
+       "memory",
+       "tools",
+       "issues",
+       "progress",
+       "full"
+      ],
+      "description": "Aspect to inspect. Omit for a brief summary."
+     },
+     "last_n": {
+      "type": "integer",
+      "description": "Recent events per category (default 20). Only for activity, tools, full."
+     }
+    },
+    "required": []
    },
    "layers": [
     "lifecycle"
@@ -376,7 +402,15 @@
    "description": "Send a message to the running graph. The message is injected into the graph's active node conversation. Use this to relay user instructions or concerns. The graph must be running.",
    "input_schema": {
     "type": "object",
-    "properties": {}
+    "properties": {
+     "content": {
+      "type": "string",
+      "description": "Message content to send to the graph"
+     }
+    },
+    "required": [
+     "content"
+    ]
    },
    "layers": [
     "lifecycle"
@@ -398,7 +432,17 @@
    "description": "Read the playbook run-log for this colony (from colony.db, the colony bookkeeping store — separate from the domain tracker). Returns recent runs most-recent-first: run_id, name, status, dispatched, dead_lettered, result, and the log narration. Pass `run_id` to fetch one run (e.g. the id run_playbook returned), or `limit` for the most recent N.",
    "input_schema": {
     "type": "object",
-    "properties": {}
+    "properties": {
+     "run_id": {
+      "type": "string",
+      "description": "Fetch only this run."
+     },
+     "limit": {
+      "type": "integer",
+      "description": "Most recent N runs (default 20)."
+     }
+    },
+    "required": []
    },
    "layers": [
     "lifecycle"
@@ -503,7 +547,15 @@
    "description": "Deactivate an active trigger. The trigger stops firing but remains available for re-activation.",
    "input_schema": {
     "type": "object",
-    "properties": {}
+    "properties": {
+     "trigger_id": {
+      "type": "string",
+      "description": "ID of the trigger to deactivate"
+     }
+    },
+    "required": [
+     "trigger_id"
+    ]
    },
    "layers": [
     "lifecycle"
@@ -514,7 +566,20 @@
    "description": "Reply to a specific worker escalation. The reply is injected into the identified worker's conversation so it can resume. Use list_worker_questions() to discover pending request_ids.",
    "input_schema": {
     "type": "object",
-    "properties": {}
+    "properties": {
+     "request_id": {
+      "type": "string",
+      "description": "The escalation request_id from list_worker_questions."
+     },
+     "reply": {
+      "type": "string",
+      "description": "Guidance or answer text to hand back to the worker."
+     }
+    },
+    "required": [
+     "request_id",
+     "reply"
+    ]
    },
    "layers": [
     "lifecycle"
@@ -525,7 +590,25 @@
    "description": "Run a colony playbook — a deterministic Python script that drives a tracker table to convergence: query the undone work, dispatch workers on it, re-query, repeat. Use it whenever the goal has row shape; reach for run_worker only for one-off heterogeneous tasks. ASYNC: returns a run_id immediately and notifies you via [PLAYBOOK_COMPLETE]; the convergence loop absorbs routine worker outcomes. Re-running is resume — done rows drop out of the pending query, so a second run only does the gap.\n\nSUPPLY THE SCRIPT (exactly one):\n• `playbook` — inline; saved to the colony library at playbooks/<meta-name>.play.py (returned as name+path).\n• `playbook_name` — run a saved playbook by meta name (the normal way to resume or re-run).\n• `playbook_path` — a script file on disk.\nIterate by editing the saved file (or re-sending inline with the same meta name, which overwrites) and re-running by name.\n\nSCRIPT SHAPE: define `meta` (name, description, optional `concurrency` = workers running at once; default 8, max 32; lanes throttle per-account within it) and `async def run(args)`. Injected in-script functions (NOT tools): converge / worker / tracker_query / tracker_count / lane / deadletter / log / phase. There is no mid-run escalation — a worker unsure about a row records that on the row (e.g. status='needs_review') for you to review after the run.\n\nGive every worker() a `goal` — one sentence in plain end-user language saying what that worker is doing; the UI shows it as the worker's title (it is not shown to the worker).\n\nTHE WORK-LIST: `pending()` returns one dict per worker dispatch. For cheap-per-row work (most campaigns), each dict should be a CHUNK of 5-10 rows grouped in plain Python — every worker pays a ~2-3k-token orientation tax before its first useful action, so one-row-per-worker multiplies that tax by N. Reserve one-row dispatches for rows that are individually large jobs. Chunking and convergence compose: done rows drop out of the next round's query and stragglers re-group. Give a chunked worker a `timeout` covering the whole slice, and a task string telling it to process rows as consecutive tool calls, upserting each row right after acting on it — rate pacing happens inside the tool layer, so a worker never needs a turn per row and a partial slice re-queues cleanly.\n\nCONTRACT — get these right or the playbook silently dispatches 0 workers:\n• tracker_query(sql) / tracker_count(sql) are SYNCHRONOUS — no await. tracker_query returns a LIST OF ROW DICTS; index a row's column (row['url']). A SELECT COUNT(*) is for counting — never the pending list.\n• converge(...) and worker(...) are ASYNC: `await converge(pending=..., dispatch=lambda unit, i: worker(...))` — converge awaits the worker coroutines and owns parallelism. worker() in a bare loop without await dispatches NOTHING; `for u in units: await worker(...)` runs serially and defeats meta['concurrency']. Parallel dispatch happens ONLY through converge.\n\nEXAMPLE (chunked — the default for cheap-per-row work):\n  meta = {\"name\": \"enrich\", \"description\": \"...\", \"concurrency\": 4}\n  RECEIPT = {\"type\":\"object\",\"required\":[\"processed\"],\"properties\":{\"processed\":{\"type\":\"array\"}}}\n  CHUNK = 8\n  async def run(args):\n      def pending():\n          rows = tracker_query(\"SELECT id, url FROM leads WHERE done_at IS NULL\")\n          return [{\"ids\": [r['id'] for r in rows[i:i+CHUNK]],\n                   \"urls\": [r['url'] for r in rows[i:i+CHUNK]]}\n                  for i in range(0, len(rows), CHUNK)]\n      await converge(\n          pending=pending,\n          dispatch=lambda chunk, i: worker(\n              task=f\"Enrich EACH of these, upserting its row + done_at as you go: {chunk['urls']}\",\n              goal=f\"Researching {len(chunk['ids'])} leads' websites\",\n              profile=\"acct-1\", skill=\"enrich\", schema=RECEIPT,\n              timeout=120 * len(chunk['ids'])),\n          max_rounds=3)\n      return {\"remaining\": tracker_count(\"SELECT 1 FROM leads WHERE done_at IS NULL\")}",
    "input_schema": {
     "type": "object",
-    "properties": {}
+    "properties": {
+     "playbook": {
+      "type": "string",
+      "description": "Inline playbook script (Python). Saved to the colony library at playbooks/<meta-name>.play.py. Pass exactly one of playbook / playbook_name / playbook_path."
+     },
+     "playbook_name": {
+      "type": "string",
+      "description": "Re-run a SAVED playbook by its meta name (the colony library) — the normal way to resume or re-run without re-sending the script."
+     },
+     "playbook_path": {
+      "type": "string",
+      "description": "Path to a playbook script file on disk."
+     },
+     "args": {
+      "type": "object",
+      "description": "Optional JSON object passed to the script's run(args) entrypoint."
+     }
+    },
+    "required": []
    },
    "layers": [
     "lifecycle"
@@ -536,7 +619,69 @@
    "description": "Lower-level fan-out — PREFER run_playbook for row-shaped work. For N units of the same job over a tracker table, run_playbook converges the table deterministically (one worker per undone unit — usually a CHUNK of 5-10 rows — with retry / dead-letter / resume) instead of making you re-coordinate each report. Reach for run_worker only for one-off heterogeneous tasks that don't fit a table, or when each report genuinely needs your judgment.\n\nBATCH SIMILAR UNITS — 5-10 PER WORKER. Every worker pays a fixed orientation tax before its first useful action: fresh context, system prompt, skill reads — roughly 2-3k tokens. One-small-unit-per-worker multiplies that tax by N for nothing (measured live: a 68-worker one-lead-each batch spent ~200-300k tokens on orientation alone). Give each worker a slice of 5-10 similar units and a timeout that covers the whole slice; reserve one-unit workers for units that are individually large. Tell the worker to process its slice as consecutive tool calls, recording each unit as it goes — it does not need a turn per unit, so the default turn budget fits a slice.\n\nFan out a batch of tasks to parallel workers and RETURN IMMEDIATELY. Workers run in the background; each one reports back to you as a [WORKER_REPORT] user turn when it finishes, so you stay unblocked and can chat with the user, kick off more work, or do anything else in the meantime.\n\nFACTOR SHARED CONTEXT INTO A SKILL FIRST. Each worker is a fresh process with no memory of your conversation, but that does NOT mean you should duplicate the same protocol prose across N task strings. If 90% of every task string is the same — schema, output format, quality bar, tools to use — stop and call ``write_skill`` once with that common ground. Workers spawned afterwards see the new skill in their ``<available_skills>`` catalog and activate it on demand. Reference the skill BY NAME in the task string (e.g. 'Follow the <skill-name> protocol to extract rows X, Y, Z') so each worker reads it once and the task strings only carry the per-worker DIFFERENCES (which 5 companies, which row IDs, which date range). Don't spend N× tokens saying the same thing.\n\nPer-task strings still need to be self-contained for the *differences*: include row keys, IDs, URLs, anything unique to that worker's slice. Workers cannot ask the user follow-up questions and cannot see your chat history.\n\nNON-OVERLAPPING SLICES. Workers run concurrently, cannot coordinate, and cannot see each other. Two tasks that touch the same tracker rows, files, or records will double-write or collide. Partition the work cleanly — each row/file/record should be owned by exactly one worker.\n\nBrowser tasks: each worker gets its OWN Chrome tab group, isolated from the queen's tabs and from every other worker, but within the SAME Chrome profile — so workers share cookies and logged-in sessions with the queen (a site the queen is logged into is also authenticated for workers). Each browser worker should start  with `hive-browser open`/`hive-browser navigate`; auth carries over from the shared profile. Live per-worker tab activity is visible to the queen via get_worker_status (focus='full' → 'worker_browsers').\n\nEach worker runs in isolation with its own AgentLoop and reports back via the report_to_parent tool. The tool returns a JSON object with status='started' and the list of worker_ids you just spawned. Each worker's completion arrives later as a [WORKER_REPORT] message containing worker_id, status (success|partial|failed|timeout|stopped), summary, data, error, duration. Read those messages as they arrive and respond to the user naturally.\n\nTIMEOUT — 'timeout' is a SOFT deadline (default 600s). When it expires, every still-active worker that hasn't reported gets a [SOFT TIMEOUT] message telling it to call report_to_parent now. The hard cutoff (when stragglers are force-stopped) is derived from 'timeout' automatically and is not agent-tunable. Explicit reports filed during the warning window ARE preserved.\n\nHETEROGENEOUS BATCHES — if some workers need different iteration / timeout budgets than others, run two batches rather than mixing. The interface intentionally exposes only batch-level knobs.",
    "input_schema": {
     "type": "object",
-    "properties": {}
+    "properties": {
+     "tasks": {
+      "type": "array",
+      "description": "List of task specs to fan out. Each spec is {\"task\": \"<description>\", \"data\": {<optional structured input>}}. The 'task' string becomes the worker's initial user message — keep it tight and per-worker UNIQUE (don't duplicate the shared protocol). 'data' is merged into the worker's AgentContext.input_data so structured fields are available to the worker's first turn.",
+      "items": {
+       "type": "object",
+       "properties": {
+        "task": {
+         "type": "string",
+         "description": "Task description for the worker."
+        },
+        "data": {
+         "type": "object",
+         "description": "Optional structured input fields."
+        },
+        "goal": {
+         "type": "string",
+         "description": "One sentence, in plain end-user language, describing what this worker is doing (e.g. 'Checking 20 Instagram profiles to see who accepts DMs'). Shown in the UI as the worker's title — ALWAYS provide it; a non-technical user should understand it. Not shown to the worker."
+        },
+        "preload_tools": {
+         "type": "array",
+         "items": {
+          "type": "string"
+         },
+         "description": "Exact tool names to pre-load into this worker's eager toolset at spawn (skips its search_tools round-trip). Use when you KNOW the task needs tools that are searchable for workers (e.g. sender or hubspot tools). Unknown names are ignored."
+        }
+       },
+       "required": [
+        "task"
+       ]
+      },
+      "minItems": 1
+     },
+     "max_iterations": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000,
+      "description": "Cap on each worker's AgentLoop iterations of useful work. After this is exhausted the framework grants an additional grace iteration (configured separately) where dispatch is restricted to report_to_parent / tracker_upsert / task_update so the worker can wrap up. Worker default: 3 (work) + 1 (grace) = 4 total."
+     },
+     "timeout": {
+      "type": "number",
+      "description": "SOFT deadline in seconds. Workers still running at this point are messaged to call report_to_parent. Default 600 (10 minutes)."
+     },
+     "tool_call_lifetime_budget": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2000,
+      "description": "Cap on each worker's CUMULATIVE tool calls across ALL its turns (distinct from max_iterations, which counts turns, and from the per-turn pacing budget). When a worker reaches this total it is forced into the grace wind-down — a stop reminder is injected and dispatch is restricted to report_to_parent / tracker_upsert / task_update so it reports back instead of running unbounded. Worker default: 150. Lower it (e.g. 20) to keep tool-heavy workers on a tight leash; on resume it also RAISES the ceiling for a worker that already exhausted its budget (the count persists across resumes). OMIT this to let the colony's adaptive budget manage the fan-out: successful workers' consumption sets the colony norm and outlier workers are wound down early. Passing an explicit value PINS those workers to it — they are neither clamped by nor counted toward the adaptive norm."
+     },
+     "resume_worker_ids": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "RESUME mode (mutually exclusive with 'tasks'). worker_ids of workers that stopped before reporting (e.g. timed-out or force-stopped) — you have these from the original run_worker return and the stopped/timeout [WORKER_REPORT]s. Each is reloaded from its saved conversation and continues from where it left off, then reports via report_to_parent. Pass 'max_iterations' to give a worker that stopped near its limit room to finish, and 'guidance' to steer it before it resumes.",
+      "minItems": 1
+     },
+     "guidance": {
+      "type": "string",
+      "description": "RESUME mode only: a single steering instruction injected as a user turn into every resumed worker before it continues (e.g. 'you got stuck on the login step — try the API instead'). Ignored when spawning fresh workers via 'tasks'."
+     }
+    },
+    "required": []
    },
    "layers": [
     "lifecycle"
@@ -741,7 +886,27 @@
    "description": "Activate a trigger (timer) so it fires periodically. Use trigger_id of an available trigger, or provide trigger_type + trigger_config to create a custom one. A task must be configured before activation — either pre-set on the trigger or provided here.",
    "input_schema": {
     "type": "object",
-    "properties": {}
+    "properties": {
+     "trigger_id": {
+      "type": "string",
+      "description": "ID of the trigger to activate (from list_triggers) or a new custom ID"
+     },
+     "trigger_type": {
+      "type": "string",
+      "description": "Type of trigger ('timer'). Only needed for custom triggers."
+     },
+     "trigger_config": {
+      "type": "object",
+      "description": "Config for the trigger. Timer: {cron: '*/5 * * * *'} or {interval_minutes: 5}. Only needed for custom triggers."
+     },
+     "task": {
+      "type": "string",
+      "description": "The task/instructions for the worker when this trigger fires (e.g. 'Process inbox emails using saved rules'). Required if not already configured on the trigger."
+     }
+    },
+    "required": [
+     "trigger_id"
+    ]
    },
    "layers": [
     "lifecycle"
@@ -752,7 +917,15 @@
    "description": "Kill a RUNNING playbook by its run_id: stops the convergence loop (no more rows dispatched) and stops its in-flight workers. Use it to halt a run that's going wrong (bad protocol, burning an account). Rows already marked done are kept — re-run with run_playbook(playbook_name=...) to resume from where the tracker stands (no run-id needed; the tracker is the resume point). (Use stop_worker for an individual run_worker worker.)",
    "input_schema": {
     "type": "object",
-    "properties": {}
+    "properties": {
+     "run_id": {
+      "type": "string",
+      "description": "The playbook run_id to stop."
+     }
+    },
+    "required": [
+     "run_id"
+    ]
    },
    "layers": [
     "lifecycle"
@@ -763,7 +936,17 @@
    "description": "Halt ALL colony work and pause timers. Use this whenever the user asks to pause, stop, or halt — it is the honest 'stop everything'. It first cancels any running playbook convergence loops (so they can't re-dispatch fresh workers), then cancels every active worker — including queued ones waiting for capacity. Each live worker first receives a [STOP REQUESTED] inject asking it to call report_to_parent with its latest progress; workers that do not report within `grace_seconds` are force-stopped. This is reliable and fast — it always returns within seconds, so call it ONCE and report the result; do not retry it in a loop. The collected reports plus the list of cancelled playbooks are returned in the tool result, so report what ACTUALLY stopped from that result — do not claim everything is stopped without it. Leave `grace_seconds` unset for a short reporting window; pass 0 for an immediate hard stop.\nTo halt one specific run_playbook run while leaving others going, use stop_playbook(run_id=...) instead.",
    "input_schema": {
     "type": "object",
-    "properties": {}
+    "properties": {
+     "reason": {
+      "type": "string",
+      "description": "Why the workers are being stopped. Surfaced to each worker in the stop inject so its final report_to_parent call can reflect the cause."
+     },
+     "grace_seconds": {
+      "type": "number",
+      "description": "Seconds to wait for workers to file a report_to_parent before force-stopping. Clamped to [0, 25]; leave unset for a short window, or 0 for an immediate hard stop."
+     }
+    },
+    "required": []
    },
    "layers": [
     "lifecycle"
@@ -1283,7 +1466,47 @@
    "description": "Insert or update one worker profile on an existing colony. Use this to swap a profile's account alias (e.g. 'switch slack-work to use alias work-2'), bind it to a specific Chrome profile via browser_profile (a connected label from list_browser_profiles), or add a profile after the colony was forked. Existing siblings are preserved. Pass only the fields you want to change.",
    "input_schema": {
     "type": "object",
-    "properties": {}
+    "properties": {
+     "colony_id": {
+      "type": "string"
+     },
+     "profile_name": {
+      "type": "string"
+     },
+     "integrations": {
+      "type": "object",
+      "additionalProperties": {
+       "type": "string"
+      }
+     },
+     "task": {
+      "type": "string"
+     },
+     "skill_name": {
+      "type": "string"
+     },
+     "concurrency_hint": {
+      "type": "integer",
+      "minimum": 1
+     },
+     "prompt_override": {
+      "type": "string"
+     },
+     "tool_filter": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "browser_profile": {
+      "type": "string",
+      "description": "Chrome profile label this profile's browser tools target (from list_browser_profiles). Empty clears it."
+     }
+    },
+    "required": [
+     "colony_id",
+     "profile_name"
+    ]
    },
    "layers": [
     "lifecycle"

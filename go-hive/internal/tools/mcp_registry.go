@@ -49,9 +49,9 @@ type RegisterMCPServerOptions struct {
 	ToolCap               *int
 	LogCollisions         bool
 	// ToolNamespace prefixes every registered tool with
-	// "<namespace>__<server>__<tool>". Empty keeps the server's own names,
-	// which is what the legacy config-file loader and the upstream registry
-	// parity tests expect.
+	// "<namespace>__<server>__<tool>". Empty (the default) registers the
+	// server's own tool names verbatim, which is what the upstream Python
+	// registry does; a configured mcp.namespace opts into the prefixed form.
 	ToolNamespace string
 }
 
@@ -506,10 +506,12 @@ func (r *ToolRegistry) registerMCPServerInner(spec MCPServerSpec, opts RegisterM
 }
 
 // recordMCPAlias claims the compatibility alias from a server-side (bare) MCP
-// tool name to the namespaced registry name that serves it. Only registry keys
-// owned by an MCP tool qualify, so a bare name can never alias to a builtin or
-// integration tool that happens to hold the namespaced key. The first claim
-// wins, mirroring the registry's first-wins collision rule.
+// tool name to the namespaced registry name that serves it. In the default
+// bare-name mode bare == registered, so this is the identity and records
+// nothing. Only registry keys owned by an MCP tool qualify, so a bare name can
+// never alias to a builtin or integration tool that happens to hold the
+// namespaced key. The first claim wins, mirroring the registry's first-wins
+// collision rule.
 func (r *ToolRegistry) recordMCPAlias(bare, registered string) {
 	if bare == "" || registered == "" || bare == registered {
 		return
@@ -587,11 +589,24 @@ func (r *ToolRegistry) findMCPOriginServerForTool(toolName string) string {
 	return ""
 }
 
-// NamespacedMCPToolName is the registry name an MCP tool is exposed under. The
-// server name is part of the name so two servers can never claim the same
-// registry key, and the prefix keeps MCP tools out of builtin/integration
-// territory (a remote tool called "read_file" becomes "mcp__srv__read_file"
-// and cannot shadow the sandboxed builtin).
+// MCPRegistryToolName maps one server-advertised tool name to the key it is
+// registered under. With no namespace (the default) the bare server name is
+// the registry key, so the model-visible surface matches the Python reference
+// exactly — no folding, no sanitising. A non-empty namespace opts into the
+// prefixed, folded form.
+func MCPRegistryToolName(namespace, server, toolName string) string {
+	if namespace == "" {
+		return toolName
+	}
+	return NamespacedMCPToolName(namespace, server, toolName)
+}
+
+// NamespacedMCPToolName is the registry name an MCP tool is exposed under when
+// the operator turns on the optional prefix mode. The server name is part of
+// the name so two servers can never claim the same registry key, and the
+// prefix keeps MCP tools out of builtin/integration territory (a remote tool
+// called "read_file" becomes "mcp__srv__read_file" and cannot shadow the
+// sandboxed builtin).
 //
 // Characters a tool call cannot carry (the model's name field is a plain
 // identifier) are folded to "_", so a server or tool name with spaces, dots or
@@ -608,8 +623,9 @@ func NamespacedMCPToolName(namespace, server, toolName string) string {
 	return clean(namespace, MCPToolNamespace) + "__" + clean(server, "server") + "__" + clean(toolName, "tool")
 }
 
-// MCPToolNamespace is the default prefix for MCP tools registered into a
-// session catalogue.
+// MCPToolNamespace is the fallback namespace for the optional prefix mode
+// (NamespacedMCPToolName). Registration itself defaults to bare names; nothing
+// prefixes tools unless the operator sets a non-empty mcp.namespace.
 const MCPToolNamespace = "mcp"
 
 var mcpToolNameUnsafe = regexp.MustCompile(`[^A-Za-z0-9_]+`)

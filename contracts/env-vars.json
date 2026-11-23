@@ -1011,7 +1011,7 @@
         "dev_reads": [],
         "test_reads": 6,
         "writes": [],
-        "mentions": 15,
+        "mentions": 19,
         "comments": 1
       }
     },
@@ -1054,7 +1054,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/cli/browser_cli.go",
-            "line": 268,
+            "line": 274,
             "symbol": "profile",
             "parse": "helper",
             "helper": "env",
@@ -1624,8 +1624,8 @@
         "dev_reads": [],
         "test_reads": 22,
         "writes": [],
-        "mentions": 38,
-        "comments": 7
+        "mentions": 41,
+        "comments": 8
       }
     },
     {
@@ -1923,7 +1923,7 @@
           },
           {
             "file": "go_hive/go-hive/internal/cli/loader.go",
-            "line": 1108,
+            "line": 1116,
             "symbol": "runtimeOwnerPID",
             "parse": "string",
             "snippet": "owner := os.Getenv(\"HIVE_DESKTOP_PARENT_PID\")",
@@ -1935,7 +1935,7 @@
         "writes": [
           {
             "file": "go_hive/go-hive/internal/cli/loader.go",
-            "line": 1111,
+            "line": 1119,
             "scope": "runtime"
           }
         ],
@@ -2026,7 +2026,7 @@
         "dev_reads": [],
         "test_reads": 0,
         "writes": [],
-        "mentions": 13,
+        "mentions": 16,
         "comments": 0
       }
     },
@@ -2504,7 +2504,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/cli/browser_cli.go",
-            "line": 352,
+            "line": 430,
             "symbol": "statePath",
             "parse": "helper",
             "helper": "env",
@@ -2544,10 +2544,21 @@
           }
         ],
         "dev_reads": [],
-        "test_reads": 62,
-        "writes": [],
-        "mentions": 270,
-        "comments": 102
+        "test_reads": 71,
+        "writes": [
+          {
+            "file": "go_hive/go-hive/internal/colony/skills_surface_test.go",
+            "line": 30,
+            "scope": "test"
+          },
+          {
+            "file": "go_hive/go-hive/internal/colony/skills_surface_test.go",
+            "line": 38,
+            "scope": "test"
+          }
+        ],
+        "mentions": 299,
+        "comments": 106
       },
       "notes": "fallback ~/.hive on both; Go converts to an absolute path."
     },
@@ -4916,7 +4927,7 @@
         "prod_reads": [
           {
             "file": "go_hive/go-hive/internal/colony/runtime.go",
-            "line": 645,
+            "line": 652,
             "symbol": "splitWorkerEventsEnabled",
             "parse": "string",
             "snippet": "switch strings.ToLower(strings.TrimSpace(os.Getenv(\"HIVE_SPLIT_WORKER_EVENTS\"))) {",

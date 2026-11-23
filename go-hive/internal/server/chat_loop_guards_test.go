@@ -57,8 +57,11 @@ func TestAddSessionArmsLoopGuards(t *testing.T) {
 	if !manager.StopSession("session_loop_guards") {
 		t.Fatal("StopSession reported the session was not registered")
 	}
-	if got := bus.SubscriptionCount(); got != before {
-		t.Fatalf("subscriptions after StopSession = %d, want %d", got, before)
+	// StopSession closes the runtime, which also removes the session-bus
+	// subscription the runtime owns (context_compacted → long reflection);
+	// only that one plus the stall check existed beyond the baseline.
+	if got := bus.SubscriptionCount(); got != before-1 {
+		t.Fatalf("subscriptions after StopSession = %d, want %d", got, before-1)
 	}
 }
 

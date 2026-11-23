@@ -606,7 +606,7 @@
         },
         {
           "file": "go_hive/go-hive/internal/agentloop/loop.go",
-          "contains": "writeCompactionReport(agentCtx, ratioBefore, conv.UsageRatio(), preInventory)"
+          "contains": "writeCompactionReport(agentCtx, ratioBefore, ratioAfter, preInventory)"
         },
         {
           "file": "go_hive/go-hive/internal/agentloop/compaction_debug.go",

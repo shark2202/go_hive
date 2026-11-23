@@ -108,8 +108,18 @@ func TestBrowserSetupRecordsBrowserGroup(t *testing.T) {
 		t.Fatalf("browser catalog = %v", entries)
 	}
 	schema, _ := entries[0]["input_schema"].(map[string]any)
-	if schema == nil || schema["type"] != "object" || schema["additionalProperties"] != false {
+	if schema == nil {
 		t.Fatalf("browser_setup input_schema = %#v", entries[0]["input_schema"])
+	}
+	// Upstream raw: {type: object, properties: {}, required: []}. Additional
+	// properties must stay unset — pydantic omits the JSON Schema default, and
+	// the live contract recheck compares the raw definition.
+	encoded, err := json.Marshal(schema)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := `{"properties":{},"required":[],"type":"object"}`; string(encoded) != want {
+		t.Fatalf("browser_setup input_schema = %s, want %s", encoded, want)
 	}
 }
 

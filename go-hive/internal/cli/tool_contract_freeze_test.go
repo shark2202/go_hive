@@ -30,6 +30,7 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/shark2202/go_hive/go-hive/internal/eventbus"
 	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
 	hiveserver "github.com/shark2202/go_hive/go-hive/internal/server"
 	"github.com/shark2202/go_hive/go-hive/internal/tools/builtin"
@@ -106,6 +107,22 @@ func TestToolContractFreeze(t *testing.T) {
 	// queen lifecycle table the chat runtime installs for a queen session.
 	root := testTempDir(t)
 	catalogue := newSessionToolCatalogue(root, builtin.New(root), hivehome.Home{Root: root})
+	// The frozen reference for task_create is the DM queen session's
+	// model-visible definition: the session pivot overlay injects
+	// new_session + handoff before the runtime builds tools[]
+	// (session_tools_task_pivot.go). Install the same overlay so this report
+	// measures the runtime layer instead of the bare pre-overlay catalogue —
+	// otherwise the section-C diff is an artifact of when the catalogue is
+	// read, not a contract gap.
+	pivotSession := hiveserver.NewSession("contract-live", eventbus.NewEventBus())
+	pivotSession.QueenName = "default"
+	enableTaskPivot(catalogue, pivotSession, taskPivotWiring{
+		manager: hiveserver.NewSessionManager(),
+		home:    hivehome.Home{Root: root},
+		create: func(hiveserver.CreateSessionParams) (*hiveserver.Session, error) {
+			return hiveserver.NewSession("contract-successor", eventbus.NewEventBus()), nil
+		},
+	})
 	live := map[string]liveTool{}
 	for _, def := range catalogue.Defs() {
 		live[def.Name] = liveTool{Description: def.Description, Parameters: def.Parameters}
@@ -192,15 +209,19 @@ func TestToolContractFreeze(t *testing.T) {
 		}
 	}
 	sort.Strings(normalizedDiffs)
-	present := len(doc.Tools) - len(missing)
+	// The session-surface denominator: reference names that exist in the live
+	// registry. Reflection-side-agent entries never enter the session surface
+	// (section A excludes them too), so counting them as "present" would
+	// inflate the denominator and understate the metric.
+	present := len(doc.Tools) - len(missing) - len(reflectionLayer)
 	descAmongPresent := 0
 	for _, tool := range doc.Tools {
 		if def, ok := live[tool.Name]; ok && def.Description == tool.Description {
 			descAmongPresent++
 		}
 	}
-	t.Logf("C. unified metric (authoritative): present %d/%d, description %d/%d, schema raw %d/%d, schema normalized %d/%d",
-		present, len(doc.Tools), descAmongPresent, present, schemaOK, present, normalizedOK, present)
+	t.Logf("C. unified metric (authoritative): session reference %d/%d (%d reference entries outside the session surface), description %d/%d, schema raw %d/%d, schema normalized %d/%d",
+		present, len(doc.Tools), len(reflectionLayer), descAmongPresent, present, schemaOK, present, normalizedOK, present)
 	logList(t, "C. schema differs after normalization", normalizedDiffs)
 
 	// --- B. freeze drift: the manifest's Go snapshot vs live ------------------

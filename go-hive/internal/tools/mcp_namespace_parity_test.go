@@ -53,16 +53,19 @@ func scriptedRegistry(clients map[string]*scriptedMCPClient) *ToolRegistry {
 	return registry
 }
 
-// TestMCPNamespaceFoldCollisionKeepsFirstTool pins the non-injective fold: a
-// server exposing both "x-y" and "x_y" folds both to one registry key, so only
-// the first tool is callable and ToolsLoaded undercounts the server's list.
+// TestMCPNamespaceFoldCollisionKeepsFirstTool pins the opt-in prefix mode's
+// non-injective fold: a server exposing both "x-y" and "x_y" folds both to one
+// registry key, so only the first tool is callable and ToolsLoaded undercounts
+// the server's list.
 //
-// Parity-exempt: the namespace prefix is a Go-side integration decision.
-// Python keys MCP tools by their raw name (core/framework/loader/
-// tool_registry.py::register_mcp_server), so "x-y" and "x_y" stay two distinct
-// callable tools there (probe go_hive/docs/e2e-assets/mcp-namespace/
-// python-output.json: collision_tool_names_in_one_server). Registered as
-// residual R1 in go_hive/docs/mcp-namespace-residuals.md.
+// Parity-exempt: the prefix is a Go-side integration switch (mcp.namespace).
+// The default bare mode keeps both names, matching Python, which keys MCP
+// tools by their raw name (core/framework/loader/tool_registry.py::
+// register_mcp_server) — see TestMCPBareDefaultKeepsDistinctToolNames and
+// probe collision_tool_names_in_one_server in
+// go_hive/docs/e2e-assets/mcp-namespace/python-output.json. Prefix mode is
+// documented as the residual R1 behaviour in
+// go_hive/docs/mcp-namespace-residuals.md.
 func TestMCPNamespaceFoldCollisionKeepsFirstTool(t *testing.T) {
 	clients := map[string]*scriptedMCPClient{
 		"fold": {
@@ -97,14 +100,15 @@ func TestMCPNamespaceFoldCollisionKeepsFirstTool(t *testing.T) {
 	}
 }
 
-// TestMCPNamespacePrefixFoldCollidesAcrossServers pins the cross-server case:
-// servers "a-b" and "a_b" produce the same prefix, so tools that only differ by
-// '-' vs '_' fold to one registry key; the first server wins.
+// TestMCPNamespacePrefixFoldCollidesAcrossServers pins the prefix mode's
+// cross-server case: servers "a-b" and "a_b" produce the same prefix, so tools
+// that only differ by '-' vs '_' fold to one registry key; the first server
+// wins.
 //
 // Parity-exempt: Python has no prefix fold and keeps "get-sum" and "get_sum"
-// as distinct keys on two distinct servers (probe:
-// collision_cross_server in go_hive/docs/e2e-assets/mcp-namespace/
-// python-output.json). Residual R1.
+// as distinct keys on two distinct servers (probe collision_cross_server in
+// go_hive/docs/e2e-assets/mcp-namespace/python-output.json). The default bare
+// mode reproduces that — TestMCPBareDefaultCrossServerNamesSurvive.
 func TestMCPNamespacePrefixFoldCollidesAcrossServers(t *testing.T) {
 	clients := map[string]*scriptedMCPClient{
 		"a-b": {config: &MCPServerConfig{Name: "a-b"}, tools: []MCPTool{scriptedTool("get-sum")}},
@@ -136,13 +140,15 @@ func TestMCPNamespacePrefixFoldCollidesAcrossServers(t *testing.T) {
 }
 
 // TestMCPNamespaceSameRemoteNameFirstWins pins the aligned half of the
-// collision story: when two servers expose the same remote tool name, the
-// first one wins and the later server registers nothing under it.
+// collision story in prefix mode: when two servers expose the same remote tool
+// name, the first one wins and the later server registers nothing under it.
 //
 // Parity: core/tests/test_mcp_registry_loader.py::test_registry_first_wins_collisions
 // — Python keys the bare name, so the later server's identical tool is skipped;
-// the Go folded key reproduces the same outcome (probe collision_cross_server
-// in go_hive/docs/e2e-assets/mcp-namespace/python-output.json).
+// prefix mode reaches the same outcome through the namespaced key (probe
+// collision_cross_server in
+// go_hive/docs/e2e-assets/mcp-namespace/python-output.json). The default bare
+// mode is directly identical (TestMCPBareDefaultSameRemoteNameFirstWins).
 func TestMCPNamespaceSameRemoteNameFirstWins(t *testing.T) {
 	clients := map[string]*scriptedMCPClient{
 		"a-b": {config: &MCPServerConfig{Name: "a-b"}, tools: []MCPTool{scriptedTool("echo_text")}},
@@ -172,14 +178,16 @@ func TestMCPNamespaceSameRemoteNameFirstWins(t *testing.T) {
 	}
 }
 
-// TestMCPNamespaceFoldOverwriteWhenNotPreserving pins the preserve=false path:
-// the later tool overwrites the folded registry key, so the surviving executor
-// calls the later server's remote tool (both servers still report the load).
+// TestMCPNamespaceFoldOverwriteWhenNotPreserving pins the prefix mode path with
+// preserve=false: the later tool overwrites the folded registry key, so the
+// surviving executor calls the later server's remote tool (both servers still
+// report the load).
 //
 // Parity: core/framework/loader/tool_registry.py::register_mcp_server with
 // preserve_existing_tools=False overwrites the earlier bare-name registration;
 // probe collision_call_echo_text_preserve_false == "a_b:echo_text" in
-// go_hive/docs/e2e-assets/mcp-namespace/python-output.json.
+// go_hive/docs/e2e-assets/mcp-namespace/python-output.json. The default bare
+// mode behaves identically (TestMCPBareDefaultPreserveFalseOverwrites).
 func TestMCPNamespaceFoldOverwriteWhenNotPreserving(t *testing.T) {
 	clients := map[string]*scriptedMCPClient{
 		"a-b": {config: &MCPServerConfig{Name: "a-b"}, tools: []MCPTool{scriptedTool("echo_text")}},
@@ -210,13 +218,16 @@ func TestMCPNamespaceFoldOverwriteWhenNotPreserving(t *testing.T) {
 }
 
 // TestMCPNamespaceLongToolNameNotTruncated pins that neither side applies a
-// length cap at registration: Python keeps the bare 70-char key, Go keeps the
-// whole tool name under the prefix, so the model-visible name is 79 chars.
+// length cap at registration in prefix mode: Python keeps the bare 70-char
+// key, Go keeps the whole tool name under the prefix, so the model-visible
+// name is 79 chars.
 //
 // Parity: core/framework/loader/tool_registry.py::register_mcp_server (keys
 // mcp_tool.name verbatim) — probe long_name.registered_len == 70 in
-// go_hive/docs/e2e-assets/mcp-namespace/python-output.json. Residual R2 tracks
-// the provider-side 64-char limit this can exceed.
+// go_hive/docs/e2e-assets/mcp-namespace/python-output.json. The default bare
+// mode registers the same 70 characters with no prefix
+// (TestMCPBareDefaultLongNameRegisteredVerbatim); the provider-side 64-char
+// limit stays Antigravity-only.
 func TestMCPNamespaceLongToolNameNotTruncated(t *testing.T) {
 	long := strings.Repeat("t", 70)
 	clients := map[string]*scriptedMCPClient{
@@ -238,6 +249,304 @@ func TestMCPNamespaceLongToolNameNotTruncated(t *testing.T) {
 	}
 	if !registry.HasTool(registered) {
 		t.Fatalf("long tool missing: %v", registry.RegisteredNames())
+	}
+}
+
+// TestMCPBareDefaultKeepsDistinctToolNames pins the default (bare) registration
+// mode on the reference's first naming case: a server exposing "x-y" and "x_y"
+// yields two distinct model-visible tools, both callable, with no folding.
+//
+// Parity: core/framework/loader/tool_registry.py::register_mcp_server — the
+// registry key is the bare mcp_tool.name (line 1053; the converter at line 1422
+// does not rename it), so "x-y" and "x_y" stay separate. Probe
+// collision_tool_names_in_one_server in
+// go_hive/docs/e2e-assets/mcp-namespace/python-output.json.
+func TestMCPBareDefaultKeepsDistinctToolNames(t *testing.T) {
+	clients := map[string]*scriptedMCPClient{
+		"fold": {
+			config: &MCPServerConfig{Name: "fold"},
+			tools:  []MCPTool{scriptedTool("x-y"), scriptedTool("x_y")},
+		},
+	}
+	registry := scriptedRegistry(clients)
+
+	results := registry.LoadRegistryServers(
+		[]MCPServerSpec{stdioSpec("fold")},
+		LoadRegistryOptions{LogSummary: boolPtr(false), PreserveExistingTools: boolPtr(true)},
+	)
+	if len(results) != 1 || results[0].ToolsLoaded != 2 {
+		t.Fatalf("results = %+v, want both tools loaded", results)
+	}
+	if !registry.HasTool("x-y") || !registry.HasTool("x_y") {
+		t.Fatalf("registered = %v, want two distinct bare names", registry.RegisteredNames())
+	}
+	if got := len(registry.GetServerToolNames("fold")); got != 2 {
+		t.Fatalf("server tool count = %d, want 2", got)
+	}
+	if got := executeToolCall(t, registry, "x-y").Content; got != "fold:x-y" {
+		t.Fatalf("x-y called %q, want its own remote tool", got)
+	}
+	if got := executeToolCall(t, registry, "x_y").Content; got != "fold:x_y" {
+		t.Fatalf("x_y called %q, want its own remote tool", got)
+	}
+}
+
+// TestMCPBareDefaultCrossServerNamesSurvive pins the cross-server half of the
+// same reference case: "a-b"/"get-sum" and "a_b"/"get_sum" stay two distinct
+// bare keys instead of folding into one prefixed key.
+//
+// Parity: core/framework/loader/tool_registry.py::register_mcp_server — the
+// server name never enters the key, so both tools remain reachable. Probe
+// collision_cross_server in
+// go_hive/docs/e2e-assets/mcp-namespace/python-output.json.
+func TestMCPBareDefaultCrossServerNamesSurvive(t *testing.T) {
+	clients := map[string]*scriptedMCPClient{
+		"a-b": {config: &MCPServerConfig{Name: "a-b"}, tools: []MCPTool{scriptedTool("get-sum")}},
+		"a_b": {config: &MCPServerConfig{Name: "a_b"}, tools: []MCPTool{scriptedTool("get_sum")}},
+	}
+	registry := scriptedRegistry(clients)
+
+	results := registry.LoadRegistryServers(
+		[]MCPServerSpec{stdioSpec("a-b"), stdioSpec("a_b")},
+		LoadRegistryOptions{LogSummary: boolPtr(false), PreserveExistingTools: boolPtr(true)},
+	)
+	if len(results) != 2 || results[0].ToolsLoaded != 1 || results[1].ToolsLoaded != 1 {
+		t.Fatalf("results = %+v, want 1 + 1 tools loaded", results)
+	}
+	if got := executeToolCall(t, registry, "get-sum").Content; got != "a-b:get-sum" {
+		t.Fatalf("get-sum = %q, want a-b:get-sum", got)
+	}
+	if got := executeToolCall(t, registry, "get_sum").Content; got != "a_b:get_sum" {
+		t.Fatalf("get_sum = %q, want a_b:get_sum", got)
+	}
+}
+
+// TestMCPBareDefaultSameRemoteNameFirstWins pins Python's first-wins collision
+// rule under the default mode: two servers exposing "echo_text" register one
+// bare key, owned by the first server; the later server's surface stays empty.
+//
+// Parity: core/tests/test_mcp_registry_loader.py::test_registry_first_wins_collisions
+// — Python keys the bare name, so the later server's identical tool is skipped
+// (probe collision_cross_server in
+// go_hive/docs/e2e-assets/mcp-namespace/python-output.json).
+func TestMCPBareDefaultSameRemoteNameFirstWins(t *testing.T) {
+	clients := map[string]*scriptedMCPClient{
+		"a-b": {config: &MCPServerConfig{Name: "a-b"}, tools: []MCPTool{scriptedTool("echo_text")}},
+		"a_b": {config: &MCPServerConfig{Name: "a_b"}, tools: []MCPTool{scriptedTool("echo_text")}},
+	}
+	registry := scriptedRegistry(clients)
+
+	results := registry.LoadRegistryServers(
+		[]MCPServerSpec{stdioSpec("a-b"), stdioSpec("a_b")},
+		LoadRegistryOptions{LogSummary: boolPtr(false), PreserveExistingTools: boolPtr(true)},
+	)
+	if len(results) != 2 || results[0].ToolsLoaded != 1 || results[1].ToolsLoaded != 0 {
+		t.Fatalf("results = %+v, want 1 then 0 (same bare name shadows)", results)
+	}
+	if got := len(registry.GetServerToolNames("a_b")); got != 0 {
+		t.Fatalf("a_b tools = %v, want none", registry.GetServerToolNames("a_b"))
+	}
+	if got := executeToolCall(t, registry, "echo_text").Content; got != "a-b:echo_text" {
+		t.Fatalf("echo_text = %q, want the first server's tool", got)
+	}
+}
+
+// TestMCPBareDefaultPreserveFalseOverwrites pins the preserve=false path in the
+// default mode: the later server's registration replaces the earlier bare key,
+// so the surviving executor calls the later remote tool.
+//
+// Parity: core/framework/loader/tool_registry.py::register_mcp_server with
+// preserve_existing_tools=False overwrites the earlier registration; probe
+// collision_call_echo_text_preserve_false == "a_b:echo_text" in
+// go_hive/docs/e2e-assets/mcp-namespace/python-output.json.
+func TestMCPBareDefaultPreserveFalseOverwrites(t *testing.T) {
+	clients := map[string]*scriptedMCPClient{
+		"a-b": {config: &MCPServerConfig{Name: "a-b"}, tools: []MCPTool{scriptedTool("echo_text")}},
+		"a_b": {config: &MCPServerConfig{Name: "a_b"}, tools: []MCPTool{scriptedTool("echo_text")}},
+	}
+	registry := scriptedRegistry(clients)
+
+	results := registry.LoadRegistryServers(
+		[]MCPServerSpec{stdioSpec("a-b"), stdioSpec("a_b")},
+		LoadRegistryOptions{LogSummary: boolPtr(false), PreserveExistingTools: boolPtr(false)},
+	)
+	if len(results) != 2 || results[0].ToolsLoaded != 1 || results[1].ToolsLoaded != 1 {
+		t.Fatalf("results = %+v, want 1 + 1", results)
+	}
+	if names := registry.RegisteredNames(); len(names) != 1 || names[0] != "echo_text" {
+		t.Fatalf("registered = %v, want the single bare key", names)
+	}
+	if got := executeToolCall(t, registry, "echo_text").Content; got != "a_b:echo_text" {
+		t.Fatalf("echo_text = %q, want the later server's tool", got)
+	}
+}
+
+// TestMCPBareDefaultLongNameRegisteredVerbatim pins the long-name case in the
+// default mode: a 70-character tool name is the registry key, character for
+// character, with no prefix and no truncation.
+//
+// Parity: core/framework/loader/tool_registry.py::register_mcp_server — probe
+// long_name.registered_key / registered_len == 70 in
+// go_hive/docs/e2e-assets/mcp-namespace/python-output.json.
+func TestMCPBareDefaultLongNameRegisteredVerbatim(t *testing.T) {
+	long := strings.Repeat("t", 70)
+	clients := map[string]*scriptedMCPClient{
+		"srv": {config: &MCPServerConfig{Name: "srv"}, tools: []MCPTool{scriptedTool(long)}},
+	}
+	registry := scriptedRegistry(clients)
+
+	registry.LoadRegistryServers(
+		[]MCPServerSpec{stdioSpec("srv")},
+		LoadRegistryOptions{LogSummary: boolPtr(false), PreserveExistingTools: boolPtr(true)},
+	)
+
+	if !registry.HasTool(long) {
+		t.Fatalf("70-char bare tool missing: %v", registry.RegisteredNames())
+	}
+	if got := len(registry.RegisteredNames()); got != 1 || len(registry.RegisteredNames()[0]) != 70 {
+		t.Fatalf("registered = %v, want one 70-char key", registry.RegisteredNames())
+	}
+	if got := executeToolCall(t, registry, long).Content; got != "srv:"+long {
+		t.Fatalf("long tool called %q, want srv:<70 chars>", got)
+	}
+}
+
+// TestMCPBareDefaultAliasesStayIdentity pins the alias rule in the default
+// mode: bare name == registry key, so the compatibility map stays empty (no
+// duplicate or invented names) and a folded twin that never existed on the
+// server is still unknown.
+//
+// Parity-exempt: mcpAliases is the Go-side D3 compatibility layer; in bare mode
+// it is the identity, which is exactly Python's lookup (the registry key).
+func TestMCPBareDefaultAliasesStayIdentity(t *testing.T) {
+	clients := map[string]*scriptedMCPClient{
+		"srv": {config: &MCPServerConfig{Name: "srv"}, tools: []MCPTool{scriptedTool("x-y")}},
+	}
+	registry := scriptedRegistry(clients)
+
+	registry.LoadRegistryServers(
+		[]MCPServerSpec{stdioSpec("srv")},
+		LoadRegistryOptions{LogSummary: boolPtr(false), PreserveExistingTools: boolPtr(true)},
+	)
+
+	if len(registry.mcpAliases) != 0 {
+		t.Fatalf("aliases = %v, want none in bare mode", registry.mcpAliases)
+	}
+	if registry.mcpToolClients["x-y"] == nil {
+		t.Fatalf("mcpToolClients = %v, want the bare key", registry.mcpToolClients)
+	}
+	result := executeToolCall(t, registry, "x_y")
+	if !result.IsError {
+		t.Fatalf("x_y resolved to %q; bare mode must not invent a fold alias", result.Content)
+	}
+}
+
+// TestMCPRegistryToolNameModeMatrix pins the two naming modes in one table.
+//
+// Parity-exempt: the mode switch itself is Go-side (mcp.namespace); the bare
+// branch reproduces core/framework/loader/tool_registry.py::register_mcp_server
+// (registry key = mcp_tool.name verbatim).
+func TestMCPRegistryToolNameModeMatrix(t *testing.T) {
+	cases := []struct {
+		namespace, server, tool, want string
+	}{
+		{"", "a-b", "x-y", "x-y"},
+		{"", "any server", "x.y", "x.y"},
+		{"", "", "read_file", "read_file"},
+		{"mcp", "a-b", "x-y", "mcp__a_b__x_y"},
+		{"mcp", "a_b", "get_sum", "mcp__a_b__get_sum"},
+		{"remote", "custom", "ping", "remote__custom__ping"},
+	}
+	for _, tc := range cases {
+		if got := MCPRegistryToolName(tc.namespace, tc.server, tc.tool); got != tc.want {
+			t.Fatalf("MCPRegistryToolName(%q,%q,%q) = %q, want %q",
+				tc.namespace, tc.server, tc.tool, got, tc.want)
+		}
+	}
+}
+
+// TestMCPBareDefaultProbeAndKillUseBareKeys pins the liveness/disconnect path:
+// the executor's probe and kill lookups resolve the same bare key the registry
+// stored, so a hung bare-name tool is still diagnosed and disconnected.
+//
+// Parity-exempt: the registry-owned client map is Go-side plumbing; upstream's
+// MCP client has no separate probe/kill seam.
+func TestMCPBareDefaultProbeAndKillUseBareKeys(t *testing.T) {
+	client := &probeKillMCPClient{
+		config: &MCPServerConfig{Name: "srv", Transport: "stdio"},
+		tools:  []MCPTool{scriptedTool("echo_text")},
+	}
+	registry := NewToolRegistry()
+	registry.newMCPClient = func(*MCPServerConfig) MCPClient { return client }
+	registry.sleepFn = func(time.Duration) {}
+
+	registry.LoadRegistryServers(
+		[]MCPServerSpec{stdioSpec("srv")},
+		LoadRegistryOptions{LogSummary: boolPtr(false), PreserveExistingTools: boolPtr(true)},
+	)
+	if !registry.HasTool("echo_text") {
+		t.Fatalf("bare tool missing: %v", registry.RegisteredNames())
+	}
+	if got := registry.GetExecutor().ProbeForTool("echo_text"); got != "alive" {
+		t.Fatalf("ProbeForTool = %q, want alive", got)
+	}
+	if client.probes != 1 {
+		t.Fatalf("probes = %d, want 1", client.probes)
+	}
+	if err := registry.GetExecutor().KillForTool("echo_text"); err != nil {
+		t.Fatalf("KillForTool: %v", err)
+	}
+	if !client.killed {
+		t.Fatal("KillForTool did not disconnect the bare-name tool's client")
+	}
+}
+
+// probeKillMCPClient is a scripted client that also answers the optional
+// liveness interface ProbeForTool uses.
+type probeKillMCPClient struct {
+	config *MCPServerConfig
+	tools  []MCPTool
+	probes int
+	killed bool
+}
+
+func (c *probeKillMCPClient) Connect() error    { return nil }
+func (c *probeKillMCPClient) Disconnect() error { c.killed = true; return nil }
+func (c *probeKillMCPClient) ListTools() []MCPTool {
+	return append([]MCPTool(nil), c.tools...)
+}
+func (c *probeKillMCPClient) CallTool(name string, _ map[string]any) (any, error) {
+	return c.config.Name + ":" + name, nil
+}
+func (c *probeKillMCPClient) Config() *MCPServerConfig { return c.config }
+func (c *probeKillMCPClient) ProbeLiveness() bool      { c.probes++; return true }
+func (c *probeKillMCPClient) IsConnected() bool        { return true }
+
+// TestMCPNamespacePrefixModeAliasFallbackStillResolves pins the compatibility
+// half of the mode switch: when mcp.namespace is non-empty the registry key
+// stays mcp__<ns>__<server>__<tool>, and the legacy bare name still resolves to
+// it through mcpAliases.
+//
+// Parity-exempt: the prefix mode and its alias fallback are the Go-side D3
+// compatibility layer; the default bare mode is the Python-identical path.
+func TestMCPNamespacePrefixModeAliasFallbackStillResolves(t *testing.T) {
+	clients := map[string]*scriptedMCPClient{
+		"srv": {config: &MCPServerConfig{Name: "srv"}, tools: []MCPTool{scriptedTool("echo_text")}},
+	}
+	registry := scriptedRegistry(clients)
+	registry.LoadRegistryServers(
+		[]MCPServerSpec{stdioSpec("srv")},
+		LoadRegistryOptions{LogSummary: boolPtr(false), PreserveExistingTools: boolPtr(true), ToolNamespace: "mcp"},
+	)
+
+	if got := registry.mcpAliases["echo_text"]; got != "mcp__srv__echo_text" {
+		t.Fatalf("alias = %q, want mcp__srv__echo_text", got)
+	}
+	if got := executeToolCall(t, registry, "mcp__srv__echo_text").Content; got != "srv:echo_text" {
+		t.Fatalf("prefixed call = %q", got)
+	}
+	if got := executeToolCall(t, registry, "echo_text").Content; got != "srv:echo_text" {
+		t.Fatalf("bare fallback = %q, want the prefixed tool's result", got)
 	}
 }
 

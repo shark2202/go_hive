@@ -1,0 +1,161 @@
+{
+ "method": "python runtime-layer capture (registered Tool objects projected via _tool_to_openai_format) vs the live Go session surface (newSessionToolCatalogue.Defs + QueenLifecycleToolDefs)",
+ "before": {
+  "get_playbook_status": {
+   "desc_same": true,
+   "schema_same": true
+  },
+  "get_worker_status": {
+   "desc_same": true,
+   "schema_same": true
+  },
+  "inject_message": {
+   "desc_same": true,
+   "schema_same": true
+  },
+  "list_playbook_runs": {
+   "desc_same": true,
+   "schema_same": false
+  },
+  "remove_trigger": {
+   "desc_same": true,
+   "schema_same": true
+  },
+  "reply_to_worker": {
+   "desc_same": true,
+   "schema_same": true
+  },
+  "run_playbook": {
+   "desc_same": true,
+   "schema_same": false
+  },
+  "run_worker": {
+   "desc_same": true,
+   "schema_same": false
+  },
+  "set_trigger": {
+   "desc_same": true,
+   "schema_same": true
+  },
+  "stop_playbook": {
+   "desc_same": true,
+   "schema_same": true
+  },
+  "stop_worker": {
+   "desc_same": true,
+   "schema_same": true
+  },
+  "update_worker_profile": {
+   "desc_same": true,
+   "schema_same": true
+  }
+ },
+ "after": {
+  "get_playbook_status": {
+   "description_same": true,
+   "schema_same": true,
+   "phase_visible": {
+    "independent": false,
+    "colony": true
+   }
+  },
+  "get_worker_status": {
+   "description_same": true,
+   "schema_same": true,
+   "phase_visible": {
+    "independent": false,
+    "colony": true
+   }
+  },
+  "inject_message": {
+   "description_same": true,
+   "schema_same": true,
+   "phase_visible": {
+    "independent": false,
+    "colony": true
+   }
+  },
+  "list_playbook_runs": {
+   "description_same": true,
+   "schema_same": true,
+   "phase_visible": {
+    "independent": false,
+    "colony": true
+   }
+  },
+  "remove_trigger": {
+   "description_same": true,
+   "schema_same": true,
+   "phase_visible": {
+    "independent": false,
+    "colony": true
+   }
+  },
+  "reply_to_worker": {
+   "description_same": true,
+   "schema_same": true,
+   "phase_visible": {
+    "independent": false,
+    "colony": false
+   }
+  },
+  "run_playbook": {
+   "description_same": true,
+   "schema_same": true,
+   "phase_visible": {
+    "independent": false,
+    "colony": true
+   }
+  },
+  "run_worker": {
+   "description_same": true,
+   "schema_same": true,
+   "phase_visible": {
+    "independent": false,
+    "colony": true
+   }
+  },
+  "set_trigger": {
+   "description_same": true,
+   "schema_same": true,
+   "phase_visible": {
+    "independent": false,
+    "colony": true
+   }
+  },
+  "stop_playbook": {
+   "description_same": true,
+   "schema_same": true,
+   "phase_visible": {
+    "independent": false,
+    "colony": true
+   }
+  },
+  "stop_worker": {
+   "description_same": true,
+   "schema_same": true,
+   "phase_visible": {
+    "independent": false,
+    "colony": true
+   }
+  },
+  "update_worker_profile": {
+   "description_same": true,
+   "schema_same": true,
+   "phase_visible": {
+    "independent": false,
+    "colony": false
+   }
+  }
+ },
+ "aligned_after": 12,
+ "task_create": {
+  "runtime_schema_equals_frozen_reference": true,
+  "runtime_description_equals_frozen_reference": true,
+  "recheck_mirror": "tool_contract_freeze_test.go installs enableTaskPivot(DM session) before building the live map"
+ },
+ "python_capture_sha256": {
+  "python-runtime-tools.json": "77ddce1fdb1596ef2482eb10c3f01132b1392b1cedd8dbde0add37b65774ec09",
+  "go-live-surface.json": "a6b037b90f6714672c6749e79d583c2b31ad79d3105f22ab26e3b563342b3201"
+ }
+}

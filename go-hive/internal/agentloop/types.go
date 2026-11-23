@@ -144,6 +144,14 @@ type AgentContext struct {
 	SkillDirs           []string
 
 	IterationMetadataProvider any
+	// Phase reports the queen's live phase ("independent" / "colony"). The
+	// framework-level colony dispatch gates read it (suggest_colony is
+	// independent-only, task_create(new_colony=true) is colony-only); nil
+	// skips the gate, as upstream does when iteration_metadata_provider is
+	// None.
+	//
+	// Parity: framework/agent_loop/agent_loop.py::_run_turn_loop (phase gate)
+	Phase func() string
 
 	ActiveWorkersProvider          any
 	PastConversationRecallProvider any

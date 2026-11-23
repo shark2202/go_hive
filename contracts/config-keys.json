@@ -744,7 +744,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/cli/mcp_config.go",
-              "line": 68,
+              "line": 74,
               "snippet": "Enabled        *bool           `json:\"enabled\"`"
             }
           ],
@@ -754,18 +754,18 @@
         {
           "path": "mcp.namespace",
           "type": "string",
-          "default": "mcp__",
+          "default": "",
           "env_override": null,
           "python": [],
           "go": [
             {
               "file": "go_hive/go-hive/internal/cli/mcp_config.go",
-              "line": 69,
+              "line": 75,
               "snippet": "Namespace      string          `json:\"namespace\"`"
             }
           ],
           "status": "go_only",
-          "notes": "go_only: confirmed no upstream counterpart. Tool-name namespace; blank keeps the default \"mcp__\"."
+          "notes": "go_only: confirmed no upstream counterpart. Empty (the default) registers the server's own bare tool names, matching Python's registry keys (core/framework/loader/tool_registry.py::register_mcp_server); a non-empty value opts into the Go-only prefixed <namespace>__<server>__<tool> form with [^A-Za-z0-9_] folded to _."
         },
         {
           "path": "mcp.timeout_seconds",
@@ -776,12 +776,12 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/cli/mcp_config.go",
-              "line": 70,
+              "line": 76,
               "snippet": "TimeoutSeconds *float64        `json:\"timeout_seconds\"`"
             },
             {
               "file": "go_hive/go-hive/internal/cli/mcp_loader.go",
-              "line": 148,
+              "line": 149,
               "snippet": "// configuration.json is the fallback for HIVE_MCP_CALL_RESULT_TIMEOUT:"
             }
           ],
@@ -797,7 +797,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/cli/mcp_config.go",
-              "line": 71,
+              "line": 77,
               "snippet": "Servers        json.RawMessage `json:\"servers\"`"
             }
           ],
@@ -883,7 +883,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/server/chat_memory_wiring.go",
-              "line": 293,
+              "line": 325,
               "snippet": "cfg.EveryTurns = positive(\"every_turns\", cfg.EveryTurns)"
             }
           ],
@@ -905,7 +905,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/server/chat_memory_wiring.go",
-              "line": 294,
+              "line": 326,
               "snippet": "cfg.LongEvery = positive(\"long_every\", cfg.LongEvery)"
             }
           ],
@@ -927,7 +927,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/server/chat_memory_wiring.go",
-              "line": 295,
+              "line": 327,
               "snippet": "if model, ok := section[\"model\"].(string); ok && (model == \"main\" || model == \"worker\") {"
             }
           ],
@@ -3743,7 +3743,7 @@
       "evidence": [
         {
           "file": "go_hive/go-hive/internal/cli/mcp_loader.go",
-          "line": 148,
+          "line": 149,
           "snippet": "// configuration.json is the fallback for HIVE_MCP_CALL_RESULT_TIMEOUT:"
         },
         {

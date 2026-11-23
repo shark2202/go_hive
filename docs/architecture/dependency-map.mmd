@@ -1,5 +1,5 @@
 %% go_hive 分层依赖图（生成物，勿手改）
-%% 源：architecture/model.yaml + go list -json ./... · commit 9684ec82eea5
+%% 源：architecture/model.yaml + go list -json ./... · commit 949e39b29f9c
 %% 只画包级 import 边；箭头 A --> B 读作 A imports B（A 依赖 B）。
 flowchart TB
   subgraph layer_entry["入口层（entry）"]
@@ -194,6 +194,7 @@ flowchart TB
   n_internal_colony --> n_internal_llm
   n_internal_colony --> n_internal_pipeline
   n_internal_colony --> n_internal_playbook
+  n_internal_colony --> n_internal_queen
   n_internal_colony --> n_internal_schemas
   n_internal_colony --> n_internal_skills
   n_internal_colony --> n_internal_tasks

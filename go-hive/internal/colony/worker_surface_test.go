@@ -367,8 +367,11 @@ func TestReadSurfaceAccessors(t *testing.T) {
 	}
 
 	bare := NewColonyRuntime(RuntimeOptions{StoragePath: t.TempDir()})
-	if _, ok := bare.Skills(); ok {
-		t.Fatal("Skills reported a catalog on a runtime without a provider")
+	// A bare runtime auto-wires the default skill hierarchy (framework +
+	// preset + user + colony), exactly like upstream's default SkillsManager;
+	// only a pushed provider can report "no catalog".
+	if listed, ok := bare.Skills(); !ok || len(listed) == 0 {
+		t.Fatalf("Skills = %d/%v on a bare runtime, want the default framework catalog", len(listed), ok)
 	}
 	if got := bare.WorkerLLM(); got != nil {
 		t.Fatalf("WorkerLLM = %v on a bare runtime, want nil", got)

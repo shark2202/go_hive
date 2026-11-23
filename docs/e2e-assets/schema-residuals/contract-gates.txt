@@ -1,0 +1,15 @@
+=== RUN   TestTaskCreatePivotDefinitionMatchesPythonContract
+--- PASS: TestTaskCreatePivotDefinitionMatchesPythonContract (0.01s)
+=== RUN   TestQueenLifecycleDefinitionsMatchPythonSource
+--- PASS: TestQueenLifecycleDefinitionsMatchPythonSource (0.00s)
+=== RUN   TestFlatSurfacePlaybookToolsMatchPythonSource
+--- PASS: TestFlatSurfacePlaybookToolsMatchPythonSource (0.00s)
+=== RUN   TestRunPlaybookDescriptionMatchesFrozenContract
+--- PASS: TestRunPlaybookDescriptionMatchesFrozenContract (0.00s)
+=== RUN   TestSameNameToolDescriptionsMatchFrozenContract
+--- PASS: TestSameNameToolDescriptionsMatchFrozenContract (0.00s)
+=== RUN   TestFlatSurfaceSchemasMatchFrozenContract
+    tool_surface_flat_test.go:287: schema parity: verbatim 36/40, P1-kept [attach_file pdf_read terminal_job_logs], lifecycle-kept [], colony-phase-only [get_worker_health_summary]
+--- PASS: TestFlatSurfaceSchemasMatchFrozenContract (0.00s)
+PASS
+ok  	github.com/shark2202/go_hive/go-hive/internal/cli	0.554s

@@ -10,8 +10,8 @@
 |---|---|---|
 | 工具定义（description） | **逐字一致**（`echo_text` 两侧同 sha） | `evidence.json#/tools` |
 | inputSchema 透传 | **一致**：两侧都保留 `type/properties/required/default/enum/minimum/maximum`，未改写类型或必填；`expected_schema_sha256` 两侧均命中 | `evidence.json#/dimensions/schema_passthrough` |
-| 工具命名 | **有意差异**：Python 用 server 侧裸名；Go 加 `mcp__<namespace>__<server>__<tool>` 前缀并折叠非法字符 | `evidence.json#/dimensions/namespace` |
-| 同名冲突 | **有意差异**：Python 先到先得（内置 `read_file` 压掉 server 的 `read_file`）；Go 命名空间让两者共存 | `evidence.json#/dimensions/collision` |
+| 工具命名 | **默认一致**（D3 终选 B′，2026-11-23）：两侧都用 server 侧裸名；Go 仅在显式 `mcp.namespace` 时加 `mcp__<namespace>__<server>__<tool>` 前缀并折叠非法字符（可选模式） | `evidence.json#/dimensions/namespace` |
+| 同名冲突 | **默认一致**：两侧都先到先得（内置 `read_file` 压掉 server 的 `read_file`，跨 server 同名同样 first-wins）；仅显式 `mcp.namespace` 时 Go 前缀让两者共存 | `evidence.json#/dimensions/collision` |
 | server 启停 | **语义一致**：两侧都按存储的 `enabled` 生效，禁用后装载 0 个 server | `evidence.json#/dimensions/enable_disable` |
 | reload | **Go 扩展**：Python 无 reload 路由，下个 queen 会话生效；Go 有 `POST /api/mcp/reload` + generation 重挂 | `evidence.json#/dimensions/reload` |
 | 超时优先级 | **Go 扩展**：Go 为 env > `configuration.json mcp.timeout_seconds` > 240s；Python 只有 env（import 时读一次），无文件读取点 | `evidence.json#/dimensions/timeout` |
@@ -59,9 +59,9 @@
 ### 3.1 工具命名：Python 裸名 vs Go 命名空间
 
 - Python `ToolRegistry._convert_mcp_tool_to_framework_tool` 的 `name=mcp_tool.name`（`core/framework/loader/tool_registry.py:1422`），server 名不进入注册键，因此**两个 server 暴露同名工具时后者被静默压掉**（first-wins）。
-- Go `NamespacedMCPToolName(namespace, server, tool)`（`go_hive/go-hive/internal/tools/mcp_registry.go:553`）生成 `mcp__<namespace>__<server>__<tool>`，并把 `[^A-Za-z0-9_]+` 折叠成 `_`：server `mcp-crosscheck-echo` → `mcp_crosscheck_echo`，所以最终名是 `mcp__mcp_crosscheck_echo__echo_text`。这是 `docs/architecture/contracts.md` 已冻结的 Go 契约（命名空间阻止远端 `read_file` 覆盖沙箱内置工具），本核对只把它从「契约」升级为「实测」。
+- Go `NamespacedMCPToolName(namespace, server, tool)`（`go_hive/go-hive/internal/tools/mcp_registry.go:614`）生成 `mcp__<namespace>__<server>__<tool>`，并把 `[^A-Za-z0-9_]+` 折叠成 `_`：server `mcp-crosscheck-echo` → `mcp_crosscheck_echo`，所以最终名是 `mcp__mcp_crosscheck_echo__echo_text`。**（D3 终选 B′ 后该函数只在显式 `mcp.namespace` 非空时启用；默认注册 server 侧裸名，见 `docs/e2e-assets/mcp-bare-default/REPORT.md`。）** 前缀模式的命名空间阻止远端 `read_file` 覆盖沙箱内置工具，本核对把该行为从「契约」升级为「实测」。
 
-**残余风险（未修，登记）**：折叠不可逆——`a-b` 与 `a_b` 两个 server 会得到同一前缀，工具名再按 first-wins 处理；命名空间还会把名字长度推高（server+tool 各 64 字符时可能超过 provider 的 64 字符工具名上限）。这两点都是 Go 扩展自身的边界，不影响与 Python 的行为对照，但调用方不应依赖「名字可还原 server 名」。
+**残余风险（未修，登记；D3 终选 B′ 后仅可选前缀模式）**：折叠不可逆——`a-b` 与 `a_b` 两个 server 会得到同一前缀，工具名再按 first-wins 处理；命名空间还会把名字长度推高（server+tool 各 64 字符时可能超过 provider 的 64 字符工具名上限）。默认裸名模式没有这两个边界；前缀模式是 Go 扩展，不影响默认路径与 Python 的行为对照，但调用方不应依赖「名字可还原 server 名」。
 
 ### 3.2 同名冲突：first-wins vs 命名空间共存
 
@@ -88,7 +88,7 @@ Go 的 `env > configuration.json > 240s` 有 `TestMCPCallResultTimeoutPrecedence
 
 - transport 枚举：Python `Literal["stdio","http","unix","sse","harness"]`；Go `switch config.Transport` 支持 `stdio/http/unix/sse`，`harness` 由 `HarnessGroupNames` 在建立 client 之前按 server 名分派（`go_hive/go-hive/internal/tools/mcp_registry.go:356`），所以不是缺 case。
 - 路由：Python 7 条（list/add/remove/enable/disable/health/mode），Go 8 条 = 同 7 条 + `POST /api/mcp/reload`（Go 扩展）。
-- 附带说明：`GET /api/mcp/servers` 的 `tool_names` 报的是 **server 侧工具名**（`tools/list` 原名），不是带 `mcp__` 前缀的会话名；模型实际拿到的是带前缀的名字（`chat_tool_tiers.mcpToolNames()` 负责映射）。Python 的 `tool_count` 只报数量，没有这个字段。
+- 附带说明：`GET /api/mcp/servers` 的 `tool_names` 报的是 **server 侧工具名**（`tools/list` 原名），不是带 `mcp__` 前缀的会话名；模型实际拿到的是带前缀的名字（`chat_tool_tiers.mcpToolNames()` 负责映射）。Python 的 `tool_count` 只报数量，没有这个字段。**（D3 终选 B′，2026-11-23 后：默认模式模型拿到的就是这些裸名；仅显式 `mcp.namespace` 非空时才是前缀名。）**
 
 ## 4. 本次修复（双跑暴露的真实缺陷）
 
@@ -173,7 +173,7 @@ Go 的 dump 测试默认跳过（`MCP_CROSSCHECK_OUT`/`MCP_CROSSCHECK_SERVERS` �
 
 ### 8.3 真实 server 暴露的、夹具看不到的差异（3 条）
 
-1. **Go 的命名空间清洗会改写工具名本身（不只是前缀）。** `NamespacedMCPToolName` 把 `[^A-Za-z0-9_]` 折叠成 `_`，于是 server 的 `get-sum` 在模型面前是 `mcp__everything_stdio__get_sum`，`get-annotated-message` → `mcp__everything_stdio__get_annotated_message`：server-everything 的 16 个工具里 **14 个**被改名（`diff.json#/exceptions` → `tool_name_sanitization`）。执行时映射回 server 原名，功能不受影响；但
+1. **Go 的命名空间清洗会改写工具名本身（不只是前缀）。** **（D3 终选 B′ 后本条只适用于可选前缀模式：默认 `mcp.namespace` 为空时注册裸名、不改写；见 `docs/e2e-assets/mcp-bare-default/REPORT.md`。）** `NamespacedMCPToolName` 把 `[^A-Za-z0-9_]` 折叠成 `_`，于是 server 的 `get-sum` 在模型面前是 `mcp__everything_stdio__get_sum`，`get-annotated-message` → `mcp__everything_stdio__get_annotated_message`：server-everything 的 16 个工具里 **14 个**被改名（`diff.json#/exceptions` → `tool_name_sanitization`）。执行时映射回 server 原名，功能不受影响；但
    - `a-b` 与 `a_b` 两个工具会**折叠成同一个模型可见名**，Go 侧按 first-wins 处理（夹具用的 `echo_text` 全是合法字符，所以看不到这个风险）；
    - 调用方的「提示词里写的名字」与 server 文档里的名字不再一致。
 2. **两侧都静默丢弃 `resource_link` 内容块。** `get-resource-links` 返回 1 个 text + 2 个 `resource_link`（带 `uri`/`name`/`mimeType`），两侧都只把 text 交给模型（`image_blocks=0`），链接信息丢失——`_split_mcp_content`/`SplitMCPContent` 只认 `text` 与 `data+mimeType`。两侧行为一致，但这是真实 server 才暴露的覆盖缺口（`raw/everything-stdio.json#/calls/get-resource-links`）。

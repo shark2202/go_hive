@@ -1,0 +1,288 @@
+{
+  "anchors": [
+    {
+      "label": "LoopConfig 默认值",
+      "needle": "class LoopConfig",
+      "path": "core/framework/agent_loop/internals/types.py"
+    },
+    {
+      "label": "压缩触发比例",
+      "needle": "compaction_buffer_ratio",
+      "path": "core/framework/agent_loop/internals/types.py"
+    },
+    {
+      "label": "queen 循环配置",
+      "needle": "queen_loop_config = {",
+      "path": "core/framework/agents/queen/agent.py"
+    },
+    {
+      "label": "colony queen 配置",
+      "needle": "queen_colony_loop_config = {",
+      "path": "core/framework/agents/queen/agent.py"
+    },
+    {
+      "label": "worker 循环配置",
+      "needle": "DEFAULT_LOOP_CONFIG",
+      "path": "core/framework/agents/queen/worker_definition.py"
+    },
+    {
+      "label": "per-spawn 覆盖边界",
+      "needle": "_LOOP_OVERRIDE_BOUNDS",
+      "path": "core/framework/host/colony_runtime.py"
+    },
+    {
+      "label": "覆盖白名单",
+      "needle": "_ALLOWED_WORKER_LOOP_OVERRIDES",
+      "path": "core/framework/host/colony_runtime.py"
+    },
+    {
+      "label": "queen 迭代上限环境变量",
+      "needle": "HIVE_MAX_ITER",
+      "path": "core/framework/server/queen_orchestrator.py"
+    },
+    {
+      "label": "queen 上下文窗口解析",
+      "needle": "def get_queen_max_context_tokens",
+      "path": "core/framework/config.py"
+    },
+    {
+      "label": "worker 上下文窗口解析",
+      "needle": "def get_worker_max_context_tokens",
+      "path": "core/framework/config.py"
+    },
+    {
+      "label": "反思节拍默认值",
+      "needle": "class MemoryReflectionConfig",
+      "path": "core/framework/config.py"
+    },
+    {
+      "label": "保留策略默认值",
+      "needle": "class RetentionConfig",
+      "path": "core/framework/config.py"
+    },
+    {
+      "label": "摘要输出上限",
+      "needle": "LLM_COMPACT_SUMMARY_MAX_TOKENS",
+      "path": "core/framework/agent_loop/internals/compaction.py"
+    },
+    {
+      "label": "逐字保留环境变量",
+      "needle": "HIVE_MAX_VERBATIM_CLIENT_MSGS",
+      "path": "core/framework/agent_loop/internals/compaction.py"
+    },
+    {
+      "label": "摘要断路器",
+      "needle": "MAX_CONSECUTIVE_FAILURES",
+      "path": "core/framework/agent_loop/internals/compaction.py"
+    },
+    {
+      "label": "记忆文件上限",
+      "needle": "MAX_FILES",
+      "path": "core/framework/agents/queen/queen_memory_v2.py"
+    },
+    {
+      "label": "冷 queen 会话清理",
+      "needle": "Tier 3",
+      "path": "core/framework/maintenance/retention.py"
+    },
+    {
+      "label": "Go 循环默认值",
+      "needle": "func DefaultLoopConfig",
+      "path": "go_hive/go-hive/internal/agentloop/loop_config.go"
+    },
+    {
+      "label": "Go queen 迭代上限",
+      "needle": "HIVE_MAX_ITER",
+      "path": "go_hive/go-hive/internal/server/chat_memory_wiring.go"
+    },
+    {
+      "label": "Go 事件中的 queen 迭代常量",
+      "needle": "queenAutonomousMaxIterations",
+      "path": "go_hive/go-hive/internal/server/session_start_events.go"
+    },
+    {
+      "label": "Go 摘要上限",
+      "needle": "LLMCompactSummaryMaxTokens",
+      "path": "go_hive/go-hive/internal/agentloop/compaction.go"
+    },
+    {
+      "label": "Go 记忆容量",
+      "needle": "MaxFiles",
+      "path": "go_hive/go-hive/internal/memory/memory.go"
+    },
+    {
+      "label": "Go worker 覆盖边界",
+      "needle": "workerLoopOverrideBounds",
+      "path": "go_hive/go-hive/internal/colony/worker_loop_config.go"
+    }
+  ],
+  "baseline": {
+    "go_head": "01918e5b",
+    "upstream": "1.0.15 6703b434"
+  },
+  "deltas": [
+    {
+      "evidence": "chat_memory_wiring.go starts at DefaultLoopConfig; only HIVE_MAX_ITER overrides; session_start_events.go advertises 999999",
+      "go": 50,
+      "item": "queen max_iterations",
+      "python": 999999,
+      "status": "open"
+    },
+    {
+      "evidence": "Go comment claims a port-side audit fix",
+      "go": 50,
+      "item": "queen tool-call hard stop",
+      "python": 150,
+      "status": "registered-candidate"
+    }
+  ],
+  "generated_at": "2026-11-23T10:58:19+08:00",
+  "go": {
+    "compaction_constants": {
+      "DefaultMaxVerbatimClientMessages": 40,
+      "LLMCompactMaxDepth": 10,
+      "LLMCompactSummaryMaxTokens": 8192
+    },
+    "default_loop_config": {
+      "CompactionBufferRatio": 0.4,
+      "CompactionBufferTokens": 8000,
+      "CompactionWarningBufferTokens": 12000,
+      "ContinueNudgeMaxPerTurn": 3,
+      "GraceIterations": 0,
+      "JudgeEveryNTurns": 1,
+      "LLMStreamInactivityTimeoutSeconds": 120.0,
+      "LLMStreamInterEventIdleSeconds": 120.0,
+      "LLMStreamTTFTTimeoutSeconds": 600.0,
+      "MaxContextTokens": 180000,
+      "MaxIterations": 50,
+      "MaxStreamRetries": 5,
+      "MaxToolResultChars": 30000,
+      "SessionIdleNudgeAwaitingSeconds": 120.0,
+      "SessionIdleNudgeBrokenSeconds": 30.0,
+      "SessionIdleNudgeMaxPerSession": 3,
+      "SessionIdleNudgeSeconds": 120.0,
+      "StreamRetryBackoffBase": 2.0,
+      "StreamRetryMaxDelay": 60.0,
+      "ToolCallBudget": 30,
+      "ToolCallHardLimit": 50,
+      "ToolCallHardMultiple": 5,
+      "ToolCallLifetimeBudget": 0,
+      "ToolCallTimeoutSeconds": 60.0,
+      "ToolWaitLimitSeconds": 600
+    },
+    "memory_constants": {
+      "MaxFileSizeBytes": 4096,
+      "MaxFiles": 200
+    },
+    "queen_event_max_iterations": 999999
+  },
+  "headline": {
+    "compaction_trigger": 100000,
+    "compaction_trigger_pct": 56,
+    "max_context_tokens": 180000,
+    "memory_max_file_bytes": 4096,
+    "memory_max_files": 200,
+    "queen_max_iterations": 999999,
+    "reflection_every_turns": 6,
+    "reflection_long_every": 4,
+    "summary_max_tokens": 8192,
+    "verbatim_user_messages": 40,
+    "worker_grace": 1,
+    "worker_iterations": 3
+  },
+  "python": {
+    "colony_queen_loop_config": {
+      "max_context_tokens": 180000,
+      "max_iterations": 999999,
+      "tool_call_budget": 50,
+      "tool_call_hard_multiple": 10
+    },
+    "compaction_constants": {
+      "LLM_COMPACT_MAX_DEPTH": 10,
+      "LLM_COMPACT_SUMMARY_MAX_TOKENS": 8192
+    },
+    "loop_defaults": {
+      "compaction_buffer_ratio": 0.4,
+      "compaction_buffer_tokens": 8000,
+      "compaction_warning_buffer_tokens": 12000,
+      "grace_iterations": 0,
+      "max_context_tokens": 180000,
+      "max_iterations": 50,
+      "tool_call_budget": 0,
+      "tool_call_hard_multiple": 5
+    },
+    "memory_constants": {
+      "MAX_FILES": 200,
+      "MAX_FILE_SIZE_BYTES": 4096
+    },
+    "memory_reflection": {
+      "every_turns": 6,
+      "long_every": 4,
+      "model": "worker"
+    },
+    "queen_loop_config": {
+      "max_context_tokens": 180000,
+      "max_iterations": 999999,
+      "tool_call_budget": 30
+    },
+    "retention": {
+      "active_grace_hours": 48,
+      "archive_dir": "",
+      "batch_size": 200,
+      "compaction_log_days": 7,
+      "enabled": true,
+      "event_logs_days": 7,
+      "events_rewrite_min_bytes": 1000000,
+      "io_sleep_ms": 10,
+      "junk_min_bytes": 50000000,
+      "llm_logs_days": 7,
+      "mode": "archive",
+      "queen_hygiene_days": 30,
+      "rotated_logs_days": 30,
+      "tool_artifacts_days": 14,
+      "worker_deep_clean_days": 14
+    },
+    "verbatim_env": {
+      "default": 40,
+      "name": "HIVE_MAX_VERBATIM_CLIENT_MSGS"
+    },
+    "worker_loop_config": {
+      "grace_iterations": 1,
+      "max_context_tokens": 180000,
+      "max_iterations": 3,
+      "tool_call_budget": 30,
+      "tool_call_hard_multiple": 3,
+      "tool_call_lifetime_budget": 200
+    },
+    "worker_override_allowed": [
+      "grace_iterations",
+      "max_context_tokens",
+      "max_iterations",
+      "tool_call_budget",
+      "tool_call_lifetime_budget"
+    ],
+    "worker_override_bounds": {
+      "grace_iterations": [
+        0,
+        3
+      ],
+      "max_context_tokens": [
+        1000,
+        1000000
+      ],
+      "max_iterations": [
+        1,
+        1000
+      ],
+      "tool_call_budget": [
+        0,
+        200
+      ],
+      "tool_call_lifetime_budget": [
+        0,
+        2000
+      ]
+    }
+  },
+  "schema": "hive-session-limits/v1"
+}

@@ -67,12 +67,14 @@ func RunWorkerSpawnerFromContext(ctx context.Context) RunWorkerSpawner {
 }
 
 // RunWorkerToolDef returns the run_worker tool definition. The parameter
-// schema mirrors the upstream Tool(...) declaration: tasks (spawn mode) and
-// resume_worker_ids (resume mode: rebuild stopped workers over their saved
-// transcripts) are mutually exclusive at execution time, so neither is marked
-// required.
+// schema is byte-equal to the upstream registered Tool object as the model
+// receives it: the request layer materializes `required: []` even when the
+// Tool declaration omits the key. tasks (spawn mode) and resume_worker_ids
+// (resume mode: rebuild stopped workers over their saved transcripts) are
+// mutually exclusive at execution time, so neither is marked required.
 //
 // Parity: framework/tools/queen_lifecycle_tools.py::_run_parallel_tool
+// (schema pinned by TestQueenLifecycleRuntimeSchemasMatchFrozenContract).
 func RunWorkerToolDef() llm.ToolDef {
 	return llm.ToolDef{
 		Name:        RunWorkerToolName,
@@ -83,7 +85,7 @@ func RunWorkerToolDef() llm.ToolDef {
 				"tasks": map[string]any{
 					"type": "array",
 					"description": "List of task specs to fan out. Each spec is " +
-						"'{\"task\": \"<description>\", \"data\": {<optional structured input>}}'. " +
+						"{\"task\": \"<description>\", \"data\": {<optional structured input>}}. " +
 						"The 'task' string becomes the worker's initial user message — keep it tight " +
 						"and per-worker UNIQUE (don't duplicate the shared protocol). 'data' is " +
 						"merged into the worker's AgentContext.input_data so structured fields are " +
@@ -112,8 +114,8 @@ func RunWorkerToolDef() llm.ToolDef {
 								"items": map[string]any{"type": "string"},
 								"description": "Exact tool names to pre-load into this worker's eager " +
 									"toolset at spawn (skips its search_tools round-trip). Use when you " +
-									"KNOW the task needs tools that are searchable for workers. Unknown " +
-									"names are ignored.",
+									"KNOW the task needs tools that are searchable for workers (e.g. " +
+									"sender or hubspot tools). Unknown names are ignored.",
 							},
 						},
 						"required": []string{"task"},
@@ -125,9 +127,10 @@ func RunWorkerToolDef() llm.ToolDef {
 					"minimum": 1,
 					"maximum": 1000,
 					"description": "Cap on each worker's AgentLoop iterations of useful work. After " +
-						"this is exhausted the framework grants an additional grace iteration where " +
-						"dispatch is restricted to report_to_parent / tracker_upsert / task_update so " +
-						"the worker can wrap up. Worker default: 3 (work) + 1 (grace) = 4 total.",
+						"this is exhausted the framework grants an additional grace iteration " +
+						"(configured separately) where dispatch is restricted to report_to_parent / " +
+						"tracker_upsert / task_update so the worker can wrap up. Worker default: " +
+						"3 (work) + 1 (grace) = 4 total.",
 				},
 				"timeout": map[string]any{
 					"type": "number",
@@ -139,27 +142,39 @@ func RunWorkerToolDef() llm.ToolDef {
 					"minimum": 0,
 					"maximum": 2000,
 					"description": "Cap on each worker's CUMULATIVE tool calls across ALL its turns " +
-						"(distinct from max_iterations, which counts turns). When a worker reaches " +
-						"this total it is forced into the grace wind-down so it reports back instead " +
-						"of running unbounded. Worker default: 150. OMIT this to let the colony's " +
-						"adaptive budget manage the fan-out.",
+						"(distinct from max_iterations, which counts turns, and from the per-turn " +
+						"pacing budget). When a worker reaches this total it is forced into the " +
+						"grace wind-down — a stop reminder is injected and dispatch is restricted " +
+						"to report_to_parent / tracker_upsert / task_update so it reports back " +
+						"instead of running unbounded. Worker default: 150. Lower it (e.g. 20) to " +
+						"keep tool-heavy workers on a tight leash; on resume it also RAISES the " +
+						"ceiling for a worker that already exhausted its budget (the count persists " +
+						"across resumes). OMIT this to let the colony's adaptive budget manage the " +
+						"fan-out: successful workers' consumption sets the colony norm and outlier " +
+						"workers are wound down early. Passing an explicit value PINS those workers " +
+						"to it — they are neither clamped by nor counted toward the adaptive norm.",
 				},
 				"resume_worker_ids": map[string]any{
 					"type":  "array",
 					"items": map[string]any{"type": "string"},
 					"description": "RESUME mode (mutually exclusive with 'tasks'). worker_ids of " +
-						"workers that stopped before reporting. Each is reloaded from its saved " +
-						"conversation and continues from where it left off. An id with no saved " +
-						"transcript is reported back per id instead of being re-spawned.",
+						"workers that stopped before reporting (e.g. timed-out or force-stopped) — " +
+						"you have these from the original run_worker return and the stopped/timeout " +
+						"[WORKER_REPORT]s. Each is reloaded from its saved conversation and " +
+						"continues from where it left off, then reports via report_to_parent. Pass " +
+						"'max_iterations' to give a worker that stopped near its limit room to " +
+						"finish, and 'guidance' to steer it before it resumes.",
 					"minItems": 1,
 				},
 				"guidance": map[string]any{
 					"type": "string",
 					"description": "RESUME mode only: a single steering instruction injected as a " +
-						"user turn into every resumed worker before it continues. Ignored when " +
-						"spawning fresh workers via 'tasks'.",
+						"user turn into every resumed worker before it continues (e.g. 'you got " +
+						"stuck on the login step — try the API instead'). Ignored when spawning " +
+						"fresh workers via 'tasks'.",
 				},
 			},
+			"required": []any{},
 		},
 	}
 }

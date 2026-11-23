@@ -1,0 +1,951 @@
+{
+ "captured_at_utc": "2026-11-23T01:08:58Z",
+ "repo": {
+  "root": "/Users/mac/hive/.wt/schema-residuals",
+  "head": "f9eb572042c0956c37b3b96ad62291ea16857446",
+  "core_head": "265d93d17ab9ad62520ce05b841ecbfc42439ae7",
+  "queen_lifecycle_tools_sha256": "a62385ec1ac7b8db4554c0aa34bbf32da9f0c7898e1239d42f29213a82b41367",
+  "playbook_tools_sha256": "1b164b1cc0d3687e84968581b92d08d03d9273c5130436927b3daad2803de4a2",
+  "session_tools_sha256": "eaa9990b5cbc4dc12faf7a5f90295272419efce18333fcdebe9de5b67fedf30a",
+  "note": "Captured from the repo's runtime without an LLM: registered Tool objects projected through the request layer. queen_lifecycle_tools.py / playbook_tools.py / session_tools.py are unchanged since the frozen reference commit a756b1e5; only memory-recall code moved in 1.0.15."
+ },
+ "registered_lifecycle_tool_count": 16,
+ "lifecycle_tools_of_interest": [
+  "get_playbook_status",
+  "get_worker_status",
+  "inject_message",
+  "list_playbook_runs",
+  "remove_trigger",
+  "reply_to_worker",
+  "run_playbook",
+  "run_worker",
+  "set_trigger",
+  "stop_playbook",
+  "stop_worker",
+  "update_worker_profile"
+ ],
+ "lifecycle": {
+  "get_playbook_status": {
+   "registered": true,
+   "description": "Check a playbook run by its run_id (the handle run_playbook returned). If still running, returns live progress (dispatched count, dead-lettered, phase, recent log lines). If finished, returns its run-log row. You usually DON'T need this — completion fires a [PLAYBOOK_COMPLETE] notification — use it only for an interim peek. (Use get_worker_status for an individual run_worker worker, not a playbook.)",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "run_id": {
+      "type": "string",
+      "description": "The playbook run_id."
+     }
+    },
+    "required": [
+     "run_id"
+    ]
+   },
+   "parameters_raw_tool_object": {
+    "type": "object",
+    "properties": {
+     "run_id": {
+      "type": "string",
+      "description": "The playbook run_id."
+     }
+    },
+    "required": [
+     "run_id"
+    ]
+   },
+   "phase_visible": {
+    "independent": false,
+    "colony": true
+   },
+   "request_projection": "framework/llm/litellm.py::LiteLLMProvider._tool_to_openai_format",
+   "sha256_parameters": "5e46b50c8112e01bd793630c5bafe1aa46018805c613d726225ed62991063dc8"
+  },
+  "get_worker_status": {
+   "registered": true,
+   "description": "Check on the loaded graph. Returns a brief prose summary by default. Use 'focus' to drill into specifics:\n- activity: current node, transitions, latest LLM output\n- memory: worker's accumulated buffer state\n- tools: running and recent tool calls\n- issues: retries, stalls, constraint violations\n- progress: goal criteria, token consumption\n- full: everything as JSON\nFor a PLAYBOOK (run_playbook), use get_playbook_status(run_id=...) instead — it reports the convergence run's progress by run_id.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "focus": {
+      "type": "string",
+      "enum": [
+       "activity",
+       "memory",
+       "tools",
+       "issues",
+       "progress",
+       "full"
+      ],
+      "description": "Aspect to inspect. Omit for a brief summary."
+     },
+     "last_n": {
+      "type": "integer",
+      "description": "Recent events per category (default 20). Only for activity, tools, full."
+     }
+    },
+    "required": []
+   },
+   "parameters_raw_tool_object": {
+    "type": "object",
+    "properties": {
+     "focus": {
+      "type": "string",
+      "enum": [
+       "activity",
+       "memory",
+       "tools",
+       "issues",
+       "progress",
+       "full"
+      ],
+      "description": "Aspect to inspect. Omit for a brief summary."
+     },
+     "last_n": {
+      "type": "integer",
+      "description": "Recent events per category (default 20). Only for activity, tools, full."
+     }
+    },
+    "required": []
+   },
+   "phase_visible": {
+    "independent": false,
+    "colony": true
+   },
+   "request_projection": "framework/llm/litellm.py::LiteLLMProvider._tool_to_openai_format",
+   "sha256_parameters": "9cfcd4bdbd191890a0a74f121e2c592139947362569ca20d207bfa4ef3d14f04"
+  },
+  "inject_message": {
+   "registered": true,
+   "description": "Send a message to the running graph. The message is injected into the graph's active node conversation. Use this to relay user instructions or concerns. The graph must be running.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "content": {
+      "type": "string",
+      "description": "Message content to send to the graph"
+     }
+    },
+    "required": [
+     "content"
+    ]
+   },
+   "parameters_raw_tool_object": {
+    "type": "object",
+    "properties": {
+     "content": {
+      "type": "string",
+      "description": "Message content to send to the graph"
+     }
+    },
+    "required": [
+     "content"
+    ]
+   },
+   "phase_visible": {
+    "independent": false,
+    "colony": true
+   },
+   "request_projection": "framework/llm/litellm.py::LiteLLMProvider._tool_to_openai_format",
+   "sha256_parameters": "0732f1cd7a848555dcaf724a79ef84e630b51dbfdb12b0b8b6ec7ee4d303fda1"
+  },
+  "list_browser_profiles": {
+   "registered": true,
+   "description": "List the Chrome profiles whose Hive extension is currently connected, each with the label to pass as browser_profile in update_worker_profile. Call this before binding workers to browser profiles so you bind to real, connected labels.",
+   "parameters": {
+    "type": "object",
+    "properties": {},
+    "required": []
+   },
+   "parameters_raw_tool_object": {
+    "type": "object",
+    "properties": {}
+   },
+   "phase_visible": {
+    "independent": false,
+    "colony": false
+   },
+   "request_projection": "framework/llm/litellm.py::LiteLLMProvider._tool_to_openai_format",
+   "sha256_parameters": "c8a1ac469a826ea3547ac220c7bbfdcd6b58080d4ec596ff2a0149c5ccb9b699"
+  },
+  "list_playbook_runs": {
+   "registered": true,
+   "description": "Read the playbook run-log for this colony (from colony.db, the colony bookkeeping store — separate from the domain tracker). Returns recent runs most-recent-first: run_id, name, status, dispatched, dead_lettered, result, and the log narration. Pass `run_id` to fetch one run (e.g. the id run_playbook returned), or `limit` for the most recent N.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "run_id": {
+      "type": "string",
+      "description": "Fetch only this run."
+     },
+     "limit": {
+      "type": "integer",
+      "description": "Most recent N runs (default 20)."
+     }
+    },
+    "required": []
+   },
+   "parameters_raw_tool_object": {
+    "type": "object",
+    "properties": {
+     "run_id": {
+      "type": "string",
+      "description": "Fetch only this run."
+     },
+     "limit": {
+      "type": "integer",
+      "description": "Most recent N runs (default 20)."
+     }
+    }
+   },
+   "phase_visible": {
+    "independent": false,
+    "colony": true
+   },
+   "request_projection": "framework/llm/litellm.py::LiteLLMProvider._tool_to_openai_format",
+   "sha256_parameters": "0fa808f6af2dd1ed6778cc2784954bdc74a9ef4a3f36be7696957cffba9df244"
+  },
+  "list_triggers": {
+   "registered": true,
+   "description": "List all available triggers (from the loaded worker) and their active/inactive status.",
+   "parameters": {
+    "type": "object",
+    "properties": {},
+    "required": []
+   },
+   "parameters_raw_tool_object": {
+    "type": "object",
+    "properties": {}
+   },
+   "phase_visible": {
+    "independent": false,
+    "colony": true
+   },
+   "request_projection": "framework/llm/litellm.py::LiteLLMProvider._tool_to_openai_format",
+   "sha256_parameters": "c8a1ac469a826ea3547ac220c7bbfdcd6b58080d4ec596ff2a0149c5ccb9b699"
+  },
+  "list_worker_questions": {
+   "registered": true,
+   "description": "List all worker escalations currently awaiting your reply. Each entry has a request_id that you pass to reply_to_worker() to unblock the specific worker that asked.",
+   "parameters": {
+    "type": "object",
+    "properties": {},
+    "required": []
+   },
+   "parameters_raw_tool_object": {
+    "type": "object",
+    "properties": {}
+   },
+   "phase_visible": {
+    "independent": false,
+    "colony": false
+   },
+   "request_projection": "framework/llm/litellm.py::LiteLLMProvider._tool_to_openai_format",
+   "sha256_parameters": "c8a1ac469a826ea3547ac220c7bbfdcd6b58080d4ec596ff2a0149c5ccb9b699"
+  },
+  "remove_trigger": {
+   "registered": true,
+   "description": "Deactivate an active trigger. The trigger stops firing but remains available for re-activation.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "trigger_id": {
+      "type": "string",
+      "description": "ID of the trigger to deactivate"
+     }
+    },
+    "required": [
+     "trigger_id"
+    ]
+   },
+   "parameters_raw_tool_object": {
+    "type": "object",
+    "properties": {
+     "trigger_id": {
+      "type": "string",
+      "description": "ID of the trigger to deactivate"
+     }
+    },
+    "required": [
+     "trigger_id"
+    ]
+   },
+   "phase_visible": {
+    "independent": false,
+    "colony": true
+   },
+   "request_projection": "framework/llm/litellm.py::LiteLLMProvider._tool_to_openai_format",
+   "sha256_parameters": "03cf56e363374c2ed1400a7d6d78ef6c0cb9dc844abd6f680156b7d43d16986c"
+  },
+  "reply_to_worker": {
+   "registered": true,
+   "description": "Reply to a specific worker escalation. The reply is injected into the identified worker's conversation so it can resume. Use list_worker_questions() to discover pending request_ids.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "request_id": {
+      "type": "string",
+      "description": "The escalation request_id from list_worker_questions."
+     },
+     "reply": {
+      "type": "string",
+      "description": "Guidance or answer text to hand back to the worker."
+     }
+    },
+    "required": [
+     "request_id",
+     "reply"
+    ]
+   },
+   "parameters_raw_tool_object": {
+    "type": "object",
+    "properties": {
+     "request_id": {
+      "type": "string",
+      "description": "The escalation request_id from list_worker_questions."
+     },
+     "reply": {
+      "type": "string",
+      "description": "Guidance or answer text to hand back to the worker."
+     }
+    },
+    "required": [
+     "request_id",
+     "reply"
+    ]
+   },
+   "phase_visible": {
+    "independent": false,
+    "colony": false
+   },
+   "request_projection": "framework/llm/litellm.py::LiteLLMProvider._tool_to_openai_format",
+   "sha256_parameters": "dee4c499d85efb5c01a6629cc30992d512c6ef97be222e8e4ab083fc3756da81"
+  },
+  "run_playbook": {
+   "registered": true,
+   "description": "Run a colony playbook — a deterministic Python script that drives a tracker table to convergence: query the undone work, dispatch workers on it, re-query, repeat. Use it whenever the goal has row shape; reach for run_worker only for one-off heterogeneous tasks. ASYNC: returns a run_id immediately and notifies you via [PLAYBOOK_COMPLETE]; the convergence loop absorbs routine worker outcomes. Re-running is resume — done rows drop out of the pending query, so a second run only does the gap.\n\nSUPPLY THE SCRIPT (exactly one):\n• `playbook` — inline; saved to the colony library at playbooks/<meta-name>.play.py (returned as name+path).\n• `playbook_name` — run a saved playbook by meta name (the normal way to resume or re-run).\n• `playbook_path` — a script file on disk.\nIterate by editing the saved file (or re-sending inline with the same meta name, which overwrites) and re-running by name.\n\nSCRIPT SHAPE: define `meta` (name, description, optional `concurrency` = workers running at once; default 8, max 32; lanes throttle per-account within it) and `async def run(args)`. Injected in-script functions (NOT tools): converge / worker / tracker_query / tracker_count / lane / deadletter / log / phase. There is no mid-run escalation — a worker unsure about a row records that on the row (e.g. status='needs_review') for you to review after the run.\n\nGive every worker() a `goal` — one sentence in plain end-user language saying what that worker is doing; the UI shows it as the worker's title (it is not shown to the worker).\n\nTHE WORK-LIST: `pending()` returns one dict per worker dispatch. For cheap-per-row work (most campaigns), each dict should be a CHUNK of 5-10 rows grouped in plain Python — every worker pays a ~2-3k-token orientation tax before its first useful action, so one-row-per-worker multiplies that tax by N. Reserve one-row dispatches for rows that are individually large jobs. Chunking and convergence compose: done rows drop out of the next round's query and stragglers re-group. Give a chunked worker a `timeout` covering the whole slice, and a task string telling it to process rows as consecutive tool calls, upserting each row right after acting on it — rate pacing happens inside the tool layer, so a worker never needs a turn per row and a partial slice re-queues cleanly.\n\nCONTRACT — get these right or the playbook silently dispatches 0 workers:\n• tracker_query(sql) / tracker_count(sql) are SYNCHRONOUS — no await. tracker_query returns a LIST OF ROW DICTS; index a row's column (row['url']). A SELECT COUNT(*) is for counting — never the pending list.\n• converge(...) and worker(...) are ASYNC: `await converge(pending=..., dispatch=lambda unit, i: worker(...))` — converge awaits the worker coroutines and owns parallelism. worker() in a bare loop without await dispatches NOTHING; `for u in units: await worker(...)` runs serially and defeats meta['concurrency']. Parallel dispatch happens ONLY through converge.\n\nEXAMPLE (chunked — the default for cheap-per-row work):\n  meta = {\"name\": \"enrich\", \"description\": \"...\", \"concurrency\": 4}\n  RECEIPT = {\"type\":\"object\",\"required\":[\"processed\"],\"properties\":{\"processed\":{\"type\":\"array\"}}}\n  CHUNK = 8\n  async def run(args):\n      def pending():\n          rows = tracker_query(\"SELECT id, url FROM leads WHERE done_at IS NULL\")\n          return [{\"ids\": [r['id'] for r in rows[i:i+CHUNK]],\n                   \"urls\": [r['url'] for r in rows[i:i+CHUNK]]}\n                  for i in range(0, len(rows), CHUNK)]\n      await converge(\n          pending=pending,\n          dispatch=lambda chunk, i: worker(\n              task=f\"Enrich EACH of these, upserting its row + done_at as you go: {chunk['urls']}\",\n              goal=f\"Researching {len(chunk['ids'])} leads' websites\",\n              profile=\"acct-1\", skill=\"enrich\", schema=RECEIPT,\n              timeout=120 * len(chunk['ids'])),\n          max_rounds=3)\n      return {\"remaining\": tracker_count(\"SELECT 1 FROM leads WHERE done_at IS NULL\")}",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "playbook": {
+      "type": "string",
+      "description": "Inline playbook script (Python). Saved to the colony library at playbooks/<meta-name>.play.py. Pass exactly one of playbook / playbook_name / playbook_path."
+     },
+     "playbook_name": {
+      "type": "string",
+      "description": "Re-run a SAVED playbook by its meta name (the colony library) — the normal way to resume or re-run without re-sending the script."
+     },
+     "playbook_path": {
+      "type": "string",
+      "description": "Path to a playbook script file on disk."
+     },
+     "args": {
+      "type": "object",
+      "description": "Optional JSON object passed to the script's run(args) entrypoint."
+     }
+    },
+    "required": []
+   },
+   "parameters_raw_tool_object": {
+    "type": "object",
+    "properties": {
+     "playbook": {
+      "type": "string",
+      "description": "Inline playbook script (Python). Saved to the colony library at playbooks/<meta-name>.play.py. Pass exactly one of playbook / playbook_name / playbook_path."
+     },
+     "playbook_name": {
+      "type": "string",
+      "description": "Re-run a SAVED playbook by its meta name (the colony library) — the normal way to resume or re-run without re-sending the script."
+     },
+     "playbook_path": {
+      "type": "string",
+      "description": "Path to a playbook script file on disk."
+     },
+     "args": {
+      "type": "object",
+      "description": "Optional JSON object passed to the script's run(args) entrypoint."
+     }
+    }
+   },
+   "phase_visible": {
+    "independent": false,
+    "colony": true
+   },
+   "request_projection": "framework/llm/litellm.py::LiteLLMProvider._tool_to_openai_format",
+   "sha256_parameters": "24e1ccf401d18cfd66c5a1d479fdcc7f2d908729aa6670b28535ce3cc8a1519e"
+  },
+  "run_worker": {
+   "registered": true,
+   "description": "Lower-level fan-out — PREFER run_playbook for row-shaped work. For N units of the same job over a tracker table, run_playbook converges the table deterministically (one worker per undone unit — usually a CHUNK of 5-10 rows — with retry / dead-letter / resume) instead of making you re-coordinate each report. Reach for run_worker only for one-off heterogeneous tasks that don't fit a table, or when each report genuinely needs your judgment.\n\nBATCH SIMILAR UNITS — 5-10 PER WORKER. Every worker pays a fixed orientation tax before its first useful action: fresh context, system prompt, skill reads — roughly 2-3k tokens. One-small-unit-per-worker multiplies that tax by N for nothing (measured live: a 68-worker one-lead-each batch spent ~200-300k tokens on orientation alone). Give each worker a slice of 5-10 similar units and a timeout that covers the whole slice; reserve one-unit workers for units that are individually large. Tell the worker to process its slice as consecutive tool calls, recording each unit as it goes — it does not need a turn per unit, so the default turn budget fits a slice.\n\nFan out a batch of tasks to parallel workers and RETURN IMMEDIATELY. Workers run in the background; each one reports back to you as a [WORKER_REPORT] user turn when it finishes, so you stay unblocked and can chat with the user, kick off more work, or do anything else in the meantime.\n\nFACTOR SHARED CONTEXT INTO A SKILL FIRST. Each worker is a fresh process with no memory of your conversation, but that does NOT mean you should duplicate the same protocol prose across N task strings. If 90% of every task string is the same — schema, output format, quality bar, tools to use — stop and call ``write_skill`` once with that common ground. Workers spawned afterwards see the new skill in their ``<available_skills>`` catalog and activate it on demand. Reference the skill BY NAME in the task string (e.g. 'Follow the <skill-name> protocol to extract rows X, Y, Z') so each worker reads it once and the task strings only carry the per-worker DIFFERENCES (which 5 companies, which row IDs, which date range). Don't spend N× tokens saying the same thing.\n\nPer-task strings still need to be self-contained for the *differences*: include row keys, IDs, URLs, anything unique to that worker's slice. Workers cannot ask the user follow-up questions and cannot see your chat history.\n\nNON-OVERLAPPING SLICES. Workers run concurrently, cannot coordinate, and cannot see each other. Two tasks that touch the same tracker rows, files, or records will double-write or collide. Partition the work cleanly — each row/file/record should be owned by exactly one worker.\n\nBrowser tasks: each worker gets its OWN Chrome tab group, isolated from the queen's tabs and from every other worker, but within the SAME Chrome profile — so workers share cookies and logged-in sessions with the queen (a site the queen is logged into is also authenticated for workers). Each browser worker should start  with `hive-browser open`/`hive-browser navigate`; auth carries over from the shared profile. Live per-worker tab activity is visible to the queen via get_worker_status (focus='full' → 'worker_browsers').\n\nEach worker runs in isolation with its own AgentLoop and reports back via the report_to_parent tool. The tool returns a JSON object with status='started' and the list of worker_ids you just spawned. Each worker's completion arrives later as a [WORKER_REPORT] message containing worker_id, status (success|partial|failed|timeout|stopped), summary, data, error, duration. Read those messages as they arrive and respond to the user naturally.\n\nTIMEOUT — 'timeout' is a SOFT deadline (default 600s). When it expires, every still-active worker that hasn't reported gets a [SOFT TIMEOUT] message telling it to call report_to_parent now. The hard cutoff (when stragglers are force-stopped) is derived from 'timeout' automatically and is not agent-tunable. Explicit reports filed during the warning window ARE preserved.\n\nHETEROGENEOUS BATCHES — if some workers need different iteration / timeout budgets than others, run two batches rather than mixing. The interface intentionally exposes only batch-level knobs.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "tasks": {
+      "type": "array",
+      "description": "List of task specs to fan out. Each spec is {\"task\": \"<description>\", \"data\": {<optional structured input>}}. The 'task' string becomes the worker's initial user message — keep it tight and per-worker UNIQUE (don't duplicate the shared protocol). 'data' is merged into the worker's AgentContext.input_data so structured fields are available to the worker's first turn.",
+      "items": {
+       "type": "object",
+       "properties": {
+        "task": {
+         "type": "string",
+         "description": "Task description for the worker."
+        },
+        "data": {
+         "type": "object",
+         "description": "Optional structured input fields."
+        },
+        "goal": {
+         "type": "string",
+         "description": "One sentence, in plain end-user language, describing what this worker is doing (e.g. 'Checking 20 Instagram profiles to see who accepts DMs'). Shown in the UI as the worker's title — ALWAYS provide it; a non-technical user should understand it. Not shown to the worker."
+        },
+        "preload_tools": {
+         "type": "array",
+         "items": {
+          "type": "string"
+         },
+         "description": "Exact tool names to pre-load into this worker's eager toolset at spawn (skips its search_tools round-trip). Use when you KNOW the task needs tools that are searchable for workers (e.g. sender or hubspot tools). Unknown names are ignored."
+        }
+       },
+       "required": [
+        "task"
+       ]
+      },
+      "minItems": 1
+     },
+     "max_iterations": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000,
+      "description": "Cap on each worker's AgentLoop iterations of useful work. After this is exhausted the framework grants an additional grace iteration (configured separately) where dispatch is restricted to report_to_parent / tracker_upsert / task_update so the worker can wrap up. Worker default: 3 (work) + 1 (grace) = 4 total."
+     },
+     "timeout": {
+      "type": "number",
+      "description": "SOFT deadline in seconds. Workers still running at this point are messaged to call report_to_parent. Default 600 (10 minutes)."
+     },
+     "tool_call_lifetime_budget": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2000,
+      "description": "Cap on each worker's CUMULATIVE tool calls across ALL its turns (distinct from max_iterations, which counts turns, and from the per-turn pacing budget). When a worker reaches this total it is forced into the grace wind-down — a stop reminder is injected and dispatch is restricted to report_to_parent / tracker_upsert / task_update so it reports back instead of running unbounded. Worker default: 150. Lower it (e.g. 20) to keep tool-heavy workers on a tight leash; on resume it also RAISES the ceiling for a worker that already exhausted its budget (the count persists across resumes). OMIT this to let the colony's adaptive budget manage the fan-out: successful workers' consumption sets the colony norm and outlier workers are wound down early. Passing an explicit value PINS those workers to it — they are neither clamped by nor counted toward the adaptive norm."
+     },
+     "resume_worker_ids": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "RESUME mode (mutually exclusive with 'tasks'). worker_ids of workers that stopped before reporting (e.g. timed-out or force-stopped) — you have these from the original run_worker return and the stopped/timeout [WORKER_REPORT]s. Each is reloaded from its saved conversation and continues from where it left off, then reports via report_to_parent. Pass 'max_iterations' to give a worker that stopped near its limit room to finish, and 'guidance' to steer it before it resumes.",
+      "minItems": 1
+     },
+     "guidance": {
+      "type": "string",
+      "description": "RESUME mode only: a single steering instruction injected as a user turn into every resumed worker before it continues (e.g. 'you got stuck on the login step — try the API instead'). Ignored when spawning fresh workers via 'tasks'."
+     }
+    },
+    "required": []
+   },
+   "parameters_raw_tool_object": {
+    "type": "object",
+    "properties": {
+     "tasks": {
+      "type": "array",
+      "description": "List of task specs to fan out. Each spec is {\"task\": \"<description>\", \"data\": {<optional structured input>}}. The 'task' string becomes the worker's initial user message — keep it tight and per-worker UNIQUE (don't duplicate the shared protocol). 'data' is merged into the worker's AgentContext.input_data so structured fields are available to the worker's first turn.",
+      "items": {
+       "type": "object",
+       "properties": {
+        "task": {
+         "type": "string",
+         "description": "Task description for the worker."
+        },
+        "data": {
+         "type": "object",
+         "description": "Optional structured input fields."
+        },
+        "goal": {
+         "type": "string",
+         "description": "One sentence, in plain end-user language, describing what this worker is doing (e.g. 'Checking 20 Instagram profiles to see who accepts DMs'). Shown in the UI as the worker's title — ALWAYS provide it; a non-technical user should understand it. Not shown to the worker."
+        },
+        "preload_tools": {
+         "type": "array",
+         "items": {
+          "type": "string"
+         },
+         "description": "Exact tool names to pre-load into this worker's eager toolset at spawn (skips its search_tools round-trip). Use when you KNOW the task needs tools that are searchable for workers (e.g. sender or hubspot tools). Unknown names are ignored."
+        }
+       },
+       "required": [
+        "task"
+       ]
+      },
+      "minItems": 1
+     },
+     "max_iterations": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000,
+      "description": "Cap on each worker's AgentLoop iterations of useful work. After this is exhausted the framework grants an additional grace iteration (configured separately) where dispatch is restricted to report_to_parent / tracker_upsert / task_update so the worker can wrap up. Worker default: 3 (work) + 1 (grace) = 4 total."
+     },
+     "timeout": {
+      "type": "number",
+      "description": "SOFT deadline in seconds. Workers still running at this point are messaged to call report_to_parent. Default 600 (10 minutes)."
+     },
+     "tool_call_lifetime_budget": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2000,
+      "description": "Cap on each worker's CUMULATIVE tool calls across ALL its turns (distinct from max_iterations, which counts turns, and from the per-turn pacing budget). When a worker reaches this total it is forced into the grace wind-down — a stop reminder is injected and dispatch is restricted to report_to_parent / tracker_upsert / task_update so it reports back instead of running unbounded. Worker default: 150. Lower it (e.g. 20) to keep tool-heavy workers on a tight leash; on resume it also RAISES the ceiling for a worker that already exhausted its budget (the count persists across resumes). OMIT this to let the colony's adaptive budget manage the fan-out: successful workers' consumption sets the colony norm and outlier workers are wound down early. Passing an explicit value PINS those workers to it — they are neither clamped by nor counted toward the adaptive norm."
+     },
+     "resume_worker_ids": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "RESUME mode (mutually exclusive with 'tasks'). worker_ids of workers that stopped before reporting (e.g. timed-out or force-stopped) — you have these from the original run_worker return and the stopped/timeout [WORKER_REPORT]s. Each is reloaded from its saved conversation and continues from where it left off, then reports via report_to_parent. Pass 'max_iterations' to give a worker that stopped near its limit room to finish, and 'guidance' to steer it before it resumes.",
+      "minItems": 1
+     },
+     "guidance": {
+      "type": "string",
+      "description": "RESUME mode only: a single steering instruction injected as a user turn into every resumed worker before it continues (e.g. 'you got stuck on the login step — try the API instead'). Ignored when spawning fresh workers via 'tasks'."
+     }
+    }
+   },
+   "phase_visible": {
+    "independent": false,
+    "colony": true
+   },
+   "request_projection": "framework/llm/litellm.py::LiteLLMProvider._tool_to_openai_format",
+   "sha256_parameters": "271c66222218e1649939ac1a7206fdd8383168b04dc90c8bed7a63259811078b"
+  },
+  "set_trigger": {
+   "registered": true,
+   "description": "Activate a trigger (timer) so it fires periodically. Use trigger_id of an available trigger, or provide trigger_type + trigger_config to create a custom one. A task must be configured before activation — either pre-set on the trigger or provided here.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "trigger_id": {
+      "type": "string",
+      "description": "ID of the trigger to activate (from list_triggers) or a new custom ID"
+     },
+     "trigger_type": {
+      "type": "string",
+      "description": "Type of trigger ('timer'). Only needed for custom triggers."
+     },
+     "trigger_config": {
+      "type": "object",
+      "description": "Config for the trigger. Timer: {cron: '*/5 * * * *'} or {interval_minutes: 5}. Only needed for custom triggers."
+     },
+     "task": {
+      "type": "string",
+      "description": "The task/instructions for the worker when this trigger fires (e.g. 'Process inbox emails using saved rules'). Required if not already configured on the trigger."
+     }
+    },
+    "required": [
+     "trigger_id"
+    ]
+   },
+   "parameters_raw_tool_object": {
+    "type": "object",
+    "properties": {
+     "trigger_id": {
+      "type": "string",
+      "description": "ID of the trigger to activate (from list_triggers) or a new custom ID"
+     },
+     "trigger_type": {
+      "type": "string",
+      "description": "Type of trigger ('timer'). Only needed for custom triggers."
+     },
+     "trigger_config": {
+      "type": "object",
+      "description": "Config for the trigger. Timer: {cron: '*/5 * * * *'} or {interval_minutes: 5}. Only needed for custom triggers."
+     },
+     "task": {
+      "type": "string",
+      "description": "The task/instructions for the worker when this trigger fires (e.g. 'Process inbox emails using saved rules'). Required if not already configured on the trigger."
+     }
+    },
+    "required": [
+     "trigger_id"
+    ]
+   },
+   "phase_visible": {
+    "independent": false,
+    "colony": true
+   },
+   "request_projection": "framework/llm/litellm.py::LiteLLMProvider._tool_to_openai_format",
+   "sha256_parameters": "c3a17becd4977387068fbb9f5800d75818798bfe6df54d60a10b9da6c0847136"
+  },
+  "stop_playbook": {
+   "registered": true,
+   "description": "Kill a RUNNING playbook by its run_id: stops the convergence loop (no more rows dispatched) and stops its in-flight workers. Use it to halt a run that's going wrong (bad protocol, burning an account). Rows already marked done are kept — re-run with run_playbook(playbook_name=...) to resume from where the tracker stands (no run-id needed; the tracker is the resume point). (Use stop_worker for an individual run_worker worker.)",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "run_id": {
+      "type": "string",
+      "description": "The playbook run_id to stop."
+     }
+    },
+    "required": [
+     "run_id"
+    ]
+   },
+   "parameters_raw_tool_object": {
+    "type": "object",
+    "properties": {
+     "run_id": {
+      "type": "string",
+      "description": "The playbook run_id to stop."
+     }
+    },
+    "required": [
+     "run_id"
+    ]
+   },
+   "phase_visible": {
+    "independent": false,
+    "colony": true
+   },
+   "request_projection": "framework/llm/litellm.py::LiteLLMProvider._tool_to_openai_format",
+   "sha256_parameters": "d907131cb81f0ab73507b7ff1e45cae7665448edb8c6483f0ce97b99e675afb6"
+  },
+  "stop_worker": {
+   "registered": true,
+   "description": "Halt ALL colony work and pause timers. Use this whenever the user asks to pause, stop, or halt — it is the honest 'stop everything'. It first cancels any running playbook convergence loops (so they can't re-dispatch fresh workers), then cancels every active worker — including queued ones waiting for capacity. Each live worker first receives a [STOP REQUESTED] inject asking it to call report_to_parent with its latest progress; workers that do not report within `grace_seconds` are force-stopped. This is reliable and fast — it always returns within seconds, so call it ONCE and report the result; do not retry it in a loop. The collected reports plus the list of cancelled playbooks are returned in the tool result, so report what ACTUALLY stopped from that result — do not claim everything is stopped without it. Leave `grace_seconds` unset for a short reporting window; pass 0 for an immediate hard stop.\nTo halt one specific run_playbook run while leaving others going, use stop_playbook(run_id=...) instead.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "reason": {
+      "type": "string",
+      "description": "Why the workers are being stopped. Surfaced to each worker in the stop inject so its final report_to_parent call can reflect the cause."
+     },
+     "grace_seconds": {
+      "type": "number",
+      "description": "Seconds to wait for workers to file a report_to_parent before force-stopping. Clamped to [0, 25]; leave unset for a short window, or 0 for an immediate hard stop."
+     }
+    },
+    "required": []
+   },
+   "parameters_raw_tool_object": {
+    "type": "object",
+    "properties": {
+     "reason": {
+      "type": "string",
+      "description": "Why the workers are being stopped. Surfaced to each worker in the stop inject so its final report_to_parent call can reflect the cause."
+     },
+     "grace_seconds": {
+      "type": "number",
+      "description": "Seconds to wait for workers to file a report_to_parent before force-stopping. Clamped to [0, 25]; leave unset for a short window, or 0 for an immediate hard stop."
+     }
+    },
+    "required": []
+   },
+   "phase_visible": {
+    "independent": false,
+    "colony": true
+   },
+   "request_projection": "framework/llm/litellm.py::LiteLLMProvider._tool_to_openai_format",
+   "sha256_parameters": "ddf24001d80d93681537a0f334c08a83493a579f4d7034a7c6a638835fdcf556"
+  },
+  "update_worker_profile": {
+   "registered": true,
+   "description": "Insert or update one worker profile on an existing colony. Use this to swap a profile's account alias (e.g. 'switch slack-work to use alias work-2'), bind it to a specific Chrome profile via browser_profile (a connected label from list_browser_profiles), or add a profile after the colony was forked. Existing siblings are preserved. Pass only the fields you want to change.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "colony_id": {
+      "type": "string"
+     },
+     "profile_name": {
+      "type": "string"
+     },
+     "integrations": {
+      "type": "object",
+      "additionalProperties": {
+       "type": "string"
+      }
+     },
+     "task": {
+      "type": "string"
+     },
+     "skill_name": {
+      "type": "string"
+     },
+     "concurrency_hint": {
+      "type": "integer",
+      "minimum": 1
+     },
+     "prompt_override": {
+      "type": "string"
+     },
+     "tool_filter": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "browser_profile": {
+      "type": "string",
+      "description": "Chrome profile label this profile's browser tools target (from list_browser_profiles). Empty clears it."
+     }
+    },
+    "required": [
+     "colony_id",
+     "profile_name"
+    ]
+   },
+   "parameters_raw_tool_object": {
+    "type": "object",
+    "properties": {
+     "colony_id": {
+      "type": "string"
+     },
+     "profile_name": {
+      "type": "string"
+     },
+     "integrations": {
+      "type": "object",
+      "additionalProperties": {
+       "type": "string"
+      }
+     },
+     "task": {
+      "type": "string"
+     },
+     "skill_name": {
+      "type": "string"
+     },
+     "concurrency_hint": {
+      "type": "integer",
+      "minimum": 1
+     },
+     "prompt_override": {
+      "type": "string"
+     },
+     "tool_filter": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "browser_profile": {
+      "type": "string",
+      "description": "Chrome profile label this profile's browser tools target (from list_browser_profiles). Empty clears it."
+     }
+    },
+    "required": [
+     "colony_id",
+     "profile_name"
+    ]
+   },
+   "phase_visible": {
+    "independent": false,
+    "colony": false
+   },
+   "request_projection": "framework/llm/litellm.py::LiteLLMProvider._tool_to_openai_format",
+   "sha256_parameters": "30c1e6bf521dfbeedf6199e183811ed49c8c1e68e67d927d0a98b560bd0e39c2"
+  },
+  "write_skill": {
+   "registered": true,
+   "description": "Write or replace a skill, or install one (yours, a downloaded one, an existing skill folder). This is the way to add a skill: don't write SKILL.md into a skills folder with the terminal or write_file, since a skill put there by hand isn't loaded until a new session and skips the user's approval.\n\nSCOPE (who sees it):\n  - 'queen' (default outside a colony): your own skills. In your skills catalog from your next turn and in your colonies'; no other queen sees it. A skill the user made in your skills can't be replaced.\n  - 'colony' (default inside a colony): THIS colony's workers only. Use it BEFORE fanning out parallel workers when the per-task protocol is the same across them (schema, output format, tool conventions, quality bar): write the protocol ONCE, then point each worker at it BY NAME in the task string instead of repeating the prose. Workers spawned AFTER this call pick it up; existing workers do not.\n  - 'global': the shared library every queen and colony reads. Needs the user's approval: nothing is installed yet, the user is asked in this session's chat in the Hive dashboard, and you get a message when they approve or deny. You don't wait for it; carry on.\n\nTWO MODES:\n  - Inline: pass skill_name + skill_description + skill_body (and optional skill_files). Authors a fresh skill from arguments.\n  - Copy: pass source_path pointing at an existing skill root directory (the one containing SKILL.md). The tool reads SKILL.md plus every other file in that directory and writes them into the chosen scope verbatim. Optionally pass skill_name to rename on copy. The other inline params are REJECTED in this mode — use inline mode if you need to edit content.\n\nReplacing your own skill of the same name is fine — your latest content wins.\n\nSkill body should read like a self-contained operating procedure: what the agent is doing, the exact tools/schema to use, the output format, what 'done' looks like. Skip the per-task specifics — those go in the task string.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "skill_name": {
+      "type": "string",
+      "description": "Lowercase, hyphen-separated, ≤64 chars (e.g. 'competitor-research-protocol'). Required in inline mode; optional in source_path mode (renames the skill on copy — defaults to the source's frontmatter name)."
+     },
+     "skill_description": {
+      "type": "string",
+      "description": "One-line summary of what this skill teaches and when to use it. Surfaced in the skills catalog. Required in inline mode; rejected in source_path mode (description comes from the source SKILL.md frontmatter)."
+     },
+     "skill_body": {
+      "type": "string",
+      "description": "Markdown body of SKILL.md — the operational procedure the agent needs to run it unattended. Required in inline mode; rejected in source_path mode."
+     },
+     "skill_files": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "path": {
+         "type": "string"
+        },
+        "content": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "path",
+        "content"
+       ]
+      },
+      "description": "Optional supporting files (scripts, JSON refs, etc.). Each entry is {path, content} where path is relative to the skill root. Inline mode only; rejected in source_path mode (the tool walks the source dir and copies aux files automatically)."
+     },
+     "source_path": {
+      "type": "string",
+      "description": "Absolute or '~'-prefixed path to an existing skill's root directory (the one that contains SKILL.md). When set, the tool copies the entire skill folder — SKILL.md + every other UTF-8 file — into the chosen scope. Use this to install a skill you downloaded (e.g. git clone it into your workspace first), or to lift a framework default, shared or another colony's skill into your own skills or THIS colony to customize it."
+     },
+     "scope": {
+      "type": "string",
+      "enum": [
+       "queen",
+       "colony",
+       "global"
+      ],
+      "description": "Who sees the skill: 'queen' (you, and your colonies), 'colony' (this colony's workers), or 'global' (every queen and colony, after the user approves). Defaults to 'colony' inside a colony, 'queen' outside one."
+     }
+    },
+    "required": []
+   },
+   "parameters_raw_tool_object": {
+    "type": "object",
+    "properties": {
+     "skill_name": {
+      "type": "string",
+      "description": "Lowercase, hyphen-separated, ≤64 chars (e.g. 'competitor-research-protocol'). Required in inline mode; optional in source_path mode (renames the skill on copy — defaults to the source's frontmatter name)."
+     },
+     "skill_description": {
+      "type": "string",
+      "description": "One-line summary of what this skill teaches and when to use it. Surfaced in the skills catalog. Required in inline mode; rejected in source_path mode (description comes from the source SKILL.md frontmatter)."
+     },
+     "skill_body": {
+      "type": "string",
+      "description": "Markdown body of SKILL.md — the operational procedure the agent needs to run it unattended. Required in inline mode; rejected in source_path mode."
+     },
+     "skill_files": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "path": {
+         "type": "string"
+        },
+        "content": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "path",
+        "content"
+       ]
+      },
+      "description": "Optional supporting files (scripts, JSON refs, etc.). Each entry is {path, content} where path is relative to the skill root. Inline mode only; rejected in source_path mode (the tool walks the source dir and copies aux files automatically)."
+     },
+     "source_path": {
+      "type": "string",
+      "description": "Absolute or '~'-prefixed path to an existing skill's root directory (the one that contains SKILL.md). When set, the tool copies the entire skill folder — SKILL.md + every other UTF-8 file — into the chosen scope. Use this to install a skill you downloaded (e.g. git clone it into your workspace first), or to lift a framework default, shared or another colony's skill into your own skills or THIS colony to customize it."
+     },
+     "scope": {
+      "type": "string",
+      "enum": [
+       "queen",
+       "colony",
+       "global"
+      ],
+      "description": "Who sees the skill: 'queen' (you, and your colonies), 'colony' (this colony's workers), or 'global' (every queen and colony, after the user approves). Defaults to 'colony' inside a colony, 'queen' outside one."
+     }
+    }
+   },
+   "phase_visible": {
+    "independent": true,
+    "colony": true
+   },
+   "request_projection": "framework/llm/litellm.py::LiteLLMProvider._tool_to_openai_format",
+   "sha256_parameters": "9183fbdd7d5e1364816d8d56809ce95c3355043b0cd985791bdebf86fea065b4"
+  }
+ },
+ "task_create": {
+  "runtime_dm_pivot": {
+   "description": "Use this tool to create a structured task list for your current session. The list renders as a live widget in the user's right-rail panel — it helps the user understand progress on their request and demonstrates thoroughness.\n\n**Always takes a `tasks` array — one entry or many, created atomically (all-or-none).** Replying to 5 posts is ONE `task_create` with 5 entries. A single one-off mid-run addition is ONE `task_create` with a 1-entry array.\n\n## When to use this tool\n\nUse this tool proactively in these scenarios:\n- **Multi-step requests** — when a request requires 2+ distinct atomic actions\n- **Non-trivial work** — anything involving careful planning or multiple operations (browser automation, file edits, API calls, fan-out to workers)\n- **User provides multiple tasks** — a list of things to do (numbered or comma-separated)\n- **After receiving REFINING instructions** — if the new request refines the existing plan (same goal, more detail), capture the changes as tasks and delete prior ones via `task_update` status='deleted'. If the new request is OFF-GOAL — different goal from this list's anchor — DON'T wipe and redo here; use the pivot field on this same tool instead.\n- **Mid-run additions** — when you discover unplanned work after the initial plan is laid out, add it with a 1-entry array\n- **User explicitly requests a plan or task list**\n\n## When NOT to use this tool\n\nSkip this tool when:\n- There is only a single, straightforward action (one terminal_exec, one `hive-browser open`, one tracker_query)\n- The task is trivial and tracking it provides no organizational benefit\n- The request is purely conversational or informational (greetings, questions, opinions)\n- The user has explicitly asked you not to use it\n\n## Task fields\n\n- **subject**: short imperative title (e.g. 'Crawl target URL')\n- **description**: optional, slightly longer 'what to do' note\n- **active_form**: present-continuous label shown while in_progress (e.g. 'Crawling target URL'). If omitted, the spinner shows the subject\n- **metadata**: optional KV. Set _internal=true to hide from `task_list`\n\nAll tasks are created with status `pending`.\n\n## Tips\n\n- Subjects should be clear and outcome-focused\n- **Granularity: one task/batch per atomic action, not one umbrella per project** — \"Scrape 5 LinkedIn profiles\" is 5 entries, not 1\n- Include a final **verification step** for any non-trivial plan (re-read the diff, query the tracker for gaps, screenshot the result, run the script end-to-end)\n- Check `task_list` first to avoid creating duplicate tasks",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "goal": {
+      "type": "string",
+      "description": "One-sentence statement of what this plan is for, in the user's own terms. Required on the FIRST task_create of a session — anchors the work so a later batch that drifts from this can be recognised as a real pivot rather than absorbed silently. On follow-up task_create calls in the same session, you MAY omit it (the existing goal is kept) OR re-state it unchanged. Provide a NEW goal only when you are also setting the pivot field below — the new goal then anchors the forked context."
+     },
+     "tasks": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Array of task specs. Each becomes one task with a sequential id. Atomic — all created or none.",
+      "items": {
+       "type": "object",
+       "properties": {
+        "subject": {
+         "type": "string",
+         "description": "Imperative title (e.g. 'Crawl target URL')."
+        },
+        "description": {
+         "type": "string"
+        },
+        "active_form": {
+         "type": "string",
+         "description": "Present-continuous label shown while in_progress."
+        },
+        "metadata": {
+         "type": "object"
+        }
+       },
+       "required": [
+        "subject"
+       ]
+      }
+     },
+     "new_session": {
+      "type": "boolean",
+      "description": "Whether to start this plan in a fresh session. Default false. This is the DM-phase pivot field; in COLONY phase the equivalent is `new_colony` (different field, same criteria — see `<pivot>` in the queen prompt for the universal contract).\n\nSet true ONLY for a clean pivot: the user introduces big new work that shares no goal, files, or topic with the current task list — typically the prior task is finished and they ask for something unrelated.\n\nExamples of the boundary:\n- Just finished pulling a news digest; user says 'now start a CTO sourcing campaign.' -> new session (true): zero overlap with the digest.\n- Running a CTO sourcing campaign; user says 'tweak the scoring rubric.' -> same session (false): it refines the work already underway.\n\nWhen true: a fresh session is created carrying ONLY your `handoff` note and this `tasks` plan — the old conversation is left behind, not copied or summarized. The user is silently swapped into it. Set this on your FIRST tool call of the turn, then end the turn — the new session's queen continues the work from there.\n\nKeep it false for follow-ups, clarifications, continuations, or anything that touches the current plan. When unsure, ask the user before forking."
+     },
+     "handoff": {
+      "type": "string",
+      "description": "Required when new_session=true. The new context inherits NOTHING from this conversation except what you write here — no transcript, no summary, no scrollback. So write a COMPLETE, self-contained handoff: everything the new context needs to know to carry the task plan through to done.\n\nBe descriptive and objective — state facts, not impressions. Cover, as applicable:\n- The user's actual goal and intent for this work, in their own terms.\n- Concrete facts and data established so far: names, URLs, IDs, file paths, the account/alias to use, numbers, exact requirements and wording.\n- Decisions already made, and options already considered and ruled out (with the reason).\n- Constraints, preferences, deadlines, and what 'done' looks like.\n- Anything already attempted or partially completed that the new context must not redo.\n\nThe new context cannot look back — if a detail matters for finishing the task and is not already in a task subject/description, it MUST be in this handoff. Write it in full now, while you still have the whole conversation in view. Ignored when new_session is false."
+     }
+    },
+    "required": [
+     "tasks"
+    ]
+   },
+   "sha256_parameters": "5ec58ba94dbe5c3a4ec84d1208d55c3c1e6602d3015e5d6a46a8274644255cec"
+  },
+  "plain_no_pivot": {
+   "description": "Use this tool to create a structured task list for your current session. The list renders as a live widget in the user's right-rail panel — it helps the user understand progress on their request and demonstrates thoroughness.\n\n**Always takes a `tasks` array — one entry or many, created atomically (all-or-none).** Replying to 5 posts is ONE `task_create` with 5 entries. A single one-off mid-run addition is ONE `task_create` with a 1-entry array.\n\n## When to use this tool\n\nUse this tool proactively in these scenarios:\n- **Multi-step requests** — when a request requires 2+ distinct atomic actions\n- **Non-trivial work** — anything involving careful planning or multiple operations (browser automation, file edits, API calls, fan-out to workers)\n- **User provides multiple tasks** — a list of things to do (numbered or comma-separated)\n- **After receiving REFINING instructions** — if the new request refines the existing plan (same goal, more detail), capture the changes as tasks and delete prior ones via `task_update` status='deleted'. If the new request is OFF-GOAL — different goal from this list's anchor — DON'T wipe and redo here; use the pivot field on this same tool instead.\n- **Mid-run additions** — when you discover unplanned work after the initial plan is laid out, add it with a 1-entry array\n- **User explicitly requests a plan or task list**\n\n## When NOT to use this tool\n\nSkip this tool when:\n- There is only a single, straightforward action (one terminal_exec, one `hive-browser open`, one tracker_query)\n- The task is trivial and tracking it provides no organizational benefit\n- The request is purely conversational or informational (greetings, questions, opinions)\n- The user has explicitly asked you not to use it\n\n## Task fields\n\n- **subject**: short imperative title (e.g. 'Crawl target URL')\n- **description**: optional, slightly longer 'what to do' note\n- **active_form**: present-continuous label shown while in_progress (e.g. 'Crawling target URL'). If omitted, the spinner shows the subject\n- **metadata**: optional KV. Set _internal=true to hide from `task_list`\n\nAll tasks are created with status `pending`.\n\n## Tips\n\n- Subjects should be clear and outcome-focused\n- **Granularity: one task/batch per atomic action, not one umbrella per project** — \"Scrape 5 LinkedIn profiles\" is 5 entries, not 1\n- Include a final **verification step** for any non-trivial plan (re-read the diff, query the tracker for gaps, screenshot the result, run the script end-to-end)\n- Check `task_list` first to avoid creating duplicate tasks",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "goal": {
+      "type": "string",
+      "description": "One-sentence statement of what this plan is for, in the user's own terms. Required on the FIRST task_create of a session — anchors the work so a later batch that drifts from this can be recognised as a real pivot rather than absorbed silently. On follow-up task_create calls in the same session, you MAY omit it (the existing goal is kept) OR re-state it unchanged. Provide a NEW goal only when you are also setting the pivot field below — the new goal then anchors the forked context."
+     },
+     "tasks": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Array of task specs. Each becomes one task with a sequential id. Atomic — all created or none.",
+      "items": {
+       "type": "object",
+       "properties": {
+        "subject": {
+         "type": "string",
+         "description": "Imperative title (e.g. 'Crawl target URL')."
+        },
+        "description": {
+         "type": "string"
+        },
+        "active_form": {
+         "type": "string",
+         "description": "Present-continuous label shown while in_progress."
+        },
+        "metadata": {
+         "type": "object"
+        }
+       },
+       "required": [
+        "subject"
+       ]
+      }
+     }
+    },
+    "required": [
+     "tasks"
+    ]
+   }
+  },
+  "pivot_field": "new_session",
+  "pivot_description_source": "core/framework/server/queen_orchestrator.py::_NEW_SESSION_DESC (ast-extracted)"
+ }
+}

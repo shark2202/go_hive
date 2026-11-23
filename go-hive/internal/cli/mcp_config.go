@@ -35,7 +35,9 @@ const (
 	mcpStartupBudget = 15 * time.Second
 )
 
-// mcpFileSettings is the parsed "mcp" block of configuration.json.
+// mcpFileSettings is the parsed "mcp" block of configuration.json. Namespace
+// is empty by default (bare registration); a non-empty value enables the
+// optional prefixed naming mode.
 type mcpFileSettings struct {
 	Enabled   bool
 	Namespace string
@@ -47,8 +49,12 @@ type mcpFileSettings struct {
 // block or a malformed block all mean "no file-level override": MCP stays
 // enabled with the registry's servers and the client defaults, which is the
 // behaviour of a home that never configured MCP at all.
+//
+// mcp.namespace defaults to empty: tools register under the server's own
+// names, exactly like the Python reference. A non-empty value opts into the
+// Go-only prefixed form NamespacedMCPToolName builds.
 func readMCPFileSettings(configPath string) mcpFileSettings {
-	settings := mcpFileSettings{Enabled: true, Namespace: tools.MCPToolNamespace}
+	settings := mcpFileSettings{Enabled: true}
 	if strings.TrimSpace(configPath) == "" {
 		return settings
 	}
@@ -76,9 +82,9 @@ func readMCPFileSettings(configPath string) mcpFileSettings {
 	if parsed.Enabled != nil {
 		settings.Enabled = *parsed.Enabled
 	}
-	if namespace := strings.TrimSpace(parsed.Namespace); namespace != "" {
-		settings.Namespace = namespace
-	}
+	// An explicit blank (or an absent key) keeps the bare-name default; a
+	// non-empty value enables prefix mode.
+	settings.Namespace = strings.TrimSpace(parsed.Namespace)
 	if parsed.TimeoutSeconds != nil && *parsed.TimeoutSeconds > 0 {
 		timeout := time.Duration(*parsed.TimeoutSeconds * float64(time.Second))
 		settings.Timeout = &timeout

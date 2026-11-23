@@ -1,0 +1,7 @@
+rebased 12 lifecycle references onto the runtime layer
+wrote /Users/mac/hive/.wt/schema-residuals/go_hive/contracts/tool-definitions.json
+wrote /Users/mac/hive/.wt/schema-residuals/go_hive/contracts/tool-types.proto
+wrote /Users/mac/hive/.wt/schema-residuals/go_hive/docs/tool-contract-recheck.json
+live recheck: present 48/59, description 48, raw 40, normalized 48
+normalized residual: []
+raw residual: ['attach_file', 'edit_file', 'pdf_read', 'read_file', 'terminal_job_logs', 'terminal_job_start', 'terminal_pty_open', 'terminal_pty_run']

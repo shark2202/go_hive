@@ -55,7 +55,8 @@ func newMCPRuntime(home hivehome.Home, out io.Writer) *mcpRuntime {
 		out:        out,
 		budget:     mcpStartupBudget,
 		pool:       tools.NewMCPClientPool(),
-		namespace:  tools.MCPToolNamespace,
+		// Empty namespace = the default bare-name registration, matching the
+		// Python registry. A configured mcp.namespace opts into prefix mode.
 	}
 }
 
@@ -299,9 +300,9 @@ func withMCPWorkerTools(base, declared []llm.ToolDef) []llm.ToolDef {
 
 // mcpLoadedToolNames is the set of catalogue tool names the process loader
 // connected and fetched on its last reload. Status.ToolNames holds the names
-// the server advertised (tools/list); the catalogue registers them under the
-// loader's namespace, so they are namespaced here before any comparison with
-// session/worker tool defs.
+// the server advertised (tools/list); each maps to its registry key through the
+// loader's namespace — the bare name in the default mode, the prefixed form in
+// the optional namespaced mode.
 func mcpLoadedToolNames() map[string]struct{} {
 	attacher := tools.ProcessMCP()
 	if attacher == nil {
@@ -312,12 +313,8 @@ func mcpLoadedToolNames() map[string]struct{} {
 		if !status.Connected {
 			continue
 		}
-		namespace := status.Namespace
-		if namespace == "" {
-			namespace = tools.MCPToolNamespace
-		}
 		for _, name := range status.ToolNames {
-			names[tools.NamespacedMCPToolName(namespace, status.Name, name)] = struct{}{}
+			names[tools.MCPRegistryToolName(status.Namespace, status.Name, name)] = struct{}{}
 		}
 	}
 	return names
