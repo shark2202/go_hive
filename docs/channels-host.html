@@ -30,7 +30,7 @@ figure.diagram figcaption{color:var(--muted);font-size:12px;margin-top:8px}
 </style></head><body><div class="wrap">
 <header><div class="eyebrow">Hive · Channels Host</div><h1>Channels 插件宿主 <span>需求 · 设计 · 实现</span></h1>
 <p class="lede">外部聊天应用如何接入 queen：上游用 Python entry point 在 <code>hive serve</code> 进程内加载插件；Go 端口改用独立插件进程 + stdio JSON-line。本页把分界线、上游协议、Go 方案、Python adapter 桥、配置运维和差异风险放在一张可校验的资料里，并明确标注已合并的宿主与仍未实现的 adapter。</p>
-<div class="meta"><span>生成：<b>2026-11-23 12:27 CST</b></span><span>上游基线：<b>1.0.15 · 6703b434</b></span><span>Go HEAD：<b>4412f401</b></span><span>协议：<b>hive-channel/1</b></span><span>产物：<b>HTML + JSON + contract</b></span></div>
+<div class="meta"><span>生成：<b>2026-11-23 12:39 CST</b></span><span>上游基线：<b>1.0.15 · 6703b434</b></span><span>Go HEAD：<b>b4a90e2a</b></span><span>协议：<b>hive-channel/1</b></span><span>产物：<b>HTML + JSON + contract</b></span></div>
 <div class="toc"><a href="#s00">结论与边界</a><a href="#s01">需求来源</a><a href="#s02">概念与分界</a><a href="#s03">上游协议</a><a href="#s04">Go stdio 方案</a><a href="#s05">需求-设计-实现</a><a href="#s06">一致性矩阵</a><a href="#s07">entry-point 兼容</a><a href="#s08">配置与运维</a><a href="#s09">差异与风险</a><a href="#s10">代码索引/维护</a></div></header>
 <section id="s00"><h2><span class="num">00</span>结论与边界卡片</h2>
 
@@ -337,7 +337,7 @@ _Subscription._queue  →  单独 worker  →  handler(output)
 <tr><td>D13</td><td>不移植 Pillow 缩放，按 4 MiB/8 张透传</td><td>Go 标准库没有等价缩放/EXIF 管线；先保证协议与传输可用。</td><td>大图直接进模型，成本和上下文占用高于上游；需要后续补缩放。</td></tr>
 </tbody></table></div>
 <h3>5.3 Go 实现文件与状态</h3>
-<div class="tablewrap"><table><colgroup><col style="width:38%"><col style="width:28%"><col style="width:10%"><col style="width:24%"></colgroup><thead><tr><th>文件</th><th>职责</th><th>状态</th><th>备注</th></tr></thead><tbody><tr><td><code>go_hive/go-hive/internal/server/channels_config.go</code></td><td>旧配置助手：ChannelSections / UnhostedChannels</td><td><span class="pill ok">已存在</span></td><td>仍在；internal/channels/config.go 承担实际发现</td></tr>
+<div class="tablewrap"><table><colgroup><col style="width:38%"><col style="width:28%"><col style="width:10%"><col style="width:24%"></colgroup><thead><tr><th>文件</th><th>职责</th><th>状态</th><th>备注</th></tr></thead><tbody><tr><td><code>go_hive/go-hive/internal/server/channels_config.go</code></td><td>配置读取：ChannelSections</td><td><span class="pill ok">已存在</span></td><td>internal/channels/config.go + host.go 承担发现/启动</td></tr>
 <tr><td><code>go_hive/go-hive/internal/server/routes_credentials_channels.go</code></td><td>GET /api/channels 的 shape</td><td><span class="pill ok">已存在</span></td><td>已存在；States 为空时返回 []</td></tr>
 <tr><td><code>go_hive/go-hive/internal/server/app.go</code></td><td>AppDeps.ChannelStates + 路由接线</td><td><span class="pill ok">已存在</span></td><td>ChannelStates 注入已合并</td></tr>
 <tr><td><code>go_hive/go-hive/internal/cli/loader_channels.go</code></td><td>serve 启动 host / 关闭顺序</td><td><span class="pill ok">已存在</span></td><td>channels.NewHost；shutdown 先停 channel</td></tr>
@@ -466,7 +466,7 @@ Python adapter（一个通道一个进程）
              {"name":"mychat","state":"running"},
              {"name":"idle","state":"off"}]}</pre>
 <h3>8.4 失败排查</h3>
-<div class="tablewrap"><table><colgroup><col style="width:26%"><col style="width:34%"><col style="width:40%"></colgroup><thead><tr><th>现象</th><th>最可能原因</th><th>检查/处置</th></tr></thead><tbody><tr><td>enabled=true 但状态 off</td><td>名字不在配置对象里；或 main 还没有 host</td><td>看 serve 日志/本页状态；确认 channels 段是对象且 enabled 真值</td></tr>
+<div class="tablewrap"><table><colgroup><col style="width:26%"><col style="width:34%"><col style="width:40%"></colgroup><thead><tr><th>现象</th><th>最可能原因</th><th>检查/处置</th></tr></thead><tbody><tr><td>enabled=true 但状态 off</td><td>名字不在配置对象里、enabled 不是真值，或该通道没有配置 command（Go 用 stdio 插件）</td><td>看 serve 日志/本页状态；确认 channels 段是对象、enabled 真值、command 已配置</td></tr>
 <tr><td>failed: no command configured</td><td>enabled 真但没有 command</td><td>给 stdio 插件配 command；Python entry point 需要 adapter</td></tr>
 <tr><td>failed: spawn</td><td>command 不存在/不可执行/cwd 错</td><td>手动执行同一 argv；检查 PATH 与权限</td></tr>
 <tr><td>failed: hello timeout</td><td>插件没读 stdin 或启动太慢</td><td>先跑协议探针；确认 stdout 没有被日志污染</td></tr>

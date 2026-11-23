@@ -244,7 +244,7 @@
     }
   ],
   "baseline": {
-    "go_head": "4412f401",
+    "go_head": "b4a90e2a",
     "protocol": "hive-channel/1",
     "upstream": "1.0.15 · 6703b434"
   },
@@ -390,10 +390,10 @@
       "tradeoff": "大图直接进模型，成本和上下文占用高于上游；需要后续补缩放。"
     }
   ],
-  "generated_at": "2026-11-23T12:27:11+08:00",
+  "generated_at": "2026-11-23T12:39:56+08:00",
   "headline": {
     "call_timeout_ms": 60000,
-    "current_go_state": "main: no channel host (config read + serve warning + empty GET /api/channels); lane: internal/channels + adapters_channels*.go unmerged",
+    "current_go_state": "host merged: configured stdio plugins start, GET /api/channels reports running/off/failed; Python entry-point adapter not implemented",
     "error_kinds": 6,
     "errors": 5,
     "host": "Go process host in the parallel lane; not merged into main",
@@ -416,9 +416,9 @@
   },
   "implementation": [
     {
-      "note": "仍在；internal/channels/config.go 承担实际发现",
+      "note": "internal/channels/config.go + host.go 承担发现/启动",
       "path": "go_hive/go-hive/internal/server/channels_config.go",
-      "responsibility": "旧配置助手：ChannelSections / UnhostedChannels",
+      "responsibility": "配置读取：ChannelSections",
       "status": "present"
     },
     {

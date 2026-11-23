@@ -573,7 +573,7 @@ DECISIONS = [
 ]
 
 IMPLEMENTATION = [
-    ("go_hive/go-hive/internal/server/channels_config.go", "旧配置助手：ChannelSections / UnhostedChannels", "present", "仍在；internal/channels/config.go 承担实际发现"),
+    ("go_hive/go-hive/internal/server/channels_config.go", "配置读取：ChannelSections", "present", "internal/channels/config.go + host.go 承担发现/启动"),
     ("go_hive/go-hive/internal/server/routes_credentials_channels.go", "GET /api/channels 的 shape", "present", "已存在；States 为空时返回 []"),
     ("go_hive/go-hive/internal/server/app.go", "AppDeps.ChannelStates + 路由接线", "present", "ChannelStates 注入已合并"),
     ("go_hive/go-hive/internal/cli/loader_channels.go", "serve 启动 host / 关闭顺序", "present", "channels.NewHost；shutdown 先停 channel"),
@@ -1134,7 +1134,7 @@ Python adapter（一个通道一个进程）
              {{"name":"idle","state":"off"}}]}}</pre>
 <h3>8.4 失败排查</h3>
 {table(["现象", "最可能原因", "检查/处置"], [
-    ["enabled=true 但状态 off", "名字不在配置对象里；或 main 还没有 host", "看 serve 日志/本页状态；确认 channels 段是对象且 enabled 真值"],
+    ["enabled=true 但状态 off", "名字不在配置对象里、enabled 不是真值，或该通道没有配置 command（Go 用 stdio 插件）", "看 serve 日志/本页状态；确认 channels 段是对象、enabled 真值、command 已配置"],
     ["failed: no command configured", "enabled 真但没有 command", "给 stdio 插件配 command；Python entry point 需要 adapter"],
     ["failed: spawn", "command 不存在/不可执行/cwd 错", "手动执行同一 argv；检查 PATH 与权限"],
     ["failed: hello timeout", "插件没读 stdin 或启动太慢", "先跑协议探针；确认 stdout 没有被日志污染"],
@@ -1316,7 +1316,7 @@ def build_json(f: dict[str, Any]) -> dict[str, Any]:
             "max_image_bytes": contract["limits"]["max_image_bytes"],
             "max_images_per_send": contract["limits"]["max_images_per_send"],
             "output_queue_capacity": contract["limits"]["output_queue_capacity"],
-            "current_go_state": "main: no channel host (config read + serve warning + empty GET /api/channels); lane: internal/channels + adapters_channels*.go unmerged",
+            "current_go_state": "host merged: configured stdio plugins start, GET /api/channels reports running/off/failed; Python entry-point adapter not implemented",
         },
         "requirements": REQUIREMENTS,
         "boundary": [{"topic": r[0], "host": r[1], "plugin": r[2]} for r in BOUNDARY],
