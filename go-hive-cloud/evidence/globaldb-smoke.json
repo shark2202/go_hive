@@ -1,8 +1,8 @@
 {
   "harness": "globaldb-smoke",
-  "base_url": "http://127.0.0.1:56953",
-  "started_at": "2026-11-22T16:18:21.468529Z",
-  "finished_at": "2026-11-22T16:18:21.485379Z",
+  "base_url": "http://127.0.0.1:53319",
+  "started_at": "2026-11-23T03:26:43.949182Z",
+  "finished_at": "2026-11-23T03:26:43.958794Z",
   "ok": true,
   "checks": [
     {

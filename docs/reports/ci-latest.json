@@ -1,9 +1,9 @@
 {
- "wave": 82,
- "at": "2026-11-23 07:23",
- "head": "1b44a743",
+ "wave": 83,
+ "at": "2026-11-23 11:37",
+ "head": "582afba1",
  "ci": 0,
  "qc": 0,
  "publish": 0,
- "note": "wave-82：CI 0（cf750d6e；之后仅 docs/gitignore 变更）+ QC 首跑 C8 空目录失败→清理后 9/9 + journey 6/6 + publish 0742517；slot 00/02/04/06 全补齐"
+ "note": "wave-83: CI 0 / QC 9/9 / journey 6/6; mirror 582afba1"
 }
