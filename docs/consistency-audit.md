@@ -1,5 +1,7 @@
 # hive ↔ go_hive 逐项一致性核查表
 
+> **历史快照（2026-11-22，wave-71）：** 本文件的 C12、测试与门禁数字已不是当前值；当前三轴矩阵以 [`consistency-matrix.html`](consistency-matrix.html) / [`consistency-matrix.json`](consistency-matrix.json) 为准。本文件保留为当时的核查记录，不再作为交付或对齐结论。
+
 > 生成：2026-11-22 21:45  · HEAD `80c82a08` · 核查快照 = wave-71（`3bea069f`，ci=0 / govuln=0 / qc=0，之后仅文档提交）
 > 数据源：`contracts/module-inventory.json`（C12）、`hive-concepts-inventory.json`、`integrations-evidence-audit.json`、`contracts/{api-routes,env-vars,config-keys,tool-definitions,builtin-skills}.json`。
 
