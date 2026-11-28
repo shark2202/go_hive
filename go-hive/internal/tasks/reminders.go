@@ -8,28 +8,24 @@ import (
 	"encoding/json"
 	"log"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/shark2202/go_hive/go-hive/internal/agentloop"
 	"github.com/shark2202/go_hive/go-hive/internal/atomicfs"
+	"github.com/shark2202/go_hive/go-hive/internal/pyenv"
 )
 
 const StateFilename = "reminder_state.json"
 
 const ReminderStopPoint agentloop.ReminderPoint = "stop"
 
+// envInt mirrors upstream `int(os.environ.get(name, str(default)))`: surrounding
+// whitespace and digit-group underscores are accepted, invalid values fall back.
 func envInt(name string, def int) int {
-	raw, ok := os.LookupEnv(name)
-	if !ok {
-		return def
-	}
-	n, err := strconv.Atoi(raw)
-	if err != nil {
-		return def
-	}
-	return n
+	return pyenv.Int(name, def)
 }
 
 var (
@@ -353,6 +349,16 @@ func RenderBlock(records []*TaskRecord, driftKind string, includeSnapshot bool, 
 }
 
 func ReadRecords(sessionID string) (records []*TaskRecord, ok bool) {
+	return readRecordsFrom(GetTaskStore(), sessionID)
+}
+
+// readRecordsFrom is ReadRecords against an explicit store, so a caller with
+// its own task scope (a colony worker's private list, the overseer's colony
+// plan) reads exactly the list its task tools write.
+func readRecordsFrom(store *TaskStore, sessionID string) (records []*TaskRecord, ok bool) {
+	if store == nil {
+		store = GetTaskStore()
+	}
 	defer func() {
 		if recovered := recover(); recovered != nil {
 			log.Printf("task reminder: list_tasks(%s) failed: %v", sessionID, recovered)
@@ -360,7 +366,7 @@ func ReadRecords(sessionID string) (records []*TaskRecord, ok bool) {
 			ok = false
 		}
 	}()
-	stored := GetTaskStore().ListTasks(sessionID)
+	stored := store.ListTasks(sessionID)
 	out := []*TaskRecord{}
 	for _, r := range stored {
 		if r.Status == TaskStatusArchived {
@@ -372,23 +378,37 @@ func ReadRecords(sessionID string) (records []*TaskRecord, ok bool) {
 }
 
 func ReadGoal(sessionID string) string {
-	meta := GetTaskStore().GetMeta(sessionID)
+	return readGoalFrom(GetTaskStore(), sessionID)
+}
+
+func readGoalFrom(store *TaskStore, sessionID string) string {
+	if store == nil {
+		store = GetTaskStore()
+	}
+	meta := store.GetMeta(sessionID)
 	if meta == nil || meta.Goal == nil {
 		return ""
 	}
 	return *meta.Goal
 }
 
-func reminderStatePath(sessionID string) (string, bool) {
-	dir, err := SessionStorageDir(sessionID)
+func reminderStatePathFor(store *TaskStore, sessionID string) (string, bool) {
+	if store == nil {
+		store = GetTaskStore()
+	}
+	dir, err := store.listDir(sessionID)
 	if err != nil {
 		return "", false
 	}
-	return dir + string(os.PathSeparator) + StateFilename, true
+	return filepath.Join(dir, StateFilename), true
 }
 
 func LoadReminderState(sessionID string) *ReminderState {
-	path, ok := reminderStatePath(sessionID)
+	return loadReminderStateFor(GetTaskStore(), sessionID)
+}
+
+func loadReminderStateFor(store *TaskStore, sessionID string) *ReminderState {
+	path, ok := reminderStatePathFor(store, sessionID)
 	if !ok {
 		return nil
 	}
@@ -405,7 +425,11 @@ func LoadReminderState(sessionID string) *ReminderState {
 }
 
 func SaveReminderState(sessionID string, state *ReminderState) {
-	path, ok := reminderStatePath(sessionID)
+	saveReminderStateFor(GetTaskStore(), sessionID, state)
+}
+
+func saveReminderStateFor(store *TaskStore, sessionID string, state *ReminderState) {
+	path, ok := reminderStatePathFor(store, sessionID)
 	if !ok {
 		return
 	}
@@ -414,7 +438,7 @@ func SaveReminderState(sessionID string, state *ReminderState) {
 		log.Printf("reminder state save failed for %s: %v", sessionID, err)
 		return
 	}
-	if err := atomicfs.WriteFile(path, data, 0o644); err != nil {
+	if err := atomicfs.WriteFile(path, data, 0o600); err != nil {
 		log.Printf("reminder state save failed for %s: %v", sessionID, err)
 	}
 }
@@ -435,10 +459,27 @@ type TaskReminderSource struct {
 	state     *ReminderState
 	loaded    bool
 	inChatApp bool
+	// store/sessionID scope the source to a task list other than the
+	// process-wide default. A colony worker writes its own store under
+	// <workerDir> and the overseer keeps its plan in the colony directory;
+	// both must read the list their own task tools wrote.
+	store     *TaskStore
+	sessionID string
 }
 
 func NewTaskReminderSource() *TaskReminderSource {
 	return &TaskReminderSource{state: NewReminderState()}
+}
+
+// NewTaskReminderSourceFor binds the one reminder policy to the task store and
+// session id the caller's task tools write. A nil store keeps the process-wide
+// default; an empty sessionID keeps the session id carried by the render
+// context (the chat runtime's shape).
+//
+// Parity: framework/tasks/reminders.py::TaskReminderSource (the Go port scopes
+// it per agent because worker/overseer task lists are not process-wide).
+func NewTaskReminderSourceFor(store *TaskStore, sessionID string) *TaskReminderSource {
+	return &TaskReminderSource{state: NewReminderState(), store: store, sessionID: sessionID}
 }
 
 func (s *TaskReminderSource) Name() string { return "tasks" }
@@ -478,27 +519,37 @@ func anyTaskTool(toolNames []string) bool {
 	return false
 }
 
-func (s *TaskReminderSource) ensureLoaded(sessionID string) {
+func (s *TaskReminderSource) ensureLoaded(store *TaskStore, sessionID string) {
 	if s.loaded {
 		return
 	}
 	s.loaded = true
-	if loaded := LoadReminderState(sessionID); loaded != nil {
+	if loaded := loadReminderStateFor(store, sessionID); loaded != nil {
 		s.state = loaded
 	}
 }
 
 func (s *TaskReminderSource) Render(rctx TaskReminderContext) (string, bool) {
-	if rctx.AgentCtx == nil || rctx.AgentCtx.SessionID == "" {
+	if rctx.AgentCtx == nil {
 		return "", false
 	}
-	sessionID := rctx.AgentCtx.SessionID
-	s.ensureLoaded(sessionID)
-	records, ok := ReadRecords(sessionID)
+	store := s.store
+	if store == nil {
+		store = GetTaskStore()
+	}
+	sessionID := s.sessionID
+	if sessionID == "" {
+		sessionID = rctx.AgentCtx.SessionID
+	}
+	if sessionID == "" {
+		return "", false
+	}
+	s.ensureLoaded(store, sessionID)
+	records, ok := readRecordsFrom(store, sessionID)
 	if !ok {
 		return "", false
 	}
-	goal := ReadGoal(sessionID)
+	goal := readGoalFrom(store, sessionID)
 	s.inChatApp = providerTruthy(rctx.AgentCtx.ChatAppProvider)
 	if rctx.Point == agentloop.SESSION_START && len(records) > 0 {
 		s.state.TaskToolEverUsed = true
@@ -512,7 +563,7 @@ func (s *TaskReminderSource) Render(rctx TaskReminderContext) (string, bool) {
 	default:
 		body = s.renderSnapshot(records, rctx.Point, goal)
 	}
-	SaveReminderState(sessionID, s.state)
+	saveReminderStateFor(store, sessionID, s.state)
 	if body == "" {
 		return "", false
 	}

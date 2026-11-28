@@ -63,22 +63,26 @@ go_hive / Python runtime ──HIVE_CLOUD_BASE + HIVE_CLOUD_JWT──▶ hive-ba
 
 ### 3.3 hive-backend · CRM 网格（经 go_hive 代理）
 
-上游桌面路径 `/api/crm/*` 原样映射到云：
+上游桌面路径 `/api/crm/*` 原样映射到云；`_crm_proxy` 是纯透传（投影/FK/custom-field flattening
+全在闭源后端）。M4 只实现能恢复请求/响应形状的通用行操作：
 
-| 方法/路径 |
-| --- |
-| `GET /v1/crm/grid/schema` |
-| `POST /v1/crm/grid/{entity}/query` |
-| `POST /v1/crm/grid/{entity}/group-counts` |
-| `GET /v1/crm/grid/{entity}/{id}` |
-| `POST /v1/crm/grid/{entity}` |
-| `PATCH /v1/crm/grid/{entity}/{id}` |
-| `DELETE /v1/crm/grid/{entity}/{id}` |
-| `POST /v1/crm/grid/{entity}/{id}/stage` |
-| `POST /v1/crm/claim` |
-| `POST /v1/crm/release` |
+| 方法/路径 | 请求（恢复） | 响应（恢复） | M4 |
+| --- | --- | --- | --- |
+| `GET /v1/crm/grid/schema` | — | `UNKNOWN` | planned |
+| `POST /v1/crm/grid/{entity}/query` | `{filter?, search?, order_by?, order_dir?, limit?, offset?}`（`grid_query` 形状） | 通用行页 `{table, columns, primary_key, rows, total, limit, offset}` | implemented |
+| `POST /v1/crm/grid/{entity}/group-counts` | `{group_by, filter?, search?}` | `{table, group_by, groups:[{value,count}]}` | implemented |
+| `GET /v1/crm/grid/{entity}/{id}` | — | 通用单行页 | implemented |
+| `POST /v1/crm/grid/{entity}` | `{fields, identities?, because?}` | 通用单行页 | implemented（identities 仅空值） |
+| `PATCH /v1/crm/grid/{entity}/{id}` | `{fields?, identities?, because?}` | 通用单行页 | implemented |
+| `DELETE /v1/crm/grid/{entity}/{id}` | body 可选，soft-delete | `{deleted}` | implemented |
+| `POST /v1/crm/grid/{entity}/{id}/stage` | `{value, because?}` | 通用单行页；stage 规则 `UNKNOWN` | implemented（不做转移校验） |
+| `POST /v1/crm/claim` | `{ids, because?}` | `UNKNOWN`（CLI 只说明 `skipped`） | planned |
+| `POST /v1/crm/release` | `{ids, because?}` | `UNKNOWN` | planned |
 
-认证同上（`globaldb` 客户端）。`grid_query.py` 说明：REST 无过滤/搜索/插入/删除，桌面代理用 `/v1/global-db/sql|query` 生成 SQL 补足——**自建实现必须接受这些生成的 Postgres 风格 SQL**。
+认证同上（`globaldb` 客户端）。`grid_query.py` 说明：REST 无过滤/搜索/插入/删除，桌面代理用
+`/v1/global-db/sql|query` 生成 SQL 补足——**自建实现必须接受这些生成的 Postgres 风格 SQL**；
+M4 的 `internal/httpapi/m4_contract_test.go` 用 `test_grid_query.py` 的逐字语句回归。
+详细口径与未知项见 `docs/m4-notes.md`。
 
 ### 3.4 hive-backend · 其他
 

@@ -10,6 +10,7 @@ import ChatPanel, {
   userInputTimestamp,
 } from "@/components/ChatPanel";
 import QueenSessionSwitcher from "@/components/QueenSessionSwitcher";
+import ColonyNameField, { colonySlug, isUsableColonySlug } from "@/components/ColonyNameField";
 import { api } from "@/api/client";
 import { configApi } from "@/api/config";
 import { executionApi } from "@/api/execution";
@@ -1888,6 +1889,14 @@ export default function QueenDM() {
           setIsStreaming(false);
           break;
 
+        case "payment_required":
+          // Provider 402: the turn can't continue. Upsert the billing card
+          // (synthesized by replayEvent) and drop the thinking spinner so
+          // the card is the visible end state of the turn.
+          for (const msg of emittedMessages) upsertMessage(msg);
+          setIsStreaming(false);
+          break;
+
         case "llm_turn_complete":
           if (event.data) {
             const inp = (event.data.input_tokens as number) || 0;
@@ -2096,7 +2105,7 @@ export default function QueenDM() {
             task_count?: number | null;
           };
           const isPivot = data.source_phase === "colony";
-          const slug = (data.colony_id || "").toLowerCase().replace(/[^a-z0-9_]/g, "");
+          const slug = colonySlug(data.colony_id || "");
           // DM variant requires a queen-proposed slug; the pivot variant
           // intentionally starts blank for the user to fill in.
           if (!slug && !isPivot) break;
@@ -2607,8 +2616,8 @@ export default function QueenDM() {
 
   const handleColonySpawn = useCallback(async () => {
     if (cloneSubmitting) return;
-    const colony = cloneColonyName.trim();
-    if (!colony || !sessionId) return;
+    const colony = colonySlug(cloneColonyName);
+    if (!isUsableColonySlug(colony) || !sessionId) return;
 
     setCloneError(null);
     setCloneSubmitting(true);
@@ -2979,20 +2988,14 @@ export default function QueenDM() {
                     <span className="text-muted-foreground/40"> {t("(you choose — slug)")}</span>
                   )}
                 </label>
-                <input
-                  type="text"
+                <ColonyNameField
                   value={cloneColonyName}
-                  onChange={(e) =>
-                    setCloneColonyName(
-                      e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""),
-                    )
-                  }
+                  onChange={setCloneColonyName}
                   placeholder={
                     cloneSuggestion?.sourcePhase === "colony"
                       ? t("e.g. uber_eats_research")
                       : t("e.g. research_team")
                   }
-                  className="w-full rounded-md border border-border/60 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary"
                   autoFocus
                 />
               </div>
@@ -3061,7 +3064,7 @@ export default function QueenDM() {
               </button>
               <button
                 onClick={handleColonySpawn}
-                disabled={!cloneColonyName.trim() || cloneSubmitting}
+                disabled={!isUsableColonySlug(colonySlug(cloneColonyName)) || cloneSubmitting}
                 className="px-3 py-1.5 rounded-md text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
               >
                 {cloneSubmitting ? t("Creating…") : t("Create Colony")}

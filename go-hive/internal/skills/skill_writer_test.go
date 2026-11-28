@@ -188,6 +188,22 @@ func TestValidateSkillFilesRejects(t *testing.T) {
 	}
 }
 
+// Parity-exempt: Go-only validation of falsy skill-file values; no upstream
+// test_skill_writer.py exists in this tree.
+func TestValidateSkillFilesTreatsFalsyAsEmpty(t *testing.T) {
+	for _, input := range []any{"", 0.0, false, map[string]any{}} {
+		files, errMsg := ValidateSkillFiles(input)
+		if errMsg != "" || len(files) != 0 {
+			t.Fatalf("ValidateSkillFiles(%#v) = (%+v, %q)", input, files, errMsg)
+		}
+	}
+	for _, input := range []any{"notes.md", 7.0, true, map[string]any{"path": "a"}} {
+		if _, errMsg := ValidateSkillFiles(input); errMsg != "skill_files must be an array" {
+			t.Fatalf("ValidateSkillFiles(%#v) error = %q", input, errMsg)
+		}
+	}
+}
+
 // Parity-exempt: stripping a leading ./ from skill_files paths has no Python
 func TestValidateSkillFilesStripsDotSlash(t *testing.T) {
 	files, errMsg := ValidateSkillFiles([]any{

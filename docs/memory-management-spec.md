@@ -95,8 +95,9 @@
   - `Close(grace)`：停止接收新触发，等最多 grace，然后跑一次 final short；
   - 反思进行中到达的触发**跳过**（单飞锁）；失败写 `.reflection_error.txt` 与日志，不标记完成。
 - **模型槽**：`memory_reflection.model`：`worker`（默认，`worker_llm` 槽；未配置时用会话模型）或 `main`；每次反思重新解析，改配置即时生效。
-- **短反思**（提示词全文在 `reflection.go:555`）：目标 2 回合——先 `list_memory_files` + 读疑似文件，再 `write_memory_file`/`delete_memory_file`；规则：一条学习只做一个作用域决定、全局优先、避免重复、单主题、不写任务细节、`user-profile.md` 特例、≤4KB/200。
-- **长反思**（`reflection.go:614`）：housekeeping——去重（跨作用域）、移动错位、合并优先于删除、清理过期、只整理不发明；删除/合并走 `confirms=false`，纯整理不刷新 `confirmed`。
+- **短反思**（提示词全文在 `reflection.go:555`）：目标 2 回合——先 `list_memory_files` + 读疑似文件，再 `write_memory_file`/`delete_memory_file`；规则：一条学习只做一个作用域决定、全局优先、避免重复、单主题、不写任务细节、`user-profile.md` 特例、≤4KB/200；以及维护三条——`author`/`learned`/`confirmed` 由系统维护、不要写出，`author: owner` 的文件不可改（学到的差异写到另一个文件），写入即视为以本轮对话确认、删除必须给出理由（历史可恢复）。
+- **长反思**（`reflection.go:620`）：housekeeping——去重（跨作用域）、移动错位、合并优先于删除、清理过期、只整理不发明；`author: owner` 文件原样保留、`author`/`learned`/`confirmed` 不写（系统维护）、合并时每个被删除文件给出理由（如 `merged into user-diet.md`）；删除/合并走 `confirms=false`，纯整理不刷新 `confirmed`。
+- **回放时钟**（A27）：`ReflectionLoopAt` 对应 `reflect_on_messages(now=...)`；短反思回放时把会话结束时刻同时传给写入与退休，`learned`/`confirmed` 与 `log.jsonl` 的 `at` 都按该时刻落，零值仍用 `time.Now`（测试：`TestReflectionReplayClockStampsFrontmatterAndLog`）。
 - **工具**（4 个，schema 由 `reflection_tools_contract_test.go` 冻结）：`list_memory_files(scope?)`、`read_memory_file(filename, scope?)`、`write_memory_file(filename, content, scope?)`、`delete_memory_file(filename, scope?)`；**不在 queen 的主工具注册表**。
 - **限额**：写工具在目录达 200 时拒绝新建；内容超过 4 KB 直接报错；文件名非法报错。
 
@@ -171,7 +172,7 @@
 | 数据模型/限额 | `internal/memory/memory.go` | `MaxFiles=200`、`MaxFileSizeBytes=4096`、`ScanMemoryFiles` 按 mtime 取 200 |
 | 变更日志 | `internal/memory/memory_log.go` | `Write/Retire/Restore/History`、owner guard、原子写、单互斥 |
 | 反思 | `internal/memory/reflection.go` | `ReflectionScheduler`、`OnTurnDone/OnCompaction/Close`、`BuildUnifiedShort/LongReflectSystem`、`ExecuteTool`（4 工具） |
-| 反思调度 | `internal/memory/reflection_run.go` | 次数/长反思/错误；`DailyRunner` 属 soul |
+| 反思调度 | `internal/memory/reflection.go`（`ReflectionScheduler`） | 次数/长反思/错误；soul 的 `DailyRunner` 在 `internal/soul/reflection_run.go` |
 | 选择器 | `internal/memory/recall.go` | `SelectMemories`、`BuildScopedRecallBlocks`（3/3）、pinned 回退、相对年龄 |
 | 注入 | `internal/agentloop/memory_reminders.go`、`internal/server/{chat_reminders,chat_runtime}.go` | index 清单、wait/background 缓存、`deliverCachedRecall` |
 | Past | `internal/memory/past_conversations.go` | TOP_K=6、500/500、8 字符门槛、3s 超时（`HIVE_PAST_RECALL_TIMEOUT`） |
@@ -254,13 +255,14 @@ memory_write(dir, file, content, author, confirms):
 
 | # | 差异/风险 | 状态 |
 |---|---|---|
-| D1 | Go 的 `/api/memories` 写入未调用云同步 `SchedulePush`（Python 对 `global/` 与 `agents/queens/` 会 push） | 待补（低风险，云启用时才有感） |
-| D2 | Go-only `sediment`：memory 反思结论额外写 soul（`Parity-exempt`） | 已登记（soul 文档） |
+| D1 | 记忆云同步：`MemoryRouteDeps.SchedulePush` 钩子齐备，生产装配 `app.go` 只传 `Home`（nil）。**复核（2026-11-25）**：上游 `cloud_sync_hooks.schedule_push` 先 `from framework.cloud_sync import _cloud_config`，本检出无 `framework/cloud_sync.py`，ImportError 被吞后直接 return——上游在本检出同样是空转 | **platform_diff**（非缺口）：两侧都无 reconciler；本地写完成、无推送、无报错。复查条件见 `docs/reports/memory-soul-parity-audit-20261125.md` S2 |
+| D2 | Go-only `sediment`：memory 反思结论额外写 soul（`Parity-exempt`）；**已遵守 `mode`**——review（默认）只写 pending proposal、pending 阻断、满段不驱逐，auto 保持直写 | 已修（w174）；证据 `internal/soul/sediment.go::sedimentReview`、`internal/soul/sediment_review_test.go` |
 | D3 | `timeline` 默认关闭（两侧一致）；Go 有完整实现，但真实数据仅脚本化 fixture 验证 | 已登记 |
 | D4 | worker/colony 作用域有布局与 API，但不参与自动召回（两侧一致） | 设计如此 |
 | D5 | terminal 对 `memories/` 无沙箱（技能目录沙箱同待办） | 已知边界 |
 | D6 | `message_inventory`（压缩事件）用字节口径 vs Python 字符口径 | 已登记（压缩文档） |
 | D7 | Memory 页无新建入口（API 有幂等创建） | 与上游一致；若加按钮属新增功能，需拍板 |
+| D8 | 关停收尾：Python 把最终短反思与 timeline flush 作为 fire-and-forget，server 退出统一等 6s 再取消；Go `ChatRuntime.Close` 也改为**单一 6s 预算**（`chatShutdownGrace`）同时约束两条路径，超预算取消并等待 goroutine 退出 | 已修（w174）；证据 `internal/memory/reflection.go::Shutdown`、`internal/server/chat_runtime_shutdown_test.go` |
 
 ## 7. 维护
 

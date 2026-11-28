@@ -27,6 +27,30 @@ func (r *failingLocalRegistry) DeleteAccount(string, string) (bool, error) {
 	return false, r.deleteErr
 }
 
+// recordingLocalRegistry captures the runHealthCheck decision and returns a
+// canned health outcome so the route's status/identity/valid/message wiring is
+// testable without a live provider.
+type recordingLocalRegistry struct {
+	runHealthCheck bool
+	info           credentials.LocalAccountInfo
+	extraKeys      map[string]string
+}
+
+func (r *recordingLocalRegistry) SaveAccount(credentialID, alias, apiKey string, runHealthCheck bool, extraKeys map[string]string) (credentials.LocalAccountInfo, error) {
+	r.runHealthCheck = runHealthCheck
+	r.extraKeys = extraKeys
+	info := r.info
+	if info.CredentialID == "" {
+		info.CredentialID = credentialID
+		info.Alias = alias
+	}
+	return info, nil
+}
+
+func (r *recordingLocalRegistry) DeleteAccount(string, string) (bool, error) {
+	return false, nil
+}
+
 func localCredentialTestMux(t *testing.T, deps LocalCredentialRouteDeps) (*http.ServeMux, *credentials.LocalCredentialRegistry) {
 	t.Helper()
 	if deps.Registry == nil {
@@ -49,12 +73,14 @@ func TestLocalCredentialRoutesSaveAndDelete(t *testing.T) {
 	home := hivehome.Home{Root: t.TempDir()}
 	mux, registry := localCredentialTestMux(t, LocalCredentialRouteDeps{Home: home})
 
+	// A custom provider has no registered checker, so upstream skips the
+	// health check: status=active and valid/message stay null.
 	recorder, body := doSessionJSON(t, mux, http.MethodPost, "/api/credentials/local",
-		`{"credential_id":"brave_search","account":"work","keys":{"api_key":"BSA-secret","cse_id":"cse-1"}}`)
+		`{"credential_id":"custom_local","account":"work","keys":{"api_key":"CL-secret","cse_id":"cse-1"}}`)
 	if recorder.Code != http.StatusCreated {
 		t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
 	}
-	if body["saved"] != "brave_search/work" || body["status"] != "active" {
+	if body["saved"] != "custom_local/work" || body["status"] != "active" {
 		t.Fatalf("body = %#v", body)
 	}
 	if body["valid"] != nil || body["message"] != nil {
@@ -64,15 +90,15 @@ func TestLocalCredentialRoutesSaveAndDelete(t *testing.T) {
 		t.Fatalf("identity = %#v, want empty", identity)
 	}
 	// Secrets never travel back, whether in a field or in an error message.
-	if strings.Contains(recorder.Body.String(), "BSA-secret") || strings.Contains(recorder.Body.String(), "cse-1") {
+	if strings.Contains(recorder.Body.String(), "CL-secret") || strings.Contains(recorder.Body.String(), "cse-1") {
 		t.Fatalf("response echoed a secret: %s", recorder.Body.String())
 	}
 
-	account, err := registry.GetAccount("brave_search", "work")
+	account, err := registry.GetAccount("custom_local", "work")
 	if err != nil || account == nil {
 		t.Fatalf("stored account = %#v, err = %v", account, err)
 	}
-	if value, ok := account.GetKeyValue("api_key"); !ok || value != "BSA-secret" {
+	if value, ok := account.GetKeyValue("api_key"); !ok || value != "CL-secret" {
 		t.Fatalf("api_key = %q, present = %v", value, ok)
 	}
 	if value, ok := account.GetKeyValue("cse_id"); !ok || value != "cse-1" {
@@ -82,18 +108,18 @@ func TestLocalCredentialRoutesSaveAndDelete(t *testing.T) {
 		t.Fatalf("_alias = %q, present = %v", alias, ok)
 	}
 
-	recorder, body = doSessionJSON(t, mux, http.MethodDelete, "/api/credentials/local/brave_search/work", "")
+	recorder, body = doSessionJSON(t, mux, http.MethodDelete, "/api/credentials/local/custom_local/work", "")
 	if recorder.Code != http.StatusOK || body["deleted"] != true {
 		t.Fatalf("delete status = %d, body = %#v", recorder.Code, body)
 	}
-	account, err = registry.GetAccount("brave_search", "work")
+	account, err = registry.GetAccount("custom_local", "work")
 	if err != nil || account != nil {
 		t.Fatalf("account after delete = %#v, err = %v", account, err)
 	}
 
-	recorder, body = doSessionJSON(t, mux, http.MethodDelete, "/api/credentials/local/brave_search/work", "")
+	recorder, body = doSessionJSON(t, mux, http.MethodDelete, "/api/credentials/local/custom_local/work", "")
 	if recorder.Code != http.StatusNotFound ||
-		!strings.Contains(body["error"].(string), "brave_search/work") {
+		!strings.Contains(body["error"].(string), "custom_local/work") {
 		t.Fatalf("second delete status = %d, body = %#v", recorder.Code, body)
 	}
 }
@@ -182,6 +208,100 @@ func TestLocalCredentialRoutesDefaultAccountAndPrimaryHint(t *testing.T) {
 	}
 	if value, ok := account.GetKeyValue("username"); !ok || value != "ann" {
 		t.Fatalf("username = %q, present = %v", value, ok)
+	}
+}
+
+// Parity: framework/server/routes_credentials.py::handle_save_local_credential — providers with a registered checker are validated; status/identity/valid/message come from the health result.
+func TestLocalCredentialRoutesSaveReportsHealthOutcome(t *testing.T) {
+	home := hivehome.Home{Root: t.TempDir()}
+	registry := &recordingLocalRegistry{info: credentials.LocalAccountInfo{
+		Status:   "failed",
+		Identity: credentials.CredentialIdentity{Email: stringPtr("ops@example.com")},
+		Health:   &credentials.HealthCheckResult{Valid: false, Message: "GitHub token is invalid or expired"},
+	}}
+	mux, _ := localCredentialTestMux(t, LocalCredentialRouteDeps{Home: home, Registry: registry})
+
+	recorder, body := doSessionJSON(t, mux, http.MethodPost, "/api/credentials/local",
+		`{"credential_id":"github","account":"work","keys":{"api_key":"gh-secret"}}`)
+	if recorder.Code != http.StatusCreated {
+		t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
+	}
+	if !registry.runHealthCheck {
+		t.Fatal("github has a registered checker; runHealthCheck must be true")
+	}
+	if body["status"] != "failed" || body["valid"] != false ||
+		body["message"] != "GitHub token is invalid or expired" {
+		t.Fatalf("body = %#v", body)
+	}
+	if identity := credentialRouteJSONMap(t, body["identity"]); identity["email"] != "ops@example.com" {
+		t.Fatalf("identity = %#v", identity)
+	}
+
+	registry = &recordingLocalRegistry{}
+	mux, _ = localCredentialTestMux(t, LocalCredentialRouteDeps{Home: home, Registry: registry})
+	recorder, body = doSessionJSON(t, mux, http.MethodPost, "/api/credentials/local",
+		`{"credential_id":"custom_provider","keys":{"api_key":"x"}}`)
+	if recorder.Code != http.StatusCreated {
+		t.Fatalf("custom status = %d, body = %s", recorder.Code, recorder.Body.String())
+	}
+	if registry.runHealthCheck {
+		t.Fatal("a provider without a checker must not run a health check")
+	}
+	if body["valid"] != nil || body["message"] != nil {
+		t.Fatalf("custom health fields = %#v/%#v, want nulls", body["valid"], body["message"])
+	}
+}
+
+func stringPtr(value string) *string { return &value }
+
+// TestLocalCredentialRoutesRunsRealHealthCheck exercises the production path:
+// the real LocalCredentialRegistry, the registered zoho_crm checker, and the
+// route. Before P0-5 the route hardcoded run_health_check=false, leaving
+// status=active with valid/message null despite a failed key. ZOHO_API_DOMAIN
+// points the checker at a local server so no network is used.
+//
+// Parity: framework/server/routes_credentials.py::_save_local_credential
+func TestLocalCredentialRoutesRunsRealHealthCheck(t *testing.T) {
+	home := hivehome.Home{Root: t.TempDir()}
+	key, err := credentials.GenerateFernetKey()
+	if err != nil {
+		t.Fatalf("generate key: %v", err)
+	}
+	t.Setenv(credentials.CredentialKeyEnvVar, key)
+	t.Setenv("HIVE_HOME", home.Root)
+
+	var checkedPath string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		checkedPath = r.URL.Path
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"users":[]}`))
+	}))
+	t.Cleanup(server.Close)
+	t.Setenv("ZOHO_API_DOMAIN", server.URL)
+
+	mux, registry := localCredentialTestMux(t, LocalCredentialRouteDeps{Home: home})
+	recorder, body := doSessionJSON(t, mux, http.MethodPost, "/api/credentials/local",
+		`{"credential_id":"zoho_crm","account":"work","keys":{"api_key":"zoho-secret"}}`)
+	if recorder.Code != http.StatusCreated {
+		t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
+	}
+	if body["status"] != "active" || body["valid"] != true ||
+		body["message"] != "Zoho CRM credentials valid" {
+		t.Fatalf("body = %#v, want a completed health check", body)
+	}
+	if checkedPath != "/crm/v2/users" {
+		t.Fatalf("health-check path = %q, want /crm/v2/users", checkedPath)
+	}
+
+	account, err := registry.GetAccount("zoho_crm", "work")
+	if err != nil || account == nil {
+		t.Fatalf("stored account = %#v, err = %v", account, err)
+	}
+	if status, _ := account.GetKeyValue("_status"); status != "active" {
+		t.Fatalf("_status = %q, want active", status)
+	}
+	if account.LastRefreshed == nil {
+		t.Fatal("last_refreshed must be persisted after a completed health check")
 	}
 }
 

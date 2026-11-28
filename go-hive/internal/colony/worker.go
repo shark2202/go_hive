@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/shark2202/go_hive/go-hive/internal/agentloop"
+	"github.com/shark2202/go_hive/go-hive/internal/llm"
 	"github.com/shark2202/go_hive/go-hive/internal/tracker"
 )
 
@@ -29,6 +30,9 @@ type WorkerResult struct {
 	Error         *string
 	ToolCallsUsed int
 	BudgetLimited bool
+	// TokensUsed is the prompt+completion token total the worker's loop
+	// recorded, the port's counterpart of upstream WorkerResult.tokens_used.
+	TokensUsed int
 
 	// Summary/Data/ReportStatus/DurationSeconds mirror the remaining
 	// framework/host/worker.py::WorkerResult fields. They are filled when the
@@ -92,6 +96,14 @@ type Worker struct {
 	// continues the persisted conversation instead of rendering the fresh
 	// task message.
 	resumed bool
+	// resumeGuidance is the queen's steering turn for a resumed worker. It is
+	// injected as client input once the loop exists (runWorker) instead of
+	// being written into the saved transcript.
+	resumeGuidance string
+	// resumeTools is the tool scope the resume caller handed down (upstream
+	// run_worker tools_override). Empty keeps the runtime's live worker
+	// surface; non-empty replaces it for this run.
+	resumeTools []llm.ToolDef
 	// wake carries "new input arrived" to the persistent (overseer) run loop.
 	// Non-persistent workers still write it; nobody reads their channel.
 	wake chan struct{}
@@ -109,6 +121,22 @@ type Worker struct {
 	// WorkerInfo by Info().
 	ProfileName string
 	WorkerSeq   int
+
+	// Integrations is the resolved worker-profile credential binding: a
+	// provider id (e.g. "slack", "google") -> connected account alias. The
+	// runtime applies it as the default `account` argument for the worker's
+	// provider-mapped tool calls; an explicit account on the call still wins.
+	// Empty for unbound/legacy workers and a no-op.
+	//
+	// Parity: framework/host/worker.py::Worker._integrations / account_overrides
+	Integrations map[string]string
+	// BrowserProfile is the Chrome profile label this worker's browser tools
+	// target ("default" when unbound). The spawn pre-flight fails fast when a
+	// specific profile's extension is not connected; the browser reaper uses
+	// the same label for the worker's tab group.
+	//
+	// Parity: framework/host/worker.py::Worker._browser_profile
+	BrowserProfile string
 
 	loopOverrides map[string]any
 	loopConfig    *agentloop.LoopConfig
@@ -439,6 +467,30 @@ func (w *Worker) AgentLoop() *agentloop.AgentLoop {
 	return w.agentLoop
 }
 
+// takeResumeGuidance drains the queen's steering turn queued by a resume. The
+// run path injects it into the loop as client input before the first model
+// call, matching upstream's inject_event-at-resume shape.
+func (w *Worker) takeResumeGuidance() string {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	text := w.resumeGuidance
+	w.resumeGuidance = ""
+	return text
+}
+
+// resumeToolScope returns the resume caller's tool scope, or nil when the
+// resume kept the runtime's live worker surface.
+func (w *Worker) resumeToolScope() []llm.ToolDef {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if len(w.resumeTools) == 0 {
+		return nil
+	}
+	out := make([]llm.ToolDef, len(w.resumeTools))
+	copy(out, w.resumeTools)
+	return out
+}
+
 // Parity: framework/host/worker.py::Worker._loop_tool_calls_used
 func (w *Worker) LoopToolCallsUsed() int {
 	if loop := w.AgentLoop(); loop != nil {
@@ -453,6 +505,17 @@ func (w *Worker) LoopBudgetLimited() bool {
 		return loop.BudgetLimited()
 	}
 	return false
+}
+
+// LoopTokensUsed mirrors WorkerResult.tokens_used: the loop's cumulative
+// prompt+completion tokens at the moment the terminal report is built.
+//
+// Parity: framework/host/worker.py::WorkerResult.tokens_used
+func (w *Worker) LoopTokensUsed() int {
+	if loop := w.AgentLoop(); loop != nil {
+		return loop.TokensUsed()
+	}
+	return 0
 }
 
 // Parity: framework/agent_loop/internals/types.py::LoopConfig.tool_call_lifetime_budget
@@ -487,6 +550,10 @@ func (w *Worker) reportPayload() map[string]any {
 	payload["budget_limited"] = result.BudgetLimited
 	payload["budget_pinned"] = w.BudgetPinned
 	payload["tool_call_lifetime_budget"] = w.EffectiveBudget()
+	// tokens_used rides every terminal report (upstream WorkerResult carries
+	// it on success, failed and stopped alike) so the queen-side formatter can
+	// render cost without a second lookup.
+	payload["tokens_used"] = result.TokensUsed
 	// duration_seconds is the upstream report field the queen's formatter
 	// renders; it rides every terminal report (success, failed, stopped).
 	payload["duration_seconds"] = result.DurationSeconds
@@ -504,6 +571,20 @@ func (w *Worker) reportPayload() map[string]any {
 			payload["data"] = data
 		}
 		return payload
+	}
+	// No explicit report: the terminal result still carries the report
+	// vocabulary. finishWorkerWithoutReport sets ReportStatus=partial for a
+	// clean exit without report_to_parent (P0-1), and a stopped worker maps to
+	// "stopped" — the wait/report readers must see that, not the payload's
+	// "success" default.
+	if result.ReportStatus != "" {
+		payload["status"] = result.ReportStatus
+	}
+	if result.Summary != "" {
+		payload["summary"] = result.Summary
+	}
+	if len(result.Data) > 0 {
+		payload["data"] = result.Data
 	}
 	if result.Status == WorkerFailed {
 		payload["status"] = "failed"

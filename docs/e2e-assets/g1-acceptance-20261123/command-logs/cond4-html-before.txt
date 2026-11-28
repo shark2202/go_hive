@@ -1,0 +1,1 @@
+ok: /Users/mac/hive/.wt/w91-g1-acceptance/go_hive/docs/configuration.html matches /Users/mac/hive/.wt/w91-g1-acceptance/go_hive/contracts/config-keys.json

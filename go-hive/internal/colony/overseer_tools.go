@@ -45,6 +45,7 @@ const overseerTaskAgentID = "queen"
 // serialised here the same way the chat catalogue serialises its own.
 type overseerTaskSet struct {
 	mu        sync.Mutex
+	store     *tasks.TaskStore
 	sessionID string
 	ordered   []tasks.Tool
 	byName    map[string]tasks.Tool
@@ -54,6 +55,7 @@ func newOverseerTaskSet(storagePath string) *overseerTaskSet {
 	store := tasks.NewTaskStore(storagePath)
 	built := tasks.BuildSessionTools(store, nil)
 	set := &overseerTaskSet{
+		store:     store,
 		sessionID: overseerTaskSessionID,
 		ordered:   built,
 		byName:    make(map[string]tasks.Tool, len(built)),

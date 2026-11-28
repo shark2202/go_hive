@@ -46,10 +46,13 @@ type CredentialRouteDeps struct {
 	Specs      func() []CredentialSpecView
 	SpecsStore func() credentialRouteStore
 	Accounts   func() map[string][]map[string]any
-	// Resync forces a credential resync. Nil installs the local default
-	// (resyncLocalCredentials) when the caller supplied Home; without Home the
-	// route keeps its explicit 500.
-	Resync                 func() error
+	// Resync forces a credential resync. Nil installs the production default
+	// when the caller supplied Home: force-fetch Aden tokens when ADEN_API_KEY
+	// is set, otherwise re-read the local sources.
+	Resync func() error
+	// AdenClient is the Aden client used by the default resync/store wiring.
+	// Nil builds one from ADEN_API_KEY and ADEN_API_URL; tests inject a fake.
+	AdenClient             credentials.AdenSyncClient
 	ValidateKey            func(providerID, apiKey string) (map[string]any, error)
 	PublishCredentialEvent func(connected bool, credentialID, provider string)
 	// SyncEnv mirrors saved credentials into the process environment after a
@@ -75,12 +78,11 @@ func RegisterCredentialRoutes(mux *http.ServeMux, deps CredentialRouteDeps) {
 	}
 	routes := &CredentialRoutes{deps: deps, homeGiven: homeGiven}
 	if routes.deps.Resync == nil && homeGiven {
-		// Production default: re-read the local credential sources and mirror
-		// them into the process environment. The reference force-fetches Aden
-		// OAuth tokens here; the Go port has no Aden client yet (separate
-		// backlog item), so this is the observable local equivalent — a key
-		// written by another process becomes visible without a restart.
-		routes.deps.Resync = routes.resyncLocalCredentials
+		// Production default: force-fetch Aden OAuth tokens when ADEN_API_KEY
+		// is configured; without a key, re-read the local credential sources
+		// and mirror them into the process environment — a key written by
+		// another process becomes visible without a restart.
+		routes.deps.Resync = routes.resyncCredentials
 	}
 	mux.HandleFunc("GET /api/credentials/specs", routes.handleListSpecs)
 	mux.HandleFunc("GET /api/credentials/oauth-status", routes.handleOAuthStatus)
@@ -107,7 +109,7 @@ func (rt *CredentialRoutes) credentialStore() (credentialRouteStore, error) {
 		//
 		// Parity: framework/server/routes_credentials.py::handle_list_specs
 		_, _ = credentials.LoadCredentialKey()
-		store, err := credentials.WithEncryptedStorage(rt.deps.Home.CredentialsDir())
+		store, err := credentials.WithAdenSync(rt.deps.Home.CredentialsDir(), rt.deps.AdenClient, 0, false)
 		rt.store, rt.storeErr = store, err
 	})
 	return rt.store, rt.storeErr
@@ -184,13 +186,47 @@ func (rt *CredentialRoutes) syncEnv() {
 	credentials.SyncEnvFromStore(rt.deps.Home.CredentialsDir(), allCredentialEnvBindings(specs))
 }
 
-// resyncLocalCredentials is the production Resync default. The reference
-// force-fetches Aden OAuth tokens and drops its adapter/queen caches; the Go
-// port has no Aden client yet (separate backlog item), so this is the
-// observable local equivalent: re-read the bootstrap keys from their local
-// sources (secrets file, shell config), drop the credential store's in-memory
-// cache, and re-run the store → environment bridge — a credential written by
-// another process becomes visible without a restart.
+// resyncCredentials is the production Resync default. With ADEN_API_KEY set it
+// mirrors the reference: force-fetch every aden_supported token from Aden
+// (overwriting env vars that were already set), converge the live credential
+// store through enable_aden_sync, and re-run the store → environment bridge.
+// Without a key it falls back to the local reread.
+func (rt *CredentialRoutes) resyncCredentials() error {
+	if !rt.adenKeyPresent() {
+		return rt.resyncLocalCredentials()
+	}
+	return rt.resyncAdenCredentials()
+}
+
+// resyncAdenCredentials force-fetches Aden tokens into the process environment
+// and upgrades the live store. Aden being unreachable is logged, not surfaced:
+// the reference route returns 200 after a failed sync.
+//
+// Parity: framework/server/routes_credentials.py::handle_resync_credentials
+func (rt *CredentialRoutes) resyncAdenCredentials() error {
+	client := rt.deps.AdenClient
+	credentials.PresyncAdenTokens(credentials.GeneratedCredentialSpecs, true, client)
+
+	if store, err := rt.credentialStore(); err == nil {
+		if enabler, ok := store.(interface {
+			EnableAdenSync(credentials.AdenSyncClient, int) (int, error)
+		}); ok {
+			if _, enableErr := enabler.EnableAdenSync(client, 0); enableErr != nil {
+				credentials.LogWarning("framework.server.routes_credentials",
+					"resync: enable Aden sync failed: %v", enableErr)
+			}
+		} else if clearer, ok := store.(interface{ ClearCache() }); ok {
+			clearer.ClearCache()
+		}
+	}
+	rt.syncEnv()
+	return nil
+}
+
+// resyncLocalCredentials is the no-key fallback: re-read the bootstrap keys
+// from their local sources (secrets file, shell config), drop the credential
+// store's in-memory cache, and re-run the store → environment bridge — a
+// credential written by another process becomes visible without a restart.
 func (rt *CredentialRoutes) resyncLocalCredentials() error {
 	_, _ = credentials.LoadCredentialKey()
 	_, _ = credentials.LoadAdenAPIKey()
@@ -254,13 +290,13 @@ func (rt *CredentialRoutes) accountsByProvider() map[string][]map[string]any {
 				AdenProviderName: spec.AdenProviderName,
 				Description:      spec.Description,
 			},
+			EnvVar: spec.EnvVar,
 		})
 	}
-	store, err := credentials.WithEncryptedStorage(rt.deps.Home.CredentialsDir())
+	adapter, err := credentials.DefaultAdapterAt(rt.deps.Home.CredentialsDir(), named)
 	if err != nil {
 		return map[string][]map[string]any{}
 	}
-	adapter := credentials.NewCredentialStoreAdapter(store, named, credentials.DefaultLocalCredentialRegistry())
 	return groupAccountsByProvider(adapter.GetAllAccountInfo())
 }
 
@@ -429,9 +465,16 @@ func (rt *CredentialRoutes) handleGetCredential(w http.ResponseWriter, r *http.R
 
 // Parity: framework/server/routes_credentials.py::handle_save_credential
 func (rt *CredentialRoutes) handleSaveCredential(w http.ResponseWriter, r *http.Request) {
-	body, ok := credentialRequestBody(r)
+	value, err := decodeJSONValue(r)
+	if err != nil {
+		// Upstream's bare `await request.json()` lets malformed JSON reach the
+		// error middleware as 500; oversize is 413.
+		writeJSONBodyFailure(w, err, http.StatusInternalServerError, internalServerError)
+		return
+	}
+	body, ok := value.(map[string]any)
 	if !ok {
-		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "Invalid JSON body"})
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": internalServerError})
 		return
 	}
 	credentialID, hasID := body["credential_id"].(string)
@@ -635,7 +678,12 @@ func (rt *CredentialRoutes) handleResync(w http.ResponseWriter, r *http.Request)
 
 // Parity: framework/server/routes_credentials.py::handle_validate_key
 func (rt *CredentialRoutes) handleValidateKey(w http.ResponseWriter, r *http.Request) {
-	body, ok := credentialRequestBody(r)
+	value, err := decodeJSONValue(r)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "Invalid JSON body"})
+		return
+	}
+	body, ok := value.(map[string]any)
 	if !ok {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "Invalid JSON body"})
 		return
@@ -667,13 +715,4 @@ func (rt *CredentialRoutes) handleValidateKey(w http.ResponseWriter, r *http.Req
 		return
 	}
 	writeJSON(w, http.StatusOK, result)
-}
-
-func credentialRequestBody(r *http.Request) (map[string]any, bool) {
-	value, err := decodeJSONValue(r)
-	if err != nil {
-		return nil, false
-	}
-	body, ok := value.(map[string]any)
-	return body, ok
 }

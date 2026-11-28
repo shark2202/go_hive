@@ -4,17 +4,21 @@ package agentloop
 //
 // The audit's gap was "repeated tool calls are never noticed": a model that
 // re-issues the same call with the same arguments gets the same result forever,
-// and nothing in the loop says so. Upstream has no numeric fingerprint rule —
-// its stall guard is the judge-based `stall_check` (framework/server/
-// stall_check.py::subscribe_stall_check, ported in internal/server/stall_check.go
-// and still unsubscribed). This file adds the deterministic half that needs no
-// model: N *consecutive* calls with the same (tool name, arguments) fingerprint
-// produce one reminder appended to the tool result.
+// and nothing in the loop says so. Upstream has two deterministic guards:
+// exact tool-call fingerprints and response-text n-gram similarity
+// (framework/agent_loop/internals/stall_detector.py). This file ports the
+// tool-fingerprint half; the response-text half lives in stall_detector.go.
+// The judge-based `stall_check` (framework/server/stall_check.py) is a third,
+// turn-end guard, wired separately in internal/server/chat_loop_guards.go.
 //
-// It never interrupts: the loop keeps running, the model keeps its budget, and
-// the reminder is advisory text in the tool result it already reads. That is
-// deliberate — a repeated call can be legitimate (polling a job, re-reading a
-// file that a concurrent writer updates), so the loop warns rather than parks.
+// This file ports the per-call fingerprint half (the P0-14 guard: warn at the
+// threshold, park past the park threshold). The turn-level duplicate-batch
+// half of upstream's 6f' guard lives in doom_loop_window.go; both halves hand
+// their first detection of a turn-loop to the host's DoomLoopSink, which
+// publishes node_tool_doom_loop. The per-call warn/park ladder is the port's
+// own deterministic guard (upstream has no per-call park), while the window is
+// upstream's exact-fingerprint branch: escalate for a colony worker, park a
+// queen on the user, warn otherwise.
 
 import (
 	"encoding/json"
@@ -46,13 +50,24 @@ const DoomLoopReminder = "<system-reminder>\n" +
 // arguments encoded canonically (encoding/json sorts map keys, so two calls
 // that differ only in argument order fingerprint the same).
 func ToolCallFingerprint(name string, input map[string]any) string {
+	fingerprint, _ := toolCallFingerprintParts(name, input)
+	return fingerprint
+}
+
+// toolCallFingerprintParts returns the identity and the canonical argument
+// JSON separately. The cursor persists upstream's (tool name, canonical args)
+// pair, so the argument half must stay available after the identity is built.
+//
+// Parity: framework/agent_loop/internals/stall_detector.py::fingerprint_tool_calls
+func toolCallFingerprintParts(name string, input map[string]any) (string, string) {
 	encoded, err := json.Marshal(input)
 	if err != nil {
 		// An argument map that cannot be encoded cannot be compared; fall back
 		// to the name alone so a repeated call still counts as repeated.
-		return name + "\x00?"
+		return name + "\x00?", "?"
 	}
-	return name + "\x00" + string(encoded)
+	args := string(encoded)
+	return name + "\x00" + args, args
 }
 
 // DoomLoopDetector tracks consecutive identical tool calls. The zero value is
@@ -199,10 +214,14 @@ func DoomLoopDescription(tool string, streak int) string {
 }
 
 // DoomLoopSink publishes the loop's first tool doom-loop detection of a
-// turn-loop. The repeating tool and the streak that crossed the warning
-// threshold ride the call; the host (the colony runtime) stamps them onto the
-// node_tool_doom_loop event. A nil sink is a no-op.
-type DoomLoopSink func(tool string, streak int)
+// turn-loop. The repeating tool, the streak that crossed the warning threshold
+// and the upstream-worded description ride the call; the host (the colony
+// runtime) stamps them onto the node_tool_doom_loop event. Description is the
+// detection's own wording: the per-call streak's one-line identity, the
+// turn-level window's batch description, or the replay breaker's detail, so the
+// event never re-derives a description that disagrees with the park/escalation
+// text for the same detection. A nil sink is a no-op.
+type DoomLoopSink func(tool string, streak int, description string)
 
 // DoomLoopParkedError is the turn-loop error that ends a turn parked on a
 // repeated identical tool call. It carries the repeating call and the streak
@@ -211,11 +230,21 @@ type DoomLoopSink func(tool string, streak int)
 type DoomLoopParkedError struct {
 	Tool   string
 	Streak int
+	// Breaker is true when the replay breaker refused the call before it ran,
+	// rather than the post-execution detector observing the streak. The two
+	// share ParkReasonDoomLoop (upstream reuses the reason) but must not
+	// describe the same execution history.
+	Breaker bool
 }
 
 func (e *DoomLoopParkedError) Error() string {
 	if e == nil {
 		return "agent loop: parked on a repeated tool call"
+	}
+	if e.Breaker {
+		return fmt.Sprintf(
+			"agent loop: replay breaker tripped — `%s` reached %d consecutive identical call(s) and was NOT executed",
+			e.Tool, e.Streak)
 	}
 	return fmt.Sprintf(
 		"agent loop: parked on a doom loop — `%s` ran %d times in a row with identical arguments and the same result",

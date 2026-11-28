@@ -21,7 +21,7 @@ browserbridge  ──ws 127.0.0.1:14829/bridge──►  Chrome 扩展 1.7.4 ─
    ▲                                            ▲
    │ ws 127.0.0.1:14831/control（client_hello + notify）  │ POST /tabs/{id}/reveal · /shutdown（侧面板）
    │ 由 `hive serve` 以子进程方式启动/守护/回收              │
-hive serve（supervisor + keepalive：browser_supervisor.go / browser_control.go）
+hive serve（supervisor + keepalive：browsersupervisor/supervisor.go / browsercli/browser_control.go）
 ```
 
 - 主模块**不 import** browserbridge module（后者自带 `go.mod`），两者只通过
@@ -37,7 +37,7 @@ hive serve（supervisor + keepalive：browser_supervisor.go / browser_control.go
 
 ## 2. `hive serve` 的桥生命周期（supervisor）
 
-`defaultServe` 里只有 3 行接线，逻辑全在 `internal/cli/browser_supervisor.go`
+`defaultServe` 里只有 3 行接线，逻辑全在 `internal/cli/browsersupervisor/supervisor.go`
 （`loader.go` 受规模门禁冻结，只能 ≤1936 行）：
 
 ```go
@@ -96,7 +96,7 @@ defer stopBrowserBridge()
 | 无匹配 | 不伪造收件人：只记 `notify: no live agent matched profile=<profile> (extra=…)`，不写任何会话、不排队 |
 | 注入失败 | queen 已匹配但 `InjectEvent` 报错（如 runtime 已关闭）时记 `notify: queen inject failed for session=…`，不再继续扫描 |
 
-**面板代理**（`internal/server/routes_browser_panel.go`，上游
+**面板代理**（`internal/server/routesbrowser/routes_browser_panel.go`，上游
 `framework/server/routes_workers.py` 的三条路由）：
 
 | 路由 | 桥侧对应 | 行为 |

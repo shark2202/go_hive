@@ -34,6 +34,32 @@ func (r *Runner) newQueenMailService(
 	return adapter, createSession
 }
 
+// featureSessionsSnapshot projects the live-session slice onto the config
+// route's feature view. The colony runtime (not just the id) must ride along:
+// PUT /api/config/features hot-applies adaptive_tool_budget to it and counts
+// only colonies whose flag actually changed, so an id-only snapshot reports
+// colonies_applied: 0 forever.
+//
+// Parity: framework/server/routes_config.py::_apply_adaptive_budget_flag
+func featureSessionsSnapshot(liveMu *sync.Mutex, live []*hiveserver.Session) []hiveserver.FeatureSession {
+	if live == nil {
+		return nil
+	}
+	if liveMu != nil {
+		liveMu.Lock()
+		defer liveMu.Unlock()
+	}
+	out := make([]hiveserver.FeatureSession, 0, len(live))
+	for _, record := range live {
+		feature := hiveserver.FeatureSession{ColonyID: record.ColonyID}
+		if featureColony, ok := record.Colony.(hiveserver.FeatureColony); ok {
+			feature.Colony = featureColony
+		}
+		out = append(out, feature)
+	}
+	return out
+}
+
 // enableQueenMailTools puts list_queens/message_queen on a queen session's
 // catalogue when queen_mail is on, and returns the turn hook that starts a new
 // chain of letters when someone other than a correspondent speaks. A colony

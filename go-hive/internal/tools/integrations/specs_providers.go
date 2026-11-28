@@ -49,10 +49,9 @@ func telegramSpecs() map[string]RestSpec {
 		specs[action] = RestSpec{
 			Method: http.MethodPost,
 			Path:   "/" + method,
-			Unwrap: "result",
 		}
 	}
-	return specs
+	return withShapes(specs, telegramShapes())
 }
 
 func trelloSpecs() map[string]RestSpec {
@@ -92,10 +91,10 @@ func trelloSpecs() map[string]RestSpec {
 
 func airtableSpecs() map[string]RestSpec {
 	return map[string]RestSpec{
-		// The Airtable API returns at most 100 records per call and reports a
-		// follow-up `offset`; the declarative walk makes list_records return
-		// the merged set (upstream surfaces has_more/offset for the model to
-		// continue; the Go client follows it directly).
+		// Airtable returns at most 100 records per call and reports a
+		// follow-up `offset`. Go's declarative walk merges the pages and
+		// returns the upstream {count, records} projection of the merged set;
+		// following offset is a documented Go-side extension.
 		"airtable_list_records": {
 			Method: http.MethodGet, Path: "/{base_id}/{table_name}",
 			Rename: map[string]string{
@@ -112,8 +111,8 @@ func airtableSpecs() map[string]RestSpec {
 			},
 		},
 		"airtable_get_record":      {Method: http.MethodGet, Path: "/{base_id}/{table_name}/{record_id}"},
-		"airtable_create_records":  {Method: http.MethodPost, Path: "/{base_id}/{table_name}"},
-		"airtable_update_records":  {Method: http.MethodPatch, Path: "/{base_id}/{table_name}"},
+		"airtable_create_records":  {Method: http.MethodPost, Path: "/{base_id}/{table_name}", JSONParams: []string{"records"}},
+		"airtable_update_records":  {Method: http.MethodPatch, Path: "/{base_id}/{table_name}", JSONParams: []string{"records"}},
 		"airtable_list_bases":      {Method: http.MethodGet, Path: "/meta/bases"},
 		"airtable_get_base_schema": {Method: http.MethodGet, Path: "/meta/bases/{base_id}/tables"},
 		"airtable_delete_records": {

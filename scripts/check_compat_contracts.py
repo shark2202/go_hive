@@ -38,6 +38,14 @@ lives in the freeze lanes; this gate is the cheap, standing CI check that the
       ``package main`` and one of its symbols must be referenced by another
       non-test Go file, so a same-named-but-uncalled function cannot pass as a
       port. Self-test: ``make module-inventory-selftest``.
+  C13 generated API contracts: ``go_hive/scripts/check_openapi_contract.py``
+      (stdlib only, offline) — the committed ``contracts/openapi.json``
+      (OpenAPI 3.1) and ``contracts/asyncapi.json`` (AsyncAPI 3) must still be
+      byte-identical to the generator, cover every route in
+      ``api-routes.json`` exactly once, map every frozen snapshot, resolve every
+      local ``$ref`` and keep the ``x-contract.sources`` digests current.
+      Legacy ``api.proto`` remains the field-shape evidence checked by C7; C13
+      is the canonical-document gate.
 
 Nothing here touches the network or the project virtualenv. A check that
 cannot run is SKIP with a stated reason — never a silent pass; the summary
@@ -837,6 +845,39 @@ def check_module_inventory(root: Path) -> None:
         record(cid, title, "PASS", summary.replace("module-inventory: ", ""))
 
 
+def check_generated_api_contracts(root: Path) -> None:
+    """C13: the committed OpenAPI 3.1 / AsyncAPI 3 documents still describe the tree.
+
+    Runs the same checker a developer runs by hand, so a route/snapshot/digest
+    change that was not re-generated fails ``make ci`` instead of drifting until
+    the next release. Stdlib only, offline, ~4 s — cheap enough for the standing
+    gate. The checker exits 2 when the documents cannot be read, 1 on any
+    validation/drift error, 0 when clean; any non-zero becomes FAIL here so the
+    gate keeps its "unverified is not green" semantics.
+    """
+    cid = "C13"
+    title = "OpenAPI/AsyncAPI 契约（check_openapi_contract）"
+    script = root / "go_hive/scripts/check_openapi_contract.py"
+    if not script.exists():
+        record(cid, title, "FAIL", "go_hive/scripts/check_openapi_contract.py 缺失")
+        return
+    rc, out = run_script([str(script)], cwd=root)
+    summary = next((line for line in out.splitlines() if line.startswith("[contract-check]")), "")
+    if rc == 0:
+        if not summary:
+            record(cid, title, "FAIL", "check_openapi_contract.py 未输出 [contract-check] 行（输出格式漂移）")
+            return
+        record(cid, title, "PASS", summary.replace("[contract-check] ", "")[:300])
+        return
+    errors = [
+        line.replace("[contract-check]", "").strip()
+        for line in out.splitlines()
+        if line.startswith("[contract-check]  ")
+    ]
+    detail = "；".join(errors[:3]) if errors else (summary or (out.splitlines()[-1] if out else "无输出"))
+    record(cid, title, "FAIL", f"exit {rc}: {detail[:300]}")
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--root", default=str(REPO))
@@ -860,6 +901,7 @@ def main(argv: list[str] | None = None) -> int:
     check_tool_face_extras(root)
     check_cli_surface(root)
     check_module_inventory(root)
+    check_generated_api_contracts(root)
 
     for row in results:
         print(f"[{row['status']}] {row['id']} {row['title']} — {row['detail']}")

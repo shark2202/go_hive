@@ -1,0 +1,55 @@
+# go-hive-cloud M2 gate evidence
+generated_at: 2026-11-23T12:44:38Z
+code_commit: ab2a18cefc8f34a2d011fbd6b3405b9716c61045
+go: go version go1.26.11 darwin/arm64
+module: github.com/shark2202/go_hive/go-hive-cloud
+
+## gofmt
+$ gofmt -l .
+exit_code: 0
+
+## vet
+$ go vet ./...
+exit_code: 0
+
+## test
+$ go test ./... -count=1
+?   	github.com/shark2202/go_hive/go-hive-cloud/cmd/hive-cloud	[no test files]
+ok  	github.com/shark2202/go_hive/go-hive-cloud/internal/auth	0.350s
+?   	github.com/shark2202/go_hive/go-hive-cloud/internal/config	[no test files]
+ok  	github.com/shark2202/go_hive/go-hive-cloud/internal/httpapi	1.849s
+ok  	github.com/shark2202/go_hive/go-hive-cloud/internal/store	0.611s
+exit_code: 0
+
+## surface
+$ python3 scripts/gen_cloud_surface.py --check
+cloud-surface: OK — 48 endpoints (implemented 15 / planned 16 / inferred 1 / unknown 16), SSE 1, WS 0; observed-contract 31 classified; routes 15/15
+exit_code: 0
+
+## harness_globaldb
+$ bash -c cd harness/globaldb-smoke && go vet ./... && go build -o /dev/null .
+exit_code: 0
+
+## harness_inbox
+$ bash -c cd harness/inbox-smoke && go vet ./... && go build -o /dev/null .
+exit_code: 0
+
+## smoke
+$ ./scripts/smoke.sh
+inbox-smoke: driving the closed loop with the real go_hive sentinel client
+ok   operator_jwt_accepted map[status:200]
+ok   stream_token_rejected map[error:Sign in to use the shared global DB — no cloud session (HIVE_CLOUD_JWT / HIVE_CLOUD_BASE unset). status:401]
+ok   desktop_stream_unknown_404 map[error:<nil> status:404]
+2026/11/23 20:44:44 [sentinel] hive inbox listener started (runtime_id=rt-inbox-smoke kind=smoke)
+ok   escalate_via_sentinel map[message_id:5c9a11aa69bf79a2ddad862b182dfe7b ok:true]
+ok   reply_injected map[delivered:1 ok:true reply_id:1 status:200]
+ok   sse_reply_delivered map[channel:hive sender_id:hive source:colony-smoke text:(ref: corr-inbox-smoke) Approved by the smoke run — ship it. want_text:(ref: corr-inbox-smoke) Approved by the smoke run — ship it.]
+ok   resolve_via_sentinel map[session_id:s-inbox-smoke]
+2026/11/23 20:44:44 [sentinel] hive inbox listener stopped
+harness: evidence -> /Users/mac/hive/.wt/w87-cloud-m2/go_hive/go-hive-cloud/evidence/inbox-smoke.json
+harness: all 7 checks passed against http://127.0.0.1:61969
+inbox-smoke: OK — evidence at evidence/inbox-smoke.json
+smoke: OK — evidence at evidence/globaldb-smoke.json and evidence/inbox-smoke.json
+exit_code: 0
+
+overall_exit_code: 0

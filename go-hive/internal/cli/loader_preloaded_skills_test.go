@@ -15,8 +15,8 @@ import (
 	hiveserver "github.com/shark2202/go_hive/go-hive/internal/server"
 )
 
-// preloadedCatalogLLM answers every preloaded-session turn (the queen's chat,
-// the overseer's boot message) with plain text; auxiliary calls get text too.
+// preloadedCatalogLLM answers every preloaded-session turn (the queen's chat)
+// with plain text; auxiliary calls get text too.
 type preloadedCatalogLLM struct {
 	mu    sync.Mutex
 	calls int
@@ -63,6 +63,10 @@ func TestPreloadedColonySessionInjectsSkillsCatalog(t *testing.T) {
 	}
 	if record.Chat == nil {
 		t.Fatalf("preloaded session has no chat runtime; output: %s", stdout.String())
+	}
+	host, ok := record.Colony.(*colonyhost.Host)
+	if !ok || !host.Started() || host.OverseerRunning() {
+		t.Fatalf("preloaded colony started=%v overseer=%v, want true/false", ok && host.Started(), ok && host.OverseerRunning())
 	}
 	t.Cleanup(func() {
 		_ = record.Chat.Close()

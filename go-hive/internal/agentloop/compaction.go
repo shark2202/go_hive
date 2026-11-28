@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Parity: framework/agent_loop/internals/compaction.py COMPACTABLE_TOOLS.
@@ -21,7 +22,27 @@ var CompactableTools = map[string]bool{
 	"search_wikipedia":    true,
 }
 
+// DefaultMaxConsecutiveCompactionFailures is the circuit breaker: after this
+// many consecutive LLM-compaction failures the loop stops asking the summarizer
+// and leaves the conversation intact, so a provider outage cannot turn every
+// iteration into another doomed summarization call.
+//
+// Parity: framework/agent_loop/internals/compaction.py::MAX_CONSECUTIVE_FAILURES
+const DefaultMaxConsecutiveCompactionFailures = 3
+
+// RecompactionWarningWindow is upstream's recompaction-chain detector: a
+// second compaction this soon after the last one means the previous summary did
+// not actually reclaim budget.
+//
+// Parity: framework/agent_loop/internals/compaction.py::compact (30s window)
+const RecompactionWarningWindow = 30 * time.Second
+
 const (
+	compactionFailureCounter        = "compaction_llm_failed"
+	compactionCircuitOpenCounter    = "compaction_circuit_breaker_skipped"
+	compactionRecompactionCounter   = "compaction_recompaction_chain"
+	oversizedUserMessageClippedStat = "oversized_user_messages_truncated"
+
 	DefaultMicrocompactKeepRecent = 6
 
 	LLMCompactMaxDepth         = 10

@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"io"
 	"net/http"
 	"net/url"
 	"sort"
@@ -622,7 +621,7 @@ func handleCRMProxy(w http.ResponseWriter, r *http.Request, deps ColonyWorkerDep
 	case http.MethodPost, http.MethodPatch, http.MethodPut, http.MethodDelete:
 		var raw []byte
 		if r.Body != nil {
-			raw, err = io.ReadAll(r.Body)
+			raw, err = readLimitedBody(r, maxJSONBodyBytes)
 			if err != nil {
 				writeJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid JSON body"})
 				return

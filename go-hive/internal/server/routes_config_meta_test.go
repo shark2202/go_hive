@@ -13,6 +13,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/shark2202/go_hive/go-hive/internal/llm"
 	"github.com/shark2202/go_hive/go-hive/internal/memory"
@@ -38,6 +39,16 @@ func assertJSONEqual(t *testing.T, got, want any) {
 	if !reflect.DeepEqual(gotCanonical, wantCanonical) {
 		t.Fatalf("body = %#v\nwant   %#v", gotCanonical, wantCanonical)
 	}
+}
+
+// profileMemoryBody returns the part of a memory file below its frontmatter.
+func profileMemoryBody(t *testing.T, text string) string {
+	t.Helper()
+	parts := strings.SplitN(text, "---\n", 3)
+	if len(parts) != 3 {
+		t.Fatalf("memory file has no frontmatter: %q", text)
+	}
+	return strings.TrimPrefix(parts[2], "\n")
 }
 
 func configGetRaw(t *testing.T, url string) (int, http.Header, []byte) {
@@ -511,16 +522,41 @@ func TestTheProfileRoutePersistsAndMirrorsIntoMemory(t *testing.T) {
 		"prompt_library_sort": map[string]any{"community": "popular"},
 	})
 
-	wantMemory := memory.BuildMemoryDocument(
-		"User Profile", "User identity: Ada Lovelace", "profile",
-		"## Identity\n- **Name:** Ada Lovelace\n- **About:** 42")
-	memoryPath := filepath.Join(memory.GlobalMemoryDir(home.Root), "user-profile.md")
+	// The mirror is a memory.Write: a profile-type document with stamped
+	// provenance and one log.jsonl entry, not a bare file dropped on disk.
+	memoryDir := memory.GlobalMemoryDir(home.Root)
+	memoryPath := filepath.Join(memoryDir, "user-profile.md")
 	data, err := os.ReadFile(memoryPath)
 	if err != nil {
 		t.Fatalf("read memory file: %v", err)
 	}
-	if string(data) != wantMemory {
-		t.Fatalf("memory file =\n%s\nwant\n%s", data, wantMemory)
+	text := string(data)
+	fields := memory.ParseFrontmatter(text)
+	if fields["name"] != "User Profile" || fields["description"] != "User identity: Ada Lovelace" || fields["type"] != "profile" {
+		t.Fatalf("frontmatter = %#v", fields)
+	}
+	if memory.Day(fields["learned"]) == "" || memory.Day(fields["learned"]) != memory.Day(fields["confirmed"]) {
+		t.Fatalf("learned/confirmed = %q/%q", fields["learned"], fields["confirmed"])
+	}
+	wantBody := "## Identity\n- **Name:** Ada Lovelace\n- **About:** 42\n"
+	if body := profileMemoryBody(t, text); body != wantBody {
+		t.Fatalf("memory body = %q, want %q", body, wantBody)
+	}
+	// KeepAuthor (upstream claim=False): a freshly synced profile belongs to
+	// nobody yet, so the reflection agent may still add what it learned.
+	if author := memory.AuthorOf(text); author != "" {
+		t.Fatalf("author = %q, want no author on a new profile", author)
+	}
+	entries := memory.History(memoryDir, nil)
+	if len(entries) != 1 {
+		t.Fatalf("log entries = %#v, want one profile-settings write", entries)
+	}
+	entry := entries[0]
+	if entry.Op != "write" || entry.File != "user-profile.md" || entry.Author != "owner" || entry.Reason != "profile settings" {
+		t.Fatalf("log entry = %#v", entry)
+	}
+	if entry.Before != nil || entry.After == nil || *entry.After != text {
+		t.Fatalf("log before/after = %#v/%#v", entry.Before, entry.After)
 	}
 }
 
@@ -529,31 +565,123 @@ func TestTheProfileRouteReplacesOnlyTheIdentityMemorySection(t *testing.T) {
 	home := newFeatureHome(t)
 	server := newConfigRoutes(t, ConfigRouteDeps{Home: home})
 
-	memoryPath := filepath.Join(memory.GlobalMemoryDir(home.Root), "user-profile.md")
-	if err := os.MkdirAll(filepath.Dir(memoryPath), 0o755); err != nil {
-		t.Fatalf("mkdir memory dir: %v", err)
-	}
+	memoryDir := memory.GlobalMemoryDir(home.Root)
+	memoryPath := filepath.Join(memoryDir, "user-profile.md")
 	existing := memory.BuildMemoryDocument(
 		"User Profile", "User profile information", "profile",
 		"## Identity\n- **Name:** Old\n- **About:** Old about\n\n## Preferences\n- likes tea")
-	if err := os.WriteFile(memoryPath, []byte(existing), 0o644); err != nil {
-		t.Fatalf("write memory file: %v", err)
+	// Seed an owner-written profile so the sync must keep the owner author and
+	// the day it was learned, while re-stamping when it was confirmed.
+	seededText, err := memory.Write(memoryDir, "user-profile.md", existing,
+		memory.WriteOptions{Author: memory.AuthorOwner, Reason: "seeded", Now: time.Date(2026, 1, 2, 9, 0, 0, 0, time.Local)})
+	if err != nil {
+		t.Fatalf("seed memory file: %v", err)
 	}
 
+	before := time.Now().Format("2006-01-02")
 	status, body := configDo(t, http.MethodPut, server.URL+"/api/config/profile",
 		map[string]any{"displayName": "Grace", "about": "hopper"})
 	if status != 200 {
 		t.Fatalf("status = %d, want 200 (body %#v)", status, body)
 	}
+	after := time.Now().Format("2006-01-02")
 
-	wantBody := "## Identity\n- **Name:** Grace\n- **About:** hopper\n## Preferences\n- likes tea"
-	want := memory.BuildMemoryDocument("User Profile", "User identity: Grace", "profile", wantBody)
 	data, err := os.ReadFile(memoryPath)
 	if err != nil {
 		t.Fatalf("read memory file: %v", err)
 	}
-	if string(data) != want {
-		t.Fatalf("memory file =\n%s\nwant\n%s", data, want)
+	text := string(data)
+	wantBody := "## Identity\n- **Name:** Grace\n- **About:** hopper\n## Preferences\n- likes tea\n"
+	if body := profileMemoryBody(t, text); body != wantBody {
+		t.Fatalf("memory body = %q, want %q", body, wantBody)
+	}
+	fields := memory.ParseFrontmatter(text)
+	if fields["author"] != "owner" {
+		t.Fatalf("author = %q, want owner kept", fields["author"])
+	}
+	if learned := memory.Day(fields["learned"]); learned != "2026-01-02" {
+		t.Fatalf("learned = %q, want 2026-01-02 kept", fields["learned"])
+	}
+	if confirmed := memory.Day(fields["confirmed"]); confirmed != before && confirmed != after {
+		t.Fatalf("confirmed = %q, want %q", fields["confirmed"], before)
+	}
+	entries := memory.History(memoryDir, nil)
+	if len(entries) != 2 {
+		t.Fatalf("log entries = %#v, want the seed plus one profile-settings write", entries)
+	}
+	if last := entries[len(entries)-1]; last.Reason != "profile settings" || last.Author != "owner" || last.Before == nil || *last.Before != seededText {
+		t.Fatalf("last log entry = %#v", last)
+	}
+}
+
+// Parity: core/framework/server/routes_config.py::_update_user_profile_memory
+func TestSyncUserProfileMemoryKeepsTheOwnerAndLogsTheSync(t *testing.T) {
+	home := newFeatureHome(t)
+	memoryDir := memory.GlobalMemoryDir(home.Root)
+	seeded := memory.BuildMemoryDocument(
+		"User Profile", "User profile information", "profile",
+		"## Identity\n- **Name:** Ada\n\n## Preferences\n- likes tea")
+	if _, err := memory.Write(memoryDir, "user-profile.md", seeded,
+		memory.WriteOptions{Author: memory.AuthorOwner, Reason: "seeded", Now: time.Date(2026, 1, 2, 9, 0, 0, 0, time.Local)}); err != nil {
+		t.Fatalf("seed memory file: %v", err)
+	}
+
+	SyncUserProfileMemory(home, "Ada", "Engineer")
+
+	data, err := os.ReadFile(filepath.Join(memoryDir, "user-profile.md"))
+	if err != nil {
+		t.Fatalf("read memory file: %v", err)
+	}
+	text := string(data)
+	if author := memory.AuthorOf(text); author != "owner" {
+		t.Fatalf("author = %q, want owner", author)
+	}
+	if body := profileMemoryBody(t, text); !strings.Contains(body, "- **About:** Engineer") {
+		t.Fatalf("memory body = %q, want the synced identity line", body)
+	}
+	entries := memory.History(memoryDir, nil)
+	if len(entries) != 2 {
+		t.Fatalf("log entries = %#v, want the seed plus one sync", entries)
+	}
+	last := entries[len(entries)-1]
+	if last.Op != "write" || last.File != "user-profile.md" || last.Author != "owner" || last.Reason != "profile settings" {
+		t.Fatalf("sync log entry = %#v", last)
+	}
+
+	// The guard the sync relies on: a profile the owner wrote stays the
+	// owner's, and a non-owner write is refused without logging anything.
+	if _, err := memory.Write(memoryDir, "user-profile.md", seeded,
+		memory.WriteOptions{Author: "reflection", Reason: "learned"}); !memory.IsOwnerWritten(err) {
+		t.Fatalf("reflection write = %v, want OwnerWritten", err)
+	}
+	if entries := memory.History(memoryDir, nil); len(entries) != 2 {
+		t.Fatalf("refused write was logged: %#v", entries)
+	}
+}
+
+// Parity: core/framework/server/routes_config.py::_update_user_profile_memory
+// The upstream sync swallows memory-log failures so the profile save still
+// succeeds; an oversized mirror must not write a partial file or a log entry.
+func TestTheProfileRouteSurvivesAnOversizedMemoryMirror(t *testing.T) {
+	home := newFeatureHome(t)
+	server := newConfigRoutes(t, ConfigRouteDeps{Home: home})
+
+	huge := strings.Repeat("x", memory.MaxFileSizeBytes+1)
+	status, body := configDo(t, http.MethodPut, server.URL+"/api/config/profile",
+		map[string]any{"displayName": "Ada", "about": huge})
+	if status != 200 {
+		t.Fatalf("status = %d, want 200 (body %#v)", status, body)
+	}
+	if stored, _ := readFeatureConfig(t, home)["user_profile"].(map[string]any); stored["about"] != huge {
+		t.Fatalf("stored about was not saved")
+	}
+	memoryDir := memory.GlobalMemoryDir(home.Root)
+	_, statErr := os.Stat(filepath.Join(memoryDir, "user-profile.md"))
+	if statErr == nil || !os.IsNotExist(statErr) {
+		t.Fatalf("oversized mirror left a memory file: %v", statErr)
+	}
+	if entries := memory.History(memoryDir, nil); len(entries) != 0 {
+		t.Fatalf("oversized mirror was logged: %#v", entries)
 	}
 }
 

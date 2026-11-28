@@ -4,6 +4,7 @@ package server
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -18,6 +19,10 @@ import (
 
 type MemoryRouteDeps struct {
 	Home hivehome.Home
+	// SchedulePush mirrors framework.cloud_sync_hooks.schedule_push(kind, key):
+	// fire-and-forget, never awaited by the handler. Nil means no cloud-sync
+	// reconciler is wired, which is a no-op (see schedulePush below).
+	SchedulePush func(kind, key string)
 }
 
 func RegisterMemoryRoutes(mux *http.ServeMux, deps MemoryRouteDeps) {
@@ -56,6 +61,41 @@ func (deps MemoryRouteDeps) memoriesDir() string {
 		return "memories"
 	}
 	return home.MemoriesDir()
+}
+
+// schedulePush hands one finished local write to the cloud-sync reconciler.
+//
+// Production wires no hook, and that matches upstream in this checkout:
+// cloud_sync_hooks.schedule_push imports framework.cloud_sync, and this tree
+// ships no such module (only cloud_sync_hooks.py). The ImportError is swallowed
+// by its `except Exception` and every call returns before scheduling anything,
+// so upstream pushes nothing either. Rather than invent a cloud path neither
+// tree executes, the seam stays nil until a reconciler exists on both sides;
+// the decision and its evidence are the S2 platform_diff in
+// docs/reports/memory-soul-parity-audit-20261125.md.
+func (deps MemoryRouteDeps) schedulePush(kind, key string) {
+	if deps.SchedulePush == nil {
+		return
+	}
+	// Upstream schedule_push never raises and the handler does not await the
+	// push: a panicking hook must not turn a finished local write into a
+	// failed request.
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			log.Printf("memory cloud sync: push %s:%s failed: %v", kind, key, recovered)
+		}
+	}()
+	deps.SchedulePush(kind, key)
+}
+
+// maybeSyncMemory ports routes_memories.py::_maybe_sync_memory: push a memory
+// file to the cloud — only global + per-queen scope (v1).
+//
+// Parity: core/framework/server/routes_memories.py::_maybe_sync_memory
+func (deps MemoryRouteDeps) maybeSyncMemory(rel string) {
+	if strings.HasPrefix(rel, "global/") || strings.HasPrefix(rel, "agents/queens/") {
+		deps.schedulePush("memory", rel)
+	}
 }
 
 func memoryScopeForRel(parts []string) (string, string) {
@@ -294,6 +334,7 @@ func handleCreateMemory(w http.ResponseWriter, r *http.Request, deps MemoryRoute
 		return
 	}
 
+	deps.maybeSyncMemory(rel)
 	payload := memoryToDict(memory.MemoryFileFromPath(target), rel)
 	payload["content"] = stamped
 	payload["created"] = true
@@ -341,6 +382,7 @@ func handleUpdateMemory(w http.ResponseWriter, r *http.Request, deps MemoryRoute
 		return
 	}
 
+	deps.maybeSyncMemory(rel)
 	payload := memoryToDict(memory.MemoryFileFromPath(target), rel)
 	payload["content"] = stamped
 	writeJSON(w, http.StatusOK, payload)
@@ -362,6 +404,7 @@ func handleDeleteMemory(w http.ResponseWriter, r *http.Request, deps MemoryRoute
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": "Could not delete memory"})
 		return
 	}
+	deps.maybeSyncMemory(rel)
 	writeJSON(w, http.StatusOK, map[string]any{"deleted": rel})
 }
 
@@ -421,6 +464,7 @@ func handleRestoreMemory(w http.ResponseWriter, r *http.Request, deps MemoryRout
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": internalServerError})
 		return
 	}
+	deps.maybeSyncMemory(rel)
 	payload := memoryToDict(memory.MemoryFileFromPath(target), rel)
 	payload["content"] = content
 	writeJSON(w, http.StatusOK, payload)

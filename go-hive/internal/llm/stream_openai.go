@@ -65,6 +65,31 @@ func (p *Provider) ACompleteStream(ctx context.Context, req CompletionRequest, e
 			apiKey = pooled
 		}
 	}
+	// Codex ChatGPT subscriptions only expose the Responses API. The bridge
+	// emits the same StreamEvents as the chat-completions transport so the
+	// agent loop does not need a second code path.
+	//
+	// Parity: core/framework/llm/litellm.py::LiteLLMProvider._codex_backend
+	if isCodexResponsesBase(resolveCompletionAPIBase(model, apiBase)) {
+		attempts := 0
+		for {
+			result, err := p.codexResponsesStream(ctx, kwargs, model, apiBase, apiKey, emit)
+			if err != nil {
+				p.noteKeyOutcome(apiKey, err)
+				return Completion{}, err
+			}
+			if result.empty() && attempts < EmptyResponseMaxRetries {
+				if ctxErr := p.sleepStreamRetry(ctx); ctxErr != nil {
+					return Completion{}, ctxErr
+				}
+				attempts++
+				continue
+			}
+			p.noteKeyOutcome(apiKey, nil)
+			emitStreamTail(result, emit)
+			return result.completion, nil
+		}
+	}
 	// Parity: core/framework/llm/litellm.py::LiteLLMProvider.stream — Anthropic
 	// (and the Anthropic-compatible kimi/hive proxies) speaks the Messages SSE
 	// protocol, which has its own parser. MiniMax chunks are known to break
@@ -90,6 +115,15 @@ func (p *Provider) openAIChatCompletionStream(
 	model, apiBase, apiKey string,
 	emit func(StreamEvent),
 ) (Completion, error) {
+	// A model that previously rejected native tool use skips the probe: the
+	// compatibility prompt is used directly until the cache entry expires.
+	//
+	// Parity: core/framework/llm/litellm.py::LiteLLMProvider.stream
+	// (_is_openrouter_tool_compat_cached)
+	if len(original.Tools) > 0 && isOpenRouterModel(model, apiBase) && isOpenRouterToolCompatCached(model) {
+		return p.openRouterToolCompatCompletion(ctx, original, model, apiBase, apiKey, emit, nil)
+	}
+
 	body := openAIRequestBody(kwargs, model)
 	body["stream"] = true
 	// Anthropic is routed elsewhere; every remaining OpenAI-compatible
@@ -122,6 +156,8 @@ func (p *Provider) openAIChatCompletionStream(
 	}
 
 	attempts := 0
+	transientAttempts := 0
+	tokenRefreshed := false
 	for {
 		if ctxErr := ctx.Err(); ctxErr != nil {
 			return Completion{}, ctxErr
@@ -131,6 +167,19 @@ func (p *Provider) openAIChatCompletionStream(
 		}
 		response, err := p.doStreamRequest(ctx, openAIStreamLabel, endpoint, headers, encoded)
 		if err != nil {
+			// Network blips and timeouts are retried a bounded number of
+			// times, exactly like upstream's transient-stream set.
+			//
+			// Parity: core/framework/llm/litellm.py::_is_stream_transient_error
+			if isStreamTransientError(err) && transientAttempts < StreamTransientMaxRetries {
+				if ctxErr := ctx.Err(); ctxErr != nil {
+					return Completion{}, ctxErr
+				}
+				p.sleepFor(ComputeRetryDelay(transientAttempts, err, RetryPolicy{Jitter: true}))
+				transientAttempts++
+				continue
+			}
+			p.emitStreamError(emit, err)
 			return Completion{}, err
 		}
 
@@ -158,13 +207,56 @@ func (p *Provider) openAIChatCompletionStream(
 				attempts++
 				continue
 			}
+			// Gateway/server unavailability is transient: retry before
+			// surfacing a recoverable terminal error.
+			if isStreamTransientStatus(response.StatusCode) && transientAttempts < StreamTransientMaxRetries {
+				if ctxErr := ctx.Err(); ctxErr != nil {
+					return Completion{}, ctxErr
+				}
+				p.sleepFor(ComputeRetryDelay(transientAttempts, providerErr, RetryPolicy{Jitter: true}))
+				transientAttempts++
+				continue
+			}
+			// A rejected hive streamToken is refreshed once and the request
+			// replayed with the new credential — the defensive path for clock
+			// skew or revocation that beat the rotation loop.
+			//
+			// Parity: core/framework/llm/litellm.py (hive_stream_token_invalid
+			// -> try_refresh_now -> retry the same call once)
+			if refreshed, ok := retryAfterStreamTokenRefresh(ctx, providerErr, &tokenRefreshed); ok {
+				headers["Authorization"] = "Bearer " + refreshed
+				continue
+			}
+			// OpenRouter can reject native tool use for the routed model; the
+			// compatibility path emulates tools through a JSON prompt and is
+			// cached so later turns skip the probe.
+			//
+			// Parity: core/framework/llm/litellm.py::LiteLLMProvider.stream
+			// (_should_use_openrouter_tool_compat)
+			if len(original.Tools) > 0 && shouldUseOpenRouterToolCompat(model, apiBase, providerErr) {
+				rememberOpenRouterToolCompatModel(model)
+				return p.openRouterToolCompatCompletion(ctx, original, model, apiBase, apiKey, emit, providerErr)
+			}
 			if streamingFallbackStatus(response.StatusCode) {
 				return p.streamingNonStreamFallback(ctx, original, emit, providerErr)
 			}
+			// Terminal non-2xx: classify before failing so the SSE consumer
+			// sees error_type/upstream_status (402 -> payment_required).
+			//
+			// Parity: core/framework/llm/litellm.py::LiteLLMProvider.stream
+			p.emitStreamError(emit, providerErr)
 			return Completion{}, providerErr
 		}
 
-		result, err := p.consumeOpenAIStreamResponse(ctx, response, model, emit)
+		// Track whether this attempt surfaced anything: a mid-stream
+		// transient failure may only be retried when nothing was emitted,
+		// otherwise the consumer would see duplicated deltas.
+		emitted := 0
+		attemptEmit := func(event StreamEvent) {
+			emitted++
+			emit(event)
+		}
+		result, err := p.consumeOpenAIStreamResponse(ctx, response, model, attemptEmit)
 		if errors.Is(err, errEmptyOpenAIStream) {
 			if attempts >= EmptyResponseMaxRetries {
 				return result.completion, nil
@@ -176,7 +268,15 @@ func (p *Provider) openAIChatCompletionStream(
 			continue
 		}
 		if err != nil {
-			emit(StreamErrorEvent{Error: err.Error()})
+			if emitted == 0 && isStreamTransientError(err) && transientAttempts < StreamTransientMaxRetries {
+				if ctxErr := ctx.Err(); ctxErr != nil {
+					return Completion{}, ctxErr
+				}
+				p.sleepFor(ComputeRetryDelay(transientAttempts, err, RetryPolicy{Jitter: true}))
+				transientAttempts++
+				continue
+			}
+			p.emitStreamError(emit, err)
 			return Completion{}, err
 		}
 		emitStreamTail(result, emit)
@@ -249,6 +349,9 @@ func (p *Provider) sleepStreamRetry(ctx context.Context) error {
 func (p *Provider) streamingNonStreamFallback(ctx context.Context, req CompletionRequest, emit func(StreamEvent), cause error) (Completion, error) {
 	completion, err := p.AComplete(ctx, req)
 	if err != nil {
+		// The stream status was rejected and the non-streaming fallback also
+		// failed: classify the terminal response before the turn fails.
+		p.emitStreamError(emit, err)
 		return Completion{}, fmt.Errorf("llm: streaming request rejected (%v); non-streaming fallback failed: %w", cause, err)
 	}
 	if completion.Content != "" {
@@ -266,14 +369,23 @@ func (p *Provider) streamingNonStreamFallback(ctx context.Context, req Completio
 	if completion.Content != "" {
 		emit(TextEndEvent{FullText: completion.Content})
 	}
+	stopReason := completion.StopReason
+	if stopReason == "" {
+		// The non-streaming fallback always publishes a terminal stop, like
+		// upstream's `response.stop_reason or "stop"`.
+		stopReason = "stop"
+	}
 	emit(FinishEvent{
-		StopReason:          completion.StopReason,
+		StopReason:          stopReason,
 		InputTokens:         completion.InputTokens,
 		OutputTokens:        completion.OutputTokens,
 		CachedTokens:        completion.CachedTokens,
 		CacheCreationTokens: completion.CacheCreationTokens,
 		CostUSD:             completion.CostUSD,
+		Credits:             completion.Credits,
 		Model:               completion.Model,
+		ThinkingBlocks:      completion.ThinkingBlocks,
+		ReasoningContent:    completion.ReasoningContent,
 	})
 	return completion, nil
 }
@@ -283,6 +395,13 @@ func (p *Provider) streamingNonStreamFallback(ctx context.Context, req Completio
 type streamResult struct {
 	completion Completion
 	toolInputs []map[string]any
+	// suppressFinish is set when the stream ended without a finish_reason.
+	// Upstream emits no FinishEvent for a disconnected stream; synthesizing
+	// Finish(stop="") makes a truncated turn look complete.
+	//
+	// Parity: core/framework/llm/litellm.py::LiteLLMProvider.stream
+	// (FinishEvent is only appended inside `if choice.finish_reason`)
+	suppressFinish bool
 }
 
 // empty reports a stream that produced neither text, tool calls nor a
@@ -294,6 +413,14 @@ func (r streamResult) empty() bool {
 }
 
 func emitStreamTail(result streamResult, emit func(StreamEvent)) {
+	if result.suppressFinish {
+		// A stream that never reported a finish_reason was cut off: upstream
+		// produces no tail events for it, and a synthetic stop would mark the
+		// turn complete.
+		//
+		// Parity: core/framework/llm/litellm.py::LiteLLMProvider.stream
+		return
+	}
 	for i, call := range result.completion.ToolCalls {
 		input := map[string]any{}
 		if i < len(result.toolInputs) && result.toolInputs[i] != nil {
@@ -311,7 +438,9 @@ func emitStreamTail(result streamResult, emit func(StreamEvent)) {
 		CachedTokens:        result.completion.CachedTokens,
 		CacheCreationTokens: result.completion.CacheCreationTokens,
 		CostUSD:             result.completion.CostUSD,
+		Credits:             result.completion.Credits,
 		Model:               result.completion.Model,
+		ThinkingBlocks:      result.completion.ThinkingBlocks,
 		ReasoningContent:    result.completion.ReasoningContent,
 	})
 }
@@ -378,6 +507,7 @@ func (p *Provider) parseOpenAIStream(ctx context.Context, reader io.Reader, requ
 		reasoning   strings.Builder
 		model       = requestedModel
 		stopReason  string
+		finishSeen  bool
 		usage       *Usage
 		tools       = map[int]*openAIStreamToolAccumulator{}
 		lastToolIdx = -1
@@ -461,6 +591,7 @@ func (p *Provider) parseOpenAIStream(ctx context.Context, reader io.Reader, requ
 		}
 		if choice.FinishReason != nil && *choice.FinishReason != "" {
 			stopReason = normalizeStreamFinishReason(*choice.FinishReason, len(tools) > 0)
+			finishSeen = true
 		}
 		return nil
 	}
@@ -501,8 +632,22 @@ scan:
 		return result, err
 	}
 
+	// Gemini (and similar models) sometimes emit tool calls as
+	// `<tool_code>{"name": {...args}}</tool_code>` text instead of structured
+	// function calls. Extract them as real tool calls and strip the blocks
+	// from the visible answer.
+	//
+	// Parity: core/framework/llm/litellm.py::_extract_text_tool_calls
+	content := text.String()
+	extracted, cleaned := extractTextToolCalls(content)
+	if len(extracted) > 0 {
+		content = cleaned
+		// Overwrite the consumer's accumulated snapshot with the cleaned text.
+		emit(TextDeltaEvent{Content: "", Snapshot: cleaned})
+	}
+
 	completion := Completion{
-		Content:          text.String(),
+		Content:          content,
 		Model:            model,
 		StopReason:       stopReason,
 		ReasoningContent: reasoning.String(),
@@ -512,6 +657,7 @@ scan:
 		completion.OutputTokens = usage.CompletionTokens
 		completion.CostUSD = ExtractCost(usage, nil, model)
 		completion.CachedTokens, completion.CacheCreationTokens = ExtractCacheTokens(usage)
+		completion.Credits = usage.Credits
 	}
 	indices := make([]int, 0, len(tools))
 	for idx := range tools {
@@ -532,8 +678,19 @@ scan:
 		}
 		result.toolInputs = append(result.toolInputs, input)
 	}
+	for _, call := range extracted {
+		completion.ToolCalls = append(completion.ToolCalls, ToolCall{
+			ID:        call.ID,
+			Name:      call.Name,
+			Arguments: call.Arguments,
+		})
+		result.toolInputs = append(result.toolInputs, call.Input)
+	}
 
 	result.completion = completion
+	// A stream that closes without any finish_reason was truncated; upstream
+	// yields no FinishEvent for it.
+	result.suppressFinish = !finishSeen
 	if result.empty() {
 		return result, errEmptyOpenAIStream
 	}

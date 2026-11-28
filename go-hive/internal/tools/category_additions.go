@@ -31,6 +31,14 @@ var CategoryAdditions = map[string]map[string]string{
 	// switch — whose lists name now-removed browser_* tools.
 	"browser_core": {"browser_setup": "0.3.0"},
 	"file_ops":     {"attach_file": "0.2.19"},
+	// Native HTTP family ships in 1.0.27. A saved sidecar that already covers
+	// web_core's baseline (web_scrape) receives the three new tools; fresh
+	// role defaults also see them through http_core.
+	"web_core": {
+		"http_request":  "1.0.27",
+		"http_download": "1.0.27",
+		"http_upload":   "1.0.27",
+	},
 	// The dated timeline next to search_messages ships in 0.7.2.
 	"context_awareness": {"search_timeline": "0.7.2"},
 	// image_generate shipped in 0.2.27 but "media" was only in three visual

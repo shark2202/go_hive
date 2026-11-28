@@ -53,6 +53,14 @@ func (p *Problem) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return err
 	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+	// Pydantic fields without defaults: id, severity, description.
+	if err := requireFields(raw, "problem", "id", "severity", "description"); err != nil {
+		return err
+	}
 	*p = Problem(v)
 	p.Extra = extras
 	if p.Timestamp.IsZero() {
@@ -252,6 +260,9 @@ func (r *Run) Validate() error {
 func (r Run) MarshalJSON() ([]byte, error) {
 	type plain Run
 	p := plain(r)
+	if p.StartedAt.IsZero() {
+		p.StartedAt = NowTimestamp()
+	}
 	if p.Status == "" {
 		p.Status = RunRunning
 	}
@@ -283,6 +294,18 @@ func (r *Run) UnmarshalJSON(b []byte) error {
 	extras, err := unmarshalStruct(b, &p)
 	if err != nil {
 		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+	// Pydantic fields without defaults: id, goal_id. started_at carries
+	// default_factory=datetime.now, so a missing key is now, never null.
+	if err := requireFields(raw, "run", "id", "goal_id"); err != nil {
+		return err
+	}
+	if _, ok := raw["started_at"]; !ok || p.StartedAt.IsZero() {
+		p.StartedAt = NowTimestamp()
 	}
 	*r = Run(p)
 	r.Extra = extras

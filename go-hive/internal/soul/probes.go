@@ -4,7 +4,9 @@ package soul
 
 import (
 	"errors"
+	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 )
@@ -33,7 +35,12 @@ type ProbeOptions struct {
 	// Identity is her rendered identity prompt; an empty value leaves the
 	// soul alone as the system prompt, exactly like upstream.
 	Identity string
-	Answer   ProbeAnswerFunc
+	// MemoryDirs are the folders live recall reads, in order: her own scope,
+	// then global. A question that names a speaker gets that speaker's memory
+	// files appended, so the probe meets them as recall would, not as
+	// strangers.
+	MemoryDirs []string
+	Answer     ProbeAnswerFunc
 }
 
 var (
@@ -113,6 +120,75 @@ func probeSystem(identity string, cfg *SoulConfig, current *Soul) string {
 	return identity + "\n\n" + rendered
 }
 
+// probeSpeakerIDRe finds the speaker ids a question carries: "[Ann(12345)]:"
+// headers, the same detection live recall uses to bring that person's memory
+// files beside the message.
+var probeSpeakerIDRe = regexp.MustCompile(`\[[^\[\]\n]*?\((\d{5,})\)\]:`)
+
+// probeRelatedMemories is how many of her memory files a probe brings, the
+// same cap as recall.
+const probeRelatedMemories = 3
+
+// RelatedMemories returns the memory files that mention a speaker id in the
+// question, formatted as recall injects them: at most three, her scope before
+// global, each headed by its file name. A question without a speaker id brings
+// nothing, so a stranger stays a stranger.
+//
+// Parity: framework/agents/queen/soul_probes.py::related_memories
+func RelatedMemories(memoryDirs []string, question string) string {
+	matches := probeSpeakerIDRe.FindAllStringSubmatch(question, -1)
+	if len(matches) == 0 {
+		return ""
+	}
+	found := make([]string, 0, probeRelatedMemories)
+	for _, dir := range memoryDirs {
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			continue
+		}
+		for _, entry := range entries {
+			if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".md") {
+				continue
+			}
+			data, readErr := os.ReadFile(filepath.Join(dir, entry.Name()))
+			if readErr != nil {
+				continue
+			}
+			text := strings.ToValidUTF8(string(data), "\uFFFD")
+			if !mentionsAny(text, matches) {
+				continue
+			}
+			found = append(found, "### "+entry.Name()+"\n"+strings.TrimSpace(text))
+			if len(found) >= probeRelatedMemories {
+				break
+			}
+		}
+		if len(found) >= probeRelatedMemories {
+			break
+		}
+	}
+	if len(found) == 0 {
+		return ""
+	}
+	return "<recalled_memories>\n" + strings.Join(found, "\n\n") + "\n</recalled_memories>"
+}
+
+func mentionsAny(text string, matches [][]string) bool {
+	for _, match := range matches {
+		if len(match) > 1 && strings.Contains(text, match[1]) {
+			return true
+		}
+	}
+	return false
+}
+
+func withRelatedMemories(system, memories string) string {
+	if memories == "" {
+		return system
+	}
+	return system + "\n\n" + memories
+}
+
 // Probe answers every question twice: with her soul as it stands, and with
 // the proposal's edits applied. Answers are stored in the proposal so the
 // dashboard can show them side by side; a person judges them.
@@ -141,8 +217,9 @@ func Probe(opts ProbeOptions) ([]map[string]any, error) {
 
 	results := make([]map[string]any, 0, len(probes))
 	for _, probe := range probes {
-		before := answerProbe(opts.Answer, beforeSystem, probe.Q)
-		afterAnswer := answerProbe(opts.Answer, afterSystem, probe.Q)
+		memories := RelatedMemories(opts.MemoryDirs, probe.Q)
+		before := answerProbe(opts.Answer, withRelatedMemories(beforeSystem, memories), probe.Q)
+		afterAnswer := answerProbe(opts.Answer, withRelatedMemories(afterSystem, memories), probe.Q)
 		results = append(results, map[string]any{
 			"q":      probe.Q,
 			"anchor": probe.Anchor,

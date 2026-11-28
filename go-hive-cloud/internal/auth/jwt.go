@@ -121,6 +121,25 @@ func Verify(secret []byte, token string) (*Claims, error) {
 	return VerifyAny([]([]byte){secret}, token)
 }
 
+// VerifyStreamToken verifies a streamToken: a valid signature under any
+// configured secret (the first secret signs new tokens; further secrets keep a
+// rotation window open), typ="stream", and a usable user/team identity.
+//
+// The observed refresh contract only proves that the token's signature is the
+// credential; it does not describe a revocation ledger. Revocation therefore
+// happens by removing a signing secret from the accepted set (master-secret
+// rotation), not by rewriting already-issued tokens.
+func VerifyStreamToken(secrets [][]byte, token string) (*Claims, error) {
+	claims, err := VerifyAny(secrets, token)
+	if err != nil {
+		return nil, err
+	}
+	if claims.Typ != TokenTypeStream || claims.UserID == "" || !ValidTeamID(claims.TeamID) {
+		return nil, ErrInvalid
+	}
+	return claims, nil
+}
+
 // VerifyAny tries each secret in order (supports a dual-key rotation window)
 // and returns the claims of the first secret that validates the signature.
 func VerifyAny(secrets [][]byte, token string) (*Claims, error) {

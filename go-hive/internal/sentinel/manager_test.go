@@ -246,6 +246,67 @@ func TestColdRestoreWhenSessionNotLive(t *testing.T) {
 	}
 }
 
+// Parity: core/framework/sentinel/manager.py, core/tests/test_sentinel_manager.py::test_cold_restore_when_session_not_live
+//
+// The host-supplied restorer is the production path: it must receive the
+// record's colony and resume target, override the bare SessionManager, and the
+// restored queen must receive the reply.
+func TestColdRestoreUsesWiredSessionRestorer(t *testing.T) {
+	store := newTestStore(t, nil)
+	tokens := fixedSecretTokens(t, store)
+	record := openRecord(t, store, tokens, "c1", "esc_1", "s1")
+	sessions := &fakeSM{sessions: map[string]LiveSession{}}
+	manager := newTestManager(t, store, &fakeNotifier{result: NotifierResult{OK: true}}, sessions)
+	manager.Tokens = tokens
+	manager.byToken[record.CorrelationToken] = tokenRef{colonyID: "c1", escalationID: "esc_1"}
+	node := &fakeNode{}
+	manager.SetSessionRestorer(func(_ context.Context, colonyID, resumeFrom string) (LiveSession, error) {
+		if colonyID != "c1" || resumeFrom != "s1" {
+			return nil, errors.New("wrong restore target")
+		}
+		return &fakeSession{node: node}, nil
+	})
+
+	manager.OnInbound(context.Background(), "telegram", "42", "go "+FormatRef(record.CorrelationToken), map[string]any{}, "")
+
+	if len(sessions.created) != 0 {
+		t.Fatalf("bare SessionManager.CreateSession should not run when a restorer is wired: %#v", sessions.created)
+	}
+	if len(node.injected) != 1 || node.injected[0].content != "go" || !node.injected[0].clientIn {
+		t.Fatalf("restored queen injections = %#v", node.injected)
+	}
+	loaded, _ := store.LoadEscalation("c1", "esc_1")
+	if loaded.Status != StatusResolved {
+		t.Fatalf("record status = %q, want resolved", loaded.Status)
+	}
+}
+
+// Parity-exempt: cold-restore failure has no Python unit test; this pins that
+// an unwired/failed restoration is reported, not mistaken for delivery, and
+// leaves the escalation open for a later reply.
+func TestColdRestoreFailureLeavesEscalationOpen(t *testing.T) {
+	store := newTestStore(t, nil)
+	tokens := fixedSecretTokens(t, store)
+	record := openRecord(t, store, tokens, "c1", "esc_1", "s1")
+	node := &fakeNode{}
+	manager := newTestManager(t, store, &fakeNotifier{result: NotifierResult{OK: true}}, &fakeSM{sessions: map[string]LiveSession{}})
+	manager.Tokens = tokens
+	manager.byToken[record.CorrelationToken] = tokenRef{colonyID: "c1", escalationID: "esc_1"}
+	manager.SetSessionRestorer(func(context.Context, string, string) (LiveSession, error) {
+		return nil, errors.New("provider unavailable")
+	})
+
+	manager.OnInbound(context.Background(), "telegram", "42", "go "+FormatRef(record.CorrelationToken), map[string]any{}, "")
+
+	if len(node.injected) != 0 {
+		t.Fatalf("unexpected injection: %#v", node.injected)
+	}
+	loaded, _ := store.LoadEscalation("c1", "esc_1")
+	if loaded.Status != StatusOpen {
+		t.Fatalf("record status = %q, want open", loaded.Status)
+	}
+}
+
 // Parity: core/framework/sentinel/manager.py, core/tests/test_sentinel_manager.py::test_has_attached_ui
 func TestHasAttachedUI(t *testing.T) {
 	store := newTestStore(t, nil)

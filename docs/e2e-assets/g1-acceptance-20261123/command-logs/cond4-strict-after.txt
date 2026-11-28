@@ -1,0 +1,8 @@
+== env/config contract gate (report-only unless --strict) ==
+env audit reproduced: {'python': 90, 'go': 125, 'common': 84, 'python_only': 6, 'go_only': 41} (expected {'python': 90, 'go': 125, 'common': 84, 'python_only': 6, 'go_only': 41}) -> MATCH
+env read-evidence status: {'aligned': 68, 'default_and_parse_differ': 1, 'go_only': 8, 'literal_only': 43, 'parse_differs': 5, 'python_only': 6}
+config keys: 137 -> {'aligned': 131, 'go_only': 4, 'go_partial': 1, 'unread': 1}
+  missing (python_only)=0 extra (go_only)=4 runtime-partial=1 type/default/parse differences=0
+  python_only: []
+  go_only: ['mcp.enabled', 'mcp.namespace', 'mcp.timeout_seconds', 'mcp.servers']
+RESULT: OK — manifests match the tree and the published env audit

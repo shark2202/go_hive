@@ -26,7 +26,7 @@ import (
 	"github.com/shark2202/go_hive/go-hive-cloud/internal/httpapi"
 )
 
-const version = "0.1.0-m1"
+const version = "0.1.0-m5"
 
 func main() {
 	os.Exit(run(os.Args[1:]))
@@ -77,8 +77,19 @@ func runServe(args []string) int {
 	configPath := fs.String("config", "", "config.json path (0600)")
 	jwtSecret := fs.String("jwt-secret", "", "operator JWT signing secret (default: <data-dir>/jwt_secret)")
 	streamSecret := fs.String("stream-secret", "", "streamToken signing secret (default: <data-dir>/stream_secret)")
+	streamSecretPrevious := fs.String("stream-secret-previous", "", "previous streamToken secret kept valid during a rotation window (optional)")
 	statementTimeout := fs.Duration("statement-timeout", 0, "per-statement SQL timeout (default 5s)")
 	rowCap := fs.Int("row-cap", 0, "default row cap for SQL results, 0 = unlimited (default 1000)")
+	inboxRateLimit := fs.Int("inbox-rate-limit", 0, "per-team inbox writes per window, 0 = disabled (default 0)")
+	inboxRateWindow := fs.Duration("inbox-rate-window", 0, "inbox rate-limit window (default 1m)")
+	llmUpstreamURL := fs.String("llm-upstream-url", "", "Anthropic-compatible Messages upstream base or /v1/messages URL (empty disables pass-through)")
+	llmUpstreamKey := fs.String("llm-upstream-key", "", "credential for the Messages upstream (prefer config.json/env)")
+	llmUpstreamAuth := fs.String("llm-upstream-auth", "", "upstream auth header: x-api-key (default) or bearer")
+	llmAnthropicVersion := fs.String("llm-anthropic-version", "", "anthropic-version sent when the client omits it (default 2023-06-01)")
+	llmRequestTimeout := fs.Duration("llm-request-timeout", 0, "per-call Messages upstream timeout (default 10m)")
+	imagesUpstreamURL := fs.String("images-upstream-url", "", "OpenAI-compatible images endpoint URL (empty answers 503)")
+	imagesUpstreamKey := fs.String("images-upstream-key", "", "credential for the images upstream (prefer config.json/env)")
+	imagesRequestTimeout := fs.Duration("images-request-timeout", 0, "per-call images upstream timeout (default 225s)")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
@@ -107,11 +118,44 @@ func runServe(args []string) int {
 	if set["stream-secret"] {
 		cfg.StreamSecret = []byte(*streamSecret)
 	}
+	if set["stream-secret-previous"] {
+		cfg.StreamSecretPrevious = []byte(*streamSecretPrevious)
+	}
 	if set["statement-timeout"] {
 		cfg.StatementTimeout = *statementTimeout
 	}
 	if set["row-cap"] {
 		cfg.RowCapDefault = *rowCap
+	}
+	if set["inbox-rate-limit"] {
+		cfg.InboxRateLimit = *inboxRateLimit
+	}
+	if set["inbox-rate-window"] {
+		cfg.InboxRateWindow = *inboxRateWindow
+	}
+	if set["llm-upstream-url"] {
+		cfg.LLMUpstreamURL = *llmUpstreamURL
+	}
+	if set["llm-upstream-key"] {
+		cfg.LLMUpstreamKey = *llmUpstreamKey
+	}
+	if set["llm-upstream-auth"] {
+		cfg.LLMUpstreamAuth = *llmUpstreamAuth
+	}
+	if set["llm-anthropic-version"] {
+		cfg.LLMAnthropicVersion = *llmAnthropicVersion
+	}
+	if set["llm-request-timeout"] {
+		cfg.LLMRequestTimeout = *llmRequestTimeout
+	}
+	if set["images-upstream-url"] {
+		cfg.ImagesUpstreamURL = *imagesUpstreamURL
+	}
+	if set["images-upstream-key"] {
+		cfg.ImagesUpstreamKey = *imagesUpstreamKey
+	}
+	if set["images-request-timeout"] {
+		cfg.ImagesRequestTimeout = *imagesRequestTimeout
 	}
 
 	resolved, err := config.ResolveSecrets(cfg)
@@ -120,14 +164,28 @@ func runServe(args []string) int {
 		return 1
 	}
 	logger := log.New(os.Stderr, "", log.LstdFlags)
+	streamSecrets := [][]byte{resolved.StreamSecret}
+	if len(resolved.StreamSecretPrevious) > 0 {
+		streamSecrets = append(streamSecrets, resolved.StreamSecretPrevious)
+	}
 	server, err := httpapi.New(httpapi.Config{
-		DataDir:          resolved.DataDir,
-		JWTSecret:        resolved.JWTSecret,
-		StreamSecrets:    [][]byte{resolved.StreamSecret},
-		StatementTimeout: resolved.StatementTimeout,
-		RowCapDefault:    resolved.RowCapDefault,
-		Version:          version,
-		Logger:           logger,
+		DataDir:              resolved.DataDir,
+		JWTSecret:            resolved.JWTSecret,
+		StreamSecrets:        streamSecrets,
+		StatementTimeout:     resolved.StatementTimeout,
+		RowCapDefault:        resolved.RowCapDefault,
+		InboxRateLimit:       resolved.InboxRateLimit,
+		InboxRateWindow:      resolved.InboxRateWindow,
+		LLMUpstreamURL:       resolved.LLMUpstreamURL,
+		LLMUpstreamKey:       resolved.LLMUpstreamKey,
+		LLMUpstreamAuth:      resolved.LLMUpstreamAuth,
+		LLMAnthropicVersion:  resolved.LLMAnthropicVersion,
+		LLMRequestTimeout:    resolved.LLMRequestTimeout,
+		ImagesUpstreamURL:    resolved.ImagesUpstreamURL,
+		ImagesUpstreamKey:    resolved.ImagesUpstreamKey,
+		ImagesRequestTimeout: resolved.ImagesRequestTimeout,
+		Version:              version,
+		Logger:               logger,
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "hive-cloud: %v\n", err)

@@ -1,0 +1,74 @@
+{
+  "harness": "inbox-smoke",
+  "base_url": "http://127.0.0.1:54834",
+  "runtime_id": "rt-inbox-smoke",
+  "session_id": "s-inbox-smoke",
+  "started_at": "2026-11-23T13:07:17.677954Z",
+  "finished_at": "2026-11-23T13:07:17.687601Z",
+  "ok": true,
+  "checks": [
+    {
+      "name": "operator_jwt_accepted",
+      "ok": true,
+      "detail": {
+        "status": 200
+      }
+    },
+    {
+      "name": "stream_token_rejected",
+      "ok": true,
+      "detail": {
+        "error": "Sign in to use the shared global DB — no cloud session (HIVE_CLOUD_JWT / HIVE_CLOUD_BASE unset).",
+        "status": 401
+      }
+    },
+    {
+      "name": "desktop_stream_unknown_404",
+      "ok": true,
+      "detail": {
+        "error": null,
+        "status": 404
+      }
+    },
+    {
+      "name": "escalate_via_sentinel",
+      "ok": true,
+      "detail": {
+        "message_id": "0cb21fcf3c6ea83038a5ed7e1eea5fef",
+        "ok": true
+      }
+    },
+    {
+      "name": "reply_injected",
+      "ok": true,
+      "detail": {
+        "delivered": 1,
+        "ok": true,
+        "reply_id": 1,
+        "status": 200
+      }
+    },
+    {
+      "name": "sse_reply_delivered",
+      "ok": true,
+      "detail": {
+        "channel": "hive",
+        "sender_id": "hive",
+        "source": "colony-smoke",
+        "text": "(ref: corr-inbox-smoke) Approved by the smoke run — ship it.",
+        "want_text": "(ref: corr-inbox-smoke) Approved by the smoke run — ship it."
+      }
+    },
+    {
+      "name": "resolve_via_sentinel",
+      "ok": true,
+      "detail": {
+        "session_id": "s-inbox-smoke"
+      }
+    }
+  ],
+  "env": {
+    "go_hive_sentinel": "github.com/shark2202/go_hive/go-hive/internal/sentinel",
+    "reply_endpoint": "/internal/inbox/reply (private-deploy extension)"
+  }
+}

@@ -22,7 +22,9 @@ type Engine struct {
 	log          *SendLog
 	suppressions *SuppressionStore
 	cursors      *CursorStore
+	threads      *ThreadStore
 	mailer       Mailer
+	provider     ProviderAdapter
 	now          func() time.Time
 }
 
@@ -32,6 +34,14 @@ type Option func(*Engine)
 // WithMailer swaps the delivery transport (tests, proxies).
 func WithMailer(mailer Mailer) Option {
 	return func(e *Engine) { e.mailer = mailer }
+}
+
+// WithProviderAdapter installs the cloud/ESP delivery seam. Without one, a
+// non-SMTP sender keeps the explicit "requires the Aden cloud connector"
+// refusal; with one, quota, suppression, send-log and conversation tracking
+// still run locally around the adapter.
+func WithProviderAdapter(adapter ProviderAdapter) Option {
+	return func(e *Engine) { e.provider = adapter }
 }
 
 // WithClock overrides the clock (deterministic day rollover in tests).
@@ -61,11 +71,26 @@ func Open(home string, opts ...Option) (*Engine, error) {
 	engine.log = OpenSendLog(dir, engine.now)
 	engine.suppressions = OpenSuppressionStore(dir, engine.now)
 	engine.cursors = OpenCursorStore(dir, engine.now)
+	engine.threads = OpenThreadStore(dir, engine.now)
 	return engine, nil
 }
 
 // Dir is the state directory (diagnostics and tests).
 func (e *Engine) Dir() string { return e.dir }
+
+// Threads exposes the conversation store to a reply poller.
+func (e *Engine) Threads() *ThreadStore { return e.threads }
+
+// RecordThreadReply maps an inbound reply's threading headers to the stored
+// conversation and increments its reply count. A token we never minted
+// returns nil, so a stranger cannot forge one to wake an agent.
+func (e *Engine) RecordThreadReply(inReplyTo, references string) (*ThreadRecord, error) {
+	token := ExtractThreadToken(inReplyTo, references)
+	if token == "" {
+		return nil, nil
+	}
+	return e.threads.RecordReply(token)
+}
 
 func (e *Engine) availableNames() ([]string, error) {
 	rows, err := e.store.List(true)
@@ -179,7 +204,17 @@ func (e *Engine) SendFromSender(ctx context.Context, req SendRequest) (map[strin
 			return map[string]any{"error": "Provide a body: `html`, or `text` for a plain-text message."}, nil
 		}
 	}
-	return e.deliver(ctx, *sender, req.ToEmail, req.Subject, htmlBody, textBody, req.CampaignID, req.ColonyID, req.Step)
+	return e.deliver(ctx, deliveryRequest{
+		sender:         *sender,
+		toEmail:        req.ToEmail,
+		subject:        req.Subject,
+		html:           htmlBody,
+		text:           textBody,
+		campaignID:     req.CampaignID,
+		colonyID:       req.ColonyID,
+		step:           req.Step,
+		hubspotEmailID: req.HubspotEmailID,
+	})
 }
 
 // unsupportedProvider explains, per sender, why local mode cannot deliver it.
@@ -231,36 +266,63 @@ func (e *Engine) deniedOutput(sender Sender, reservation Reservation) map[string
 	return out
 }
 
+// deliveryRequest is one send after recipient and body validation. Bundling
+// the fields keeps the dispatch and quota path readable as providers grow.
+type deliveryRequest struct {
+	sender         Sender
+	toEmail        string
+	subject        string
+	html           string
+	text           string
+	campaignID     string
+	colonyID       string
+	step           int
+	hubspotEmailID int
+}
+
 // deliver reserves, sends, and closes the loop. It is the only path that may
 // put a row in the send log.
-func (e *Engine) deliver(ctx context.Context, sender Sender, toEmail, subject, htmlBody, textBody, campaignID, colonyID string, step int) (map[string]any, error) {
-	if sender.Provider != ProviderSMTP {
+func (e *Engine) deliver(ctx context.Context, req deliveryRequest) (map[string]any, error) {
+	sender := req.sender
+	// Refuse before reserving. A provider with no transport cannot deliver,
+	// and a reservation for it would burn the day's budget for nothing.
+	if sender.Provider != ProviderSMTP && e.provider == nil {
 		return map[string]any{"error": unsupportedProvider(sender), "sender": sender.Name}, nil
 	}
+	if sender.Provider == ProviderHubSpot && req.hubspotEmailID == 0 {
+		return map[string]any{
+			"error": fmt.Sprintf(
+				"HubSpot sender %q needs hubspot_email_id (the id of a marketing email built in HubSpot); subject/html are ignored.",
+				sender.Name,
+			),
+			"sender": sender.Name,
+		}, nil
+	}
+	step := req.step
 	if step <= 0 {
 		step = 1
 	}
 	// Only a mailbox with an inbox can host a reply, and only a known colony
 	// gives that reply somewhere to go. Otherwise the send is a dead end and we
 	// say so instead of minting a conversation token that can never resolve.
-	trackable := sender.CanReceive && colonyID != ""
+	trackable := sender.CanReceive && req.colonyID != ""
 	messageID := ""
 	token := ""
 	if trackable {
 		messageID, token = MintMessageID(sender.FromEmail)
 	}
 
-	suppressed, err := e.suppressions.IsSuppressed(toEmail)
+	suppressed, err := e.suppressions.IsSuppressed(req.toEmail)
 	if err != nil {
 		return nil, err
 	}
 	reservation, err := e.log.Reserve(ReserveRequest{
 		SenderID:          sender.ID,
 		SenderName:        sender.Name,
-		ToEmail:           toEmail,
-		Subject:           subject,
-		ColonyID:          colonyID,
-		CampaignID:        campaignID,
+		ToEmail:           req.toEmail,
+		Subject:           req.subject,
+		ColonyID:          req.colonyID,
+		CampaignID:        req.campaignID,
 		Step:              step,
 		ConversationToken: token,
 		MessageID:         messageID,
@@ -274,14 +336,7 @@ func (e *Engine) deliver(ctx context.Context, sender Sender, toEmail, subject, h
 		return e.deniedOutput(sender, reservation), nil
 	}
 
-	outcome, sendErr := e.mailer.Send(ctx, Outgoing{
-		Sender:    sender,
-		ToEmail:   toEmail,
-		Subject:   subject,
-		HTML:      htmlBody,
-		Text:      textBody,
-		MessageID: messageID,
-	})
+	outcome, sendErr := e.dispatch(ctx, sender, req, messageID)
 	if sendErr != nil {
 		_ = e.log.Complete(reservation.SendID, StatusFailed, "", truncate(sendErr.Error(), 2000))
 		return map[string]any{"error": sendErr.Error(), "sender": sender.Name}, nil
@@ -301,14 +356,68 @@ func (e *Engine) deliver(ctx context.Context, sender Sender, toEmail, subject, h
 		result["daily_limit"] = *sender.DailyLimit
 	}
 	if trackable {
-		result["conversation"] = token
+		if _, threadErr := e.threads.RecordSend(ThreadSend{
+			Token:     token,
+			MessageID: messageID,
+			ColonyID:  req.colonyID,
+			SenderID:  sender.ID,
+			FromEmail: sender.FromEmail,
+			ToEmail:   req.toEmail,
+			Subject:   req.subject,
+		}); threadErr != nil {
+			// The mail is already out. Never report a conversation token that
+			// cannot resolve: surface the persistence failure instead.
+			result["thread_error"] = truncate(threadErr.Error(), 500)
+			result["reply_tracking"] = "unavailable — the conversation could not be recorded, so a reply will not resolve."
+		} else {
+			result["conversation"] = token
+		}
 	} else if !sender.CanReceive {
 		result["reply_tracking"] = fmt.Sprintf(
 			"none — '%s' has no inbox, so a reply from %s will not reach you. Use a mailbox sender for conversations.",
-			sender.Name, toEmail,
+			sender.Name, req.toEmail,
 		)
 	}
 	return result, nil
+}
+
+// dispatch hands one already-reserved message to the transport that owns its
+// provider: the local SMTP mailer, or the injected cloud/ESP adapter.
+func (e *Engine) dispatch(ctx context.Context, sender Sender, req deliveryRequest, messageID string) (MailOutcome, error) {
+	if sender.Provider == ProviderSMTP {
+		return e.mailer.Send(ctx, Outgoing{
+			Sender:    sender,
+			ToEmail:   req.toEmail,
+			Subject:   req.subject,
+			HTML:      req.html,
+			Text:      req.text,
+			MessageID: messageID,
+		})
+	}
+	result, err := e.provider.Send(ctx, ProviderRequest{
+		Sender:         sender,
+		ToEmail:        req.toEmail,
+		Subject:        req.subject,
+		HTML:           req.html,
+		Text:           req.text,
+		MessageID:      messageID,
+		HubspotEmailID: req.hubspotEmailID,
+	})
+	if err != nil {
+		return MailOutcome{}, err
+	}
+	if !result.Success {
+		message := strings.TrimSpace(result.Error)
+		if message == "" {
+			message = fmt.Sprintf("%s rejected the message", e.provider.Name())
+		}
+		return MailOutcome{}, errors.New(message)
+	}
+	provider := result.Provider
+	if provider == "" {
+		provider = sender.Provider
+	}
+	return MailOutcome{Provider: provider, ID: result.ID}, nil
 }
 
 // SetupRequest is one setup_email_sender call.
@@ -818,7 +927,17 @@ func (e *Engine) SendCampaign(ctx context.Context, req CampaignRequest) (map[str
 			failed++
 			continue
 		}
-		outcome, sendErr := e.deliver(ctx, *chosen, recipient, req.Subject, htmlBody, textBody, req.CampaignID, req.ColonyID, 1)
+		outcome, sendErr := e.deliver(ctx, deliveryRequest{
+			sender:         *chosen,
+			toEmail:        recipient,
+			subject:        req.Subject,
+			html:           htmlBody,
+			text:           textBody,
+			campaignID:     req.CampaignID,
+			colonyID:       req.ColonyID,
+			step:           1,
+			hubspotEmailID: req.HubspotEmailID,
+		})
 		if sendErr != nil {
 			return nil, sendErr
 		}
@@ -826,6 +945,9 @@ func (e *Engine) SendCampaign(ctx context.Context, req CampaignRequest) (map[str
 			row := map[string]any{"to": recipient, "sender": chosen.Name, "success": true, "id": outcome["id"]}
 			if conversation, ok := outcome["conversation"]; ok {
 				row["conversation"] = conversation
+			}
+			if threadError, ok := outcome["thread_error"]; ok {
+				row["thread_error"] = threadError
 			}
 			results = append(results, row)
 			sent++

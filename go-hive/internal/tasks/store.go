@@ -204,6 +204,21 @@ func (s *TaskStore) readDoc(sessionID string) *TaskListDocument {
 		log.Printf("WARNING: Corrupt tasks.json at %s: %v", path, err)
 		return nil
 	}
+	// Python validates the document through TaskListDocument.model_validate_json:
+	// a status outside TaskStatus raises and _read_doc_sync logs the file as
+	// corrupt and returns None, hiding the whole list. Match that read semantics
+	// for legacy files written before the write-side guard existed (P0-10): the
+	// guard prevents new invalid values, and this makes the on-disk outcome
+	// identical on both runtimes instead of Go silently listing an unreadable doc.
+	for _, record := range doc.Tasks {
+		if record == nil || record.Status == "" {
+			continue
+		}
+		if !ValidTaskStatus(string(record.Status)) {
+			log.Printf("WARNING: Corrupt tasks.json at %s: task #%d has invalid status %q", path, record.ID, record.Status)
+			return nil
+		}
+	}
 	normalizeDoc(&doc)
 	return &doc
 }
@@ -242,6 +257,15 @@ func normalizeDoc(doc *TaskListDocument) {
 }
 
 func (s *TaskStore) writeDoc(sessionID string, doc *TaskListDocument) error {
+	// Python validates the document with pydantic on read: one record with an
+	// unknown status makes tasks.json look corrupt and the whole task list
+	// disappears. Refuse that write at the boundary so no caller can produce a
+	// file the Python implementation cannot read.
+	for _, record := range doc.Tasks {
+		if record != nil && !ValidTaskStatus(string(record.Status)) {
+			return fmt.Errorf("refusing to write tasks.json: task #%d has invalid status %q", record.ID, record.Status)
+		}
+	}
 	path, err := s.DocPath(sessionID)
 	if err != nil {
 		return err
@@ -691,7 +715,13 @@ func updateTaskInDoc(doc *TaskListDocument, current *TaskRecord, opts UpdateTask
 		current.Owner = opts.Owner
 		changed = append(changed, "owner")
 	}
-	if opts.Status != nil && *opts.Status != current.Status {
+	if opts.Status != nil && !ValidTaskStatus(string(*opts.Status)) {
+		// Python's TaskStatus enum raises before the store is touched. Never
+		// persist an unknown status: pydantic then rejects the whole
+		// tasks.json on read, hiding every task in the list. The tool layer
+		// rejects this first; this guard keeps internal callers honest.
+		log.Printf("WARNING: refusing invalid task status %q for #%d", *opts.Status, current.ID)
+	} else if opts.Status != nil && *opts.Status != current.Status {
 		if *opts.Status == TaskStatusArchived {
 			current.Metadata["archived_from"] = string(current.Status)
 			current.Metadata["archived_at"] = NowSeconds()

@@ -48,6 +48,35 @@ type Config struct {
 	StreamTTL time.Duration
 	// KeepAlive is the SSE keepalive interval (default 15s).
 	KeepAlive time.Duration
+	// InboxRateLimit is the optional per-team inbox write allowance per
+	// InboxRateWindow (0 = disabled; the observed cloud contract has no
+	// rate-limit semantics).
+	InboxRateLimit int
+	// InboxRateWindow is the rate-limit window (default 1m).
+	InboxRateWindow time.Duration
+	// LLMUpstreamURL is the explicit Anthropic-compatible Messages upstream
+	// base/full endpoint. Empty means no upstream: /v1/messages answers 400
+	// llm_upstream_not_configured and never fakes a completion.
+	LLMUpstreamURL string
+	// LLMUpstreamKey is the credential sent to the Messages upstream.
+	LLMUpstreamKey string
+	// LLMUpstreamAuth is "x-api-key" (default) or "bearer".
+	LLMUpstreamAuth string
+	// LLMAnthropicVersion is sent when the client omits anthropic-version.
+	LLMAnthropicVersion string
+	// LLMRequestTimeout bounds one upstream Messages call (default 10m).
+	LLMRequestTimeout time.Duration
+	// LLMUpstreamClient overrides the HTTP client (tests); nil builds one.
+	LLMUpstreamClient *http.Client
+	// ImagesUpstreamURL is the explicit OpenAI-compatible images endpoint.
+	// Empty means /v1/images/generations answers 503.
+	ImagesUpstreamURL string
+	// ImagesUpstreamKey is the credential sent to the images upstream.
+	ImagesUpstreamKey string
+	// ImagesRequestTimeout bounds one upstream images call (default 225s).
+	ImagesRequestTimeout time.Duration
+	// ImagesUpstreamClient overrides the images HTTP client (tests).
+	ImagesUpstreamClient *http.Client
 	// Version is reported by /health.
 	Version string
 	// Logger receives access/error logs; nil means stderr.
@@ -62,10 +91,14 @@ type Server struct {
 	store  *store.Store
 	signer *auth.Signer
 	hub    *replyHub
-	mux    *http.ServeMux
-	routes []Route
-	logger *log.Logger
-	now    func() time.Time
+	// llm is the configured upstream proxy (endpoints may be empty = disabled).
+	llm *llmProxy
+	// inboxLimiter is the optional private-deploy inbox write limiter.
+	inboxLimiter *inboxLimiter
+	mux          *http.ServeMux
+	routes       []Route
+	logger       *log.Logger
+	now          func() time.Time
 }
 
 // Route is one registered pattern (used by the contract coverage test).
@@ -92,14 +125,21 @@ func New(cfg Config) (*Server, error) {
 	if cfg.KeepAlive <= 0 {
 		cfg.KeepAlive = 15 * time.Second
 	}
+	if cfg.InboxRateWindow <= 0 {
+		cfg.InboxRateWindow = time.Minute
+	}
 	if cfg.Version == "" {
-		cfg.Version = "0.1.0-m1"
+		cfg.Version = "0.1.0-m5"
 	}
 	if cfg.Now == nil {
 		cfg.Now = time.Now
 	}
 	if cfg.Logger == nil {
 		cfg.Logger = log.New(io.Discard, "", 0)
+	}
+	llm, err := newLLMProxy(cfg)
+	if err != nil {
+		return nil, err
 	}
 	st, err := store.Open(store.Options{
 		Dir:              cfg.DataDir,
@@ -111,13 +151,15 @@ func New(cfg Config) (*Server, error) {
 		return nil, err
 	}
 	s := &Server{
-		cfg:    cfg,
-		store:  st,
-		signer: auth.NewSigner(cfg.JWTSecret, cfg.Now),
-		hub:    newReplyHub(),
-		mux:    http.NewServeMux(),
-		logger: cfg.Logger,
-		now:    cfg.Now,
+		cfg:          cfg,
+		store:        st,
+		signer:       auth.NewSigner(cfg.JWTSecret, cfg.Now),
+		hub:          newReplyHub(),
+		llm:          llm,
+		inboxLimiter: newInboxLimiter(cfg.InboxRateLimit, cfg.InboxRateWindow, cfg.Now),
+		mux:          http.NewServeMux(),
+		logger:       cfg.Logger,
+		now:          cfg.Now,
 	}
 	s.register()
 	return s, nil
@@ -161,10 +203,27 @@ func (s *Server) register() {
 	s.handle(http.MethodGet, "/v1/global-db/tables/{table}/rows", false, s.handleGlobalRows)
 	s.handle(http.MethodPatch, "/v1/global-db/tables/{table}/rows", false, s.handleGlobalPatchRows)
 
+	// CRM grid (contract §3.3). Only the evidence-backed generic grid subset
+	// is registered; schema/claim/release stay planned and unregistered (docs/m4-notes.md).
+	s.handle(http.MethodPost, "/v1/crm/grid/{entity}/query", false, s.handleCRMQuery)
+	s.handle(http.MethodPost, "/v1/crm/grid/{entity}/group-counts", false, s.handleCRMGroupCounts)
+	s.handle(http.MethodGet, "/v1/crm/grid/{entity}/{id}", false, s.handleCRMGet)
+	s.handle(http.MethodPost, "/v1/crm/grid/{entity}", false, s.handleCRMCreate)
+	s.handle(http.MethodPatch, "/v1/crm/grid/{entity}/{id}", false, s.handleCRMPatch)
+	s.handle(http.MethodDelete, "/v1/crm/grid/{entity}/{id}", false, s.handleCRMDelete)
+	s.handle(http.MethodPost, "/v1/crm/grid/{entity}/{id}/stage", false, s.handleCRMStage)
+
 	// Inbox (contract §3.2).
 	s.handle(http.MethodPost, "/v1/inbox/messages", false, s.handleInboxMessage)
 	s.handle(http.MethodPost, "/v1/inbox/resolve", false, s.handleInboxResolve)
 	s.handle(http.MethodGet, "/v1/inbox/runtime/stream", false, s.handleInboxRuntimeStream)
+
+	// LLM proxy: both routes authenticate the Bearer credential themselves.
+	// /v1/messages forwards Anthropic Messages (JSON or SSE); images forwards
+	// the observed JSON contract. With no configured upstream they answer an
+	// explicit error — never an empty 200.
+	s.handle(http.MethodPost, "/v1/messages", true, s.handleLLMMessages)
+	s.handle(http.MethodPost, "/v1/images/generations", true, s.handleLLMImages)
 
 	// Private-deploy extension (NOT part of the observed cloud contract).
 	s.handle(http.MethodPost, "/internal/inbox/reply", false, s.handleInternalInboxReply)
@@ -248,8 +307,8 @@ func (s *Server) handleRefreshStreamTokenFromStream(w http.ResponseWriter, r *ht
 		writeStreamTokenInvalid(w)
 		return
 	}
-	claims, err := auth.VerifyAny(s.cfg.StreamSecrets, body.StreamToken)
-	if err != nil || claims.Typ != auth.TokenTypeStream || claims.UserID == "" {
+	claims, err := auth.VerifyStreamToken(s.cfg.StreamSecrets, body.StreamToken)
+	if err != nil {
 		writeStreamTokenInvalid(w)
 		return
 	}

@@ -6,9 +6,10 @@ package server
 // host owns it), while the dashboard follows the session's EventBus over SSE.
 // Nothing connected the two, so worker started/completed/failed events were
 // invisible to the UI. This file mirrors the colony lifecycle onto the session
-// bus using the existing agent-event types, and forwards the same inputs
-// (worker reports, framework triggers) to the colony's persistent overseer so
-// it has a real input source.
+// bus using the existing agent-event types, and, when the Go-only live
+// overseer is opted in, forwards the same inputs (worker reports, framework
+// triggers) to it so it has a real input source. By default the overseer is
+// dormant and the colony-bound chat queen executes.
 
 import (
 	"log"
@@ -275,7 +276,9 @@ func (r *ChatRuntime) parkOverseerCredentialForm(event *eventbus.AgentEvent) {
 
 // deliverToOverseer hands a client message to the colony's persistent overseer
 // and reports whether it was accepted. A colony with no live overseer keeps the
-// chat queen as the executor, so delivery never silently drops a message.
+// chat queen as the executor, so delivery never silently drops a message. The
+// live overseer is dormant Go-only infrastructure (Hive 1.0.15 production never
+// starts one), so this normally returns false and the chat queen runs the turn.
 func (r *ChatRuntime) deliverToOverseer(message string) bool {
 	if r == nil || strings.TrimSpace(message) == "" {
 		return false

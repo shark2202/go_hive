@@ -401,7 +401,7 @@
 ## 6. 登记例外与外部未验证（不藏）
 
 - 设计性例外：浏览器渲染字节（Skia vs PIL）、字体度量、dpr 注解、父死时序、EventBus 异步派发、版本双轨、recall JSON 索引、playbook 900s 守护、工具输出 golden 12 例外
-- 功能缺口：oauth2 平台 provider 4 模块（base/lifecycle/hubspot/zoho）、aden/client 云端 token 拉取、`attached_credentials.json`、channels 宿主
+- 功能缺口：oauth2 平台 provider 4 模块（base/lifecycle/hubspot/zoho）、aden/client 云端 token 拉取、channels 宿主
 - 外部未验证：Windows 实机、GitHub Actions release job、Sentinel 真实投递、91 个第三方集成、真实 MCP server
 - 详见 `docs/trial/KNOWN-GAPS.md`、`docs/alignment-differences.md`、`docs/unported-triage.md`
 

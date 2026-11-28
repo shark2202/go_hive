@@ -59,6 +59,17 @@ type Provider struct {
 
 	HiveProxyAuth bool
 
+	// PaymentRequiredSink, when installed by the session runtime, receives the
+	// dedicated billing-gate event for a classified 402. PaymentRequiredStreamID
+	// and PaymentRequiredExecutionID identify the SSE stream/execution the event
+	// belongs to (nil execution is allowed).
+	//
+	// Parity: core/framework/agent_loop/agent_loop.py::_run_turn_loop
+	// (StreamErrorEvent error_type=="payment_required" -> emit_payment_required)
+	PaymentRequiredSink        PaymentRequiredEmitter
+	PaymentRequiredStreamID    string
+	PaymentRequiredExecutionID *string
+
 	SleepFunc func(time.Duration)
 
 	refusal parallelToolsRefusalLatch
@@ -389,6 +400,11 @@ type Usage struct {
 	PromptTokens     int
 	CompletionTokens int
 	Cost             float64
+	// Credits is the Hive proxy's cumulative per-request credit charge.
+	// Nil means absent (direct provider models), not zero.
+	//
+	// Parity: core/framework/llm/litellm.py::_credits_from_usage
+	Credits *float64
 
 	PromptTokensDetails *PromptTokensDetails
 
@@ -721,14 +737,35 @@ func ToolToOpenAIFormat(tool ToolDef) map[string]any {
 			parameters["required"] = value
 		}
 	}
-	return map[string]any{
+	return toolDefinitionForRequest(map[string]any{
 		"type": "function",
 		"function": map[string]any{
 			"name":        tool.Name,
 			"description": tool.Description,
 			"parameters":  parameters,
 		},
+	})
+}
+
+// toolDefinitionForRequest applies the Python LLM-boundary path rewrite to a
+// projected tool definition: prompt text says ~/.hive, but the runtime's hive
+// root can live elsewhere (the desktop ships it under Application Support), so
+// the model must see the real on-disk location. When HIVE_HOME cannot be
+// resolved the definition is returned unchanged rather than rewritten to an
+// empty string.
+//
+// Parity: core/framework/llm/litellm.py::LiteLLMProvider._tool_to_openai_format
+// (resolve_hive_paths_deep over the whole function dict).
+func toolDefinitionForRequest(tool map[string]any) map[string]any {
+	home, ok := toolDescriptionHiveHome()
+	if !ok {
+		return tool
 	}
+	rewritten, ok := resolveHivePathsDeep(tool, home).(map[string]any)
+	if !ok {
+		return tool
+	}
+	return rewritten
 }
 
 func CloseTruncatedJSONFragment(fragment string) string {

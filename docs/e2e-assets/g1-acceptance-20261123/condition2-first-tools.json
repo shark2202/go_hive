@@ -1,0 +1,1101 @@
+[
+ {
+  "function": {
+   "description": "Loads tool schemas so you can call them. Tools in the <searchable_tools> block of your system prompt are listed by name only — their schemas are not loaded, so they cannot be called until you load them here. Once loaded, a tool is callable on your next step exactly like an always-on tool, and stays loaded for the rest of the session.\n\nQuery forms:\n- \"inventory\" — report loaded, searchable, disabled, and unavailable tools without loading anything. Use before describing your capabilities.\n- \"select:name_a,name_b\" — load these exact tools by name (no limit). Preferred: the <searchable_tools> list already gives you the names, so pass all the ones this task needs in a single call.\n- \"send gmail email\" — keyword search; loads up to max_results best matches.",
+   "name": "search_tools",
+   "parameters": {
+    "properties": {
+     "max_results": {
+      "default": 5,
+      "description": "Max tools a keyword search loads (default 5). Ignored by select:, which loads every name you pass.",
+      "type": "number"
+     },
+     "query": {
+      "description": "\"select:name_a,name_b\" to load exact tools by name, or keywords to search.",
+      "type": "string"
+     }
+    },
+    "required": [
+     "query"
+    ],
+    "type": "object"
+   }
+  },
+  "type": "function"
+ },
+ {
+  "function": {
+   "description": "Write or replace a skill, or install one (yours, a downloaded one, an existing skill folder). This is the way to add a skill: don't write SKILL.md into a skills folder with the terminal or write_file, since a skill put there by hand isn't loaded until a new session and skips the user's approval.\n\nSCOPE (who sees it):\n  - 'queen' (default outside a colony): your own skills. In your skills catalog from your next turn and in your colonies'; no other queen sees it. A skill the user made in your skills can't be replaced.\n  - 'colony' (default inside a colony): THIS colony's workers only. Use it BEFORE fanning out parallel workers when the per-task protocol is the same across them (schema, output format, tool conventions, quality bar): write the protocol ONCE, then point each worker at it BY NAME in the task string instead of repeating the prose. Workers spawned AFTER this call pick it up; existing workers do not.\n  - 'global': the shared library every queen and colony reads. Needs the user's approval: nothing is installed yet, the user is asked in this session's chat in the Hive dashboard, and you get a message when they approve or deny. You don't wait for it; carry on.\n\nTWO MODES:\n  - Inline: pass skill_name + skill_description + skill_body (and optional skill_files). Authors a fresh skill from arguments.\n  - Copy: pass source_path pointing at an existing skill root directory (the one containing SKILL.md). The tool reads SKILL.md plus every other file in that directory and writes them into the chosen scope verbatim. Optionally pass skill_name to rename on copy. The other inline params are REJECTED in this mode — use inline mode if you need to edit content.\n\nReplacing your own skill of the same name is fine — your latest content wins.\n\nSkill body should read like a self-contained operating procedure: what the agent is doing, the exact tools/schema to use, the output format, what 'done' looks like. Skip the per-task specifics — those go in the task string.",
+   "name": "write_skill",
+   "parameters": {
+    "properties": {
+     "scope": {
+      "description": "Who sees the skill: 'queen' (you, and your colonies), 'colony' (this colony's workers), or 'global' (every queen and colony, after the user approves). Defaults to 'colony' inside a colony, 'queen' outside one.",
+      "enum": [
+       "queen",
+       "colony",
+       "global"
+      ],
+      "type": "string"
+     },
+     "skill_body": {
+      "description": "Markdown body of SKILL.md — the operational procedure the agent needs to run it unattended. Required in inline mode; rejected in source_path mode.",
+      "type": "string"
+     },
+     "skill_description": {
+      "description": "One-line summary of what this skill teaches and when to use it. Surfaced in the skills catalog. Required in inline mode; rejected in source_path mode (description comes from the source SKILL.md frontmatter).",
+      "type": "string"
+     },
+     "skill_files": {
+      "description": "Optional supporting files (scripts, JSON refs, etc.). Each entry is {path, content} where path is relative to the skill root. Inline mode only; rejected in source_path mode (the tool walks the source dir and copies aux files automatically).",
+      "items": {
+       "properties": {
+        "content": {
+         "type": "string"
+        },
+        "path": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "path",
+        "content"
+       ],
+       "type": "object"
+      },
+      "type": "array"
+     },
+     "skill_name": {
+      "description": "Lowercase, hyphen-separated, ≤64 chars (e.g. 'competitor-research-protocol'). Required in inline mode; optional in source_path mode (renames the skill on copy — defaults to the source's frontmatter name).",
+      "type": "string"
+     },
+     "source_path": {
+      "description": "Absolute or '~'-prefixed path to an existing skill's root directory (the one that contains SKILL.md). When set, the tool copies the entire skill folder — SKILL.md + every other UTF-8 file — into the chosen scope. Use this to install a skill you downloaded (e.g. git clone it into your workspace first), or to lift a framework default, shared or another colony's skill into your own skills or THIS colony to customize it.",
+      "type": "string"
+     }
+    },
+    "required": [],
+    "type": "object"
+   }
+  },
+  "type": "function"
+ },
+ {
+  "function": {
+   "description": "Use this tool to create a structured task list for your current session. The list renders as a live widget in the user's right-rail panel — it helps the user understand progress on their request and demonstrates thoroughness.\n\n**Always takes a `tasks` array — one entry or many, created atomically (all-or-none).** Replying to 5 posts is ONE `task_create` with 5 entries. A single one-off mid-run addition is ONE `task_create` with a 1-entry array.\n\n## When to use this tool\n\nUse this tool proactively in these scenarios:\n- **Multi-step requests** — when a request requires 2+ distinct atomic actions\n- **Non-trivial work** — anything involving careful planning or multiple operations (browser automation, file edits, API calls, fan-out to workers)\n- **User provides multiple tasks** — a list of things to do (numbered or comma-separated)\n- **After receiving REFINING instructions** — if the new request refines the existing plan (same goal, more detail), capture the changes as tasks and delete prior ones via `task_update` status='deleted'. If the new request is OFF-GOAL — different goal from this list's anchor — DON'T wipe and redo here; use the pivot field on this same tool instead.\n- **Mid-run additions** — when you discover unplanned work after the initial plan is laid out, add it with a 1-entry array\n- **User explicitly requests a plan or task list**\n\n## When NOT to use this tool\n\nSkip this tool when:\n- There is only a single, straightforward action (one terminal_exec, one `hive-browser open`, one tracker_query)\n- The task is trivial and tracking it provides no organizational benefit\n- The request is purely conversational or informational (greetings, questions, opinions)\n- The user has explicitly asked you not to use it\n\n## Task fields\n\n- **subject**: short imperative title (e.g. 'Crawl target URL')\n- **description**: optional, slightly longer 'what to do' note\n- **active_form**: present-continuous label shown while in_progress (e.g. 'Crawling target URL'). If omitted, the spinner shows the subject\n- **metadata**: optional KV. Set _internal=true to hide from `task_list`\n\nAll tasks are created with status `pending`.\n\n## Tips\n\n- Subjects should be clear and outcome-focused\n- **Granularity: one task/batch per atomic action, not one umbrella per project** — \"Scrape 5 LinkedIn profiles\" is 5 entries, not 1\n- Include a final **verification step** for any non-trivial plan (re-read the diff, query the tracker for gaps, screenshot the result, run the script end-to-end)\n- Check `task_list` first to avoid creating duplicate tasks",
+   "name": "task_create",
+   "parameters": {
+    "properties": {
+     "goal": {
+      "description": "One-sentence statement of what this plan is for, in the user's own terms. Required on the FIRST task_create of a session — anchors the work so a later batch that drifts from this can be recognised as a real pivot rather than absorbed silently. On follow-up task_create calls in the same session, you MAY omit it (the existing goal is kept) OR re-state it unchanged. Provide a NEW goal only when you are also setting the pivot field below — the new goal then anchors the forked context.",
+      "type": "string"
+     },
+     "handoff": {
+      "description": "Required when new_session=true. The new context inherits NOTHING from this conversation except what you write here — no transcript, no summary, no scrollback. So write a COMPLETE, self-contained handoff: everything the new context needs to know to carry the task plan through to done.\n\nBe descriptive and objective — state facts, not impressions. Cover, as applicable:\n- The user's actual goal and intent for this work, in their own terms.\n- Concrete facts and data established so far: names, URLs, IDs, file paths, the account/alias to use, numbers, exact requirements and wording.\n- Decisions already made, and options already considered and ruled out (with the reason).\n- Constraints, preferences, deadlines, and what 'done' looks like.\n- Anything already attempted or partially completed that the new context must not redo.\n\nThe new context cannot look back — if a detail matters for finishing the task and is not already in a task subject/description, it MUST be in this handoff. Write it in full now, while you still have the whole conversation in view. Ignored when new_session is false.",
+      "type": "string"
+     },
+     "new_session": {
+      "description": "Whether to start this plan in a fresh session. Default false. This is the DM-phase pivot field; in COLONY phase the equivalent is `new_colony` (different field, same criteria — see `<pivot>` in the queen prompt for the universal contract).\n\nSet true ONLY for a clean pivot: the user introduces big new work that shares no goal, files, or topic with the current task list — typically the prior task is finished and they ask for something unrelated.\n\nExamples of the boundary:\n- Just finished pulling a news digest; user says 'now start a CTO sourcing campaign.' -> new session (true): zero overlap with the digest.\n- Running a CTO sourcing campaign; user says 'tweak the scoring rubric.' -> same session (false): it refines the work already underway.\n\nWhen true: a fresh session is created carrying ONLY your `handoff` note and this `tasks` plan — the old conversation is left behind, not copied or summarized. The user is silently swapped into it. Set this on your FIRST tool call of the turn, then end the turn — the new session's queen continues the work from there.\n\nKeep it false for follow-ups, clarifications, continuations, or anything that touches the current plan. When unsure, ask the user before forking.",
+      "type": "boolean"
+     },
+     "tasks": {
+      "description": "Array of task specs. Each becomes one task with a sequential id. Atomic — all created or none.",
+      "items": {
+       "properties": {
+        "active_form": {
+         "description": "Present-continuous label shown while in_progress.",
+         "type": "string"
+        },
+        "description": {
+         "type": "string"
+        },
+        "metadata": {
+         "type": "object"
+        },
+        "subject": {
+         "description": "Imperative title (e.g. 'Crawl target URL').",
+         "type": "string"
+        }
+       },
+       "required": [
+        "subject"
+       ],
+       "type": "object"
+      },
+      "minItems": 1,
+      "type": "array"
+     }
+    },
+    "required": [
+     "tasks"
+    ],
+    "type": "object"
+   }
+  },
+  "type": "function"
+ },
+ {
+  "function": {
+   "description": "Update ONE task on your own session task list. There is no batch update tool by design — every `completed` transition is a discrete progress signal to the user.\n\nWorkflow:\n- Mark a task `in_progress` BEFORE you start working on it.\n- Mark it `completed` AS SOON as you finish it — do not let multiple finished tasks pile up unmarked before flushing them at the end of the run.\n- Send these in the same response as your next real tool call (one response can carry several calls): a response that only updates tasks makes the user wait a whole model turn for nothing.\n- Archive tasks: when the user asks you to refresh/tidy the plan, set status='archived' on finished or no-longer-relevant tasks to move them out of the active plan into the user's History. Archived tasks are preserved and hidden from the default `task_list` — pass include_archived=true to see them. Archiving is reversible: edit an archived task's status back to pending/in_progress/completed to pull it back into the active plan.\n- Delete tasks: when a task is no longer relevant or was created in error. Setting status='deleted' **permanently** removes the task — the id is retired and cannot be reused. Prefer 'archived' over 'deleted' unless the task was a genuine mistake.\n\nONLY mark `completed` when the task is FULLY done. If you hit errors, blockers, or partial state, keep it `in_progress` and create a new task describing what's blocking. Never mark completed with caveats; if it's not done, it's not done.\n\nSetting status='in_progress' without owner auto-fills your agent_id.",
+   "name": "task_update",
+   "parameters": {
+    "properties": {
+     "active_form": {
+      "type": "string"
+     },
+     "add_blocked_by": {
+      "description": "Add task ids that block this task (bidirectional).",
+      "items": {
+       "type": "integer"
+      },
+      "type": "array"
+     },
+     "add_blocks": {
+      "description": "Add task ids that this task blocks (bidirectional).",
+      "items": {
+       "type": "integer"
+      },
+      "type": "array"
+     },
+     "description": {
+      "type": "string"
+     },
+     "id": {
+      "description": "Task id (the #N from task_list).",
+      "type": "integer"
+     },
+     "metadata_patch": {
+      "description": "Merge into metadata. Null values delete keys.",
+      "type": "object"
+     },
+     "owner": {
+      "description": "Agent id of the owner. Null clears ownership.",
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "status": {
+      "description": "pending / in_progress / completed track work. 'archived' moves a finished or no-longer-relevant task out of the active plan into the user's History (preserved, unlike 'deleted' which removes it permanently). Archiving is reversible: set an archived task back to pending/in_progress/completed to restore it to the active plan (use task_list include_archived=true to find archived ids).",
+      "enum": [
+       "pending",
+       "in_progress",
+       "completed",
+       "archived",
+       "deleted"
+      ],
+      "type": "string"
+     },
+     "subject": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "id"
+    ],
+    "type": "object"
+   }
+  },
+  "type": "function"
+ },
+ {
+  "function": {
+   "description": "Show your session task list, sorted by id ascending. Internal tasks (metadata._internal=true), resolved blockers, and archived tasks are filtered out by default; pass include_archived=true to also see archived tasks (e.g. to restore one). **Prefer working on tasks in id order** (lowest first) — earlier tasks usually set up context for later ones.",
+   "name": "task_list",
+   "parameters": {
+    "properties": {
+     "include_archived": {
+      "description": "Include archived tasks (default false). Set true to review what you archived — e.g. before restoring one by editing its status back to pending/in_progress.",
+      "type": "boolean"
+     }
+    },
+    "required": [],
+    "type": "object"
+   }
+  },
+  "type": "function"
+ },
+ {
+  "function": {
+   "description": "Read the full record of one task (description, metadata, timestamps) from your own session task list. Use this to refresh your view of a task before updating it if you're not sure of current fields.",
+   "name": "task_get",
+   "parameters": {
+    "properties": {
+     "id": {
+      "type": "integer"
+     }
+    },
+    "required": [
+     "id"
+    ],
+    "type": "object"
+   }
+  },
+  "type": "function"
+ },
+ {
+  "function": {
+   "description": "Propose forking this session into a colony. Call this when the current work needs parallelization, scheduling, background/recurring execution, or otherwise should outlive this chat. The frontend opens a 'Create Colony' popup pre-filled with this colony_id and the current queen auto-selected; the user reviews and confirms. On accept, this chat's conversation is compacted into the new colony's queen seed and this session locks — so make sure you've left the conversation in a self-contained state. On dismiss the chat continues normally. Do NOT call this for one-shot work the user wants finished in THIS chat — do that work yourself with your independent toolkit.",
+   "name": "suggest_colony",
+   "parameters": {
+    "properties": {
+     "colony_id": {
+      "description": "Lowercase alphanumeric+underscore slug for the proposed colony (e.g. 'morning_hn_digest', 'fintech_competitor_research'). Pre-fills the popup's name field; the user can edit it before confirming.",
+      "type": "string"
+     },
+     "reason": {
+      "description": "Optional one-sentence rationale shown in the popup — why parallel/persistent execution helps here. Be specific (e.g. '23 competitor profiles to research in parallel' rather than 'this is a lot of work').",
+      "type": "string"
+     }
+    },
+    "required": [
+     "colony_id"
+    ],
+    "type": "object"
+   }
+  },
+  "type": "function"
+ },
+ {
+  "function": {
+   "description": "Read and extract text from one or many PDF files.\n\nSingle-file mode (``file_path``) returns a flat result:\n``{path, name, total_pages, pages_extracted, content, char_count,\npages: [{number, text, needs_vision}], needs_vision_pages?, metadata?}``.\n\nMulti-file mode (``files``, up to 10) returns ``{pdfs: [...]}`` with\neach entry in the single-file shape. Pages below 200 chars of\nextracted text are flagged ``needs_vision: true``; the result also\ncarries a ``next_step`` field telling the caller to use\n``attach_file`` on the original PDF — it sends the pages as\nImageContent so vision reads them directly (no OCR, no per-page\nimage rendering).\n\nArgs:\n    file_path: One PDF (local path or http(s):// URL). Back-compat.\n    files: Up to 10 PDFs. Mutually-exclusive with ``file_path``.\n    pages: ``\"all\"``/None, ``\"5\"``, ``\"1-10\"``, or ``\"1,3,5\"``.\n    max_pages: Per-PDF cap on parsed pages (1-1000).\n    max_bytes_mb: Per-PDF download cap for URL inputs.\n    password: Decrypt password for encrypted PDFs.\n    include_metadata: Include title/author/dates if available.",
+   "name": "pdf_read",
+   "parameters": {
+    "properties": {
+     "file_path": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "files": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "include_metadata": {
+      "default": true,
+      "type": "boolean"
+     },
+     "max_bytes_mb": {
+      "default": 25.0,
+      "type": "number"
+     },
+     "max_pages": {
+      "default": 100,
+      "type": "integer"
+     },
+     "pages": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "password": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     }
+    },
+    "required": [],
+    "type": "object"
+   }
+  },
+  "type": "function"
+ },
+ {
+  "function": {
+   "description": "Surface one or more local files to the user as clickable chips\nin chat. **Any file type is accepted.**\n\nUse this whenever the user has asked for a file — a report, a\nspreadsheet, a config, a zip, anything. Never rename, zip, or\npaste the contents inline as a workaround \"because the tool\ndoesn't support this format\" — it does.\n\nUse this on a PDF that ``pdf_read`` returned with\n``needs_vision_pages`` (scanned / image-based) — the PDF is sent\nas ImageContent so vision can read the rendered pages directly.\nDo NOT reach for tesseract / pdftoppm first; ``attach_file`` on\nthe original PDF replaces that whole pipeline.\n\nArgs:\n    paths: One path or a list of up to 10 paths. Each may be\n        absolute, relative to your working directory (where\n        terminal commands run), or relative to ``$HIVE_STORAGE_PATH``\n        (so ``data/attachments/X.pdf`` works as the agent reads\n        it from the user message).\n    max_bytes_mb: Per-file cap. Files larger than this are\n        reported in the ``errors`` list instead of being attached.\n\nHow each file type is handled:\n    - **PDFs + images** (.pdf, .png, .jpg, .jpeg, .webp, .gif) —\n      base64-encoded into ImageContent so you can re-read the\n      bytes, AND surfaced as a chip the user can open.\n    - **Text formats** (.md, .txt, .csv, .json, .yaml, .py, .ts,\n      .sh, .xml, .html, source code, configs, logs, ...) — read\n      as text and inlined as TextContent so you can read them\n      directly, AND surfaced as a chip.\n    - **Anything else** (.zip, .docx, .xlsx, .mp3, .mp4, .wav,\n      .exe, ...) — published as a chip the user can download.\n      You receive only the metadata summary, not the bytes.\n      The chip opens in a new browser tab; the browser previews\n      the file when it can and downloads it otherwise.\n\nReturns:\n    An MCP content list: a TextContent JSON summary plus zero or\n    more content blocks per file (one for preview/text kinds;\n    none for opaque blobs). Each ``attached`` entry includes\n    ``kind`` ∈ {pdf, image, text, blob}, ``mime``, ``filename``,\n    and ``resolved`` (absolute path). The framework injects\n    ``hive_attachment_url`` (the renderer's chip URL) into each\n    entry post-hoc once the chip copy is in place.",
+   "name": "attach_file",
+   "parameters": {
+    "properties": {
+     "max_bytes_mb": {
+      "default": 25.0,
+      "type": "number"
+     },
+     "paths": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array"
+       }
+      ]
+     }
+    },
+    "required": [
+     "paths"
+    ],
+    "type": "object"
+   }
+  },
+  "type": "function"
+ },
+ {
+  "function": {
+   "description": "Get the current date and time.\n\nUse this tool when you need accurate current time, especially in\nlong-running sessions or when precision matters (e.g., scheduling,\nchecking availability, time-sensitive operations).\n\nArgs:\n    timezone: IANA timezone name (e.g., \"UTC\", \"America/New_York\",\n             \"Asia/Kolkata\", \"Europe/London\"). Defaults to \"UTC\".\n\nReturns:\n    Dictionary with datetime info:\n    - datetime: Full ISO 8601 datetime string\n    - date: Date in YYYY-MM-DD format\n    - time: Time in HH:MM:SS format\n    - timezone: The timezone used\n    - day_of_week: Full day name (e.g., \"Monday\")\n    - unix_timestamp: Unix timestamp (seconds since epoch)",
+   "name": "get_current_time",
+   "parameters": {
+    "properties": {
+     "timezone": {
+      "default": "UTC",
+      "type": "string"
+     }
+    },
+    "required": [],
+    "type": "object"
+   }
+  },
+  "type": "function"
+ },
+ {
+  "function": {
+   "description": "Generate or edit an image from a text prompt. Billed to Hive credits.\n\nRoutes through the Hive image service (OpenAI ``gpt-image-2``). The cost\nis charged to the user's credits like an LLM call — no API key needed.\n\nProvide ``reference_images`` to edit / compose from existing images\n(e.g. restyle a product photo, combine elements, keep a character's\nidentity); the model conditions on them at high fidelity. Without them\nit's pure text-to-image.\n\nArgs:\n    prompt: What to draw. Be specific about subject, style, composition,\n        colors, and any text to render.\n    reference_images: Up to 10 local file paths or http(s) URLs to\n        condition on. Omit for text-to-image.\n    size: ``1024x1024`` (default), ``1536x1024`` (landscape),\n        ``1024x1536`` (portrait), or ``auto``.\n    quality: ``low`` only. Higher tiers (``medium``/``high``/``auto``)\n        are disabled for cost control and are forced down to ``low``.\n    n: Number of images, 1-4 (default 1). Each one is billed separately.\n    output_format: ``png`` (default), ``jpeg``, or ``webp``.\n    model: Image model. Defaults to ``gpt-image-2``.\n\nReturns:\n    An MCP content list: a leading TextContent JSON summary with\n    ``images`` (each ``{path, size, quality, format, bytes}``), ``model``,\n    ``n``, and ``usage`` tokens, plus one inline image preview. Pass a\n    saved ``path`` to ``attach_file`` to show the user a downloadable\n    chip. On failure, a single TextContent JSON ``{\"error\": ...}``.",
+   "name": "image_generate",
+   "parameters": {
+    "properties": {
+     "model": {
+      "default": "gpt-image-2",
+      "type": "string"
+     },
+     "n": {
+      "default": 1,
+      "type": "integer"
+     },
+     "output_format": {
+      "default": "png",
+      "type": "string"
+     },
+     "prompt": {
+      "type": "string"
+     },
+     "quality": {
+      "default": "low",
+      "type": "string"
+     },
+     "reference_images": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "size": {
+      "default": "1024x1024",
+      "type": "string"
+     }
+    },
+    "required": [
+     "prompt"
+    ],
+    "type": "object"
+   }
+  },
+  "type": "function"
+ },
+ {
+  "function": {
+   "description": "List connected accounts and their identities.\n\nCall with no arguments to see all connected accounts.\nCall with provider=\"google\" to filter by provider type.\n\nReturns account IDs, provider types, and identity labels\n(email, username, workspace) for each connected account.",
+   "name": "get_account_info",
+   "parameters": {
+    "properties": {
+     "provider": {
+      "default": "",
+      "type": "string"
+     }
+    },
+    "required": [],
+    "type": "object"
+   }
+  },
+  "type": "function"
+ },
+ {
+  "function": {
+   "description": "Run a shell command and capture its output.\n\nPast auto_background_after_sec, the call auto-promotes to a background\njob and returns immediately with `auto_backgrounded=True, job_id=...`\n— poll with terminal_job_logs(job_id, since_offset=...) to read the rest.\nSet auto_background_after_sec=0 to force pure foreground (kill on\ntimeout_sec).\n\nThe agent loop may first return a bg_* handle; use collect_result for\nthat handle, then terminal_job_logs for any job_id in the result.\nPOSIX uses bash when shell=True; Windows selects Git Bash, PowerShell,\nthen cmd. Read shell_kind before choosing platform-specific syntax.\n\nArgs:\n    command: The command. With shell=False POSIX uses shlex splitting;\n        shell syntax is detected automatically. Use shell=True for scripts.\n    cwd: Working directory. Defaults to the session workdir when\n        omitted; pass an absolute path to override (loose default,\n        not a sandbox — you can point anywhere).\n    env: Environment override (merged into a sanitized base — zsh\n        dotfile vars are stripped).\n    timeout_sec: Total deadline from command start, including background\n        execution. Expiry terminates the process tree and reports\n        timed_out=True. 0 means unlimited, requiring auto-promotion.\n    auto_background_after_sec: Inline budget. Past this, promote to\n        a background job and return. 0 disables auto-promotion. The\n        foreground wait must be finite and at most 220 seconds.\n    shell: True to use the platform shell. zsh refused.\n    stdin: Optional stdin payload (string).\n    limits: Optional setrlimit caps. Keys: cpu_sec, rss_mb,\n        fsize_mb, nofile.\n    max_output_kb: Inline output cap. Overflow stashes to an\n        output_handle for retrieval via terminal_output_get.\n\nReturns the standard envelope: see `terminal-tools-foundations` skill.",
+   "name": "terminal_exec",
+   "parameters": {
+    "properties": {
+     "auto_background_after_sec": {
+      "default": 30,
+      "type": "integer"
+     },
+     "command": {
+      "type": "string"
+     },
+     "crm_principal": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "cwd": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "env": {
+      "anyOf": [
+       {
+        "additionalProperties": {
+         "type": "string"
+        },
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "limits": {
+      "anyOf": [
+       {
+        "additionalProperties": {
+         "type": "integer"
+        },
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "max_output_kb": {
+      "default": 256,
+      "type": "integer"
+     },
+     "shell": {
+      "default": false,
+      "type": "boolean"
+     },
+     "stdin": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "timeout_sec": {
+      "default": 60,
+      "type": "integer"
+     }
+    },
+    "required": [
+     "command"
+    ],
+    "type": "object"
+   }
+  },
+  "type": "function"
+ },
+ {
+  "function": {
+   "description": "Read job output at an offset. Combined read + status + wait primitive.\n\nTrack next_offset across calls to avoid replaying data. When\nwait_until_exit=True, waits until the job exits, a new message for you\narrives, or wait_timeout_sec elapses, then returns logs and status.\n\nArgs:\n    job_id: From terminal_job_start (or auto-promoted from terminal_exec).\n    stream: \"stdout\" | \"stderr\" | \"merged\". Use \"merged\" only when the\n        job was started with merge_stderr=True.\n    since_offset: Absolute byte offset to start reading from. Pass 0\n        on first call; pass next_offset on subsequent calls.\n    max_bytes: Max bytes of decoded output to return inline.\n    wait_until_exit: When True, waits for the job to exit before reading.\n        Prefer one long wait to repeated short ones: each repeat costs a\n        whole model turn. If it returns status=\"running\" because a new\n        message arrived, deal with the message, then wait again.\n    wait_timeout_sec: Longest to wait, in seconds (up to 600). Does not\n        change the job's execution deadline.\n    tail: When True, ignores since_offset and returns the last max_bytes.\n\nReturns: {data, offset, next_offset, status, exit_code, timed_out, eof, truncated_bytes_dropped}",
+   "name": "terminal_job_logs",
+   "parameters": {
+    "properties": {
+     "job_id": {
+      "type": "string"
+     },
+     "max_bytes": {
+      "default": 64000,
+      "type": "integer"
+     },
+     "since_offset": {
+      "default": 0,
+      "type": "integer"
+     },
+     "stream": {
+      "default": "stdout",
+      "type": "string"
+     },
+     "tail": {
+      "default": false,
+      "type": "boolean"
+     },
+     "wait_timeout_sec": {
+      "default": 600.0,
+      "type": "number"
+     },
+     "wait_until_exit": {
+      "default": false,
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "job_id"
+    ],
+    "type": "object"
+   }
+  },
+  "type": "function"
+ },
+ {
+  "function": {
+   "description": "List jobs, send signals, or write to job stdin.\n\nSingle tool covering job-control side effects. The action argument\npicks the operation:\n\n- \"capabilities\": return platform, supported_actions and signal semantics.\nNo job_id required. Check this before choosing a signal.\n- \"list\": list active + recently-exited jobs. job_id ignored.\n- \"signal_term\" | \"signal_kill\" | \"signal_int\" | \"signal_hup\"\n| \"signal_usr1\" | \"signal_usr2\": send the named signal. Requires job_id.\n- \"stdin\": write `data` to the job's stdin. Requires job_id and data.\n- \"close_stdin\": close the job's stdin pipe (e.g. to flush a tool that\nreads until EOF). Requires job_id.\n\nOn POSIX, signal_int requests an interrupt; signal_term requests\ntermination and forces cleanup after up to 2 seconds. On Windows,\nonly signal_term and signal_kill are supported: both forcefully\nterminate the job process tree, without application cleanup handlers.\nWindows signal_int returns unsupported_action without signaling the job.\n\nReturns vary by action. List → {jobs: [...], capabilities}.\nSignals → {ok, signal, semantics}.\nStdin → {bytes_written}.",
+   "name": "terminal_job_manage",
+   "parameters": {
+    "properties": {
+     "action": {
+      "type": "string"
+     },
+     "data": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "job_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     }
+    },
+    "required": [
+     "action"
+    ],
+    "type": "object"
+   }
+  },
+  "type": "function"
+ },
+ {
+  "function": {
+   "description": "Run ripgrep on `path` for `pattern` — the content-search tool.\n\nUse this for all content (regex) search, whether project code or raw\npaths (system configs, /var/log, archive contents); it exposes the full\nrg flag surface. Relative paths resolve against the session workdir.\n\nArgs:\n    pattern: Regex pattern.\n    path: Directory or file to search. Relative paths resolve against\n        the session workdir; default is the session workdir itself.\n    glob: Filename glob (e.g. \"*.py\").\n    type_filter: rg filetype shortcut (e.g. \"py\", \"rust\", \"md\").\n    ignore_case: Case-insensitive search.\n    context: Lines of context above and below each match.\n    max_count: Stop after N matches per file.\n    max_depth: Limit directory recursion depth.\n    hidden: Include hidden files (rg ignores them by default).\n    no_ignore: Don't respect .gitignore.\n    extra_args: Raw flags to append (use sparingly — most needs are covered above).\n    allow_fallback: If rg is missing, explicitly accept approximate Python\n        search without .gitignore support and with Python regex syntax.\n        Context, extra_args, unknown filetypes and complex globs still\n        require rg; unsupported parameters return an error without searching.\n\nReturns: {matches: [...], context: [...], total, truncated, exit_code, stderr}.\n    Context entries have the same path/line/text shape as matches;\n    total counts only matches. Missing rg returns ripgrep_required by default.",
+   "name": "terminal_rg",
+   "parameters": {
+    "properties": {
+     "allow_fallback": {
+      "default": false,
+      "type": "boolean"
+     },
+     "context": {
+      "default": 0,
+      "type": "integer"
+     },
+     "extra_args": {
+      "anyOf": [
+       {
+        "items": {
+         "type": "string"
+        },
+        "type": "array"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "glob": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "hidden": {
+      "default": false,
+      "type": "boolean"
+     },
+     "ignore_case": {
+      "default": false,
+      "type": "boolean"
+     },
+     "max_count": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "max_depth": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     },
+     "no_ignore": {
+      "default": false,
+      "type": "boolean"
+     },
+     "path": {
+      "default": ".",
+      "type": "string"
+     },
+     "pattern": {
+      "type": "string"
+     },
+     "type_filter": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null
+     }
+    },
+    "required": [
+     "pattern"
+    ],
+    "type": "object"
+   }
+  },
+  "type": "function"
+ },
+ {
+  "function": {
+   "description": "Find files by name/glob under `path` — the Glob tool.\n\nUse this to locate files by name, in the project tree or raw/arbitrary\npaths (/var/log, /etc, archive contents). Relative paths resolve against\nthe session workdir. For mtime/size/type predicate queries, drop to\nterminal_exec(\"find ...\") — see references/find_predicates.md.\n\nPattern handling (so bare stems Just Work):\n    \"lk_scan_post_reactors\" -> matched as **/*lk_scan_post_reactors*\n    \"*.py\"                  -> matched as **/*.py (recursive)\n    \"src/**/*.py\"           -> used verbatim\nThe glob actually run is returned as `expanded_pattern`.\n\nArgs:\n    pattern: Filename glob or bare substring.\n    path: Directory to search under. Relative paths resolve against the\n        session workdir; default is the session workdir itself.\n    max_results: Cap on returned paths (search stops early at the cap).\n    include_ignored: Include .gitignored / hidden / build-cache files.\n\nReturns: {paths, count, truncated, timed_out, expanded_pattern, command}\n    Without rg, returns fallback=\"python-walk\" and a note: the\n    approximate filename walk does not honor .gitignore.",
+   "name": "terminal_glob",
+   "parameters": {
+    "properties": {
+     "include_ignored": {
+      "default": false,
+      "type": "boolean"
+     },
+     "max_results": {
+      "default": 1000,
+      "type": "integer"
+     },
+     "path": {
+      "default": ".",
+      "type": "string"
+     },
+     "pattern": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "pattern"
+    ],
+    "type": "object"
+   }
+  },
+  "type": "function"
+ },
+ {
+  "function": {
+   "description": "Retrieve a slice of truncated output by handle.\n\nWhen terminal_exec or terminal_job_logs returns more output than fits inline,\nyou'll see `output_handle: \"out_<hex>\"`. Pass it here with successive\noffsets to paginate. The full output is preserved (combined stdout+stderr\nwith `--- stdout ---` / `--- stderr ---` separators) for 5 minutes.\n\nArgs:\n    output_handle: From a prior tool's envelope.\n    since_offset: Pass 0 first, then next_offset from the previous call.\n    max_kb: Max KB to return per call.\n\nReturns: {data, offset, next_offset, eof, expired}",
+   "name": "terminal_output_get",
+   "parameters": {
+    "properties": {
+     "max_kb": {
+      "default": 64,
+      "type": "integer"
+     },
+     "output_handle": {
+      "type": "string"
+     },
+     "since_offset": {
+      "default": 0,
+      "type": "integer"
+     }
+    },
+    "required": [
+     "output_handle"
+    ],
+    "type": "object"
+   }
+  },
+  "type": "function"
+ },
+ {
+  "function": {
+   "description": "Recall what was said in any past session — yours and the user's.\n\nThis is your long-term memory. Your active context only holds\nthe current session (and even that gets compacted as it grows).\nEverything the user told you, every answer you gave, every\ntool result you saw across every previous session lives in\nthis index. Reach for this tool whenever you can't see\nsomething in your active context but suspect it happened.\n\nCALL THIS when the user says any of:\n    • \"remember…\" / \"do you remember…\"\n    • \"last time\" / \"before\" / \"earlier\" / \"previously\"\n    • \"what did I ask about…\" / \"what did we decide…\"\n    • \"the X I mentioned\" / \"that thing we worked on\"\n    • any reference to a prior conversation, decision,\n      ticker, name, link, file, or fact you don't currently\n      have in front of you\n\nSearchable content (the only things this matches):\n    • user text the user typed\n    • your own prose responses\n    • tool result bodies (including full bodies of large\n      tool results that spilled to disk)\n\nPattern is a Rust-style regex (RE2 subset). For a name or\nticker, plain text is enough: ``\"AAPL\"``, ``\"(?i)stock\"``,\n``\"deadline\"``. See per-argument descriptions for inline\nflags and other options.\n\nReturns: dict with ``matches[]`` and ``total_matches``. Each\nmatch has ``session``, ``session_started_at`` and ``turn[]``\nof ``{role, content, is_hit?}`` entries. On invalid input or\nan unbound scope, returns ``{\"error\": \"...\", ...}`` instead\nof raising.",
+   "name": "search_messages",
+   "parameters": {
+    "properties": {
+     "context": {
+      "default": "turn",
+      "description": "How much context to return per hit. 'turn' (default) returns the full conversational turn around the match — best for understanding what was happening. 'narrow' returns only the matched message. 'none' returns coordinates only.",
+      "enum": [
+       "none",
+       "narrow",
+       "turn"
+      ],
+      "type": "string"
+     },
+     "match_source": {
+      "default": "all",
+      "description": "'events' searches in-chat message text. 'data' searches the spilled bodies of large tool results. 'all' (default) searches both in parallel.",
+      "enum": [
+       "events",
+       "data",
+       "all"
+      ],
+      "type": "string"
+     },
+     "max_matches": {
+      "default": 20,
+      "description": "Cap on returned hits. Default 20. Bump up if you suspect more relevant past context exists.",
+      "type": "integer"
+     },
+     "pattern": {
+      "description": "Rust-style regex (RE2 subset). Plain text matches plain text — for a name, ticker, or keyword you can pass it as-is (e.g. 'AAPL', 'deadline'). Use inline flags for case-insensitive match ('(?i)stock'), line-bound ^/$ ('(?m)'), or '.' matching newlines ('(?s)'). Lookaround and backreferences are not supported.",
+      "type": "string"
+     },
+     "per_message_char_cap": {
+      "default": 800,
+      "description": "Character budget per individual message inside a turn — long messages get middle-truncated. Default 800.",
+      "type": "integer"
+     },
+     "role": {
+      "default": "all",
+      "description": "Filter by who said it: 'user' (the user's typed messages), 'assistant' (your own prose), 'tool' (tool result bodies), or 'all' (default).",
+      "enum": [
+       "user",
+       "assistant",
+       "tool",
+       "all"
+      ],
+      "type": "string"
+     },
+     "session": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "Optional. Restrict to one session id (e.g. 'session_20260501_145636_72fa023d'). Use to drill into a specific past conversation; omit to search across all sessions."
+     },
+     "since": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "ISO date or datetime. Only sessions started on or after this point are searched. Use to scope to recent memory."
+     },
+     "turn_char_cap": {
+      "default": 4000,
+      "description": "Total character budget per returned turn window. Default 4000.",
+      "type": "integer"
+     },
+     "until": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "default": null,
+      "description": "ISO date or datetime. Only sessions started before this point are searched (exclusive)."
+     }
+    },
+    "required": [
+     "pattern"
+    ],
+    "type": "object"
+   }
+  },
+  "type": "function"
+ },
+ {
+  "function": {
+   "description": "Get everything you need to drive the web browser. The browser is controlled from the terminal via the `hive-browser` CLI — run its commands with terminal_exec, ALWAYS with `--json`. Call this first before any browser work: it returns the command surface and how to check the extension connection. Then run `hive-browser setup --json` in the terminal to confirm the Hive browser extension is connected (it returns the Chrome Web Store install steps if not) and to list the connected Chrome profiles.",
+   "name": "browser_setup",
+   "parameters": {
+    "properties": {},
+    "required": [],
+    "type": "object"
+   }
+  },
+  "type": "function"
+ },
+ {
+  "function": {
+   "description": "Fetch the result of a tool that is running in the background — one that returned {\"status\":\"started\",\"handle\":\"bg_…\"}. Pass that handle. It waits until the work is done and returns the real result. If a new message for you arrives first it returns {\"status\":\"pending\"} at once, so you can answer it; call this again to go back to waiting. This is how you retrieve image_generate and slow terminal_exec results. If the result contains auto_backgrounded=true and job_id, the command is still a terminal job: use terminal_job_logs(job_id, wait_until_exit=true) for its final output/status, or terminal_job_manage to stop it.",
+   "name": "collect_result",
+   "parameters": {
+    "properties": {
+     "handle": {
+      "description": "The handle from the backgrounded call (e.g. \"bg_1\").",
+      "type": "string"
+     },
+     "wait_seconds": {
+      "description": "Stop waiting after this many seconds. Leave it out to wait until the work is done.",
+      "minimum": 0,
+      "type": "integer"
+     }
+    },
+    "required": [
+     "handle"
+    ],
+    "type": "object"
+   }
+  },
+  "type": "function"
+ },
+ {
+  "function": {
+   "description": "Use this tool when you need to ask the user questions during execution. Reach for it when:\n\n- The task is ambiguous and the user needs to choose an approach\n- You need missing information to continue\n- You want approval before taking a meaningful action\n- A decision has real trade-offs the user should weigh in on\n- You want post-task feedback, or to offer saving a skill or updating memory\n\nUsage notes:\n- Users will always be able to select \"Other\" to provide custom text input, so do not include catch-all options like \"Other\" or \"Something else\" yourself.\n- Each option is a plain string. Do NOT wrap options in `{\"label\": \"...\"}` or `{\"value\": \"...\"}` objects — pass the raw choice text directly, e.g. `\"Email\"`, not `{\"label\": \"Email\"}`.\n- If you recommend a specific option, make that the first option in the list and append \" (Recommended)\" to the end of its text.\n- Call this tool whenever you need the user's response.\n- The prompt field must be plain text only.\n- Do not include XML, pseudo-tags, or inline option lists inside prompt.\n- Omit options only when the question truly requires a free-form response the user must type out, such as describing an idea or pasting an error message.\n- Do not repeat the questions in your normal text response. The widget renders them, so keep any surrounding text to a brief intro only.\nExample — single question with options:\n{\"questions\": [{\"id\": \"next\", \"prompt\": \"What would you like to do?\", \"options\": [\"Build a new agent (Recommended)\", \"Modify existing agent\", \"Run tests\"]}]}\n\nExample — batch:\n{\"questions\": [\n  {\"id\": \"scope\", \"prompt\": \"What scope?\", \"options\": [\"Full\", \"Partial\"]},\n  {\"id\": \"format\", \"prompt\": \"Output format?\", \"options\": [\"PDF\", \"CSV\", \"JSON\"]},\n  {\"id\": \"details\", \"prompt\": \"Any special requirements?\"}\n]}\n\nExample — free-form (queen only):\n{\"questions\": [{\"id\": \"idea\", \"prompt\": \"Describe the agent you want to build.\"}]}\n",
+   "name": "ask_user",
+   "parameters": {
+    "properties": {
+     "questions": {
+      "description": "List of questions to present to the user.",
+      "items": {
+       "properties": {
+        "id": {
+         "description": "Short identifier for this question (used in the response).",
+         "type": "string"
+        },
+        "options": {
+         "description": "2-3 predefined choices as plain strings (e.g. [\"Yes\", \"No\", \"Maybe\"]). Do NOT wrap items in {\"label\": \"...\"} or {\"value\": \"...\"} objects — pass the raw choice text directly. The UI appends an 'Other' free-text input automatically, so don't include catch-all options. Omit only when the user must type a free-form answer.",
+         "items": {
+          "type": "string"
+         },
+         "maxItems": 3,
+         "minItems": 2,
+         "type": "array"
+        },
+        "prompt": {
+         "description": "The question text shown to the user.",
+         "type": "string"
+        }
+       },
+       "required": [
+        "id",
+        "prompt"
+       ],
+       "type": "object"
+      },
+      "maxItems": 8,
+      "minItems": 1,
+      "type": "array"
+     }
+    },
+    "required": [
+     "questions"
+    ],
+    "type": "object"
+   }
+  },
+  "type": "function"
+ },
+ {
+  "function": {
+   "description": "Collect a new credential from the user via a secure form, or pin one to this session (a CLI-style tool; call with no arguments for usage). Actions: help, collect, attach, detach. To SEE what is connected or to USE a credential value in a script, run the `hive-cred` CLI in the terminal instead: `hive-cred browse --json`, `hive-cred inspect <id> --json`, `hive-cred token <id> --account <alias>`.",
+   "name": "credentials",
+   "parameters": {
+    "properties": {
+     "account": {
+      "description": "Account alias for multi-account providers (e.g. 'work'). Defaults to 'default'.",
+      "type": "string"
+     },
+     "action": {
+      "description": "What to do. Defaults to \"help\", which returns full usage. Call help first if unsure.",
+      "enum": [
+       "help",
+       "collect",
+       "attach",
+       "detach"
+      ],
+      "type": "string"
+     },
+     "credential_id": {
+      "description": "Logical credential / provider id (e.g. 'stripe', 'github'). Required for collect/attach/detach.",
+      "type": "string"
+     },
+     "fields": {
+      "description": "Optional field specs for collect. Each: {name, label?, secret?, required?, placeholder?}.",
+      "items": {
+       "properties": {
+        "label": {
+         "type": "string"
+        },
+        "name": {
+         "type": "string"
+        },
+        "placeholder": {
+         "type": "string"
+        },
+        "required": {
+         "type": "boolean"
+        },
+        "secret": {
+         "type": "boolean"
+        }
+       },
+       "required": [
+        "name"
+       ],
+       "type": "object"
+      },
+      "type": "array"
+     },
+     "instructions": {
+      "description": "Optional help text shown above the collect form.",
+      "type": "string"
+     },
+     "title": {
+      "description": "Optional form title for collect.",
+      "type": "string"
+     }
+    },
+    "required": [],
+    "type": "object"
+   }
+  },
+  "type": "function"
+ },
+ {
+  "function": {
+   "description": "Set up Sentinel notifications (Slack / Telegram) for a colony — the same actions the desktop Sentinel connector performs. Call with no args (or action=\"help\") for usage. Actions: help, status, store_token, detect_chat, configure, test. Use store_token to save a channel token you obtained (e.g. a Slack bot xoxb- / app-level xapp- token, or a Telegram bot token); detect_chat finds the Telegram chat id after the user messages the bot; configure sets the colony's channel + turns Sentinel on; test verifies a message lands. Tokens are stored encrypted; configure/test target the colony bound to this session unless you pass colony_id.",
+   "name": "sentinel_setup",
+   "parameters": {
+    "properties": {
+     "action": {
+      "description": "What to do. Defaults to \"help\", which returns full usage.",
+      "enum": [
+       "help",
+       "status",
+       "store_token",
+       "detect_chat",
+       "configure",
+       "test"
+      ],
+      "type": "string"
+     },
+     "allowlist": {
+      "description": "For configure: sender ids allowed to reply and drive the colony.",
+      "items": {
+       "type": "string"
+      },
+      "type": "array"
+     },
+     "channel": {
+      "description": "For configure/test: the channel to deliver on.",
+      "enum": [
+       "slack",
+       "telegram"
+      ],
+      "type": "string"
+     },
+     "classify_after_seconds": {
+      "description": "For configure: per-colony idle budget before escalating; omit to inherit the default.",
+      "type": "number"
+     },
+     "colony_id": {
+      "description": "For configure/test: target colony's on-disk directory name. Defaults to the colony bound to this session.",
+      "type": "string"
+     },
+     "enabled": {
+      "description": "For configure: turn Sentinel on (true) or off (false) for the colony.",
+      "type": "boolean"
+     },
+     "provider": {
+      "description": "For store_token: which token. 'slack' = bot xoxb-, 'slack_app' = app-level xapp-, 'telegram' = bot token.",
+      "enum": [
+       "slack",
+       "slack_app",
+       "telegram"
+      ],
+      "type": "string"
+     },
+     "target": {
+      "description": "For configure/test: destination. Slack: {\"channel\": \"C0123ABC\"}. Telegram: {\"chat_id\": \"123456789\"}.",
+      "type": "object"
+     },
+     "token": {
+      "description": "For store_token: the raw token value to store (kept encrypted).",
+      "type": "string"
+     }
+    },
+    "required": [],
+    "type": "object"
+   }
+  },
+  "type": "function"
+ }
+]

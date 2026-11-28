@@ -20,10 +20,14 @@
 // Scope, stated honestly:
 //   - Simple text PDFs (Type1/TrueType fonts, WinAnsi or ToUnicode CMaps) are
 //     extracted page by page.
-//   - Encrypted PDFs are rejected explicitly; password decryption is not
-//     implemented (upstream delegates that to pdfplumber).
+//   - Encrypted PDFs are decrypted with the standard security handler when
+//     the caller supplies the password (RC4 40/128, AES-128, AES-256 R5/R6),
+//     matching pdfplumber's password argument. A wrong or missing password is
+//     reported as pdf_encrypted with a qpdf fallback hint.
 //   - Scanned/image-only PDFs are rejected with an explicit needs_vision
-//     error instead of silently returning an empty body.
+//     error that routes the model to attach_file/vision first (OCR only as
+//     the non-vision terminal_hint fallback) instead of silently returning an
+//     empty body.
 //   - Inline images, AcroForm fields, annotations, JavaScript and PostScript
 //     functions are ignored.
 //

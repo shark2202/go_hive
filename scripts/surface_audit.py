@@ -39,8 +39,10 @@ DEFAULT_ALLOWLIST = "go_hive/scripts/surface_audit_allowlist.json"
 DEFAULT_REPORT = "go_hive/docs/surface-audit.md"
 
 # 空目录 / lane 文件扫描时跳过的目录名。`.wt` 是并行 worktree，扫进来既慢又吵。
+# `.hive_go` 是 HIVE_HOME 运行时状态（会话/凭据/记忆等），不是交付源码；
+# 运行期间出现空目录是常态，不能当作落地残渣阻断门禁。
 SKIP_DIR_NAMES = {
-    ".git", ".wt", ".venv", "venv", "node_modules", "__pycache__",
+    ".git", ".wt", ".hive_go", ".venv", "venv", "node_modules", "__pycache__",
     ".pytest_cache", ".mypy_cache", ".ruff_cache", ".cache", "build",
     "dist", "coverage", "target", ".next", ".idea",
 }

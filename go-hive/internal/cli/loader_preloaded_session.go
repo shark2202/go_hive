@@ -6,7 +6,6 @@ package cli
 // inside the repository's frozen file-size budget.
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -17,7 +16,6 @@ import (
 	"github.com/shark2202/go_hive/go-hive/internal/atomicfs"
 	"github.com/shark2202/go_hive/go-hive/internal/eventbus"
 	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
-	colonyhost "github.com/shark2202/go_hive/go-hive/internal/host"
 	"github.com/shark2202/go_hive/go-hive/internal/mcpregistry"
 	hiveserver "github.com/shark2202/go_hive/go-hive/internal/server"
 	hivesession "github.com/shark2202/go_hive/go-hive/internal/session"
@@ -78,14 +76,6 @@ func (r *Runner) loadPreloadedColonySession(
 	// Nil when no provider is configured, in which case the worker and
 	// colony routes keep their on-disk fallbacks.
 	record.Colony = r.buildColonyHost(colonyPath, colonyID, home, model)
-	if built, ok := record.Colony.(*colonyhost.Host); ok {
-		// A preloaded colony is live from boot: its overseer starts here
-		// rather than waiting for a load_colony round trip.
-		queenName := colonyQueenName(home, colonyID)
-		if _, startErr := built.StartOverseer(context.Background(), queenOverseerSpec(home, queenName), nil); startErr != nil {
-			fmt.Fprintf(r.Stdout, "Warning: colony overseer unavailable for %s: %v\n", colonyID, startErr)
-		}
-	}
 	// Chat/trigger/dispatch runtime for the preloaded session. It must exist
 	// before triggers are restored: a restored timer's first fire needs the
 	// session's queen executor.
@@ -190,7 +180,9 @@ func (r *Runner) attachPreloadedChatRuntime(record *hiveserver.Session, manager 
 	// A resumed channel session keeps its channel (upstream create_queen
 	// restores session.channel from meta.json).
 	record.SetChannel(hiveserver.ReadSessionChannel(sessionDir))
-	toolbox := builtin.New("")
+	// File tools sandbox at the session directory, matching the ast_grep/LSP
+	// root; terminal tools keep resolving the injected session_cwd.
+	toolbox := builtin.New(sessionDir)
 	tools := newSessionToolCatalogue(sessionDir, toolbox, home)
 	// Same live registry handle a created session carries, so the diagnosis
 	// endpoints and the Tool Library see this session's MCP bookkeeping.
@@ -208,6 +200,12 @@ func (r *Runner) attachPreloadedChatRuntime(record *hiveserver.Session, manager 
 	// with the same searchable-manifest filter.
 	alwaysOnTools, deferredTools := tools.LazySurfaceDeps()
 	manifestNames, manifestFiltered := tools.SearchableManifestNames(chatSessionQueenScope(record.QueenName))
+	// One registry executor carries both liveness handles (probe / kill) for
+	// the shared MCP pool.
+	//
+	// Parity: framework/loader/tool_registry.py (executor.probe_for_tool /
+	// executor.kill_for_tool)
+	toolLiveness := tools.Registry().GetExecutor()
 	built, err := hiveserver.NewChatRuntime(hiveserver.ChatRuntimeDeps{
 		LLM:               provider,
 		Tools:             tools.ModelDefs(),
@@ -220,9 +218,14 @@ func (r *Runner) attachPreloadedChatRuntime(record *hiveserver.Session, manager 
 		MCPToolNamesAll: tools.CatalogueMCPToolNamesAll(),
 		Execute:         tools.Execute,
 		ExecuteBlocks:   tools.ExecuteBlocks,
-		Root:            sessionDir,
-		Bus:             record.EventBus,
-		SessionID:       record.ID,
+		// A tool that times out probes its shared MCP transport before the
+		// loop reclaims it; the closures above cannot carry the methods, so
+		// the catalogue's registry executor rides alongside.
+		ToolProber: toolLiveness,
+		ToolKiller: toolLiveness,
+		Root:       sessionDir,
+		Bus:        record.EventBus,
+		SessionID:  record.ID,
 		// The live session record: the colony pivot intercept stashes
 		// session.pending_colony_pivot on it for the accept/dismiss routes.
 		Session:   record,
@@ -260,6 +263,11 @@ func (r *Runner) attachPreloadedChatRuntime(record *hiveserver.Session, manager 
 			}
 			return adapter.GetAllAccountInfo()
 		},
+		// Full per-account detail for credentials pinned with
+		// credentials(action=attach); re-read on every prompt build.
+		//
+		// Parity: framework/server/queen_orchestrator.py::_build_credentials_provider
+		PinnedCredentials: sessionPinnedCredentialsProvider(home, record.ID, sessionDir),
 		// The command-line MCP servers she runs with terminal_exec, right after
 		// the credentials block.
 		//

@@ -98,7 +98,12 @@ func (e *chatTurnEmitter) executionStarted(message string) {
 	e.bus.EmitLoopStateChanged(e.streamID, e.nodeID, "executing", &e.executionID, nil, nil, nil)
 	maxIterations := e.maxIterations
 	if maxIterations <= 0 {
-		maxIterations = agentloop.DefaultLoopConfig().MaxIterations
+		// A chat session is a queen session: a partially built runtime (no
+		// loop yet) must still advertise the queen profile's autonomous
+		// bound. agentloop.DefaultLoopConfig's 50 is the worker/generic
+		// default and would understate this session's cap. The normal path
+		// reads r.loop.Config, so a HIVE_MAX_ITER cap still wins there.
+		maxIterations = agentloop.QueenLoopConfig().MaxIterations
 	}
 	e.bus.EmitNodeLoopStarted(e.streamID, e.nodeID, &e.executionID, &maxIterations)
 }
@@ -242,7 +247,7 @@ func (e *chatTurnEmitter) LLMTurnComplete(completion llm.Completion, iteration i
 		completion.StopReason, model,
 		completion.InputTokens, completion.OutputTokens,
 		completion.CachedTokens, completion.CacheCreationTokens,
-		completion.CostUSD, nil,
+		completion.CostUSD, completion.Credits,
 		&e.executionID, &iteration, prefixSHA, suffixSHA, historyAnchor, messageCount)
 }
 
@@ -332,6 +337,30 @@ func (e *chatTurnEmitter) executionCompleted(iterations int, parkReason string, 
 	e.bus.EmitLoopStateChanged(e.streamID, e.nodeID, "awaiting_user", &e.executionID, &parkReason, nil, nil)
 	e.bus.EmitExecutionCompleted(e.streamID, e.executionID,
 		map[string]any{"status": "completed"}, nil, nil)
+}
+
+// executionParked closes a turn the loop parked by design rather than failed.
+// Two loop guards end a turn with a typed park error — the empty-response
+// ghost stream and the deterministic doom loop — and upstream's
+// _await_user_input announces that wait instead of failing the execution:
+// client_input_requested carries the park reason, and _set_activity flips the
+// loop state to the reason's own activity (interrupted for both broken parks).
+// No execution_failed frame is published, because nothing failed: the loop
+// chose to park and the next user message starts a fresh turn.
+//
+// Parity: framework/agent_loop/agent_loop.py::_await_user_input
+func (e *chatTurnEmitter) executionParked(parkReason agentloop.ParkReason, questions []map[string]any) {
+	if e == nil {
+		return
+	}
+	reason := string(parkReason)
+	if reason == "" {
+		reason = string(agentloop.ParkReasonUnknown)
+	}
+	e.bus.EmitClientInputRequested(e.streamID, e.nodeID, &e.executionID, questions, &reason)
+	// The park's authoritative activity: a broken park is "interrupted", a
+	// deliberate one "awaiting_user" (ParkReason.Activity is the classifier).
+	e.bus.EmitLoopStateChanged(e.streamID, e.nodeID, string(parkReason.Activity()), &e.executionID, &reason, nil, questions)
 }
 
 // parkAnnouncesClientRequest reports whether the park boundary itself

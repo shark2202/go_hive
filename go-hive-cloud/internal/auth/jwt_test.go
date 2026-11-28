@@ -90,6 +90,53 @@ func mustSign(t *testing.T, secret []byte, user, team string) string {
 	return token
 }
 
+func TestVerifyStreamToken(t *testing.T) {
+	current := []byte("current-stream-secret")
+	previous := []byte("previous-stream-secret")
+	signer := NewSigner(current, nil)
+	stream, err := signer.MintStreamToken("u1", "team1", time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	claims, err := VerifyStreamToken([][]byte{current, previous}, stream)
+	if err != nil {
+		t.Fatalf("VerifyStreamToken: %v", err)
+	}
+	if claims.Typ != TokenTypeStream || claims.UserID != "u1" || claims.TeamID != "team1" {
+		t.Fatalf("claims = %+v", claims)
+	}
+
+	old, err := NewSigner(previous, nil).MintStreamToken("u1", "team1", time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := VerifyStreamToken([][]byte{current, previous}, old); err != nil {
+		t.Fatalf("previous-secret token rejected inside the window: %v", err)
+	}
+	if _, err := VerifyStreamToken([][]byte{current}, old); !errors.Is(err, ErrInvalid) {
+		t.Fatalf("previous-secret token outside the window = %v, want ErrInvalid", err)
+	}
+
+	userToken, _ := signer.MintUserToken("u1", "team1", time.Hour)
+	if _, err := VerifyStreamToken([][]byte{current}, userToken); !errors.Is(err, ErrInvalid) {
+		t.Fatalf("user token = %v, want ErrInvalid", err)
+	}
+	noTeam, err := signer.Sign(Claims{UserID: "u1", Typ: TokenTypeStream, Exp: time.Now().Add(time.Hour).Unix()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := VerifyStreamToken([][]byte{current}, noTeam); !errors.Is(err, ErrInvalid) {
+		t.Fatalf("missing team = %v, want ErrInvalid", err)
+	}
+	badTeam, err := signer.Sign(Claims{UserID: "u1", TeamID: "../x", Typ: TokenTypeStream, Exp: time.Now().Add(time.Hour).Unix()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := VerifyStreamToken([][]byte{current}, badTeam); !errors.Is(err, ErrInvalid) {
+		t.Fatalf("bad team = %v, want ErrInvalid", err)
+	}
+}
+
 func TestDecodeExp(t *testing.T) {
 	token := mustSign(t, secret, "u1", "team1")
 	exp, ok := DecodeExp(token)

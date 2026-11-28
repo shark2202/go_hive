@@ -8,6 +8,7 @@ package server
 import (
 	"context"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/shark2202/go_hive/go-hive/internal/agentloop"
@@ -267,4 +268,164 @@ func llmToolNameSet(defs []llm.ToolDef) map[string]bool {
 		out[def.Name] = true
 	}
 	return out
+}
+
+// Parity: core/framework/server/queen_orchestrator.py::_make_pivot_payload_sink
+func TestColonyPivotSinkVetoesForkKickoffWithoutStashing(t *testing.T) {
+	session := NewSession("session_20260101_000000_veto001", nil)
+	session.ForkKickoffPending = true
+	runtime, _ := colonyDispatchRuntime(t, llm.Completion{Content: "ok"}, "colony", session, nil)
+	defer runtime.Close()
+
+	veto := runtime.sinkColonyPivot(map[string]any{"goal": "chain fork"})
+	const want = "This colony was just created by a fork — its task plan " +
+		"already exists and this IS the new colony. Do NOT spawn " +
+		"another colony or re-create tasks. Call task_list to " +
+		"see the plan, then task_update to work it. new_colony " +
+		"becomes available again only after the user sends a new " +
+		"message in this colony."
+	if veto != want {
+		t.Fatalf("veto = %q, want the upstream fork-kickoff text", veto)
+	}
+	if _, pivot := runtime.pendingColonyDispatch(); pivot != nil {
+		t.Fatalf("runtime stash = %#v, want nil after a fork-kickoff veto", pivot)
+	}
+	if session.HasPendingColonyPivot() {
+		t.Fatal("session.pending_colony_pivot set after a fork-kickoff veto")
+	}
+}
+
+// Parity: core/framework/server/queen_orchestrator.py::_make_pivot_payload_sink
+func TestColonyPivotSinkVetoesOpenRuntimePopupWithoutOverwriting(t *testing.T) {
+	session := NewSession("session_20260101_000000_veto002", nil)
+	runtime, _ := colonyDispatchRuntime(t, llm.Completion{Content: "ok"}, "colony", session, nil)
+	defer runtime.Close()
+
+	runtime.rememberPendingColonyPivot(map[string]any{"goal": "first pivot"})
+	// Isolate the runtime-level stash: the session mirror has its own test.
+	session.ClearPendingColonyPivot()
+
+	veto := runtime.sinkColonyPivot(map[string]any{"goal": "second pivot"})
+	const want = "A new_colony popup is already open and waiting for the " +
+		"user. Do not call task_create(new_colony=true) again " +
+		"until the current popup resolves."
+	if veto != want {
+		t.Fatalf("veto = %q, want the upstream concurrent-popup text", veto)
+	}
+	_, pivot := runtime.pendingColonyDispatch()
+	if pivot == nil || pivot["goal"] != "first pivot" {
+		t.Fatalf("runtime stash = %#v, want the first pivot untouched", pivot)
+	}
+	if session.HasPendingColonyPivot() {
+		t.Fatal("veto wrote the payload to the session stash")
+	}
+}
+
+// Parity: core/framework/server/queen_orchestrator.py::_make_pivot_payload_sink
+func TestColonyPivotSinkVetoesOpenSessionPopupWithoutOverwriting(t *testing.T) {
+	session := NewSession("session_20260101_000000_veto003", nil)
+	session.SetPendingColonyPivot(map[string]any{"goal": "first pivot"})
+	runtime, _ := colonyDispatchRuntime(t, llm.Completion{Content: "ok"}, "colony", session, nil)
+	defer runtime.Close()
+
+	veto := runtime.sinkColonyPivot(map[string]any{"goal": "second pivot"})
+	const want = "A new_colony popup is already open and waiting for the " +
+		"user. Do not call task_create(new_colony=true) again " +
+		"until the current popup resolves."
+	if veto != want {
+		t.Fatalf("veto = %q, want the upstream concurrent-popup text", veto)
+	}
+	if _, pivot := runtime.pendingColonyDispatch(); pivot != nil {
+		t.Fatalf("runtime stash = %#v, want nil: the veto must not stash", pivot)
+	}
+	pending, _ := session.PendingColonyPivot().(map[string]any)
+	if pending == nil || pending["goal"] != "first pivot" {
+		t.Fatalf("session pending = %#v, want the first pivot untouched", pending)
+	}
+}
+
+// Parity: core/framework/server/queen_orchestrator.py::_make_pivot_payload_sink
+func TestColonyPivotSinkStashesPayloadWhenNoVeto(t *testing.T) {
+	session := NewSession("session_20260101_000000_veto004", nil)
+	runtime, _ := colonyDispatchRuntime(t, llm.Completion{Content: "ok"}, "colony", session, nil)
+	defer runtime.Close()
+
+	payload := map[string]any{
+		"goal":    "new colony",
+		"handoff": "full objective brief",
+		"tasks":   []map[string]any{{"subject": "s"}},
+	}
+	if veto := runtime.sinkColonyPivot(payload); veto != "" {
+		t.Fatalf("veto = %q, want no veto on the clean path", veto)
+	}
+	_, pivot := runtime.pendingColonyDispatch()
+	if pivot == nil || pivot["goal"] != "new colony" || pivot["handoff"] != "full objective brief" {
+		t.Fatalf("runtime stash = %#v", pivot)
+	}
+	pending, _ := session.PendingColonyPivot().(map[string]any)
+	if pending == nil || pending["goal"] != "new colony" {
+		t.Fatalf("session pending = %#v", pending)
+	}
+}
+
+// Parity: core/framework/server/queen_orchestrator.py::_make_pivot_payload_sink
+// Parity: framework/agent_loop/agent_loop.py:5272-5295 (sink veto skips the popup)
+func TestForkKickoffPivotVetoIsAnIsErrorResultAndSkipsThePopup(t *testing.T) {
+	session := NewSession("session_20260101_000000_veto005", nil)
+	session.ForkKickoffPending = true
+	runtime, bus := colonyDispatchRuntime(t, llm.Completion{
+		ToolCalls: []llm.ToolCall{{
+			ID:        "t1",
+			Name:      agentloop.TaskCreateToolName,
+			Arguments: `{"new_colony":true,"goal":"chain fork","handoff":"brief","tasks":[{"subject":"s"}]}`,
+		}},
+	}, "colony", session, nil)
+	session.EventBus = bus
+	defer runtime.Close()
+	recorder := recordChatEvents(bus)
+
+	if err := runtime.Deliver("kickoff"); err != nil {
+		t.Fatalf("Deliver: %v", err)
+	}
+	waitForChatEvents(t, recorder, eventbus.EventExecutionCompleted, 1)
+
+	if events := recorder.ofType(eventbus.EventColonySuggestionRequested); len(events) != 0 {
+		t.Fatalf("colony_suggestion_requested = %d, want 0 (the veto must not open a popup)", len(events))
+	}
+	if session.HasPendingColonyPivot() {
+		t.Fatal("session.pending_colony_pivot set after the veto")
+	}
+	model, ok := runtime.deps.LLM.(*queenChatLLM)
+	if !ok {
+		t.Fatalf("runtime LLM = %T, want *queenChatLLM", runtime.deps.LLM)
+	}
+	sawVeto := false
+	for _, request := range model.requestSnapshot() {
+		for _, message := range request.Messages {
+			if strings.Contains(message.Content, "This colony was just created by a fork") &&
+				strings.Contains(message.Content, "new_colony becomes available again") {
+				sawVeto = true
+			}
+		}
+	}
+	if !sawVeto {
+		t.Fatal("the model never received the fork-kickoff veto as a tool result")
+	}
+}
+
+// Parity: core/framework/server/queen_orchestrator.py::_make_pivot_payload_sink
+func TestColonyPivotSinkNilSafety(t *testing.T) {
+	var nilRuntime *ChatRuntime
+	if veto := nilRuntime.sinkColonyPivot(map[string]any{"goal": "g"}); veto != "" {
+		t.Fatalf("nil runtime veto = %q, want no veto", veto)
+	}
+	session := NewSession("session_20260101_000000_veto006", nil)
+	runtime, _ := colonyDispatchRuntime(t, llm.Completion{Content: "ok"}, "colony", session, nil)
+	defer runtime.Close()
+	if veto := runtime.sinkColonyPivot(nil); veto != "" {
+		t.Fatalf("nil payload veto = %q, want no veto", veto)
+	}
+	if _, pivot := runtime.pendingColonyDispatch(); pivot != nil {
+		t.Fatalf("runtime stash = %#v, want nil for a nil payload", pivot)
+	}
 }

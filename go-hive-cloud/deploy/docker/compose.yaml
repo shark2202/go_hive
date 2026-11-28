@@ -1,0 +1,51 @@
+# go-hive-cloud single-node compose deployment (SQLite data only).
+#
+#   cp .env.example .env       # optional non-secret overrides, never commit .env
+#   docker compose up -d --build
+#   curl -fsS http://127.0.0.1:8788/health
+#
+# The service listens on loopback only by default. Put a TLS-terminating
+# reverse proxy in front for remote clients; do not publish :8788 publicly.
+#
+# JWT/streamToken signing secrets are generated inside the named volume as
+# 0600 files on first start. No secrets are baked into the image or this file.
+name: hive-cloud
+
+services:
+  hive-cloud:
+    image: ${HIVE_CLOUD_IMAGE:-hive-cloud:local}
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+      args:
+        GO_VERSION: ${GO_VERSION:-1.26.11}
+    restart: unless-stopped
+    read_only: true
+    user: "65532:65532"
+    ports:
+      - "127.0.0.1:${HIVE_CLOUD_PORT:-8788}:8788"
+    environment:
+      HIVE_CLOUD_LISTEN: "0.0.0.0:8788"
+      HIVE_CLOUD_DATA_DIR: "/var/lib/hive-cloud"
+      HIVE_CLOUD_STATEMENT_TIMEOUT_MS: "${HIVE_CLOUD_STATEMENT_TIMEOUT_MS:-5000}"
+      HIVE_CLOUD_INBOX_RATE_LIMIT: "${HIVE_CLOUD_INBOX_RATE_LIMIT:-0}"
+      HIVE_CLOUD_INBOX_RATE_WINDOW_MS: "${HIVE_CLOUD_INBOX_RATE_WINDOW_MS:-60000}"
+    volumes:
+      - hive-cloud-data:/var/lib/hive-cloud
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8788/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    stop_signal: SIGTERM
+    stop_grace_period: 15s
+
+volumes:
+  hive-cloud-data:

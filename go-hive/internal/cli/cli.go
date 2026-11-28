@@ -25,6 +25,7 @@ import (
 	"github.com/shark2202/go_hive/go-hive/internal/llm"
 	"github.com/shark2202/go_hive/go-hive/internal/llmjudge"
 	"github.com/shark2202/go_hive/go-hive/internal/mcpregistry"
+	"github.com/shark2202/go_hive/go-hive/internal/pyenv"
 	"github.com/shark2202/go_hive/go-hive/internal/session"
 	"github.com/shark2202/go_hive/go-hive/internal/skills"
 	"github.com/shark2202/go_hive/go-hive/internal/version"
@@ -167,7 +168,7 @@ func NewRunner() *Runner {
 		mcpCLI := &mcpregistry.CLI{
 			Out: r.Stdout, Err: r.Stderr, In: r.Stdin,
 			RootProg:  "hive",
-			RootUsage: func() string { return root.helpSpec().UsageText() },
+			RootUsage: func() string { return root.HelpSpec().UsageText() },
 		}
 		return mcpCLI.Main(argv)
 	}
@@ -271,12 +272,16 @@ func defaultRunCommand(dir string, command []string) (commandOutput, error) {
 }
 
 func (r *Runner) Run(argv []string) int {
+	// Before anything starts a process: MCP servers, terminal commands,
+	// mcp2cli. Upstream drops it at the top of framework/cli.py::main; this is
+	// the Go entry every command passes through.
+	pyenv.DropLauncherPythonHome()
 	spec := r.rootCommand()
 	args, err := parseCommand(spec, argv)
 	if err != nil {
 		var help *helpRequest
 		if errors.As(err, &help) {
-			fmt.Fprint(r.Stdout, help.spec.helpText())
+			fmt.Fprint(r.Stdout, help.spec.HelpText())
 			return 0
 		}
 		var versionReq *versionRequest
@@ -333,7 +338,9 @@ func (r *Runner) rootCommand() *commandSpec {
 	root.Subcommands = append(root.Subcommands, r.debuggerCommands()...)
 	root.Subcommands = append(root.Subcommands, r.mcpCommands()...)
 	root.Subcommands = append(root.Subcommands, r.janitorCommands()...)
+	root.Subcommands = append(root.Subcommands, r.globalDBCommands()...)
 	root.Subcommands = append(root.Subcommands, r.queenMailMCPCommands()...)
+	root.Subcommands = append(root.Subcommands, r.testApprovalCommands()...)
 	return root
 }
 

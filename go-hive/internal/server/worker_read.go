@@ -43,15 +43,26 @@ func ReadWorkerFromDisk(workerID, wdir string) map[string]any {
 	if v := meta["profile_name"]; pythonTruthy(v) {
 		profileName = v
 	}
+	// Lineage: which queen session spawned this worker, and which queen owned
+	// the colony. Both are spawn-time breadcrumbs in meta.json, so a worker
+	// directory stays attributable after the runtime that created it is gone.
+	// Absent keys render null (upstream's .get() on a legacy meta).
+	queenSessionID := meta["queen_session_id"]
+	queenName := meta["queen_name"]
+	if !pythonTruthy(queenName) {
+		queenName = nil
+	}
 
 	return map[string]any{
-		"worker_id":    workerID,
-		"task":         task,
-		"goal":         goal,
-		"status":       "historical",
-		"started_at":   startedAt,
-		"result":       result,
-		"profile_name": profileName,
+		"worker_id":        workerID,
+		"task":             task,
+		"goal":             goal,
+		"status":           "historical",
+		"started_at":       startedAt,
+		"result":           result,
+		"profile_name":     profileName,
+		"queen_session_id": queenSessionID,
+		"queen_name":       queenName,
 		"batch": map[string]any{
 			"batch_id":    orDefault(meta["batch_id"], ""),
 			"batch_index": orDefault(meta["batch_index"], 0),

@@ -778,6 +778,7 @@ import {
 import { useLazyHistoryWindow } from "@/components/useLazyHistoryWindow";
 import NoModelNotice from "@/components/NoModelNotice";
 import ModelErrorCard, { parseModelError } from "@/components/ModelErrorCard";
+import PaymentRequiredCard, { parsePaymentRequired } from "@/components/PaymentRequiredCard";
 
 /** A queen's reply text: Markdown, or a card when it is a failed model call. */
 function QueenText({ content }: { content: string }) {
@@ -809,7 +810,8 @@ export interface ChatMessage {
     | "colony_link"
     | "inherited_block"
     | "trigger"
-    | "reasoning";
+    | "reasoning"
+    | "payment_required";
   role?: "queen" | "worker";
   /** Which worker thread this message belongs to (worker agent name) */
   thread?: string;
@@ -2222,6 +2224,11 @@ const MessageBubble = memo(
       );
     }
 
+    if (msg.type === "payment_required") {
+      // Provider 402: a billing/upgrade card with the way out of the error.
+      return <PaymentRequiredCard error={parsePaymentRequired(msg.content)} />;
+    }
+
     if (msg.type === "trigger") {
       // Rendered when a scheduler/webhook trigger fires. Content is a JSON
       // payload: { trigger_id, trigger_type, name, task, last_fired_at,
@@ -3169,7 +3176,8 @@ export default function ChatPanel({
           if (
             m.type === "colony_link" ||
             m.type === "inherited_block" ||
-            m.type === "system"
+            m.type === "system" ||
+            m.type === "payment_required"
           ) { dbg("worker_run break banner", { idx: i, id: m.id, type: m.type }); break; }
           // Subagent message — different group type, stop here
           if (m.nodeId?.includes(":subagent:")) { dbg("worker_run break subagent", { idx: i, id: m.id, nodeId: m.nodeId }); break; }

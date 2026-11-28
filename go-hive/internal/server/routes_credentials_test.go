@@ -11,6 +11,7 @@ import (
 
 	"github.com/shark2202/go_hive/go-hive/internal/credentials"
 	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/server/routesagents"
 )
 
 type credentialRouteTestStore struct {
@@ -612,7 +613,7 @@ func TestCredentialRoutesSpecsAvailabilityUsesEnvStore(t *testing.T) {
 func TestCredentialRoutesCoexistWithAgentRoutes(t *testing.T) {
 	home := hivehome.Home{Root: t.TempDir()}
 	mux := http.NewServeMux()
-	RegisterAgentRoutes(mux, AgentRouteDeps{Home: home})
+	routesagents.RegisterRoutes(mux, routesagents.Deps{Home: home})
 	RegisterCredentialRoutes(mux, CredentialRouteDeps{Store: credentials.ForTesting(nil)})
 	RegisterSoulRoutes(mux, SoulRouteDeps{Home: home})
 	RegisterChannelRoutes(mux, ChannelRouteDeps{})

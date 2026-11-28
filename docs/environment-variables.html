@@ -69,7 +69,7 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 <section id="pyonly"><h2><span class="num">03</span>Python 独有（6，全部为 GCU 平台差异）</h2>
 <p class="sub">Go 侧没有这些名字的读取点；它们只对 Python GCU（browser tools）进程生效，而 Go 端口用 Go browser bridge 取代了该进程，因此登记为<b>平台差异</b>（有替代机制），不是"待补的读取点"。逐项理由与替代 anchor 见 <a href="env-verbatim-port.md">env-verbatim-port.md</a> §2；机器可读见 <code>contracts/config-support-ledger.json</code>（<code>status=platform_diff</code>，门禁强制要求 reason + anchor 齐全）。</p>
 <div class="tablewrap"><table><thead><tr><th style="width:30%">变量</th><th style="width:36%">用途 / 语义（Python）</th><th>Go 侧替代</th></tr></thead><tbody>
-<tr><td><code>HIVE_GCU_MEMTRACE</code></td><td>GCU 内存追踪开关（truthy 才启动采样）</td><td rowspan="5">无对应机制：Go 用 browser bridge + <code>hive-browser</code> CLI 取代 Python GCU 进程（<code>go_hive/go-hive/internal/cli/browser_supervisor.go</code> <code>startBrowserBridge</code>、<code>go_hive/go-hive/internal/cli/browser_cli.go</code>），不采样 GCU 堆</td></tr>
+<tr><td><code>HIVE_GCU_MEMTRACE</code></td><td>GCU 内存追踪开关（truthy 才启动采样）</td><td rowspan="5">无对应机制：Go 用 browser bridge + <code>hive-browser</code> CLI 取代 Python GCU 进程（<code>go_hive/go-hive/internal/cli/browsersupervisor/supervisor.go</code> <code>startBrowserBridge</code>、<code>go_hive/go-hive/internal/cli/browsercli/browser_cli.go</code>），不采样 GCU 堆</td></tr>
 <tr><td><code>HIVE_GCU_MEMTRACE_FILE</code></td><td>追踪输出文件（未设时 bridge_host 自写 <code>${GCU_LOG_FILE}.bridge_host</code>）</td></tr>
 <tr><td><code>HIVE_GCU_MEMTRACE_FRAMES</code></td><td>追踪保留帧数（默认 12，下限 1）</td></tr>
 <tr><td><code>HIVE_GCU_MEMTRACE_INTERVAL_S</code></td><td>采样间隔秒（默认 60，下限 10）</td></tr>
@@ -99,16 +99,18 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 <section id="goonly"><h2><span class="num">04</span>Go 独有（35）</h2>
 <h3>生产（14）</h3>
 <div class="tablewrap"><table><thead><tr><th style="width:30%">变量</th><th style="width:44%">用途 / 语义</th><th>读取点</th></tr></thead><tbody>
-<tr><td><code>HIVE_BROWSERBRIDGE_ARGS</code></td><td>browserbridge 额外启动参数</td><td><code>go_hive/go-hive/internal/cli/browser_supervisor.go</code></td></tr>
-<tr><td><code>HIVE_BROWSERBRIDGE_BIN</code></td><td>browserbridge 可执行文件路径</td><td><code>go_hive/go-hive/internal/cli/browser_supervisor.go</code></td></tr>
+<tr><td><code>HIVE_BROWSERBRIDGE_ARGS</code></td><td>browserbridge 额外启动参数</td><td><code>go_hive/go-hive/internal/cli/browsersupervisor/supervisor.go</code></td></tr>
+<tr><td><code>HIVE_BROWSERBRIDGE_BIN</code></td><td>browserbridge 可执行文件路径</td><td><code>go_hive/go-hive/internal/cli/browsersupervisor/supervisor.go</code></td></tr>
 <tr><td><code>HIVE_BROWSERBRIDGE_CONTROL</code></td><td>bridge control RPC 端口</td><td><code>go_hive/go-hive/internal/cli/browser_control.go</code></td></tr>
-<tr><td><code>HIVE_BROWSERBRIDGE_HTTP</code></td><td>bridge HTTP 端口/地址</td><td><code>go_hive/go-hive/internal/cli/browser_supervisor.go</code> 等 2 处</td></tr>
-<tr><td><code>HIVE_BROWSER_BRIDGE</code></td><td>是否随 serve 拉起 bridge</td><td><code>go_hive/go-hive/internal/cli/browser_supervisor.go</code></td></tr>
-<tr><td><code>HIVE_BROWSER_VIEWPORT_SCALE</code></td><td>GCU 视口缩放（由 configuration/gcu_viewport_scale 注入）</td><td><code>go_hive/go-hive/internal/cli/browser_supervisor.go</code></td></tr>
+<tr><td><code>HIVE_BROWSERBRIDGE_HTTP</code></td><td>bridge HTTP 端口/地址</td><td><code>go_hive/go-hive/internal/cli/browsersupervisor/supervisor.go</code> 等 2 处</td></tr>
+<tr><td><code>HIVE_BROWSER_BRIDGE</code></td><td>是否随 serve 拉起 bridge</td><td><code>go_hive/go-hive/internal/cli/browsersupervisor/supervisor.go</code></td></tr>
+<tr><td><code>HIVE_BROWSER_VIEWPORT_SCALE</code></td><td>GCU 视口缩放（由 configuration/gcu_viewport_scale 注入）</td><td><code>go_hive/go-hive/internal/cli/browsersupervisor/supervisor.go</code></td></tr>
 <tr><td><code>HIVE_MCP2CLI</code></td><td>mcp2cli 兼容层开关</td><td><code>go_hive/go-hive/internal/mcpregistry/mcp2cli.go</code></td></tr>
 <tr><td><code>HIVE_SESSION_COST_LIMIT_USD</code></td><td>会话成本上限（美元）</td><td><code>go_hive/go-hive/internal/agentloop/session_cost.go</code></td></tr>
 <tr><td><code>HIVE_PYTHON</code></td><td>Python playbook 解释器路径（覆盖 python3/python 查找）</td><td><code>go_hive/go-hive/internal/playbook/python.go</code></td></tr>
 <tr><td><code>HIVE_TOOL_SURFACE</code></td><td>工具面形态（flat / grouped）</td><td><code>go_hive/go-hive/internal/cli/tool_surface_flat.go</code></td></tr>
+<tr><td><code>HIVE_HTTP_TOOLS</code></td><td>原生 HTTP 工具家族硬开关（0=关闭；配置只读 <code>$HIVE_HOME/http_tools.json</code>）</td><td><code>go_hive/go-hive/internal/nativehttp/config.go</code></td></tr>
+<tr><td><code>HIVE_AST_ANALYZE</code></td><td>仓库 AST 分析工具硬开关（0=关闭；配置只读 <code>$HIVE_HOME/ast_analyze.json</code>）</td><td><code>go_hive/go-hive/internal/astanalyze/astanalyze.go</code></td></tr>
 <tr><td><code>HIVE_CONTINUE_NUDGE_ENABLED</code></td><td>continue-nudge 开关（Go 扩展）</td><td><code>go_hive/go-hive/internal/server/chat_memory_wiring.go</code></td></tr>
 <tr><td><code>HIVE_CONTINUE_NUDGE_MAX_PER_TURN</code></td><td>每回合 continue-nudge 次数上限（Go 扩展）</td><td><code>go_hive/go-hive/internal/server/chat_memory_wiring.go</code></td></tr>
 <tr><td><code>HIVE_LLM_STREAM_TTFT_TIMEOUT_SECONDS</code></td><td>LLM 流首包（TTFT）超时秒数（Go 扩展）</td><td><code>go_hive/go-hive/internal/server/chat_memory_wiring.go</code></td></tr>

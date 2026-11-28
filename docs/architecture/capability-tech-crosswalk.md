@@ -1,6 +1,6 @@
 # 业务能力 ↔ 技术模块对照（生成物，勿手改）
 
-> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` 生成。commit: `5154313071a3`
+> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` 生成。commit: `d90acd8b4e9d`
 > 这是业务视图与技术视图的接缝：左边是人关心的结果，右边是代码里真实存在的包、入口与落盘文件。
 
 ## 成熟度与审批口径
@@ -21,7 +21,7 @@
 | **Colony 部署单元**<br/>`colony-unit` | 一次目标对应一个可暂停、可恢复的 colony 目录，绑定 queen、tracker 与 worker 池，使长任务不与单个会话同生共死。 | `internal/colony`<br>`internal/host`<br>`internal/session`<br>`internal/storage` | HTTP POST /api/colonies/{colony_id}/scaffold<br>HTTP POST /api/sessions/{session_id}/colony（加载已有 colony）<br>CLI hive colony list\|info\|delete | ~/.hive/colonies/{colony}/{metadata.json, worker.json}<br>~/.hive/colonies/{colony}/{tracker/tracker.db, workers/, queens/, playbooks/} | no | tested | 会话 spawn colony 后即锁定，必须 compact-and-fork 才能继续；一个 colony 一个 tracker 库，跨 colony 不共享账本。 |
 | **Worker 派发与回报**<br/>`worker-dispatch` | Queen 一次 run_worker 提交 N 个任务立即返回，worker 在后台并行执行，每个以一条结构化 [WORKER_REPORT] 回合回报。 | `internal/colony`<br>`internal/agentloop`<br>`internal/tools`<br>`internal/eventbus`<br>`internal/tasks` | tool run_worker<br>tool report_to_parent<br>HTTP GET /api/sessions/{session_id}/workers<br>HTTP POST /api/sessions/{session_id}/workers/stop-all | ~/.hive/colonies/{colony}/workers/{worker_id}/{worker.json, parts/}<br>会话中的一个 [WORKER_REPORT] 用户回合 | no | tested | 并发受 HIVE_MAX_CONCURRENT_WORKERS 闸门限制；worker 不能递归 run_playbook；stop 只保证不再启动，不回收已发起的上游调用。 |
 | **技能与 Playbook**<br/>`skills-playbook` | 把可复用流程固化成技能与可执行 playbook，同一套动作可以批量派给多个 worker。 | `internal/skills`<br>`internal/playbook`<br>`internal/colony`<br>`internal/tools` | CLI hive skill install\|validate\|test\|trust<br>tool run_playbook<br>HTTP GET /api/sessions/{session_id}/colony/skills | skills/{name}/SKILL.md<br>~/.hive/colonies/{colony}/playbooks/*.play.json<br>~/.hive/queens/{queen}/skills_overrides.json | partial | tested | 技能是提示词加脚本，不是沙箱；playbook 并发受 HIVE_MAX_PLAYBOOK_CONCURRENCY 上限约束。 |
-| **工具与凭据边界**<br/>`tools-credentials` | 模型只看见按 tier 过滤后的工具；外部系统的凭据在边界内注入，缺失时停下来等人填，而不是猜。 | `internal/tools`<br>`internal/tools/builtin`<br>`internal/tools/integrations`<br>`internal/tools/integrationkit`<br>`internal/mcpregistry`<br>`internal/mcpregistry/nativecli`<br>`internal/credentials`<br>`internal/ratelimit`<br>`internal/llm`<br>`internal/charts`<br>`internal/visionfallback` | CLI hive mcp install\|list\|doctor<br>HTTP GET\|PUT /api/credentials<br>HTTP GET /api/mcp/servers<br>tool search_tools | ~/.hive/credentials/（规格与存储）<br>~/.hive/secrets/<br>~/.hive/mcp_registry/<br>~/.hive/configuration.json（rate_limits） | yes | live | 没有 OS 级沙箱，MCP 子进程继承当前用户权限；未配置 rate_limits 时限速为无限；凭据缺失会 park 整个 turn。 |
+| **工具与凭据边界**<br/>`tools-credentials` | 模型只看见按 tier 过滤后的工具；外部系统的凭据在边界内注入，缺失时停下来等人填，而不是猜。 | `internal/tools`<br>`internal/tools/builtin`<br>`internal/tools/integrations`<br>`internal/tools/integrationkit`<br>`internal/nativehttp`<br>`internal/netguard`<br>`internal/astanalyze`<br>`internal/mcpregistry`<br>`internal/mcpregistry/nativecli`<br>`internal/credentials`<br>`internal/ratelimit`<br>`internal/llm`<br>`internal/charts`<br>`internal/visionfallback` | CLI hive mcp install\|list\|doctor<br>HTTP GET\|PUT /api/credentials<br>HTTP GET /api/mcp/servers<br>tool search_tools | ~/.hive/credentials/（规格与存储）<br>~/.hive/secrets/<br>~/.hive/mcp_registry/<br>~/.hive/configuration.json（rate_limits） | yes | live | 没有 OS 级沙箱，MCP 子进程继承当前用户权限；未配置 rate_limits 时限速为无限；凭据缺失会 park 整个 turn。 |
 | **记忆与沉淀**<br/>`memory-sediment` | 跨会话记住偏好与结论；Queen 把经历写进 soul，可审阅、可回滚，而不是每次从零开始。 | `internal/memory`<br>`internal/soul`<br>`internal/server`<br>`internal/agentloop` | HTTP GET\|PUT /api/memories/file<br>HTTP POST /api/queen/{queen_id}/soul/reflect<br>HTTP POST /api/queen/{queen_id}/soul/proposals/{proposal_id}/decide | ~/.hive/memories/*.md<br>~/.hive/queens/{queen}/soul/{soul.json, history/v*.json, log.jsonl, proposals/*.json} | partial | tested | 记忆是 Markdown + 提示注入，不是向量库；soul 有字符与条数上限，默认 review 模式下提案需人批准。 |
 | **Tracker、计划与证据**<br/>`evidence-tracker` | 每一行结果都可追溯：worker 写共享账本，Queen 查询账本，任务计划跨回合存活，报告可按会话打包。 | `internal/tracker`<br>`internal/tasks`<br>`internal/colony`<br>`internal/server`<br>`internal/sessionreport` | tool tracker_upsert\|tracker_query\|tracker_sql<br>tool task_create\|task_update\|task_list\|task_get<br>HTTP GET /api/sessions/{session_id}/tasks<br>HTTP POST /api/sessions/{session_id}/report-bundle | ~/.hive/colonies/{colony}/tracker/tracker.db (SQLite WAL)<br>{session\|worker}/tasks.json<br>{session}/reminder_state.json | no | tested | tracker 写入是 worker 的自愿行为，漏写只能从报告文本恢复；SQLite 单写者，跨进程并发写需靠 WAL 与重试。 |
 | **触发器与 Sentinel 自治**<br/>`triggers-sentinel` | 定时或事件触发能自动唤醒会话；Queen 停泊但目标未完成时，由 Sentinel 决定继续推、升级给人还是不动。 | `internal/triggers`<br>`internal/sentinel`<br>`internal/server`<br>`internal/eventbus` | HTTP POST /api/sessions/{session_id}/triggers<br>HTTP POST /api/sessions/{session_id}/triggers/{trigger_id}/run<br>HTTP PUT /api/config/sentinel<br>进程内 timer ticker | {session}/triggers.json<br>~/.hive/colonies/{colony}/notifications.json<br>~/.hive/colonies/{colony}/escalations/ | partial | tested | 定时器只在服务进程存活时运行；错过的触发需要 resolve_missed 决策，不会自动补跑；escalate 依赖外部渠道可达。 |
@@ -34,6 +34,7 @@
 | 模块 | 层 | 承载能力 |
 | --- | --- | --- |
 | `internal/agentloop` | runtime | Queen 分诊与对话、Worker 派发与回报、目标与结果、记忆与沉淀、通知与提醒 |
+| `internal/astanalyze` | capability | 工具与凭据边界 |
 | `internal/attachments` | capability | Queen 分诊与对话 |
 | `internal/charts` | capability | 工具与凭据边界 |
 | `internal/claudecode` | orchestration | 渠道与仪表盘 |
@@ -50,6 +51,8 @@
 | `internal/mcpregistry` | capability | 工具与凭据边界 |
 | `internal/mcpregistry/nativecli` | capability | 工具与凭据边界 |
 | `internal/memory` | capability | Queen 分诊与对话、记忆与沉淀 |
+| `internal/nativehttp` | capability | 工具与凭据边界 |
+| `internal/netguard` | foundation | 工具与凭据边界 |
 | `internal/playbook` | orchestration | 技能与 Playbook |
 | `internal/quality` | foundation | 发布与质量门禁 |
 | `internal/queen` | orchestration | Queen 分诊与对话 |
@@ -79,11 +82,16 @@
 
 ## 未被业务能力直接引用的模块
 
-共 45 个。基础层与入口层通常不需要挂到业务能力上；如果能力层出现这里的包，说明画图时漏了映射，应该补 `model.yaml` 的 `capabilities[].modules`。
+共 60 个。基础层与入口层通常不需要挂到业务能力上；如果能力层出现这里的包，说明画图时漏了映射，应该补 `model.yaml` 的 `capabilities[].modules`。
 
 | 模块 | 层 | 说明 |
 | --- | --- | --- |
 | `internal/cli` | assembly | 装配/传输面，通常只体现在能力的入口列 |
+| `internal/cli/browsercli` | assembly | 装配/传输面，通常只体现在能力的入口列 |
+| `internal/cli/browsersupervisor` | assembly | 装配/传输面，通常只体现在能力的入口列 |
+| `internal/cli/cliargs` | assembly | 装配/传输面，通常只体现在能力的入口列 |
+| `internal/cli/cliguard` | assembly | 装配/传输面，通常只体现在能力的入口列 |
+| `internal/cli/toolcatalog` | assembly | 装配/传输面，通常只体现在能力的入口列 |
 | `internal/pipeline` | capability | 能力层未映射，建议补充 modules |
 | `internal/tools/integrations/ai` | capability | 能力层未映射，建议补充 modules |
 | `internal/tools/integrations/cloudflare` | capability | 能力层未映射，建议补充 modules |
@@ -95,15 +103,18 @@
 | `internal/tools/integrations/enrichment` | capability | 能力层未映射，建议补充 modules |
 | `internal/tools/integrations/excel` | capability | 能力层未映射，建议补充 modules |
 | `internal/tools/integrations/gworkspace` | capability | 能力层未映射，建议补充 modules |
+| `internal/tools/integrations/image` | capability | 能力层未映射，建议补充 modules |
 | `internal/tools/integrations/infra` | capability | 能力层未映射，建议补充 modules |
 | `internal/tools/integrations/pdf` | capability | 能力层未映射，建议补充 modules |
 | `internal/tools/integrations/schedchat` | capability | 能力层未映射，建议补充 modules |
+| `internal/tools/integrations/scrape` | capability | 能力层未映射，建议补充 modules |
 | `internal/tools/integrations/social` | capability | 能力层未映射，建议补充 modules |
 | `internal/tools/integrations/webintel` | capability | 能力层未映射，建议补充 modules |
 | `cmd/hive` | entry | 基础/入口/测试装置层，预期不挂业务能力 |
 | `cmd/hive-browser` | entry | 基础/入口/测试装置层，预期不挂业务能力 |
 | `cmd/hive-cred` | entry | 基础/入口/测试装置层，预期不挂业务能力 |
 | `cmd/hive-longmemeval` | entry | 基础/入口/测试装置层，预期不挂业务能力 |
+| `hive` | entry | 基础/入口/测试装置层，预期不挂业务能力 |
 | `internal/arghelp` | foundation | 基础/入口/测试装置层，预期不挂业务能力 |
 | `internal/atomicfs` | foundation | 基础/入口/测试装置层，预期不挂业务能力 |
 | `internal/hiveclock` | foundation | 基础/入口/测试装置层，预期不挂业务能力 |
@@ -126,8 +137,15 @@
 | `internal/toolgolden` | harness | 基础/入口/测试装置层，预期不挂业务能力 |
 | `internal/agents` | orchestration | 编排/运行时组件，可按需挂到能力 |
 | `internal/longmemeval` | orchestration | 编排/运行时组件，可按需挂到能力 |
-| `internal/orchestrator` | runtime | 编排/运行时组件，可按需挂到能力 |
+| `internal/server/routesagents` | transport | 装配/传输面，通常只体现在能力的入口列 |
+| `internal/server/routesapp` | transport | 装配/传输面，通常只体现在能力的入口列 |
+| `internal/server/routesbrowser` | transport | 装配/传输面，通常只体现在能力的入口列 |
+| `internal/server/routeutil` | transport | 装配/传输面，通常只体现在能力的入口列 |
+| `internal/astgrep` | unmapped | 编排/运行时组件，可按需挂到能力 |
 | `internal/channels` | unmapped | 编排/运行时组件，可按需挂到能力 |
+| `internal/lsp` | unmapped | 编排/运行时组件，可按需挂到能力 |
+| `internal/streamtoken` | unmapped | 编排/运行时组件，可按需挂到能力 |
+| `internal/testframework` | unmapped | 编排/运行时组件，可按需挂到能力 |
 
 ## 业务链路的读法
 

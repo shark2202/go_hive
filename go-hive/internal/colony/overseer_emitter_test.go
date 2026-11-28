@@ -10,7 +10,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/shark2202/go_hive/go-hive/internal/agentloop"
 	"github.com/shark2202/go_hive/go-hive/internal/eventbus"
+	"github.com/shark2202/go_hive/go-hive/internal/llm"
 )
 
 type overseerEvent struct {
@@ -90,5 +92,74 @@ func TestOverseerTurnPublishesClientOutput(t *testing.T) {
 	}
 	if !sawStarted || !sawCompleted {
 		t.Fatalf("turn boundaries missing: started=%v completed=%v", sawStarted, sawCompleted)
+	}
+}
+
+// emptyOverseerLLM always answers with a completion that carries no text and
+// no tool calls, so the loop's empty-response guard is the only thing that can
+// end the turn.
+type emptyOverseerLLM struct{}
+
+func (e *emptyOverseerLLM) AComplete(context.Context, llm.CompletionRequest) (llm.Completion, error) {
+	return llm.Completion{}, nil
+}
+
+// A turn that produced nothing at all is a ghost stream, not a finished turn:
+// the loop nudges the model and, at the stall-detection threshold, parks the
+// overseer on EMPTY_RESPONSES with a typed error. Upstream announces that park
+// the way it announces every wait — client_input_requested carrying the park
+// reason, with the loop state following the reason's activity — and publishes
+// no execution_failed, because nothing failed. The overseer must not turn the
+// designed park into a broken turn.
+//
+// Parity: framework/agent_loop/agent_loop.py::_execute_impl (6e”' empty
+// response guard -> _await_user_input(reason=ParkReason.EMPTY_RESPONSES))
+// Parity: framework/agent_loop/reminders.py::ParkReason.activity
+func TestOverseerEmptyResponseParkAnnouncesWaitWithoutFailure(t *testing.T) {
+	bus := eventbus.NewEventBus()
+	runtime := newOverseerParkRuntime(t, &emptyOverseerLLM{}, bus)
+	requests := collectEvents(bus, eventbus.EventClientInputRequested)
+	states := collectEvents(bus, eventbus.EventLoopStateChanged)
+	failures := collectEvents(bus, eventbus.EventExecutionFailed)
+
+	if _, err := runtime.StartOverseer(context.Background(), overseerParkSpec(), nil); err != nil {
+		t.Fatalf("StartOverseer: %v", err)
+	}
+	if !waitForColony(t, 5*time.Second, func() bool { return requests.count() > 0 }) {
+		t.Fatalf("overseer never announced its empty-response park: states=%d", states.count())
+	}
+	// EventBus handlers run on their own goroutines: give a failure frame the
+	// same chance to arrive before asserting the park published none.
+	time.Sleep(50 * time.Millisecond)
+	if failed := failures.snapshot(); len(failed) != 0 {
+		t.Fatalf("empty-response park published execution_failed: %#v", failed[0].Data)
+	}
+
+	events := requests.snapshot()
+	if len(events) != 1 {
+		t.Fatalf("client_input_requested count = %d, want 1", len(events))
+	}
+	event := events[0]
+	if event.StreamID != overseerStream || event.NodeID == nil || *event.NodeID != overseerStream {
+		t.Fatalf("client_input_requested stream/node = %q/%v, want overseer/overseer", event.StreamID, event.NodeID)
+	}
+	if got := event.Data["park_reason"]; got != string(agentloop.ParkReasonEmptyResponses) {
+		t.Fatalf("client_input_requested park_reason = %#v, want empty_responses", got)
+	}
+
+	// The loop state names the same park and its activity: EMPTY_RESPONSES is
+	// a broken park, so the snapshot reports interrupted rather than a false
+	// "executing" stall.
+	var parkState *eventbus.AgentEvent
+	for _, state := range states.snapshot() {
+		if state.Data["park_reason"] == string(agentloop.ParkReasonEmptyResponses) {
+			parkState = state
+		}
+	}
+	if parkState == nil {
+		t.Fatalf("no loop_state_changed for empty_responses: %#v", states.snapshot())
+	}
+	if got := parkState.Data["activity"]; got != string(agentloop.LoopActivityInterrupted) {
+		t.Fatalf("park activity = %#v, want interrupted", got)
 	}
 }

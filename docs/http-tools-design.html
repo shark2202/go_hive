@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>http_tools · 原生 curl 家族需求—设计链</title>
+<style>
+:root{--bg:#0b0f14;--panel:#121923;--panel2:#0f1620;--line:#233041;--text:#e6edf3;--muted:#8b9bb0;--accent:#f0b429;--accent2:#58a6ff;--ok:#3fb950;--warn:#d29922;--bad:#f85149;--code:#0a0e13}
+*{box-sizing:border-box} body{margin:0;background:linear-gradient(180deg,#0b0f14,#0d131b 55%,#0b0f14);color:var(--text);font:14.5px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;overflow-wrap:anywhere}
+a{color:var(--accent2);text-decoration:none} a:hover{text-decoration:underline}
+.wrap{max-width:1320px;margin:0 auto;padding:44px 26px 80px}
+header{border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:28px}
+.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+h1{font-size:30px;line-height:1.25;margin:10px 0 10px;letter-spacing:-.02em} h1 span{color:var(--accent)}
+.lede{color:var(--muted);max-width:1060px;font-size:15px} .meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:15px;color:var(--muted);font-size:12.5px} .meta b{color:var(--text)}
+section{margin:38px 0} h2{font-size:22px;margin:0 0 8px} h2 .num{color:var(--accent);font-size:14px;margin-right:8px} h3{font-size:15.5px;margin:16px 0 8px;color:#cfdae6}
+p{color:#c6d2df;margin:8px 0} .sub{color:var(--muted);font-size:12.5px}
+.grid{display:grid;gap:12px} .g2{grid-template-columns:repeat(2,minmax(0,1fr))} .g3{grid-template-columns:repeat(3,minmax(0,1fr))} .grid>*{min-width:0}
+@media(max-width:1000px){.g3{grid-template-columns:repeat(2,minmax(0,1fr))}} @media(max-width:560px){.g3,.g2{grid-template-columns:1fr}.wrap{padding:30px 16px 60px}h1{font-size:24px}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:15px;min-width:0} .card .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700} .card .v{font-size:20px;font-weight:800;margin-top:5px} .card .d{color:var(--muted);font-size:12px;margin-top:5px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:14px 0;background:var(--panel2);max-width:100%}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed} th,td{border-bottom:1px solid var(--line);padding:9px 10px;vertical-align:top;text-align:left;overflow-wrap:anywhere;word-break:break-word} th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;background:#0d141d;position:sticky;top:0;z-index:1} tr:hover td{background:#121a25} tr:last-child td{border-bottom:0}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--code);border:1px solid #1e2937;border-radius:5px;padding:1px 4px;color:#d7e3f0;overflow-wrap:anywhere}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#cfe0f2;white-space:pre-wrap;word-break:break-word}
+.pill{display:inline-flex;align-items:center;font-size:11px;border-radius:999px;padding:2px 8px;border:1px solid var(--line);color:var(--muted);white-space:normal;margin:1px 2px 1px 0} .pill.ok{color:var(--ok);border-color:#1d3b26;background:#0f1a13} .pill.warn{color:var(--warn);border-color:#3d3013;background:#1a150a} .pill.muted{color:var(--muted);border-color:var(--line);background:#0f1620}
+.callout{border-left:3px solid var(--accent);background:#161207;padding:11px 14px;border-radius:0 9px 9px 0;margin:14px 0;color:#e8d9b4} .callout.info{border-color:var(--accent2);background:#0d1622;color:#cfe3ff} .callout.bad{border-color:var(--bad);background:#1a0f0f;color:#f2c7c7}
+ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin-top:44px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:12px}
+@media(max-width:560px){table{font-size:12px}th,td{padding:7px 6px}}
+</style></head><body><div class="wrap">
+<header><div class="eyebrow">GO_HIVE · HTTP_TOOLS · 需求 → 设计</div>
+<h1>原生 HTTP <span>curl 家族</span></h1>
+<p class="lede">为 go_hive 增加一组模型可调用的 HTTP 工具（<code>http_request</code> / <code>http_download</code> / <code>http_upload</code>），用 Go 标准库 <code>net/http</code> 直接发请求，不依赖 curl、不经过 shell。本页先冻结工具契约、出站策略（SSRF/重定向/代理）、按 Hive 会话隔离的 Cookie、结果信封与验收链。使用与配置见 <a href="http-tools-usage.html">http-tools-usage.html</a>。</p>
+<div class="meta"><span>状态：<b>implemented</b></span><span>决策：<b>用 net/http 原生实现三支扁平工具（http_request、http_download、http_upload），共享 internal/nativehttp 与 internal/netguard；不依赖 curl、不经过 shell、不新增第三方依赖。Cookie 状态按 Hive chat session 硬隔离：每个会话 catalogue 一个内存 host-only jar，不跨会话共享，v1 不落盘。所有用户路径输入必须是绝对路径且在会话根内。</b></span><span>目标：<b>CGO_ENABLED=0 · 六平台</b></span></div></header>
+
+<section id="problem"><h2><span class="num">00</span>问题与价值</h2>
+<div class="grid g2"><div class="card"><div class="k">问题</div><div class="d">go_hive 没有通用 HTTP 请求工具。agent 只能用 terminal_exec 调 curl，而最小 Windows/容器镜像往往没有 curl；即使有，也会把密钥写进 argv 与 shell 历史，且没有 SSRF 守卫、响应上限和结构化结果（状态码/响应头/耗时）。</div></div><div class="card"><div class="k">为什么不是当前 parity 项</div><div class="d">上游 Hive 没有 http_request 工具，因此不属于 parity 面。冻结的 39 个默认会话工具面与 14 个 builtin 定义保持不变；本工具家族只进入 lazy/searchable 层，作为 go-only 增量。</div></div></div>
+<h3>用户价值</h3><ul><li>不装 curl、不开 shell 也能调 JSON API、Webhook 和需要认证的端点。</li><li>拿到结构化结果（状态码、响应头、耗时、TLS、重定向链），而不是原始 stdout。</li><li>内存与上下文有界：小响应内联，大响应落盘，二进制/未知编码不被静默丢弃。</li><li>请求、下载、上传共享同一套出站策略（SSRF、重定向、代理、TLS）。</li><li>同一 Hive 会话内保持登录态，同时与其他会话硬隔离。</li><li>六平台 CGO_ENABLED=0 纯 Go 构建。</li></ul>
+<div class="grid g3">
+<div class="card"><div class="k">工具</div><div class="v">3</div><div class="d">request · download · upload</div></div>
+<div class="card"><div class="k">新依赖</div><div class="v">0</div><div class="d">net/http + net 标准库</div></div>
+<div class="card"><div class="k">冻结面</div><div class="v">14 / 39 / 24</div><div class="d">builtin / flat / 首轮请求 不变</div></div>
+</div></section>
+
+<section id="requirements"><h2><span class="num">01</span>需求链</h2>
+<p class="sub">R → D → A 是同一张链：每个需求必须落到一个设计项和至少一个验收项。</p>
+<div class="tablewrap"><table><thead><tr><th style="width:7%">ID</th><th style="width:7%">优先级</th><th style="width:38%">需求</th><th style="width:38%">验收</th><th style="width:10%">链路</th></tr></thead><tbody><tr><td><code>R1</code></td><td>P0</td><td>用 net/http 原生实现，不依赖 curl 二进制、不经过 shell、不新增第三方依赖，CGO_ENABLED=0。</td><td>go list -deps ./internal/nativehttp 只出现标准库；linux/darwin/windows × amd64/arm64 在 cgo 关闭下构建通过。</td><td>D2, D14, A2, A13</td></tr><tr><td><code>R2</code></td><td>P0</td><td>暴露三支扁平工具，名称与 schema 冻结：http_request、http_download、http_upload。</td><td>适配器单测逐字钉住 name/description/input_schema；无 action 开关；catalogue 内名称唯一。</td><td>D1, D3, A1</td></tr><tr><td><code>R3</code></td><td>P0</td><td>http_request 支持七种方法、多值头/查询、basic/bearer 认证，以及四种互斥请求体（raw、JSON、form、内联 multipart）。</td><td>方法 × 请求体矩阵通过；冲突的请求体返回 invalid_input；Content-Type 默认值被钉住。</td><td>D6, A3</td></tr><tr><td><code>R4</code></td><td>P0</td><td>重定向遵循 RFC 9110：301/302/303 把 POST 改写为 GET，307/308 保留方法与请求体；每跳重新校验，跨主机剥离认证头。</td><td>重定向矩阵、环检测、max_redirects、跨主机 Authorization/Cookie 剥离、https→http 拒绝全部通过。</td><td>D5, A4</td></tr><tr><td><code>R5</code></td><td>P0</td><td>每次请求与重定向都执行同一套出站策略：仅 http(s)、拒绝回环/私网/链路本地/CGNAT/ULA/metadata、解析后拨号已验证 IP、支持主机白/黑名单。</td><td>SSRF 矩阵（字面量、DNS、重定向、IPv4 映射、IPv6、metadata 主机名）全部拦截；公网通过；rebinding 测试证明拨的是已验证 IP；allow_private_hosts 必须显式开启。</td><td>D4, A5</td></tr><tr><td><code>R6</code></td><td>P0</td><td>响应有界：内联预算、硬抓取上限、超限落盘并回 sha256 与预览、二进制识别、gzip 解码、charset 报告、响应头上限。</td><td>预算-1/预算/预算+1 边界、二进制、gzip、未知编码、100 头上限与截断提示全部通过。</td><td>D7, A6</td></tr><tr><td><code>R7</code></td><td>P0</td><td>http_download 流式写入 &lt;path&gt;.part，fsync 后原子 rename；支持断点续传、覆盖策略、max_bytes 与可选 expected_sha256。</td><td>原子 rename、206 续传、If-Range 不匹配重下、路径穿越拒绝、大小上限、校验和不匹配全部通过。</td><td>D8, A7</td></tr><tr><td><code>R8</code></td><td>P0</td><td>http_upload 流式发送 multipart 字段/文件或原始 body_file；不整文件入内存；文件名净化；请求与响应都有上限。</td><td>multipart 与原始 body 测试通过；文件名穿越被净化；1 GiB 流式测试证明内存有界。</td><td>D9, A8</td></tr><tr><td><code>R9</code></td><td>P0</td><td>分阶段超时、context 取消、有界重试（退避+抖动+Retry-After），默认只重试幂等方法。</td><td>超时/取消/重试测试通过；POST 未开 retry_non_idempotent 不重试；总预算不被突破。</td><td>D10, A9</td></tr><tr><td><code>R10</code></td><td>P0</td><td>配置只从会话沙箱之外读取：&lt;HIVE_HOME&gt;/http_tools.json；支持 HIVE_HTTP_TOOLS=0 硬开关；配置损坏时 fail closed，且不允许 agent 通过会话目录放宽策略。</td><td>显式路径/HIVE_HOME 优先级、enabled=false、损坏/不可读、硬开关、主机白/黑名单通过；agent 写入的 &lt;sessionDir&gt;/.hive/http_tools.json 被忽略。</td><td>D12, A10</td></tr><tr><td><code>R11</code></td><td>P0</td><td>结果与日志脱敏；每次尝试一条结构化日志；Cookie jar 按会话隔离，不跨会话泄漏。</td><td>Authorization/Cookie/Set-Cookie/userinfo/redact_query_keys 脱敏测试通过；日志不含头与 body；jar 隔离测试通过。</td><td>D13, A11</td></tr><tr><td><code>R12</code></td><td>P0</td><td>接入时不改变冻结面：builtin.Defs() 仍为 14，默认 flat 面仍为 39/24；新工具只进 lazy tier 并参与类别愈合。</td><td>catalogue 测试断言 14/39/24 不变、三个新名字出现在 lazy 层；类别愈合能授予已保存 sidecar；freeze 报告保持 report-only。</td><td>D3, A12</td></tr><tr><td><code>R13</code></td><td>P1</td><td>用确定性测试覆盖整个家族，并为运维与后续 lane 留下契约文档。</td><td>httptest 夹具、假解析器/拨号器、适配器 golden、catalogue 测试与设计产物全部提交；make ci 绿。</td><td>D14, A13, A14</td></tr><tr><td><code>R14</code></td><td>P0</td><td>Cookie 状态按 Hive chat session 与 colony worker 硬隔离：每个会话 catalogue 一个内存 host-only jar；v1 没有全局、跨会话或磁盘 jar。</td><td>两个不同 sessionDir 的 catalogue jar 互不可见；A 会话设置的 cookie 在 B 会话查不到；WithRoot worker 初始为空；-race 并发测试通过；全库无 package-level jar；host-only 默认、allowed_domains 才放行 Domain cookie；恢复会话从空开始。</td><td>D15, A15</td></tr><tr><td><code>R15</code></td><td>P0</td><td>所有用户路径输入必须是绝对路径且在会话根内：response.path、http_download.path、http_upload.body_file/files[].path、tls.ca_file/client_cert_file/client_key_file。相对路径返回 path_not_absolute；越界/../symlink 返回 path_escape；自动落盘仍用内部生成的相对路径。</td><td>相对路径、绝对越界、symlink 逃逸全部 fail closed；绝对根内路径通过；-o/-T/--cacert 等示例使用绝对路径；A16 通过。</td><td>D16, A16</td></tr></tbody></table></div>
+<h3>非目标</h3><ul><li>v1 不做 HTTP/3、WebSocket 或 SSE 流式；http_download 落盘，不向对话流式输出。</li><li>不支持 ftp/gopher/file/data 协议、unix socket、--resolve、--connect-to、--interface；这些会绕过出站策略。</li><li>不做浏览器渲染或 HTML 抽取；那是 web_scrape 的职责。</li><li>v1 不做跨会话 cookie 共享，也不落盘：恢复会话必须重新认证。</li><li>没有全局 cookie jar，colony worker 也不继承 queen 会话的 cookie。</li><li>不承诺 Python parity：本工具家族与 ast_grep、lsp 一样是 go-only 能力。</li><li>默认不重试非幂等方法，除非显式 retry_non_idempotent。</li></ul></section>
+
+<section id="options"><h2><span class="num">02</span>决策链</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:7%">ID</th><th style="width:26%">方案</th><th style="width:10%">结论</th><th style="width:57%">理由</th></tr></thead><tbody><tr><td><code>O1</code></td><td>通过 terminal_exec 调 curl</td><td><span class="pill muted">rejected</span></td><td>依赖最小镜像没有的二进制；密钥进 argv/历史；没有 SSRF 守卫、响应上限和结构化结果；引号语义跨平台不一致。</td></tr><tr><td><code>O2</code></td><td>引入第三方 HTTP 客户端（resty/req）</td><td><span class="pill muted">rejected</span></td><td>标准库已足够；为了没有的能力新增依赖，会扩大六平台 CGO_ENABLED=0 构建与依赖清单。</td></tr><tr><td><code>O3</code></td><td>单支 http 工具 + action 开关</td><td><span class="pill muted">rejected</span></td><td>默认会话面是扁平名字；action 开关会让 search_tools 难以按需加载，并让单个 schema 膨胀。集成模块的 action 模式不适用于新的核心工具。</td></tr><tr><td><code>O4</code></td><td>在 web_scrape 上扩展原始请求字段</td><td><span class="pill muted">rejected</span></td><td>职责不同：web_scrape 负责渲染与抽取，原始请求工具要流式、续传、上传。合并会让两个 schema 都膨胀，并把浏览器可用性与 HTTP 调用耦合。</td></tr><tr><td><code>O5</code></td><td>三支扁平工具 + 共享标准库核心</td><td><span class="pill ok">chosen</span></td><td>schema 小、可按需加载、策略/传输只有一份实现，并沿用 ast_grep/lsp 的独立适配器注册与测试先例。</td></tr><tr><td><code>O6</code></td><td>提供 hive curl CLI，agent 继续用 terminal_exec</td><td><span class="pill warn">deferred</span></td><td>CLI 对人/脚本有用，但不是模型工具：没有结构化结果、没有逐调用策略、没有 lazy tier 广告。后续可以包一层 internal/nativehttp。</td></tr></tbody></table></div>
+<div class="callout info"><b>选择：</b>用 net/http 原生实现三支扁平工具（http_request、http_download、http_upload），共享 internal/nativehttp 与 internal/netguard；不依赖 curl、不经过 shell、不新增第三方依赖。Cookie 状态按 Hive chat session 硬隔离：每个会话 catalogue 一个内存 host-only jar，不跨会话共享，v1 不落盘。所有用户路径输入必须是绝对路径且在会话根内。 <b>备选：</b>如果六平台 CGO_ENABLED=0 构建或 SSRF 验收无法通过，退回纯 CLI（<code>hive curl</code>）并保留 terminal_exec，而不是引入 cgo 或第三方 HTTP 栈。</div></section>
+
+<section id="design"><h2><span class="num">03</span>设计链</h2><div class="grid g2"><div class="card"><div class="k">D1</div><h3>工具家族与命名</h3><p>http_request（任意方法，响应有界内联）、http_download（流式落盘，支持续传与校验）、http_upload（multipart 或原始文件体）。http_* 前缀保留。没有 action 开关：每支工具一个精简 schema，search_tools 可以只加载任务需要的那一支。</p></div><div class="card"><div class="k">D2</div><h3>包边界</h3><p>internal/nativehttp 是只依赖标准库的核心：请求构建、策略、传输、重定向/重试、有界落盘与结果渲染。internal/netguard 拥有 SSRF 策略与拨号期 IP 固定，从 scrape.go 与 pdf/ssrf.go 抽取，旧封装保留、现有测试继续钉住行为。适配器 internal/tools/builtin/http_tools.go 负责 schema 与强制转换；internal/cli/session_tools_http.go 负责门控与分发。核心不 import server/cli/builtin，因此无需会话即可测试。WithRoot 会为 colony worker 重新挂根（路径包含与 cookie jar 跟随worker 存储目录），与 toolbox/taskTools 一致；catalogue 的 Close 负责关闭空闲连接。</p></div><div class="card"><div class="k">D3</div><h3>注册与工具面</h3><p>通过会话 catalogue 以独立适配器注册（ast_grep/lsp 先例），不进入 builtin.Defs()（保持 14），也不进入冻结的 39 个参考面。默认启用；http_tools.json 可关闭。工具进入 lazy/searchable 层，HIVE_TOOL_SURFACE=grouped 时同样可见。类别：新增 http_core；**不加入** web_core/research 成员，保持参考 manifest 的 chart_render + web_scrape 两名清单。CategoryAdditions[web_core] 在发布版本（拟 1.0.27）愈合已保存的 tools.json sidecar。三支工具都标记 ConcurrencySafe=false：方法与请求体逐调用变化，且 cookie jar 是会话内共享状态。</p></div><div class="card"><div class="k">D4</div><h3>出站策略（SSRF）</h3><p>仅允许 http(s)；裸主机自动补 https。每次请求与每一跳重定向都解析主机，拒绝回环、私网、ULA、链路本地、CGNAT、组播、未指定、文档/基准网段、IPv4 映射 IPv6、NAT64 本地段，以及 metadata 主机名（169.254.169.254、fd00:ec2::254、metadata.google.internal、*.local、*.internal、kubernetes.default.svc）。DialContext 校验后直接拨已验证 IP，DNS rebinding 无法在校验与连接之间换成私网地址。代理模式下只能做预检，作为残余风险登记。优先级：denied_hosts 高于 allowed_hosts，allowed_hosts 高于私网 IP 拒绝表；allow_private_hosts 才显式关闭 IP 拒绝表（会记日志）。https→http 重定向默认拒绝，除非 allow_https_to_http。</p></div><div class="card"><div class="k">D5</div><h3>重定向与认证</h3><p>最多跟随 max_redirects（默认 10，上限 20），记录每一跳。301/302/303 把 POST 改写为 GET 并丢弃请求体；307/308 保留方法与请求体。跨主机跳转剥离 Authorization、Cookie、Proxy-Authorization 与显式 auth；代理凭据绝不转发给源站。用已访问 URL 集合检测环。每一跳前重新执行出站策略。</p></div><div class="card"><div class="k">D6</div><h3>请求体</h3><p>body（原始）、json（任意 JSON 值）、form（urlencoded）、multipart（内联部件）四选一；冲突返回 invalid_input。Content-Type 默认：application/json、application/x-www-form-urlencoded 或生成的 multipart boundary。显式头优先于推导值。内联模式在内存构建；文件模式通过 io.Pipe 流式发送。不开 shell、不进 argv，密钥不会出现在进程列表里。</p></div><div class="card"><div class="k">D7</div><h3>响应处理</h3><p>有界读取：response.max_inline_bytes（默认 64 KiB）内联；更大的响应落盘到 response.path （必须是绝对路径且在会话根内）或确定性的会话 tool-output 文件，结果带 saved_to + sha256 + 预览。二进制用 Content-Type + NUL 扫描识别，小体积才 base64，否则落盘。gzip 解码；未知 Content-Encoding 如实报告，不静默篡改。文本只按 UTF-8 解码，非 UTF-8 以 base64/文件返回并记录 charset。响应头有上限（100 头 / 64 KiB），敏感值脱敏。</p></div><div class="card"><div class="k">D8</div><h3>下载</h3><p>流式写入 &lt;path&gt;.part，fsync 后原子 rename；overwrite=false 默认。resume=true 发送 Range: bytes=&lt;size&gt;- 并带 If-Range（ETag/Last-Modified），校验 206 + Content-Range，不匹配则重下。max_bytes 限制传输；始终计算 sha256；expected_sha256 可选。path 必须是绝对路径且在会话根内（跟随 symlink，逃逸拒绝）。失败时保留 .part，重试可续传。</p></div><div class="card"><div class="k">D9</div><h3>上传</h3><p>multipart 部件从会话根内的绝对路径流式读取，文件名净化；body_file 以绝对路径流式发送原始 body（curl -T，默认 PUT）。fields/files 与 body_file 互斥。max_bytes 限制请求体；响应按 D7 有界。不做临时拷贝，1 GiB 上传不会占用 1 GiB 内存或磁盘。</p></div><div class="card"><div class="k">D10</div><h3>超时与重试</h3><p>分阶段截止时间：连接（默认 10s）、TLS（10s）、响应头（15s）、总预算（请求默认 30s，下载/上传默认 300s；请求上限 300s，下载/上传上限 1800s）、空闲连接 90s。context 取消会传到传输层。默认只重试幂等方法（GET/HEAD/OPTIONS）的 408/425/429/500/502/503/504，遵守 Retry-After ≤ 30s，指数退避 + 抖动，并受总预算约束；retry_non_idempotent 需显式开启。每次尝试都记日志。</p></div><div class="card"><div class="k">D11</div><h3>结果与错误</h3><p>三支工具共用同一个 JSON 信封，键名稳定、snake_case。非 2xx 默认是正常结果（带 status/body），除非 fail_on_http_error=true，语义等同 curl 不带 -f。失败时携带 error + error_kind（闭集），有响应时附 status/body_preview。二进制或未知编码绝不静默丢弃。</p></div><div class="card"><div class="k">D12</div><h3>配置</h3><p>配置只从会话沙箱之外读取：&lt;HIVE_HOME&gt;/http_tools.json（运维/用户级）。**不自动发现** &lt;sessionDir&gt;/.hive/http_tools.json：会话目录是文件工具的沙箱根，agent 可写，自动发现等于允许 agent 放宽自己的出站策略（提权）。配置只允许收紧（更小上限、更严 allow/deny、enabled=false），不允许放宽。文件缺失即默认启用；格式错误或不可读即关闭（fail closed）。HIVE_HTTP_TOOLS=0 是进程级硬开关。字段：enabled、allow_private_hosts、allowed_hosts、denied_hosts、max_inline_bytes、max_response_bytes、max_download_bytes、max_upload_bytes、default_timeout_seconds、max_timeout_seconds、connect_timeout_seconds、follow_redirects、max_redirects、allow_https_to_http、user_agent、proxy、redact_query_keys、cookies {enabled, host_only, allowed_domains, max_cookies, max_value_bytes}。v1 故意没有 store_dir 或跨会话 profile 配置。</p></div><div class="card"><div class="k">D13</div><h3>可观测性与脱敏</h3><p>每次尝试一条结构化日志：tool、method、host、status、bytes、duration_ms、redirects、retries、error_kind。绝不记录头、body、cookie 或 userinfo；查询串中命中 redact_query_keys 的值替换为 [redacted]；结果中的 Authorization/Cookie/Set-Cookie 默认脱敏，除非 include_cookies。Cookie jar 在内存中、归会话 catalogue 所有、加锁保护，v1 不落盘、不是全局。</p></div><div class="card"><div class="k">D14</div><h3>测试策略</h3><p>httptest.Server 覆盖方法/请求体/重定向/重试/超时/压缩/二进制；假解析器覆盖 SSRF 与 rebinding；拨号器测试证明拨的是已验证 IP；表驱动适配器强制转换测试；catalogue 测试证明名称注册、lazy 层存在、配置门控，以及 builtin 14 / 冻结 39 面不变；CGO_ENABLED=0 交叉构建矩阵。</p></div><div class="card"><div class="k">D15</div><h3>Cookie 隔离（按 Hive chat session）</h3><p>jar 是 newSessionToolCatalogue(sessionDir, ...) 创建的每会话适配器上的字段，其中 sessionDir = chatSessionDir(home, queenScope, sessionID) 按 Hive 会话唯一。没有 package-level jar、没有按模型提供的 name 共享的 sync.Map、没有 http.DefaultClient/Jar、v1 也没有磁盘 jar：恢复的会话从空开始。WithRoot 为 colony worker 克隆适配器时新建空 jar（不继承 queen 或其他 worker）。默认 host-only：带 Domain 的 Set-Cookie 一律拒绝，除非 http_tools.json 的 cookies.allowed_domains 显式列出；同时校验 __Host-/__Secure- 前缀；SameSite 只记录不强制（非浏览器客户端）。jar 由 cookiejar 内部锁与 wrapper 自身锁保护（Clear 换新 jar），并发调用跑 -race。catalogue 拥有每会话的 http.Client/Transport，Close 调 CloseIdleConnections，因此连接与 cookie 状态都不跨会话存活。</p></div><div class="card"><div class="k">D16</div><h3>路径语义（绝对路径）</h3><p>go_hive 没有项目 cwd，只有会话沙箱根 c.root，因此用户路径输入一律必须绝对：response.path、http_download.path、http_upload.body_file、files[].path、tls.ca_file、tls.client_cert_file、tls.client_key_file。相对路径返回 path_not_absolute；绝对路径仍必须在 c.root 内，越界/../symlink 逃逸返回 path_escape。写文件父目录自动创建（0700），临时文件 + fsync + 原子 rename；读文件通过 os.Root 打开，防止解析后被 symlink 换向。自动落盘（未给 path）仍由内部生成 c.root/data/tool-output/ 下的相对路径，不经过用户输入。saved_to/path 在结果里永远是绝对路径。</p></div></div>
+<div class="callout info"><b>包边界：</b><code>internal/nativehttp</code>（核心，stdlib-only）· <code>internal/netguard</code>（SSRF/拨号策略）· <code>internal/tools/builtin/http_tools.go</code>（schema/适配）· <code>internal/cli/session_tools_http.go</code>（门控/路由）。internal/nativehttp 拥有请求构建、出站策略、传输、重定向/重试、有界落盘与结果渲染，只依赖标准库，不得 import internal/server、internal/cli 或 internal/tools/builtin。internal/netguard 拥有共享的 SSRF 策略与拨号期 IP 固定；scrape.go 与 pdf/ssrf.go 保留薄封装，其现有测试继续钉住旧行为。适配器负责 schema 与输入强制转换，catalogue 负责门控与路由。 <b>维护：</b>核心包必须能脱离会话与工具注册表独立测试：httptest.Server 夹具 + 假解析器 + 假拨号器；每条策略分支都有表驱动测试；单测不访问真实网络。</div>
+<h3>处理流水线</h3><ol><li>归一化并校验 url/method/请求体来源/响应选项</li><li>应用 http_tools.json 策略（启用开关、主机白/黑名单、私网门控、容量上限）</li><li>构建 client：代理、TLS、超时、HTTP 版本、会话 cookie jar</li><li>解析并校验目标主机；在 DialContext 中固定已验证 IP</li><li>构建唯一一个请求体（raw / json / form / multipart / 文件流）</li><li>执行并处理重定向：每跳重新校验、跨主机剥离认证头、记录重定向链</li><li>在总预算内对有资格的尝试做退避重试并遵守 Retry-After</li><li>在内联预算内读取响应；溢出落盘并计算 sha256</li><li>解码 gzip/文本/二进制，脱敏敏感响应头与查询值</li><li>渲染 JSON 信封（status、headers、body/saved_to、耗时、TLS、重定向、error_kind）</li><li>关闭空闲连接并输出一条结构化日志</li></ol></section>
+
+<section id="contract"><h2><span class="num">04</span>工具契约</h2>
+<p class="sub">以下 JSON Schema 是工具契约原文：字段名、类型与英文描述保持原样，便于与实现逐字对齐；其余章节为中文。</p>
+<h3>http_request</h3><pre>{
+  &quot;type&quot;: &quot;object&quot;,
+  &quot;additionalProperties&quot;: false,
+  &quot;properties&quot;: {
+    &quot;url&quot;: {
+      &quot;type&quot;: &quot;string&quot;,
+      &quot;description&quot;: &quot;Absolute http(s) URL. A bare host is upgraded to https://.&quot;
+    },
+    &quot;method&quot;: {
+      &quot;type&quot;: &quot;string&quot;,
+      &quot;enum&quot;: [
+        &quot;GET&quot;,
+        &quot;HEAD&quot;,
+        &quot;POST&quot;,
+        &quot;PUT&quot;,
+        &quot;PATCH&quot;,
+        &quot;DELETE&quot;,
+        &quot;OPTIONS&quot;
+      ],
+      &quot;default&quot;: &quot;GET&quot;,
+      &quot;description&quot;: &quot;HTTP method; upper-cased.&quot;
+    },
+    &quot;query&quot;: {
+      &quot;type&quot;: &quot;object&quot;,
+      &quot;description&quot;: &quot;Query parameters appended to url. Array values repeat the key. replace_query=true drops the URL&#x27;s existing query string.&quot;,
+      &quot;additionalProperties&quot;: {
+        &quot;anyOf&quot;: [
+          {
+            &quot;type&quot;: &quot;string&quot;
+          },
+          {
+            &quot;type&quot;: &quot;array&quot;,
+            &quot;items&quot;: {
+              &quot;type&quot;: &quot;string&quot;
+            }
+          }
+        ]
+      }
+    },
+    &quot;replace_query&quot;: {
+      &quot;type&quot;: &quot;boolean&quot;,
+      &quot;default&quot;: false
+    },
+    &quot;headers&quot;: {
+      &quot;type&quot;: &quot;object&quot;,
+      &quot;description&quot;: &quot;Request headers. Array values repeat the header; a null value removes a default header. Header names are case-insensitive.&quot;,
+      &quot;additionalProperties&quot;: {
+        &quot;anyOf&quot;: [
+          {
+            &quot;type&quot;: &quot;string&quot;
+          },
+          {
+            &quot;type&quot;: &quot;array&quot;,
+            &quot;items&quot;: {
+              &quot;type&quot;: &quot;string&quot;
+            }
+          },
+          {
+            &quot;type&quot;: &quot;null&quot;
+          }
+        ]
+      }
+    },
+    &quot;body&quot;: {
+      &quot;type&quot;: &quot;string&quot;,
+      &quot;description&quot;: &quot;Raw request body. Exactly one of body, json, form, multipart may be set.&quot;
+    },
+    &quot;json&quot;: {
+      &quot;description&quot;: &quot;JSON body (any JSON value). Compact-encoded and sent as application/json unless Content-Type is set explicitly.&quot;
+    },
+    &quot;form&quot;: {
+      &quot;type&quot;: &quot;object&quot;,
+      &quot;description&quot;: &quot;application/x-www-form-urlencoded body; array values repeat the key.&quot;,
+      &quot;additionalProperties&quot;: {
+        &quot;anyOf&quot;: [
+          {
+            &quot;type&quot;: &quot;string&quot;
+          },
+          {
+            &quot;type&quot;: &quot;array&quot;,
+            &quot;items&quot;: {
+              &quot;type&quot;: &quot;string&quot;
+            }
+          }
+        ]
+      }
+    },
+    &quot;multipart&quot;: {
+      &quot;type&quot;: &quot;object&quot;,
+      &quot;description&quot;: &quot;multipart/form-data with inline string content. Use http_upload for workspace file parts; this mode never opens files.&quot;,
+      &quot;properties&quot;: {
+        &quot;fields&quot;: {
+          &quot;type&quot;: &quot;object&quot;,
+          &quot;additionalProperties&quot;: {
+            &quot;anyOf&quot;: [
+              {
+                &quot;type&quot;: &quot;string&quot;
+              },
+              {
+                &quot;type&quot;: &quot;array&quot;,
+                &quot;items&quot;: {
+                  &quot;type&quot;: &quot;string&quot;
+                }
+              }
+            ]
+          }
+        },
+        &quot;files&quot;: {
+          &quot;type&quot;: &quot;object&quot;,
+          &quot;additionalProperties&quot;: {
+            &quot;type&quot;: &quot;object&quot;,
+            &quot;properties&quot;: {
+              &quot;content&quot;: {
+                &quot;type&quot;: &quot;string&quot;
+              },
+              &quot;filename&quot;: {
+                &quot;type&quot;: &quot;string&quot;
+              },
+              &quot;content_type&quot;: {
+                &quot;type&quot;: &quot;string&quot;
+              }
+            },
+            &quot;required&quot;: [
+              &quot;content&quot;
+            ]
+          }
+        }
+      }
+    },
+    &quot;auth&quot;: {
+      &quot;type&quot;: &quot;object&quot;,
+      &quot;description&quot;: &quot;Authorization helper. type=basic uses username/password; type=bearer uses token. An explicit Authorization header wins.&quot;,
+      &quot;properties&quot;: {
+        &quot;type&quot;: {
+          &quot;type&quot;: &quot;string&quot;,
+          &quot;enum&quot;: [
+            &quot;basic&quot;,
+            &quot;bearer&quot;
+          ]
+        },
+        &quot;username&quot;: {
+          &quot;type&quot;: &quot;string&quot;
+        },
+        &quot;password&quot;: {
+          &quot;type&quot;: &quot;string&quot;
+        },
+        &quot;token&quot;: {
+          &quot;type&quot;: &quot;string&quot;
+        }
+      },
+      &quot;required&quot;: [
+        &quot;type&quot;
+      ]
+    },
+    &quot;follow_redirects&quot;: {
+      &quot;type&quot;: &quot;boolean&quot;,
+      &quot;default&quot;: true
+    },
+    &quot;max_redirects&quot;: {
+      &quot;type&quot;: &quot;integer&quot;,
+      &quot;minimum&quot;: 0,
+      &quot;maximum&quot;: 20,
+      &quot;default&quot;: 10
+    },
+    &quot;allow_https_to_http&quot;: {
+      &quot;type&quot;: &quot;boolean&quot;,
+      &quot;default&quot;: false,
+      &quot;description&quot;: &quot;Allow a redirect that downgrades https to http (refused by default).&quot;
+    },
+    &quot;insecure&quot;: {
+      &quot;type&quot;: &quot;boolean&quot;,
+      &quot;default&quot;: false,
+      &quot;description&quot;: &quot;Skip TLS certificate verification (curl -k).&quot;
+    },
+    &quot;tls&quot;: {
+      &quot;type&quot;: &quot;object&quot;,
+      &quot;description&quot;: &quot;TLS overrides. Path fields are absolute and must resolve inside the session workspace root.&quot;,
+      &quot;properties&quot;: {
+        &quot;ca_file&quot;: {
+          &quot;type&quot;: &quot;string&quot;
+        },
+        &quot;client_cert_file&quot;: {
+          &quot;type&quot;: &quot;string&quot;
+        },
+        &quot;client_key_file&quot;: {
+          &quot;type&quot;: &quot;string&quot;
+        },
+        &quot;server_name&quot;: {
+          &quot;type&quot;: &quot;string&quot;
+        }
+      }
+    },
+    &quot;proxy&quot;: {
+      &quot;type&quot;: [
+        &quot;string&quot;,
+        &quot;null&quot;
+      ],
+      &quot;description&quot;: &quot;Explicit proxy URL. Default: HTTP_PROXY / HTTPS_PROXY / NO_PROXY. Proxy userinfo is redacted from results and logs.&quot;
+    },
+    &quot;no_proxy&quot;: {
+      &quot;type&quot;: &quot;boolean&quot;,
+      &quot;default&quot;: false,
+      &quot;description&quot;: &quot;Disable the environment proxy for this call (curl --noproxy &#x27;*&#x27;).&quot;
+    },
+    &quot;http_version&quot;: {
+      &quot;type&quot;: &quot;string&quot;,
+      &quot;enum&quot;: [
+        &quot;auto&quot;,
+        &quot;1.1&quot;,
+        &quot;2&quot;
+      ],
+      &quot;default&quot;: &quot;auto&quot;,
+      &quot;description&quot;: &quot;auto negotiates h2 over TLS; 1.1 forces HTTP/1.1; 2 forces HTTP/2 over TLS (h2c is not supported without a new dependency).&quot;
+    },
+    &quot;compressed&quot;: {
+      &quot;type&quot;: &quot;boolean&quot;,
+      &quot;default&quot;: true,
+      &quot;description&quot;: &quot;Send Accept-Encoding: gzip and decode gzip responses.&quot;
+    },
+    &quot;timeout_seconds&quot;: {
+      &quot;type&quot;: &quot;integer&quot;,
+      &quot;minimum&quot;: 1,
+      &quot;maximum&quot;: 300,
+      &quot;default&quot;: 30,
+      &quot;description&quot;: &quot;Total budget for the call including retries, in seconds.&quot;
+    },
+    &quot;connect_timeout_seconds&quot;: {
+      &quot;type&quot;: &quot;integer&quot;,
+      &quot;minimum&quot;: 1,
+      &quot;maximum&quot;: 60,
+      &quot;default&quot;: 10,
+      &quot;description&quot;: &quot;TCP + TLS connect budget per attempt, in seconds.&quot;
+    },
+    &quot;retry&quot;: {
+      &quot;type&quot;: &quot;object&quot;,
+      &quot;description&quot;: &quot;Retry policy. Idempotent methods retry on 408/425/429/500/502/503/504; other methods need retry_non_idempotent. Retry-After is honored up to 30s.&quot;,
+      &quot;properties&quot;: {
+        &quot;count&quot;: {
+          &quot;type&quot;: &quot;integer&quot;,
+          &quot;minimum&quot;: 0,
+          &quot;maximum&quot;: 10,
+          &quot;default&quot;: 0
+        },
+        &quot;delay_seconds&quot;: {
+          &quot;type&quot;: &quot;number&quot;,
+          &quot;minimum&quot;: 0,
+          &quot;default&quot;: 0.5
+        },
+        &quot;max_delay_seconds&quot;: {
+          &quot;type&quot;: &quot;number&quot;,
+          &quot;minimum&quot;: 0,
+          &quot;maximum&quot;: 30,
+          &quot;default&quot;: 8
+        },
+        &quot;retry_non_idempotent&quot;: {
+          &quot;type&quot;: &quot;boolean&quot;,
+          &quot;default&quot;: false
+        }
+      }
+    },
+    &quot;response&quot;: {
+      &quot;type&quot;: &quot;object&quot;,
+      &quot;description&quot;: &quot;Response handling: inline vs file, body cap, header/cookie visibility.&quot;,
+      &quot;properties&quot;: {
+        &quot;mode&quot;: {
+          &quot;type&quot;: &quot;string&quot;,
+          &quot;enum&quot;: [
+            &quot;auto&quot;,
+            &quot;inline&quot;,
+            &quot;file&quot;
+          ],
+          &quot;default&quot;: &quot;auto&quot;,
+          &quot;description&quot;: &quot;auto keeps bodies &lt;= max_inline_bytes inline and saves the rest.&quot;
+        },
+        &quot;path&quot;: {
+          &quot;type&quot;: &quot;string&quot;,
+          &quot;description&quot;: &quot;Absolute destination for mode=file (or auto overflow); must be inside the session workspace root.&quot;
+        },
+        &quot;max_inline_bytes&quot;: {
+          &quot;type&quot;: &quot;integer&quot;,
+          &quot;minimum&quot;: 0,
+          &quot;maximum&quot;: 10485760,
+          &quot;default&quot;: 65536
+        },
+        &quot;max_bytes&quot;: {
+          &quot;type&quot;: &quot;integer&quot;,
+          &quot;minimum&quot;: 1,
+          &quot;default&quot;: 16777216,
+          &quot;description&quot;: &quot;Hard fetch cap; exceeded means response_too_large.&quot;
+        },
+        &quot;include_headers&quot;: {
+          &quot;type&quot;: &quot;boolean&quot;,
+          &quot;default&quot;: true
+        },
+        &quot;include_body&quot;: {
+          &quot;type&quot;: &quot;boolean&quot;,
+          &quot;default&quot;: true
+        },
+        &quot;include_cookies&quot;: {
+          &quot;type&quot;: &quot;boolean&quot;,
+          &quot;default&quot;: false,
+          &quot;description&quot;: &quot;Return cookie metadata and unredacted Set-Cookie values.&quot;
+        }
+      }
+    },
+    &quot;cookies&quot;: {
+      &quot;type&quot;: &quot;object&quot;,
+      &quot;description&quot;: &quot;Cookie handling for THIS Hive chat session. The jar is owned by the session&#x27;s tool catalogue and is never shared with another session or colony worker. jar=session (default) keeps cookies across calls in this session; jar=none sends only the explicit values. Nothing is written to disk in v1.&quot;,
+      &quot;properties&quot;: {
+        &quot;jar&quot;: {
+          &quot;type&quot;: &quot;string&quot;,
+          &quot;enum&quot;: [
+            &quot;session&quot;,
+            &quot;none&quot;
+          ],
+          &quot;default&quot;: &quot;session&quot;,
+          &quot;description&quot;: &quot;session: use this session&#x27;s in-memory jar. none: stateless.&quot;
+        },
+        &quot;send&quot;: {
+          &quot;type&quot;: &quot;object&quot;,
+          &quot;description&quot;: &quot;Explicit Cookie values, merged with the jar (redacted in logs).&quot;,
+          &quot;additionalProperties&quot;: {
+            &quot;type&quot;: &quot;string&quot;
+          }
+        },
+        &quot;clear&quot;: {
+          &quot;type&quot;: &quot;boolean&quot;,
+          &quot;default&quot;: false,
+          &quot;description&quot;: &quot;Clear this session&#x27;s jar before sending (logout).&quot;
+        }
+      }
+    },
+    &quot;fail_on_http_error&quot;: {
+      &quot;type&quot;: &quot;boolean&quot;,
+      &quot;default&quot;: false,
+      &quot;description&quot;: &quot;Report non-2xx as IsError (curl --fail-with-body) instead of a normal result.&quot;
+    }
+  },
+  &quot;required&quot;: [
+    &quot;url&quot;
+  ]
+}</pre>
+<div class="tablewrap"><table><thead><tr><th style="width:34%">参数</th><th style="width:66%">中文说明</th></tr></thead><tbody><tr><td><code>url</code></td><td>绝对 http(s) 地址；裸主机自动补 https://。</td></tr><tr><td><code>method</code></td><td>GET/HEAD/POST/PUT/PATCH/DELETE/OPTIONS 之一，统一大写。</td></tr><tr><td><code>query / replace_query</code></td><td>追加查询参数；数组值重复键；replace_query=true 丢弃 URL 原有查询串。</td></tr><tr><td><code>headers</code></td><td>多值请求头；null 值删除默认头；大小写不敏感。</td></tr><tr><td><code>body / json / form / multipart</code></td><td>四种请求体互斥，只能选一种；冲突返回 invalid_input。</td></tr><tr><td><code>auth</code></td><td>basic（username/password）或 bearer（token）；显式 Authorization 头优先。</td></tr><tr><td><code>follow_redirects / max_redirects / allow_https_to_http</code></td><td>重定向策略；每跳重新做 SSRF 校验。</td></tr><tr><td><code>insecure / tls</code></td><td>关闭证书校验（显式、记日志）；CA 与客户端证书路径解析到会话根内。</td></tr><tr><td><code>proxy / no_proxy / http_version / compressed</code></td><td>代理、HTTP 版本、gzip 开关。</td></tr><tr><td><code>timeout_seconds / connect_timeout_seconds / retry</code></td><td>总预算、连接预算、重试策略。</td></tr><tr><td><code>response</code></td><td>内联/落盘、字节上限、响应头与 Cookie 可见性；response.path 必须是绝对路径。</td></tr><tr><td><code>cookies</code></td><td>本 Hive 会话的内存 jar、显式 Cookie、发送前清空。</td></tr><tr><td><code>fail_on_http_error</code></td><td>true 时非 2xx 作为工具错误（curl --fail-with-body）。</td></tr></tbody></table></div>
+<h3>http_download</h3><pre>{
+  &quot;type&quot;: &quot;object&quot;,
+  &quot;additionalProperties&quot;: false,
+  &quot;properties&quot;: {
+    &quot;url&quot;: {
+      &quot;type&quot;: &quot;string&quot;,
+      &quot;description&quot;: &quot;Absolute http(s) URL to download.&quot;
+    },
+    &quot;path&quot;: {
+      &quot;type&quot;: &quot;string&quot;,
+      &quot;description&quot;: &quot;Absolute destination file inside the session workspace root. Parent directories are created.&quot;
+    },
+    &quot;overwrite&quot;: {
+      &quot;type&quot;: &quot;boolean&quot;,
+      &quot;default&quot;: false
+    },
+    &quot;resume&quot;: {
+      &quot;type&quot;: &quot;boolean&quot;,
+      &quot;default&quot;: false,
+      &quot;description&quot;: &quot;Resume a .part file with Range + If-Range (curl -C -).&quot;
+    },
+    &quot;expected_sha256&quot;: {
+      &quot;type&quot;: &quot;string&quot;,
+      &quot;description&quot;: &quot;Fail with checksum_mismatch when the downloaded digest differs.&quot;
+    },
+    &quot;headers&quot;: {
+      &quot;type&quot;: &quot;object&quot;,
+      &quot;description&quot;: &quot;Request headers. Array values repeat the header; a null value removes a default header. Header names are case-insensitive.&quot;,
+      &quot;additionalProperties&quot;: {
+        &quot;anyOf&quot;: [
+          {
+            &quot;type&quot;: &quot;string&quot;
+          },
+          {
+            &quot;type&quot;: &quot;array&quot;,
+            &quot;items&quot;: {
+              &quot;type&quot;: &quot;string&quot;
+            }
+          },
+          {
+            &quot;type&quot;: &quot;null&quot;
+          }
+        ]
+      }
+    },
+    &quot;auth&quot;: {
+      &quot;type&quot;: &quot;object&quot;,
+      &quot;description&quot;: &quot;Authorization helper. type=basic uses username/password; type=bearer uses token. An explicit Authorization header wins.&quot;,
+      &quot;properties&quot;: {
+        &quot;type&quot;: {
+          &quot;type&quot;: &quot;string&quot;,
+          &quot;enum&quot;: [
+            &quot;basic&quot;,
+            &quot;bearer&quot;
+          ]
+        },
+        &quot;username&quot;: {
+          &quot;type&quot;: &quot;string&quot;
+        },
+        &quot;password&quot;: {
+          &quot;type&quot;: &quot;string&quot;
+        },
+        &quot;token&quot;: {
+          &quot;type&quot;: &quot;string&quot;
+        }
+      },
+      &quot;required&quot;: [
+        &quot;type&quot;
+      ]
+    },
+    &quot;follow_redirects&quot;: {
+      &quot;type&quot;: &quot;boolean&quot;,
+      &quot;default&quot;: true
+    },
+    &quot;max_redirects&quot;: {
+      &quot;type&quot;: &quot;integer&quot;,
+      &quot;minimum&quot;: 0,
+      &quot;maximum&quot;: 20,
+      &quot;default&quot;: 10
+    },
+    &quot;allow_https_to_http&quot;: {
+      &quot;type&quot;: &quot;boolean&quot;,
+      &quot;default&quot;: false,
+      &quot;description&quot;: &quot;Allow a redirect that downgrades https to http (refused by default).&quot;
+    },
+    &quot;insecure&quot;: {
+      &quot;type&quot;: &quot;boolean&quot;,
+      &quot;default&quot;: false
+    },
+    &quot;tls&quot;: {
+      &quot;type&quot;: &quot;object&quot;,
+      &quot;description&quot;: &quot;TLS overrides. Path fields are absolute and must resolve inside the session workspace root.&quot;,
+      &quot;properties&quot;: {
+        &quot;ca_file&quot;: {
+          &quot;type&quot;: &quot;string&quot;
+        },
+        &quot;client_cert_file&quot;: {
+          &quot;type&quot;: &quot;string&quot;
+        },
+        &quot;client_key_file&quot;: {
+          &quot;type&quot;: &quot;string&quot;
+        },
+        &quot;server_name&quot;: {
+          &quot;type&quot;: &quot;string&quot;
+        }
+      }
+    },
+    &quot;proxy&quot;: {
+      &quot;type&quot;: [
+        &quot;string&quot;,
+        &quot;null&quot;
+      ],
+      &quot;description&quot;: &quot;Explicit proxy URL. Default: HTTP_PROXY / HTTPS_PROXY / NO_PROXY. Proxy userinfo is redacted from results and logs.&quot;
+    },
+    &quot;no_proxy&quot;: {
+      &quot;type&quot;: &quot;boolean&quot;,
+      &quot;default&quot;: false,
+      &quot;description&quot;: &quot;Disable the environment proxy for this call (curl --noproxy &#x27;*&#x27;).&quot;
+    },
+    &quot;http_version&quot;: {
+      &quot;type&quot;: &quot;string&quot;,
+      &quot;enum&quot;: [
+        &quot;auto&quot;,
+        &quot;1.1&quot;,
+        &quot;2&quot;
+      ],
+      &quot;default&quot;: &quot;auto&quot;,
+      &quot;description&quot;: &quot;auto negotiates h2 over TLS; 1.1 forces HTTP/1.1; 2 forces HTTP/2 over TLS (h2c is not supported without a new dependency).&quot;
+    },
+    &quot;compressed&quot;: {
+      &quot;type&quot;: &quot;boolean&quot;,
+      &quot;default&quot;: true,
+      &quot;description&quot;: &quot;Send Accept-Encoding: gzip and decode gzip responses.&quot;
+    },
+    &quot;timeout_seconds&quot;: {
+      &quot;type&quot;: &quot;integer&quot;,
+      &quot;minimum&quot;: 1,
+      &quot;maximum&quot;: 1800,
+      &quot;default&quot;: 300,
+      &quot;description&quot;: &quot;Total download budget in seconds (cap 1800).&quot;
+    },
+    &quot;connect_timeout_seconds&quot;: {
+      &quot;type&quot;: &quot;integer&quot;,
+      &quot;minimum&quot;: 1,
+      &quot;maximum&quot;: 60,
+      &quot;default&quot;: 10,
+      &quot;description&quot;: &quot;TCP + TLS connect budget per attempt, in seconds.&quot;
+    },
+    &quot;max_bytes&quot;: {
+      &quot;type&quot;: &quot;integer&quot;,
+      &quot;minimum&quot;: 1,
+      &quot;default&quot;: 1073741824,
+      &quot;description&quot;: &quot;Download cap (default 1 GiB); exceeded means response_too_large.&quot;
+    },
+    &quot;retry&quot;: {
+      &quot;type&quot;: &quot;object&quot;,
+      &quot;description&quot;: &quot;Retry policy. Idempotent methods retry on 408/425/429/500/502/503/504; other methods need retry_non_idempotent. Retry-After is honored up to 30s.&quot;,
+      &quot;properties&quot;: {
+        &quot;count&quot;: {
+          &quot;type&quot;: &quot;integer&quot;,
+          &quot;minimum&quot;: 0,
+          &quot;maximum&quot;: 10,
+          &quot;default&quot;: 0
+        },
+        &quot;delay_seconds&quot;: {
+          &quot;type&quot;: &quot;number&quot;,
+          &quot;minimum&quot;: 0,
+          &quot;default&quot;: 0.5
+        },
+        &quot;max_delay_seconds&quot;: {
+          &quot;type&quot;: &quot;number&quot;,
+          &quot;minimum&quot;: 0,
+          &quot;maximum&quot;: 30,
+          &quot;default&quot;: 8
+        },
+        &quot;retry_non_idempotent&quot;: {
+          &quot;type&quot;: &quot;boolean&quot;,
+          &quot;default&quot;: false
+        }
+      }
+    }
+  },
+  &quot;required&quot;: [
+    &quot;url&quot;,
+    &quot;path&quot;
+  ]
+}</pre>
+<div class="tablewrap"><table><thead><tr><th style="width:34%">参数</th><th style="width:66%">中文说明</th></tr></thead><tbody><tr><td><code>url / path</code></td><td>下载地址与绝对目标文件（必须在会话根内；父目录自动创建）。</td></tr><tr><td><code>overwrite / resume / expected_sha256</code></td><td>覆盖策略、断点续传、下载后校验和。</td></tr><tr><td><code>headers / auth / 重定向 / tls / proxy / http_version / compressed</code></td><td>与 http_request 同义。</td></tr><tr><td><code>timeout_seconds / connect_timeout_seconds</code></td><td>下载总预算（默认 300s，上限 1800s）与连接预算。</td></tr><tr><td><code>max_bytes</code></td><td>下载上限，默认 1 GiB；超限返回 response_too_large。</td></tr><tr><td><code>retry</code></td><td>重试策略；默认只重试幂等方法。</td></tr></tbody></table></div>
+<h3>http_upload</h3><pre>{
+  &quot;type&quot;: &quot;object&quot;,
+  &quot;additionalProperties&quot;: false,
+  &quot;properties&quot;: {
+    &quot;url&quot;: {
+      &quot;type&quot;: &quot;string&quot;,
+      &quot;description&quot;: &quot;Absolute http(s) URL.&quot;
+    },
+    &quot;method&quot;: {
+      &quot;type&quot;: &quot;string&quot;,
+      &quot;enum&quot;: [
+        &quot;POST&quot;,
+        &quot;PUT&quot;,
+        &quot;PATCH&quot;
+      ],
+      &quot;default&quot;: &quot;POST&quot;,
+      &quot;description&quot;: &quot;Multipart default POST; body_file default PUT (curl -T).&quot;
+    },
+    &quot;fields&quot;: {
+      &quot;type&quot;: &quot;object&quot;,
+      &quot;description&quot;: &quot;multipart/form-data text fields; array values repeat the key.&quot;,
+      &quot;additionalProperties&quot;: {
+        &quot;anyOf&quot;: [
+          {
+            &quot;type&quot;: &quot;string&quot;
+          },
+          {
+            &quot;type&quot;: &quot;array&quot;,
+            &quot;items&quot;: {
+              &quot;type&quot;: &quot;string&quot;
+            }
+          }
+        ]
+      }
+    },
+    &quot;files&quot;: {
+      &quot;type&quot;: &quot;array&quot;,
+      &quot;description&quot;: &quot;Multipart file parts streamed from absolute workspace file paths.&quot;,
+      &quot;items&quot;: {
+        &quot;type&quot;: &quot;object&quot;,
+        &quot;properties&quot;: {
+          &quot;field&quot;: {
+            &quot;type&quot;: &quot;string&quot;
+          },
+          &quot;path&quot;: {
+            &quot;type&quot;: &quot;string&quot;,
+            &quot;description&quot;: &quot;Absolute path to a workspace file.&quot;
+          },
+          &quot;filename&quot;: {
+            &quot;type&quot;: &quot;string&quot;
+          },
+          &quot;content_type&quot;: {
+            &quot;type&quot;: &quot;string&quot;
+          }
+        },
+        &quot;required&quot;: [
+          &quot;field&quot;,
+          &quot;path&quot;
+        ]
+      }
+    },
+    &quot;body_file&quot;: {
+      &quot;type&quot;: &quot;string&quot;,
+      &quot;description&quot;: &quot;Absolute path to a workspace file, streamed as the raw body (curl -T). Mutually exclusive with fields/files.&quot;
+    },
+    &quot;content_type&quot;: {
+      &quot;type&quot;: &quot;string&quot;,
+      &quot;description&quot;: &quot;Raw-body Content-Type (body_file mode); defaults to application/octet-stream.&quot;
+    },
+    &quot;headers&quot;: {
+      &quot;type&quot;: &quot;object&quot;,
+      &quot;description&quot;: &quot;Request headers. Array values repeat the header; a null value removes a default header. Header names are case-insensitive.&quot;,
+      &quot;additionalProperties&quot;: {
+        &quot;anyOf&quot;: [
+          {
+            &quot;type&quot;: &quot;string&quot;
+          },
+          {
+            &quot;type&quot;: &quot;array&quot;,
+            &quot;items&quot;: {
+              &quot;type&quot;: &quot;string&quot;
+            }
+          },
+          {
+            &quot;type&quot;: &quot;null&quot;
+          }
+        ]
+      }
+    },
+    &quot;auth&quot;: {
+      &quot;type&quot;: &quot;object&quot;,
+      &quot;description&quot;: &quot;Authorization helper. type=basic uses username/password; type=bearer uses token. An explicit Authorization header wins.&quot;,
+      &quot;properties&quot;: {
+        &quot;type&quot;: {
+          &quot;type&quot;: &quot;string&quot;,
+          &quot;enum&quot;: [
+            &quot;basic&quot;,
+            &quot;bearer&quot;
+          ]
+        },
+        &quot;username&quot;: {
+          &quot;type&quot;: &quot;string&quot;
+        },
+        &quot;password&quot;: {
+          &quot;type&quot;: &quot;string&quot;
+        },
+        &quot;token&quot;: {
+          &quot;type&quot;: &quot;string&quot;
+        }
+      },
+      &quot;required&quot;: [
+        &quot;type&quot;
+      ]
+    },
+    &quot;follow_redirects&quot;: {
+      &quot;type&quot;: &quot;boolean&quot;,
+      &quot;default&quot;: true
+    },
+    &quot;max_redirects&quot;: {
+      &quot;type&quot;: &quot;integer&quot;,
+      &quot;minimum&quot;: 0,
+      &quot;maximum&quot;: 20,
+      &quot;default&quot;: 10
+    },
+    &quot;allow_https_to_http&quot;: {
+      &quot;type&quot;: &quot;boolean&quot;,
+      &quot;default&quot;: false,
+      &quot;description&quot;: &quot;Allow a redirect that downgrades https to http (refused by default).&quot;
+    },
+    &quot;insecure&quot;: {
+      &quot;type&quot;: &quot;boolean&quot;,
+      &quot;default&quot;: false
+    },
+    &quot;tls&quot;: {
+      &quot;type&quot;: &quot;object&quot;,
+      &quot;description&quot;: &quot;TLS overrides. Path fields are absolute and must resolve inside the session workspace root.&quot;,
+      &quot;properties&quot;: {
+        &quot;ca_file&quot;: {
+          &quot;type&quot;: &quot;string&quot;
+        },
+        &quot;client_cert_file&quot;: {
+          &quot;type&quot;: &quot;string&quot;
+        },
+        &quot;client_key_file&quot;: {
+          &quot;type&quot;: &quot;string&quot;
+        },
+        &quot;server_name&quot;: {
+          &quot;type&quot;: &quot;string&quot;
+        }
+      }
+    },
+    &quot;proxy&quot;: {
+      &quot;type&quot;: [
+        &quot;string&quot;,
+        &quot;null&quot;
+      ],
+      &quot;description&quot;: &quot;Explicit proxy URL. Default: HTTP_PROXY / HTTPS_PROXY / NO_PROXY. Proxy userinfo is redacted from results and logs.&quot;
+    },
+    &quot;no_proxy&quot;: {
+      &quot;type&quot;: &quot;boolean&quot;,
+      &quot;default&quot;: false,
+      &quot;description&quot;: &quot;Disable the environment proxy for this call (curl --noproxy &#x27;*&#x27;).&quot;
+    },
+    &quot;http_version&quot;: {
+      &quot;type&quot;: &quot;string&quot;,
+      &quot;enum&quot;: [
+        &quot;auto&quot;,
+        &quot;1.1&quot;,
+        &quot;2&quot;
+      ],
+      &quot;default&quot;: &quot;auto&quot;,
+      &quot;description&quot;: &quot;auto negotiates h2 over TLS; 1.1 forces HTTP/1.1; 2 forces HTTP/2 over TLS (h2c is not supported without a new dependency).&quot;
+    },
+    &quot;compressed&quot;: {
+      &quot;type&quot;: &quot;boolean&quot;,
+      &quot;default&quot;: true,
+      &quot;description&quot;: &quot;Send Accept-Encoding: gzip and decode gzip responses.&quot;
+    },
+    &quot;timeout_seconds&quot;: {
+      &quot;type&quot;: &quot;integer&quot;,
+      &quot;minimum&quot;: 1,
+      &quot;maximum&quot;: 1800,
+      &quot;default&quot;: 300
+    },
+    &quot;connect_timeout_seconds&quot;: {
+      &quot;type&quot;: &quot;integer&quot;,
+      &quot;minimum&quot;: 1,
+      &quot;maximum&quot;: 60,
+      &quot;default&quot;: 10,
+      &quot;description&quot;: &quot;TCP + TLS connect budget per attempt, in seconds.&quot;
+    },
+    &quot;max_bytes&quot;: {
+      &quot;type&quot;: &quot;integer&quot;,
+      &quot;minimum&quot;: 1,
+      &quot;default&quot;: 1073741824,
+      &quot;description&quot;: &quot;Upload cap (default 1 GiB); exceeded means request_too_large.&quot;
+    },
+    &quot;max_response_bytes&quot;: {
+      &quot;type&quot;: &quot;integer&quot;,
+      &quot;minimum&quot;: 1,
+      &quot;default&quot;: 16777216,
+      &quot;description&quot;: &quot;Response body cap for the upload reply.&quot;
+    },
+    &quot;retry&quot;: {
+      &quot;type&quot;: &quot;object&quot;,
+      &quot;description&quot;: &quot;Retry policy. Idempotent methods retry on 408/425/429/500/502/503/504; other methods need retry_non_idempotent. Retry-After is honored up to 30s.&quot;,
+      &quot;properties&quot;: {
+        &quot;count&quot;: {
+          &quot;type&quot;: &quot;integer&quot;,
+          &quot;minimum&quot;: 0,
+          &quot;maximum&quot;: 10,
+          &quot;default&quot;: 0
+        },
+        &quot;delay_seconds&quot;: {
+          &quot;type&quot;: &quot;number&quot;,
+          &quot;minimum&quot;: 0,
+          &quot;default&quot;: 0.5
+        },
+        &quot;max_delay_seconds&quot;: {
+          &quot;type&quot;: &quot;number&quot;,
+          &quot;minimum&quot;: 0,
+          &quot;maximum&quot;: 30,
+          &quot;default&quot;: 8
+        },
+        &quot;retry_non_idempotent&quot;: {
+          &quot;type&quot;: &quot;boolean&quot;,
+          &quot;default&quot;: false
+        }
+      }
+    }
+  },
+  &quot;required&quot;: [
+    &quot;url&quot;
+  ]
+}</pre>
+<div class="tablewrap"><table><thead><tr><th style="width:34%">参数</th><th style="width:66%">中文说明</th></tr></thead><tbody><tr><td><code>url / method</code></td><td>上传地址与方法；multipart 默认 POST，body_file 默认 PUT。</td></tr><tr><td><code>fields / files</code></td><td>multipart 文本字段与文件部件；files[].path 必须是绝对路径，流式读取，不整文件入内存。</td></tr><tr><td><code>body_file / content_type</code></td><td>原始文件体（curl -T）与 Content-Type；与 fields/files 互斥。</td></tr><tr><td><code>headers / auth / 重定向 / tls / proxy / http_version / compressed</code></td><td>与 http_request 同义。</td></tr><tr><td><code>timeout_seconds / connect_timeout_seconds</code></td><td>上传总预算与连接预算。</td></tr><tr><td><code>max_bytes / max_response_bytes</code></td><td>请求体上限与响应体上限。</td></tr><tr><td><code>retry</code></td><td>重试策略；默认只重试幂等方法。</td></tr></tbody></table></div>
+<h3>统一结果信封</h3><pre>{
+  &quot;tool&quot;: &quot;http_request | http_download | http_upload&quot;,
+  &quot;url&quot;: &quot;requested URL (userinfo and redacted query values removed)&quot;,
+  &quot;final_url&quot;: &quot;URL after the redirect chain&quot;,
+  &quot;method&quot;: &quot;GET&quot;,
+  &quot;http_version&quot;: &quot;HTTP/2.0&quot;,
+  &quot;status&quot;: 200,
+  &quot;status_text&quot;: &quot;OK&quot;,
+  &quot;ok&quot;: true,
+  &quot;headers&quot;: {
+    &quot;content-type&quot;: [
+      &quot;application/json&quot;
+    ]
+  },
+  &quot;content_type&quot;: &quot;application/json&quot;,
+  &quot;charset&quot;: &quot;utf-8&quot;,
+  &quot;body&quot;: &quot;…inline body, base64, or null when saved to a file…&quot;,
+  &quot;body_encoding&quot;: &quot;utf8 | base64 | file&quot;,
+  &quot;body_bytes&quot;: 1234,
+  &quot;body_sha256&quot;: &quot;…&quot;,
+  &quot;saved_to&quot;: null,
+  &quot;truncated&quot;: false,
+  &quot;redirects&quot;: [
+    {
+      &quot;status&quot;: 301,
+      &quot;url&quot;: &quot;https://example.com/a&quot;,
+      &quot;location&quot;: &quot;https://example.com/b&quot;
+    }
+  ],
+  &quot;cookies&quot;: [
+    {
+      &quot;name&quot;: &quot;sid&quot;,
+      &quot;domain&quot;: &quot;example.com&quot;,
+      &quot;path&quot;: &quot;/&quot;,
+      &quot;expires&quot;: &quot;2026-12-31T00:00:00Z&quot;,
+      &quot;secure&quot;: true,
+      &quot;http_only&quot;: true
+    }
+  ],
+  &quot;cookies_rejected&quot;: 0,
+  &quot;timing_ms&quot;: {
+    &quot;total&quot;: 0,
+    &quot;dns&quot;: 0,
+    &quot;connect&quot;: 0,
+    &quot;tls&quot;: 0,
+    &quot;first_byte&quot;: 0
+  },
+  &quot;remote_addr&quot;: &quot;203.0.113.10:443&quot;,
+  &quot;tls&quot;: {
+    &quot;version&quot;: &quot;TLSv1.3&quot;,
+    &quot;cipher_suite&quot;: &quot;TLS_AES_128_GCM_SHA256&quot;,
+    &quot;server_name&quot;: &quot;example.com&quot;,
+    &quot;subject&quot;: &quot;CN=example.com&quot;,
+    &quot;issuer&quot;: &quot;CN=Example CA&quot;,
+    &quot;not_after&quot;: &quot;2027-01-01T00:00:00Z&quot;
+  },
+  &quot;retries&quot;: 0,
+  &quot;error&quot;: null,
+  &quot;error_kind&quot;: null
+}</pre>
+<p class="sub">download 在信封上追加 path / bytes / sha256 / resumed / etag / last_modified；upload 追加 uploaded_bytes / parts。</p>
+<h3>error_kind 闭集</h3><p><span class="pill muted">invalid_input</span> <span class="pill muted">path_not_absolute</span> <span class="pill muted">path_escape</span> <span class="pill muted">config_disabled</span> <span class="pill muted">ssrf_blocked</span> <span class="pill muted">dns_failed</span> <span class="pill muted">connect_failed</span> <span class="pill muted">tls_failed</span> <span class="pill muted">proxy_failed</span> <span class="pill muted">timeout</span> <span class="pill muted">too_many_redirects</span> <span class="pill muted">https_downgrade_blocked</span> <span class="pill muted">response_too_large</span> <span class="pill muted">request_too_large</span> <span class="pill muted">write_failed</span> <span class="pill muted">read_failed</span> <span class="pill muted">checksum_mismatch</span> <span class="pill muted">cookie_jar_invalid</span> <span class="pill muted">http_status</span></p></section>
+
+<section id="curl"><h2><span class="num">05</span>curl 兼容矩阵</h2>
+<p class="sub">参考 curl 的常用语义，但只暴露对模型有意义的子集；不支持项明确登记，避免“看起来像 curl 但行为不同”。</p>
+<div class="tablewrap"><table><thead><tr><th style="width:26%">curl</th><th style="width:30%">工具映射</th><th style="width:44%">说明</th></tr></thead><tbody><tr><td><code>curl URL</code></td><td><code>http_request {url}</code></td><td>裸主机自动补 https://。</td></tr><tr><td><code>-X/--request</code></td><td><code>method</code></td><td>枚举值，统一大写。</td></tr><tr><td><code>-H/--header</code></td><td><code>headers</code></td><td>数组值重复该头；null 删除默认头。</td></tr><tr><td><code>-d/--data, --data-raw, --data-binary</code></td><td><code>body</code></td><td>原样字节；不做 @file 展开（用 http_upload）。</td></tr><tr><td><code>--json</code></td><td><code>json</code></td><td>紧凑 JSON；未显式设置时 Content-Type 为 application/json。</td></tr><tr><td><code>-F name=value</code></td><td><code>multipart.fields</code></td><td>内联 multipart 文本部件。</td></tr><tr><td><code>-F name=@file</code></td><td><code>http_upload {files}</code></td><td>从会话根内的绝对路径流式上传，不整文件入内存。</td></tr><tr><td><code>-G/--get + --data-urlencode</code></td><td><code>method=GET + query</code></td><td>查询串只编码一次。</td></tr><tr><td><code>-u/--user user:pass</code></td><td><code>auth {type: basic}</code></td><td>Basic 认证；显式 Authorization 头优先。</td></tr><tr><td><code>--oauth2-bearer</code></td><td><code>auth {type: bearer}</code></td><td>Bearer 令牌。</td></tr><tr><td><code>-A/--user-agent</code></td><td><code>headers User-Agent</code></td><td>或在 http_tools.json 配置 user_agent。</td></tr><tr><td><code>-e/--referer</code></td><td><code>headers Referer</code></td><td>—</td></tr><tr><td><code>-b/--cookie</code></td><td><code>cookies.send + session jar</code></td><td>显式值与当前 Hive 会话的内存 jar 合并。</td></tr><tr><td><code>-c/--cookie-jar</code></td><td><code>—</code></td><td>v1 无磁盘 jar；cookie 不跨 Hive 会话。</td></tr><tr><td><code>-L/--location, --max-redirs</code></td><td><code>follow_redirects, max_redirects</code></td><td>每跳重新校验；跨主机剥离认证头。</td></tr><tr><td><code>-k/--insecure</code></td><td><code>insecure</code></td><td>显式关闭校验；会记录日志。</td></tr><tr><td><code>--cacert, --cert, --key</code></td><td><code>tls.ca_file, tls.client_cert_file, tls.client_key_file</code></td><td>绝对路径，必须解析到会话根内。</td></tr><tr><td><code>--compressed</code></td><td><code>compressed</code></td><td>默认开启；只支持 gzip（不引入 brotli 依赖）。</td></tr><tr><td><code>-m/--max-time, --connect-timeout</code></td><td><code>timeout_seconds, connect_timeout_seconds</code></td><td>分阶段超时。</td></tr><tr><td><code>--retry, --retry-delay, --retry-max-time</code></td><td><code>retry.*</code></td><td>默认只重试幂等方法。</td></tr><tr><td><code>-o/--output, -O/--remote-name</code></td><td><code>http_download {path}</code></td><td>绝对路径；原子 .part + rename。</td></tr><tr><td><code>-C - (resume)</code></td><td><code>http_download {resume: true}</code></td><td>Range + If-Range；校验 206。</td></tr><tr><td><code>-r/--range</code></td><td><code>headers Range</code></td><td>v1 无独立参数。</td></tr><tr><td><code>--limit-rate</code></td><td><code>—</code></td><td>v1 不支持；限速请用代理/队列。</td></tr><tr><td><code>-T/--upload-file</code></td><td><code>http_upload {body_file}</code></td><td>绝对路径；流式原始 body；默认 PUT。</td></tr><tr><td><code>-x/--proxy, --noproxy</code></td><td><code>proxy, no_proxy</code></td><td>默认读取环境代理。</td></tr><tr><td><code>-I/--head</code></td><td><code>method=HEAD</code></td><td>—</td></tr><tr><td><code>-i/--include</code></td><td><code>response.include_headers</code></td><td>默认返回响应头；敏感值脱敏。</td></tr><tr><td><code>-w/--write-out</code></td><td><code>timing_ms + tls + remote_addr</code></td><td>结构化字段，不是格式串。</td></tr><tr><td><code>--fail, --fail-with-body</code></td><td><code>fail_on_http_error</code></td><td>默认非 2xx 仍是正常结果。</td></tr><tr><td><code>-v/--verbose</code></td><td><code>log record</code></td><td>不面向模型；秘密全部脱敏。</td></tr><tr><td><code>--http1.1, --http2</code></td><td><code>http_version</code></td><td>auto 在 TLS 上协商 h2。</td></tr><tr><td><code>--resolve, --connect-to, --unix-socket</code></td><td><code>—</code></td><td>v1 不支持（会绕过 SSRF 策略）。</td></tr><tr><td><code>-s/--silent, -S/--show-error</code></td><td><code>—</code></td><td>没有对应的模型语义。</td></tr><tr><td><code>--path-as-is</code></td><td><code>—</code></td><td>URL 规范化始终开启。</td></tr></tbody></table></div></section>
+
+<section id="safety"><h2><span class="num">06</span>安全与配置</h2>
+<h3>威胁模型</h3><p>模型控制 URL、头与 body，因此本工具是出站原语。默认拒绝私网地址可防止误触内部服务；脱敏防止秘密回显；容量上限防止内存/上下文耗尽。terminal_exec 对恶意 agent 仍是绕过通道，所以这是护栏而不是沙箱边界；高安全部署应同时限制 terminal 工具。</p>
+<h3>控制项</h3><ul><li>协议白名单：http/https</li><li>DNS 解析 + 拨号期 IP 固定（防 rebinding）</li><li>每一跳重定向重新校验</li><li>跨主机剥离 Authorization/Cookie</li><li>默认拒绝 https→http 降级</li><li>私网/回环/链路本地/CGNAT/ULA/metadata 拒绝表</li><li>可选 allowed_hosts / denied_hosts</li><li>响应/请求字节上限与响应头上限</li><li>分阶段超时与 context 取消</li><li>结果与日志中的秘密脱敏</li><li>每 Hive 会话一份内存 cookie jar（host-only 默认；无跨会话、无磁盘 jar）</li></ul>
+<h3>残余风险</h3><ul><li>代理模式下目标由代理解析：客户端只能预检，代理可能触达本应被客户端拦截的内部名称</li><li>恶意 agent 仍可用 terminal_exec 跑 curl；策略落地依赖同时限制 terminal 工具</li><li>运维显式设置 allow_private_hosts 或 insecure=true 是有记录的安全降级</li><li>内存 jar 在进程重启或会话恢复后丢失；v1 用重新登录换取“绝不跨会话持久化”</li></ul>
+<h3>http_tools.json</h3>
+<ul><li><code>&lt;HIVE_HOME&gt;/http_tools.json（运维/用户级；在会话沙箱之外）</code></li></ul>
+<p class="sub">只读 &lt;HIVE_HOME&gt;/http_tools.json；缺失即默认值，低信任层只允许收紧，不允许放宽。格式错误或不可读即关闭（fail closed）。 HIVE_HTTP_TOOLS=0 对进程硬关闭；=1 仅在配置未关闭时生效。</p>
+<div class="callout bad"><b>不做会话级自动发现：</b>刻意不读取 &lt;sessionDir&gt;/.hive/http_tools.json：会话目录对 agent 的文件工具可写，自动发现会让 agent 改写自己的出站策略（提权）。</div>
+<pre>{
+  &quot;$schema&quot;: &quot;http_tools.json&quot;,
+  &quot;enabled&quot;: true,
+  &quot;allow_private_hosts&quot;: false,
+  &quot;allowed_hosts&quot;: [],
+  &quot;denied_hosts&quot;: [
+    &quot;localhost&quot;,
+    &quot;*.localhost&quot;,
+    &quot;*.internal&quot;,
+    &quot;*.local&quot;,
+    &quot;metadata.google.internal&quot;
+  ],
+  &quot;max_inline_bytes&quot;: 65536,
+  &quot;max_response_bytes&quot;: 16777216,
+  &quot;max_download_bytes&quot;: 1073741824,
+  &quot;max_upload_bytes&quot;: 1073741824,
+  &quot;default_timeout_seconds&quot;: 30,
+  &quot;max_timeout_seconds&quot;: 1800,
+  &quot;connect_timeout_seconds&quot;: 10,
+  &quot;follow_redirects&quot;: true,
+  &quot;max_redirects&quot;: 10,
+  &quot;allow_https_to_http&quot;: false,
+  &quot;user_agent&quot;: &quot;hive-go/&lt;version&gt; (+https://github.com/shark2202/go_hive)&quot;,
+  &quot;proxy&quot;: null,
+  &quot;redact_query_keys&quot;: [
+    &quot;token&quot;,
+    &quot;access_token&quot;,
+    &quot;refresh_token&quot;,
+    &quot;api_key&quot;,
+    &quot;key&quot;,
+    &quot;secret&quot;,
+    &quot;password&quot;,
+    &quot;sig&quot;,
+    &quot;signature&quot;
+  ],
+  &quot;cookies&quot;: {
+    &quot;enabled&quot;: true,
+    &quot;host_only&quot;: true,
+    &quot;allowed_domains&quot;: [],
+    &quot;max_cookies&quot;: 200,
+    &quot;max_value_bytes&quot;: 4096
+  }
+}</pre>
+<div class="tablewrap"><table><thead><tr><th style="width:34%">字段</th><th style="width:66%">中文说明</th></tr></thead><tbody><tr><td><code>enabled</code></td><td>是否启用本工具家族；false 时整组工具不注册。</td></tr><tr><td><code>allow_private_hosts</code></td><td>显式关闭私网/回环/CGNAT/ULA/metadata 拒绝（高风险，记日志）。</td></tr><tr><td><code>allowed_hosts / denied_hosts</code></td><td>主机白/黑名单；denied 优先，allowed 优先于私网 IP 拒绝表。</td></tr><tr><td><code>max_inline_bytes / max_response_bytes</code></td><td>内联预算（默认 64 KiB）与单次抓取硬上限（默认 16 MiB）。</td></tr><tr><td><code>max_download_bytes / max_upload_bytes</code></td><td>下载/上传上限（默认 1 GiB）。</td></tr><tr><td><code>default_timeout_seconds / max_timeout_seconds / connect_timeout_seconds</code></td><td>默认总预算、总预算上限、连接预算。</td></tr><tr><td><code>follow_redirects / max_redirects / allow_https_to_http</code></td><td>重定向默认值与降级开关。</td></tr><tr><td><code>user_agent / proxy</code></td><td>默认 User-Agent 与显式代理（默认读环境变量）。</td></tr><tr><td><code>redact_query_keys</code></td><td>URL 查询串中需要替换为 [redacted] 的键名。</td></tr><tr><td><code>cookies.enabled / host_only / allowed_domains / max_cookies / max_value_bytes</code></td><td>本会话 cookie jar 的总开关、host-only 默认、Domain cookie 白名单与容量上限。</td></tr></tbody></table></div></section>
+
+<section id="artifacts"><h2><span class="num">07</span>落地清单</h2>
+<p class="sub">实现 lane 必须同时改完这些文件，否则冻结面或契约会漂移。</p>
+<ul><li><code>internal/netguard/policy.go + dialer.go + policy_test.go（新增）</code></li><li><code>internal/nativehttp/{doc,request,response,download,upload,retry,result,redact,cookies,config}.go + 测试（新增）</code></li><li><code>internal/nativehttp/cookies.go（会话自有、host-only 的 jar wrapper）+ cookies_test.go（隔离、前缀、过期、-race）</code></li><li><code>internal/tools/builtin/http_tools.go + http_tools_test.go（新增适配器）</code></li><li><code>internal/cli/session_tools_http.go + session_tools_http_test.go（新增接线；双 catalogue + WithRoot 隔离测试）</code></li><li><code>internal/cli/session_tools.go（注册 + 执行路由）</code></li><li><code>internal/tools/tier_defaults.go（http_core 类别、categoryOrder；不改 web_core/research 成员）</code></li><li><code>internal/tools/category_additions.go（发布版本（拟 1.0.27）的 web_core 愈合项）</code></li><li><code>contracts/env-vars.json + docs/env-config-contract-diff.md + docs/environment-variables.html（HIVE_HTTP_TOOLS；重新生成）</code></li><li><code>contracts/config-keys.json（仅当 http_tools.json 注册为全局配置键时）</code></li><li><code>internal/tools/builtin/builtin_test.go（必须继续断言 14）</code></li><li><code>internal/cli/tool_surface_flat_test.go + session_catalogue_test.go（14/24/39 不变，新增 lazy 名字）</code></li><li><code>contracts/tool-definitions.json（重新生成 go_only_tools 与 statistics）</code></li><li><code>docs/tool-contract-diff.md（重新生成 go-only 清单/计数）</code></li><li><code>docs/http-tools-design.json + docs/http-tools-design.html + scripts/gen_http_tools_design.py（本文档）</code></li><li><code>docs/delivery-backlog.json（新增条目：http-tools-native；go-only、post-parity）</code></li><li><code>docs/alignment-differences.md（新增 A 条目：go-only 能力，无 Python 对应物）</code></li><li><code>go_hive/05-tools-and-integrations.md（built-in 分组表新增一行）</code></li><li><code>docs/e2e-assets/tool-output/（tool-output 夹具覆盖本家族时补 golden）</code></li></ul></section>
+
+<section id="acceptance"><h2><span class="num">08</span>验收链</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:8%">ID</th><th style="width:26%">测试</th><th style="width:66%">通过条件</th></tr></thead><tbody><tr><td><code>A1</code></td><td>工具契约</td><td>三支工具的 name/description/input_schema 逐字钉住；名称唯一；无 action 开关。</td></tr><tr><td><code>A2</code></td><td>无 curl / 无 cgo</td><td>go list -deps ./internal/nativehttp 只有标准库；CGO_ENABLED=0 六目标构建；无 curl 的容器可运行。</td></tr><tr><td><code>A3</code></td><td>方法 × 请求体矩阵</td><td>七种方法；raw/json/form/内联 multipart；冲突来源被拒；Content-Type 默认值钉住。</td></tr><tr><td><code>A4</code></td><td>重定向</td><td>301/302/303 改写、307/308 保留、环检测、max_redirects、跨主机剥离认证、https→http 拒绝。</td></tr><tr><td><code>A5</code></td><td>SSRF / 出站</td><td>字面量、DNS、重定向、IPv4 映射、IPv6、CGNAT、metadata 与 .internal/.local 全部拦截；公网通过；rebinding 测试拨已验证 IP；allow_private_hosts 显式开启。</td></tr><tr><td><code>A6</code></td><td>响应有界</td><td>内联边界、落盘 + sha256 + 预览、二进制、gzip、未知编码、响应头上限、截断提示。</td></tr><tr><td><code>A7</code></td><td>下载</td><td>原子 rename、206 续传、If-Range 重下、覆盖策略、路径穿越拒绝、大小上限、校验和不匹配。</td></tr><tr><td><code>A8</code></td><td>上传</td><td>multipart 与原始 body；文件名净化；请求/响应上限；有界内存流式测试。</td></tr><tr><td><code>A9</code></td><td>超时 / 重试</td><td>分阶段截止、context 取消、Retry-After、默认只重试幂等方法、总预算。</td></tr><tr><td><code>A10</code></td><td>配置门控</td><td>只读 &lt;HIVE_HOME&gt;/http_tools.json、enabled=false、损坏 fail closed、HIVE_HTTP_TOOLS=0、主机白/黑名单；agent 写入会话目录的 .hive/http_tools.json 被忽略。</td></tr><tr><td><code>A11</code></td><td>脱敏 / 可观测性</td><td>结果与日志不含 Authorization/Cookie/Set-Cookie/userinfo/redact_query_keys 值；每次尝试一条记录；jar 隔离。</td></tr><tr><td><code>A12</code></td><td>工具面不变量</td><td>builtin.Defs()=14、默认 flat 面 39/24、新名字在 lazy 层、类别愈合可授予、freeze 报告仍 report-only。</td></tr><tr><td><code>A13</code></td><td>跨平台</td><td>linux/darwin/windows × amd64/arm64 在 cgo 关闭下构建；gofmt/go vet 干净；Windows 路径处理正确。</td></tr><tr><td><code>A14</code></td><td>端到端</td><td>httptest 夹具全绿；可选真实端点 smoke 由环境变量门控；失败信封符合闭集 error_kind。</td></tr><tr><td><code>A15</code></td><td>Cookie 隔离</td><td>每 Hive 会话 jar 互不可见（双 catalogue、WithRoot worker、恢复会话从空开始）；host-only 默认；Domain cookie 仅 allowed_domains 放行；__Host-/__Secure- 前缀校验；-race 并发与 Clear 换 jar 通过；无 package-level jar。</td></tr><tr><td><code>A16</code></td><td>路径绝对化</td><td>response.path/download.path/body_file/files[].path/tls 文件相对路径返回 path_not_absolute；绝对越界/../symlink 返回 path_escape；绝对根内路径通过；saved_to 绝对；自动落盘仍在根内。</td></tr></tbody></table></div></section>
+
+<section id="plan"><h2><span class="num">09</span>实施阶段与开放问题</h2><ol><li><b>P0</b> — 从 scrape.go/pdf/ssrf.go 抽取 internal/netguard，行为不变；冻结三支工具的 schema 与结果信封。</li><li><b>P1</b> — 实现 internal/nativehttp 的请求构建、传输、重定向、重试、有界与脱敏，并用 httptest + 假解析器/拨号器覆盖。</li><li><b>P2</b> — 实现下载（原子、续传、校验和）与上传（multipart、原始 body），补有界内存测试。</li><li><b>P3</b> — 接入适配器与 catalogue（配置门控、lazy 层、类别、愈合），重新生成契约清单与 diff 文档，补 backlog/alignment 条目。</li><li><b>P4</b> — 跑六目标 CGO_ENABLED=0 矩阵与 make ci；可选真实端点 smoke；A1–A15 全过才从设计转已交付。</li></ol>
+<h3>开放问题</h3><ul><li>默认启用还是显式 opt-in？（建议启用：terminal_exec 本来就能跑 curl，本工具是更安全的替代。）</li><li>内联预算 64 KiB 是否合适，还是要降到 32 KiB 以更保护上下文？</li><li>是否增加只读 http_get 别名并标记 ConcurrencySafe=true，让独立 GET 并行？</li><li>v2：是否要在 &lt;sessionDir&gt; 内做加密持久化（仍按会话隔离，仅用于进程重启恢复），还是恢复即重新登录？</li><li>colony worker 是否需要继承 queen 会话的 cookie？（建议不继承，各 worker 独立认证。）</li><li>托管部署默认“公网放行 + 私网拒绝”，还是“默认全拒、须显式 allowlist”？</li><li>v1 是否需要项目级覆盖？当前只做 $HIVE_HOME；如需，另立显式 CLI flag 设计（不加环境变量）。</li></ul></section>
+
+<section id="risks"><h2><span class="num">10</span>风险与来源</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:30%">风险</th><th style="width:26%">影响</th><th style="width:44%">缓解</th></tr></thead><tbody><tr><td>SSRF 被 DNS rebinding、重定向或代理绕过</td><td>agent 触达内部服务</td><td>解析-校验-拨号 IP 固定、每跳再校验、拒绝 https 降级；每种向量都有测试；代理残余风险登记。</td></tr><tr><td>URL、头或结果泄漏秘密</td><td>凭据进入日志或模型上下文</td><td>按键名与头名脱敏、不记录头/body、不回显 userinfo、cookie 值默认不可见。</td></tr><tr><td>大响应或二进制撑爆上下文/内存</td><td>回合失败 / OOM</td><td>64 KiB 内联预算、硬抓取上限、落盘 + 预览、二进制识别、响应头上限。</td></tr><tr><td>重试放大非幂等请求</td><td>重复副作用</td><td>默认只重试幂等方法、显式 retry_non_idempotent、总预算与状态白名单。</td></tr><tr><td>冻结面漂移（builtin 14 / flat 39 / 契约清单）</td><td>parity 门禁与 golden 失败</td><td>独立适配器、只进 lazy 层、catalogue 不变量测试、同一次变更里重新生成清单与 diff 文档。</td></tr><tr><td>跨平台 TLS 根与路径语义</td><td>Windows/容器上校验或下载失败</td><td>默认系统根、ca_file 覆盖、路径解析到会话根、Windows 路径测试。</td></tr><tr><td>Cookie 串会话</td><td>不同会话读到彼此的登录态</td><td>jar 挂在每会话 catalogue、无全局/静态 jar、WithRoot 新建空 jar、无磁盘持久化、A15 隔离测试。</td></tr><tr><td>早期输出格式漂移</td><td>模型侧行为不稳定</td><td>本设计冻结信封；适配器 golden；只做加法演进。</td></tr></tbody></table></div>
+<h3>来源</h3><ul><li><a href="https://curl.se/docs/manpage.html">curl man page</a> — 参数清单与默认语义</li><li><a href="https://www.rfc-editor.org/rfc/rfc9110">RFC 9110 — HTTP Semantics</a> — 重定向方法改写、状态码分类、头语义</li><li><a href="https://www.rfc-editor.org/rfc/rfc6265">RFC 6265 — HTTP State Management</a> — Cookie jar 的域/路径匹配与过期语义</li><li><a href="https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html">OWASP SSRF Prevention Cheat Sheet</a> — 拒绝表、DNS rebinding、重定向再校验</li><li><a href="https://pkg.go.dev/net/http">Go net/http</a> — Transport、DialContext、TLS 配置、Client.CheckRedirect</li><li><a href="go_hive/go-hive/internal/tools/integrations/scrape.go">go_hive web_scrape SSRF 守卫</a> — 现有拒绝表 + 重定向再校验，抽取到 netguard</li><li><a href="go_hive/go-hive/internal/tools/integrations/pdf/ssrf.go">go_hive PDF SSRF 守卫</a> — 同一策略的第二份拷贝，证明需要共享包</li><li><a href="go_hive/docs/ast-grep-design.json">go_hive ast_grep 设计</a> — 独立适配器 + lazy tier 注册先例</li></ul></section>
+
+<footer>http_tools 设计 · 需求—设计—验收链 · 由 <code>go_hive/scripts/gen_http_tools_design.py</code> 生成；<code>--check</code> 防漂移 · 状态：implemented（代码已实现并通过测试）</footer>
+</div></body></html>

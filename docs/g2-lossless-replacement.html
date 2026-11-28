@@ -30,8 +30,8 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 <header>
   <div class="eyebrow">GO_HIVE · G2 LOSSLESS REPLACEMENT</div>
   <h1>老用户 <span>无损替换</span>：数据级无损 · 可回滚 · 升级实测</h1>
-  <p class="lede">一个非空旧版（v1 / v2 布局）<code>HIVE_HOME</code> 能否直接交给 Go 版 <code>hive serve</code>：自动迁移、数据不丢、字段不坏、可回滚、可升级。判定基于同一份旧 home 的 Python/Go 双跑、Go 写过的 home 用 Python 读回，以及 v1.0.25 → 1.0.26 的升级/回退演练。<b>数据级无损 ≠ 逐字节一致</b>；已知例外逐条列出，其中 P0-G2-1 待用户决策。</p>
-  <div class="meta"><span>更新：<b>2026-11-21 14:15 CST</b></span><span>基线：<b>main 059f4afe</b></span><span>被测：<b>Go 1.0.26-go.1</b> / Python 1.0.14</span><span>主机：<b>darwin/arm64</b></span><span>结论：<b>GREEN（数据级）</b></span></div>
+  <p class="lede">一个非空旧版（v1 / v2 布局）<code>HIVE_HOME</code> 能否直接交给 Go 版 <code>hive serve</code>：自动迁移、数据不丢、字段不坏、可回滚、可升级。判定基于同一份旧 home 的 Python/Go 双跑、Go 写过的 home 用 Python 读回，以及 v1.0.25 → 1.0.26 的升级/回退演练。<b>数据级无损 ≠ 逐字节一致</b>；已知例外逐条列出，P0-G2-1 已决策 A（2026-11-23 复核）。</p>
+  <div class="meta"><span>更新：<b>2026-11-21 14:15 CST</b></span><span>复核：<b>2026-11-23 @ 42f2b932</b></span><span>基线：<b>main 059f4afe</b></span><span>被测：<b>Go 1.0.26-go.1</b> / Python 1.0.14</span><span>主机：<b>darwin/arm64</b></span><span>结论：<b>GREEN（数据级）</b></span></div>
   <div class="toc"><a href="#verdict">结论</a><a href="#fixtures">夹具与双跑</a><a href="#rollback">回滚矩阵</a><a href="#upgrade">升级步骤</a><a href="#exceptions">例外与回滚指南</a><a href="#evidence">证据</a></div>
 </header>
 
@@ -43,7 +43,7 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
   <div class="card"><div class="k">升级实测</div><div class="v" style="color:var(--ok)">通过</div><div class="d">v1.0.25 v2 home → 1.0.26 启动即迁移（health / <code>/</code> 200）；<code>install.sh</code> 四二进制；归档自验 13/13。</div></div>
 </div>
 <div class="callout info"><b>一句话：</b>旧 v1/v2 <code>HIVE_HOME</code> 可以交给 Go 版直接启动；迁移按 v2 → v3 → colony_sessions → tracker ensure 执行，任一步失败只告警不阻断。回滚方向是只读的，两个方向都没有数据损坏。<b>未发现需要「回滚迁移」或修复数据的情况。</b></div>
-<div class="callout"><b>待决策（P0-G2-1）：</b>v1 <code>exports/</code> 的解析基准，Python 用 CWD 相对路径、Go 锚定 <code>$HIVE_HOME/exports</code>。Python 从 <code>core/</code> 启动时会写 <code>.migrated-v2</code> 却不搬 colony；Go 无此问题。<b>本次未改 exports 行为</b>；是否要求 Go 逐行为复刻 Python 的 CWD 语义，需用户拍板并在发布说明注明。</div>
+<div class="callout info"><b>已决策 A（P0-G2-1）：</b>v1 <code>exports/</code> 的解析基准，Python 用 CWD 相对路径、Go 锚定 <code>$HIVE_HOME/exports</code>。Python 从 <code>core/</code> 启动时会写 <code>.migrated-v2</code> 却不搬 colony；Go 无此问题。<b>决定：保持 Go 的 <code>$HIVE_HOME/exports</code> 基准，登记与 Python CWD 的差异，不改产品 exports 行为</b>；发布说明写明 v1 用户先把旧 <code>exports/</code> 放到 <code>$HIVE_HOME/exports</code>（复制不删源）。依据：<code>pending-decisions.md</code> §D2、<code>exports-baseline-decision.md</code>。</div>
 </section>
 
 <section id="fixtures"><h2><span class="num">02</span>夹具与双跑统计</h2>
@@ -116,8 +116,8 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 <section id="exceptions"><h2><span class="num">05</span>例外与回滚指南</h2>
 <h3>5.1 已知例外（逐条）</h3>
 <div class="tablewrap"><table><thead><tr><th style="width:11%">编号</th><th style="width:37%">例外</th><th>性质 / 影响</th><th style="width:22%">状态</th></tr></thead><tbody>
-<tr><td><b>P0-G2-1</b></td><td>v1 <code>exports/</code> 解析基准：Python <code>migrate_v2</code> 用 CWD 相对 <code>exports/</code>，Go 锚定 <code>$HIVE_HOME/exports</code></td><td>Python 从 <code>core/</code> 启动时给旧 v1 home 写 <code>.migrated-v2</code> 但不搬 colony（数据滞留风险）；Go 无此问题，替换方向更安全</td><td><span class="pill warn">待用户决策</span><br><span class="small">是否逐行为复刻 CWD 语义；本次未改 exports 行为，发布说明须注明</span></td></tr>
-<tr><td>F4</td><td><code>colonies/.migrations/</code> 被 <code>hive colony list</code> 当作 colony（Python 同行为）</td><td>展示层；存在误 <code>colony delete .migrations</code> 的风险</td><td><span class="pill warn">待决策</span><br><span class="small">需两侧联合过滤点目录，单改 Go 破坏对齐</span></td></tr>
+<tr><td><b>P0-G2-1</b></td><td>v1 <code>exports/</code> 解析基准：Python <code>migrate_v2</code> 用 CWD 相对 <code>exports/</code>，Go 锚定 <code>$HIVE_HOME/exports</code></td><td>Python 从 <code>core/</code> 启动时给旧 v1 home 写 <code>.migrated-v2</code> 但不搬 colony（数据滞留风险）；Go 无此问题，替换方向更安全</td><td><span class="pill ok">已决策 A</span><br><span class="small">保持 Go <code>$HIVE_HOME/exports</code>；登记 CWD 差异，不改 exports 行为；发布说明已注明</span></td></tr>
+<tr><td>F4</td><td><code>colonies/.migrations/</code> 被 <code>hive colony list</code> 当作 colony（Python 同行为）</td><td>展示层；存在误 <code>colony delete .migrations</code> 的风险</td><td><span class="pill info">已登记</span><br><span class="small">两侧行为对齐、无需修；若未来产品决定过滤点目录，两侧联合改</span></td></tr>
 <tr><td>F5</td><td>迁移前旧二进制看不到 v2 布局会话</td><td>用户感知；非数据损坏。新版本启动迁移后可读，迁移后旧二进制仍可读</td><td><span class="pill info">文档化前提</span></td></tr>
 <tr><td>F6</td><td>CLI JSON 数字序列化：Python <code>1767225600.0</code> vs Go <code>1767225600</code></td><td>值相等；严格字符串比对会差，读取无影响</td><td><span class="pill info">归 value-parity lane</span></td></tr>
 <tr><td>R-G2-1</td><td><code>colonies/alpha/worker.json</code> 的 <code>input_data.binding</code> 键序</td><td>排版级；字段/值一致，交叉消费不重写</td><td><span class="pill ok">不修</span></td></tr>
@@ -141,6 +141,7 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 <section id="evidence"><h2><span class="num">06</span>证据与相关文档</h2>
 <ul>
   <li><b>G2 双跑报告</b>：<a href="../../docs/g2-lossless-migration.md"><code>docs/g2-lossless-migration.md</code></a>（夹具规模、方法、分类证据、残余 R-G2-1…5、P0-G2-1）</li>
+  <li><b>2026-11-23 验收</b>：<a href="g2-acceptance-20261123.md"><code>go_hive/docs/g2-acceptance-20261123.md</code></a>（HEAD <code>42f2b932</code> 重跑证据；P0-G2-1 决策同步为 A）</li>
   <li><b>G2 双跑产物</b>：<a href="../../docs/e2e-assets/g2-home-e2e/"><code>docs/e2e-assets/g2-home-e2e/</code></a>（<code>summary.json</code>、<code>summary.md</code>、<code>commands.md</code> + 每步 tree/field/sqlite/read/api/credentials diff）</li>
   <li><b>回滚/升级报告</b>：<a href="upgrade-and-rollback.md"><code>go_hive/docs/upgrade-and-rollback.md</code></a>（回滚矩阵、升级/安装演练、F1…F7 发现）</li>
   <li><b>回滚/升级产物</b>：<a href="e2e-assets/g2-rollback/"><code>go_hive/docs/e2e-assets/g2-rollback/</code></a>（<code>README.md</code>、<code>summary.json</code>、<code>run.txt</code>、<code>rollback/snap/*</code>、<code>upgrade/snap/*</code>）</li>
@@ -150,5 +151,5 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 </ul>
 </section>
 
-<footer>G2 无损替换 · 手工维护页面（2026-11-21）· 数字来自实测产物；未验证项不写成通过；数据级无损不等于逐字节一致。</footer>
+<footer>G2 无损替换 · 手工维护页面（2026-11-21 初版；2026-11-23 @ 42f2b932 复核）· 数字来自实测产物；未验证项不写成通过；数据级无损不等于逐字节一致。</footer>
 </div></body></html>

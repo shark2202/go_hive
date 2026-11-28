@@ -114,6 +114,30 @@ func defaultPresetSkillsForQueenDir(queenDir string) map[string]struct{} {
 	return out
 }
 
+// queenOverridesPath is the owning queen's override store. Colonies have no
+// store of their own: the queen's file is the single authority and its entries
+// apply to every skill a worker discovers, including colony_ui entries
+// (upstream _build_default_skills_config passes queen_overrides_path into the
+// colony's SkillsManager).
+func (r *ColonyRuntime) queenOverridesPath() string {
+	if r == nil || strings.TrimSpace(r.queenDir) == "" {
+		return ""
+	}
+	return filepath.Join(r.queenDir, "skills_overrides.json")
+}
+
+// queenOverrides loads the owning queen's override store (nil when there is no
+// queen scope). workerSkillSurface reads it on every rebuild, so a UI toggle
+// reaches workers on the next spawn/reload — the Go counterpart of upstream's
+// SkillsManager loading the same file in _apply_overrides.
+func (r *ColonyRuntime) queenOverrides() *skills.SkillOverrideStore {
+	path := r.queenOverridesPath()
+	if path == "" {
+		return nil
+	}
+	return skills.LoadSkillOverrideStore(path, "queen:"+filepath.Base(filepath.Clean(r.queenDir)))
+}
+
 // workerSkillSurface is one consistent view of the worker skill hierarchy:
 // the catalog entries after preset/default overrides, the rendered catalog
 // prompt filtered for the colony phase, and the roots the view_file
@@ -137,7 +161,7 @@ func (r *ColonyRuntime) workerSkillSurface() workerSkillSurface {
 		ExtraScopes: r.workerSkillScopes(),
 	})
 	discovered := discovery.Discover()
-	filtered := skills.ApplyManagerOverrides(discovered, skills.NewSkillsConfig(), nil, r.defaultPresetSkills)
+	filtered := skills.ApplyManagerOverrides(discovered, skills.NewSkillsConfig(), r.queenOverrides(), r.defaultPresetSkills)
 	phase := colonySkillsPhase
 	return workerSkillSurface{
 		catalog:       filtered,
@@ -226,6 +250,69 @@ func (r *ColonyRuntime) ReloadSkills() (map[string]any, error) {
 	}
 	stats["skill_dirs"] = dirs
 	return stats, nil
+}
+
+// skillsWatchDirs is the root set the colony watcher polls: the same
+// directories workerSkillSurface discovers (framework defaults, presets,
+// user/external scopes, the owning queen's scope and the colony's own). They
+// are recomputed by the shared watcher after every reload, so a reload that
+// discovers a new root keeps watching it.
+func (r *ColonyRuntime) skillsWatchDirs() []string {
+	if r == nil {
+		return nil
+	}
+	return r.workerSkillSurface().dirs
+}
+
+// startSkillsWatcher starts the colony's skill hot-reload loop. It is a no-op
+// when the discovery found no roots, matching upstream's silent skip when a
+// manager has no watched paths.
+func (r *ColonyRuntime) startSkillsWatcher() {
+	if r == nil {
+		return
+	}
+	dirs := r.skillsWatchDirs()
+	if len(dirs) == 0 {
+		return
+	}
+	r.skillsWatcherMu.Lock()
+	defer r.skillsWatcherMu.Unlock()
+	if r.skillsWatcher != nil {
+		return
+	}
+	r.skillsWatcher = skills.StartWatcher(skills.WatcherOptions{
+		Interval: r.skillsWatchInterval,
+		Debounce: r.skillsWatchDebounce,
+		Targets: func() skills.WatchTargets {
+			targets := skills.WatchTargets{Dirs: r.skillsWatchDirs()}
+			// The queen's override store decides which discovered skills stay
+			// visible; watch it so a UI toggle reaches running workers, as
+			// upstream's manager watches skills_overrides.json.
+			if path := r.queenOverridesPath(); path != "" {
+				targets.Files = []string{path}
+			}
+			return targets
+		},
+		Reload: func() error {
+			_, err := r.ReloadSkills()
+			return err
+		},
+	})
+}
+
+// stopSkillsWatcher ends the hot-reload loop, if any. Safe on a runtime that
+// never started it.
+func (r *ColonyRuntime) stopSkillsWatcher() {
+	if r == nil {
+		return
+	}
+	r.skillsWatcherMu.Lock()
+	watcher := r.skillsWatcher
+	r.skillsWatcher = nil
+	r.skillsWatcherMu.Unlock()
+	if watcher != nil {
+		watcher.Stop()
+	}
 }
 
 // withoutTool removes one tool definition by name, keeping order otherwise.

@@ -49,6 +49,13 @@ type ReminderAgentContext struct {
 	// no package is installed+enabled, and the turn-context reminder
 	// source self-skips.
 	TurnContextProvider func(string) string
+	// PastConversationRecallProvider returns the dated excerpts of earlier
+	// conversations related to a user message, or "" when nothing clears
+	// the relevance bar. Nil means the past-conversations reminder source
+	// self-skips.
+	//
+	// Parity: framework/agent_loop/types.py AgentContext.past_conversation_recall_provider
+	PastConversationRecallProvider func(string) string
 	// MemoryRecallProvider picks the memory notes for a user message
 	// ("wait" mode, framework.agent_loop.memory_reminders). Nil means the
 	// wait-mode source self-skips.

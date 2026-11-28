@@ -4,8 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/user"
 	"path/filepath"
 	"runtime"
+	"strings"
 )
 
 const EnvHome = "HIVE_HOME"
@@ -16,7 +18,11 @@ type Home struct {
 
 func Resolve() (Home, error) {
 	if v := os.Getenv(EnvHome); v != "" {
-		abs, err := filepath.Abs(v)
+		expanded, err := expandUser(v)
+		if err != nil {
+			return Home{}, fmt.Errorf("resolve %s: %w", EnvHome, err)
+		}
+		abs, err := filepath.Abs(expanded)
 		if err != nil {
 			return Home{}, fmt.Errorf("resolve %s: %w", EnvHome, err)
 		}
@@ -27,6 +33,43 @@ func Resolve() (Home, error) {
 		return Home{}, err
 	}
 	return Home{Root: def}, nil
+}
+
+// expandUser is Python's Path.expanduser(): a leading "~" or "~/" becomes the
+// current user's home, and "~name/..." another user's. HIVE_HOME is commonly
+// written as "~/.hive" by hand, which filepath.Abs alone would turn into a
+// literal "~" directory under the process cwd.
+func expandUser(path string) (string, error) {
+	if !strings.HasPrefix(path, "~") {
+		return path, nil
+	}
+	// Fast path: "~" and "~/..." (the overwhelmingly common spelling). The
+	// separator check covers paths written with a backslash on Windows.
+	rest := path[1:]
+	if rest == "" || strings.HasPrefix(rest, "/") || strings.HasPrefix(rest, `\`) {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", err
+		}
+		if rest == "" {
+			return home, nil
+		}
+		return filepath.Join(home, rest[1:]), nil
+	}
+	separator := strings.IndexAny(rest, `/\`)
+	name := rest
+	if separator >= 0 {
+		name = rest[:separator]
+	}
+	account, err := user.Lookup(name)
+	if err != nil {
+		return "", fmt.Errorf("no such user %q", name)
+	}
+	tail := ""
+	if separator >= 0 {
+		tail = rest[separator:]
+	}
+	return account.HomeDir + tail, nil
 }
 
 func ResolveAt(root string) (Home, error) {
@@ -117,6 +160,11 @@ func (h Home) ColonyQueensDir(name string) string {
 // Parity: framework/config.py::colony_queen_session_dir
 func (h Home) ColonyQueenSessionDir(colonyID, queenName, sessionID string) string {
 	return filepath.Join(h.ColonyQueensDir(colonyID), queenName, "sessions", sessionID)
+}
+
+// Parity: framework/config.py::colony_seed_conversation_dir
+func (h Home) ColonySeedConversationDir(name string) string {
+	return filepath.Join(h.ColonyDir(name), "seed_conversation")
 }
 
 type Colony struct {

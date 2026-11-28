@@ -1,5 +1,7 @@
 # 发布说明：hive 1.0.26-go.1
 
+> **后续变更（2026-11-25）**：默认的 colony-bound session 已回退为 **chat queen 执行**，overseer 保持 dormant；没有生产环境变量或启动开关会启用本文描述的 live overseer 拓扑。因此“Queen 与 overseer 两份 conversation 存储”只在该 dormant 实现被显式测试启动时适用。
+
 > 版本：`hive 1.0.26-go.1`；上游 `aden-hive` / `aden-tools` 1.0.14（`c6c2cdcf`）；构建 2026-11-20，`CGO_ENABLED=0`。
 
 1.0.25 之后的版本：overseer 回复写入会话转录，附 Orca 浏览器 UI E2E 结果。

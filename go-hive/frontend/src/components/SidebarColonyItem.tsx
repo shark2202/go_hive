@@ -15,6 +15,7 @@ import { agentSlug, slugToColonyId } from "@/lib/colony-registry";
 import { coloniesApi } from "@/api/colonies";
 import { deriveColonyStatus, describeColonyStatus, STATUS_DOT_CLASS } from "@/lib/colony-status";
 import { Tooltip } from "@/components/Tooltip";
+import { colonySlug, isUsableColonySlug } from "@/components/ColonyNameField";
 import { useI18n } from "@/i18n";
 
 interface SidebarColonyItemProps {
@@ -93,9 +94,17 @@ export default function SidebarColonyItem({ colony, liveness }: SidebarColonyIte
   };
 
   const handleConfirmRename = async () => {
-    const next = renameValue.trim();
+    const next = colonySlug(renameValue, "_");
     if (renameSaving) return;
-    if (!next || next === diskName) {
+    if (!isUsableColonySlug(next)) {
+      setRenameError(
+        t(
+          "Colony names allow lowercase letters, digits and underscores only — put Chinese in the goal instead.",
+        ),
+      );
+      return;
+    }
+    if (next === diskName) {
       cancelRename();
       return;
     }
@@ -151,11 +160,7 @@ export default function SidebarColonyItem({ colony, liveness }: SidebarColonyIte
               ref={renameInputRef}
               type="text"
               value={renameValue}
-              onChange={(e) =>
-                setRenameValue(
-                  e.target.value.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, ""),
-                )
-              }
+              onChange={(e) => setRenameValue(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter") handleConfirmRename();
                 if (e.key === "Escape") cancelRename();

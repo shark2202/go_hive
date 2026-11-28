@@ -259,8 +259,23 @@ func TestAnthropicProviderACompleteBridgesRequest(t *testing.T) {
 	if !ok || len(messages) != 4 {
 		t.Fatalf("messages = %#v, want 4 entries", call["messages"])
 	}
-	if messages[0]["role"] != "system" || messages[0]["content"] != "Static prompt\n\nCurrent time: now" {
-		t.Errorf("system message = %#v", messages[0])
+	systemBlocks, ok := messages[0]["content"].([]any)
+	if !ok || len(systemBlocks) != 2 {
+		t.Fatalf("system content = %#v, want the two-block split", messages[0]["content"])
+	}
+	staticBlock, _ := systemBlocks[0].(map[string]any)
+	if staticBlock["text"] != "Static prompt" {
+		t.Errorf("static block = %#v", staticBlock)
+	}
+	if cacheControl, _ := staticBlock["cache_control"].(map[string]any); cacheControl["type"] != "ephemeral" {
+		t.Errorf("static block cache_control = %#v", staticBlock["cache_control"])
+	}
+	dynamicBlock, _ := systemBlocks[1].(map[string]any)
+	if dynamicBlock["text"] != "Current time: now" {
+		t.Errorf("dynamic block = %#v", dynamicBlock)
+	}
+	if _, present := dynamicBlock["cache_control"]; present {
+		t.Errorf("dynamic block must stay uncached: %#v", dynamicBlock)
 	}
 	if messages[2]["content"] != nil {
 		t.Errorf("assistant content = %#v, want nil", messages[2]["content"])

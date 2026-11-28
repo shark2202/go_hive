@@ -23,7 +23,11 @@ import (
 	"github.com/shark2202/go_hive/go-hive/internal/colony"
 	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
 	"github.com/shark2202/go_hive/go-hive/internal/llm"
+	"github.com/shark2202/go_hive/go-hive/internal/server/routesagents"
+	"github.com/shark2202/go_hive/go-hive/internal/server/routesapp"
+	"github.com/shark2202/go_hive/go-hive/internal/server/routesbrowser"
 	"github.com/shark2202/go_hive/go-hive/internal/server/uiembed"
+	"github.com/shark2202/go_hive/go-hive/internal/skills"
 	soulstore "github.com/shark2202/go_hive/go-hive/internal/soul"
 	"github.com/shark2202/go_hive/go-hive/internal/tasks"
 )
@@ -63,6 +67,17 @@ type AppDeps struct {
 
 	CreateSession          func(CreateSessionParams) (*Session, error)
 	CreateColonyFromSource func(CreateColonyFromSourceParams) (*Session, error)
+	// BuildLLM mirrors SessionManager.build_llm for the message classifier
+	// routes. Nil resolves the main llm slot from configuration.json at each
+	// call, so a Settings edit reaches /api/messages/classify without a
+	// restart.
+	BuildLLM func() llm.Completer
+	// RefreshSentinelListeners runs after a colony notification config save so
+	// a newly connected channel starts (or a disconnected one stops) its
+	// inbound listener without a restart. Nil refreshes the process-global
+	// sentinel manager (what upstream's get_sentinel_manager().refresh_listeners
+	// does).
+	RefreshSentinelListeners func()
 	// DefaultModel is the main-slot model reported by GET /api/queen/{id}/llm
 	// (Python's manager model, else the provider-prefixed preferred model).
 	// Nil leaves the route reporting an empty default.
@@ -114,6 +129,11 @@ type App struct {
 	executorMu  sync.Mutex
 	executorMax int
 
+	// skillsWatcher polls the queen-catalog scopes and reloads every live
+	// session's catalog (skills_watcher.go). Nil when the home has no queens
+	// tree yet or the app has no session manager.
+	skillsWatcher *skills.Watcher
+
 	processStart float64
 }
 
@@ -128,6 +148,23 @@ func configRouteDeps(deps AppDeps) ConfigRouteDeps {
 	configDeps := deps.Config
 	if configDeps.Home.Root == "" {
 		configDeps.Home = deps.Home
+	}
+	// PUT /api/config/features hot-applies adaptive_tool_budget to the live
+	// colony runtimes. Upstream reads manager.list_sessions(); the loader
+	// publishes that same snapshot through AppDeps.Sessions, so without this
+	// fallback the route always reports colonies_applied: 0.
+	if configDeps.Sessions == nil {
+		configDeps.Sessions = deps.Sessions
+	}
+	// A saved global sentinel block can change which channels are tuned, so the
+	// manager must re-evaluate its inbound listeners — the same production hook
+	// the per-colony notification route uses. An injected handler wins, which
+	// keeps the config route tests hermetic.
+	if configDeps.SentinelRefresh == nil {
+		configDeps.SentinelRefresh = deps.RefreshSentinelListeners
+		if configDeps.SentinelRefresh == nil {
+			configDeps.SentinelRefresh = refreshSentinelListeners
+		}
 	}
 	if deps.Manager == nil {
 		return configDeps
@@ -176,6 +213,26 @@ func NewApp(deps AppDeps) *App {
 	}
 
 	mux := http.NewServeMux()
+	registerHomeRouteTables(app, mux, deps)
+	registerLiveRouteTables(mux, deps)
+
+	if app.HasFrontend() {
+		mux.HandleFunc("GET /", app.handleSPA)
+	}
+
+	app.handler = app.accessLog(app.desktopAuth(app.noCacheAPI(app.rejectDotSegmentsAPI(app.errorRecovery(mux)))))
+	// The queen catalog's hot-reload loop (upstream's agent-host watcher). It
+	// starts only once the hive home has a queens tree, which EnsureDirs
+	// creates before serve.
+	app.startQueenSkillsWatcher()
+	return app
+}
+
+// registerHomeRouteTables installs the route tables that need only the home
+// directory, the session manager and the process clock. It creates the
+// process-wide reminder runtime so the session stop hook and the
+// /api/reminders routes share one instance.
+func registerHomeRouteTables(app *App, mux *http.ServeMux, deps AppDeps) {
 	mux.HandleFunc("GET /api/health", app.handleHealth)
 	mux.HandleFunc("GET /api/startup-status", app.handleStartupStatus)
 	// Config routes read/write <HIVE_HOME>/configuration.json. AppDeps.Config is
@@ -200,10 +257,28 @@ func NewApp(deps AppDeps) *App {
 		ConnectedProviders:     deps.ConnectedProviders,
 		OnSessionStopped:       reminders.DropSession,
 	})
-	RegisterAgentRoutes(mux, AgentRouteDeps{
-		Manager: deps.Manager,
-		Home:    deps.Home,
-		Roots:   deps.AgentRoots,
+	routesagents.RegisterRoutes(mux, routesagents.Deps{
+		Home:  deps.Home,
+		Roots: deps.AgentRoots,
+		Sessions: func() []routesagents.SessionRef {
+			if deps.Manager == nil {
+				return nil
+			}
+			sessions := deps.Manager.ListSessions()
+			refs := make([]routesagents.SessionRef, 0, len(sessions))
+			for _, session := range sessions {
+				refs = append(refs, routesagents.SessionRef{ID: session.ID, WorkerPath: session.WorkerPath})
+			}
+			return refs
+		},
+		StopSession: func(id string) {
+			if deps.Manager != nil {
+				deps.Manager.StopSession(id)
+			}
+		},
+		CheckAgentCredentials: func(path string, verify bool) (map[string]any, error) {
+			return checkAgentCredentialRequirements(deps.Home, nil, path, verify)
+		},
 	})
 	RegisterChatRoutes(mux, ChatRouteDeps{Manager: deps.Manager})
 
@@ -211,21 +286,31 @@ func NewApp(deps AppDeps) *App {
 	// manager and the process clock. Each seam that is not implemented yet
 	// answers with an explicit failure inside its handler (no empty 200s).
 	RegisterCredentialRoutes(mux, CredentialRouteDeps{
-		Home:    deps.Home,
-		Manager: deps.Manager,
-		Specs:   credentialSpecsFromRegistry,
+		Home:                   deps.Home,
+		Manager:                deps.Manager,
+		Specs:                  credentialSpecsFromRegistry,
+		PublishCredentialEvent: publishCredentialCatalogEvent,
 	})
 	RegisterSoulRoutes(mux, SoulRouteDeps{Home: deps.Home, Reflect: deps.SoulReflect})
 	RegisterSoulProbeRoutes(mux, SoulProbeRouteDeps{
 		Home:      deps.Home,
 		AnswerFor: deps.SoulProbeAnswerFor,
 	})
-	RegisterLocalCredentialRoutes(mux, LocalCredentialRouteDeps{Home: deps.Home})
+	RegisterLocalCredentialRoutes(mux, LocalCredentialRouteDeps{
+		Home:                   deps.Home,
+		PublishCredentialEvent: publishCredentialCatalogEvent,
+		ProviderFor:            credentialProviderForSpec,
+	})
 	RegisterRuntimeLogRoutes(mux, RuntimeLogRouteDeps{})
 	RegisterChannelRoutes(mux, ChannelRouteDeps{Home: deps.Home, States: deps.ChannelStates})
 	RegisterPromptRoutes(mux, PromptRouteDeps{Home: deps.Home})
+	// SchedulePush stays nil, exactly like upstream in this checkout:
+	// cloud_sync_hooks.schedule_push imports framework.cloud_sync, which is not
+	// shipped here, so every call is a no-op (see MemoryRouteDeps and the
+	// memory/soul parity report's S2 platform_diff). The local write is complete
+	// either way.
 	RegisterMemoryRoutes(mux, MemoryRouteDeps{Home: deps.Home})
-	RegisterMessageRoutes(mux, MessageRouteDeps{Home: deps.Home})
+	RegisterMessageRoutes(mux, MessageRouteDeps{Home: deps.Home, BuildLLM: messageRouteLLM(deps)})
 	RegisterMCPRoutes(mux, MCPRouteDeps{Home: deps.Home})
 	RegisterMaintenanceRoutes(mux, MaintenanceRouteDeps{
 		Home:           deps.Home,
@@ -233,12 +318,17 @@ func NewApp(deps AppDeps) *App {
 		ProcessStartTS: app.processStartTS,
 	})
 	RegisterEventRoutes(mux, EventRouteDeps{})
-	RegisterAppExtraRoutes(mux, AppExtraRouteDeps{Resources: deps.ResourceSnapshot})
-	RegisterBrowserPanelRoutes(mux, BrowserPanelDeps{})
+	routesapp.RegisterRoutes(mux, routesapp.Deps{Resources: deps.ResourceSnapshot})
+	routesbrowser.RegisterRoutes(mux, routesbrowser.Deps{})
 	RegisterModelRoutes(mux, ModelRouteDeps{Home: deps.Home, Manager: deps.Manager})
 	RegisterTaskRoutes(mux, TaskRouteDeps{Store: tasks.NewTaskStore(deps.Home.Root)})
 	RegisterReminderRoutes(mux, ReminderRouteDeps{Runtime: reminders})
+}
 
+// registerLiveRouteTables installs the tables that read live runtime state:
+// the colony/worker read surfaces, sentinel listener refresh, and the
+// execution, colony, queen, skills and queen-mail routes.
+func registerLiveRouteTables(mux *http.ServeMux, deps AppDeps) {
 	// Wave 1 route tables that read live runtime state. The colony adapters
 	// project *colony.ColonyRuntime onto the worker read surfaces; a session
 	// without one keeps the routes' explicit fallbacks (on-disk workers, 503
@@ -264,10 +354,15 @@ func NewApp(deps AppDeps) *App {
 			return liveWorkerRuntimeFor(colonyRuntimeFor(session))
 		},
 	})
+	refreshListeners := deps.RefreshSentinelListeners
+	if refreshListeners == nil {
+		refreshListeners = refreshSentinelListeners
+	}
 	RegisterSentinelRoutes(mux, SentinelRouteDeps{
-		Home:     deps.Home,
-		Store:    newSentinelStoreAdapter(deps.Home.Root),
-		Notifier: newSentinelNotifierAdapter(),
+		Home:             deps.Home,
+		Store:            newSentinelStoreAdapter(deps.Home.Root),
+		Notifier:         newSentinelNotifierAdapter(),
+		RefreshListeners: refreshListeners,
 	})
 	RegisterExecutionRoutes(mux, ExecutionRouteDeps{
 		Manager:       deps.Manager,
@@ -284,10 +379,14 @@ func NewApp(deps AppDeps) *App {
 		Manager: deps.Manager,
 	})
 	RegisterQueenRoutes(mux, QueenRouteDeps{
-		Home:          deps.Home,
-		Manager:       deps.Manager,
-		CreateSession: queenCreateSessionAdapter(deps.CreateSession),
-		DefaultModel:  deps.DefaultModel,
+		Home:                deps.Home,
+		Manager:             deps.Manager,
+		CreateSession:       queenCreateSessionAdapter(deps.CreateSession),
+		DefaultModel:        deps.DefaultModel,
+		ValidateProviderKey: queenValidateProviderKey,
+		RefreshQueenIdentity: func(queenID string, profile map[string]any) {
+			refreshQueenLiveIdentity(deps.Manager, queenID, profile)
+		},
 	})
 	RegisterQueenToolRoutes(mux, QueenToolRouteDeps{
 		Home:    deps.Home,
@@ -330,13 +429,6 @@ func NewApp(deps AppDeps) *App {
 	// queen-mail service the routes above use (her runner included, for the
 	// "running" mark).
 	RegisterClaudeCodeQueenRoutes(mux, NewClaudeCodeQueenRouteDeps(queenMail.Mail(), queenMail.ClaudeStore(), queenMail.ClaudeRunner()))
-
-	if app.HasFrontend() {
-		mux.HandleFunc("GET /", app.handleSPA)
-	}
-
-	app.handler = app.accessLog(app.desktopAuth(app.noCacheAPI(app.rejectDotSegmentsAPI(app.errorRecovery(mux)))))
-	return app
 }
 
 // rejectDotSegmentsAPI answers JSON 400 for any /api/ path carrying a ".."
@@ -419,6 +511,33 @@ func (a *App) handleHealth(w http.ResponseWriter, r *http.Request) {
 // Parity: framework/server/app.py::handle_startup_status
 func (a *App) handleStartupStatus(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, BootStatus())
+}
+
+// messageRouteLLM is MessageRouteDeps.BuildLLM. An injected hook (tests,
+// embedded hosts) wins; otherwise the main llm slot is rebuilt from
+// configuration.json on every call — the same resolver session creation uses —
+// so a Settings edit reaches the classifier without a restart. A provider that
+// cannot be resolved (no key configured) answers nil, which the routes surface
+// as their explicit 500 instead of a classifier quietly routing to the
+// fallback queen.
+//
+// Parity: framework/server/routes_messages.py (manager.build_llm)
+func messageRouteLLM(deps AppDeps) func() llm.Completer {
+	if deps.BuildLLM != nil {
+		return deps.BuildLLM
+	}
+	return func() llm.Completer {
+		requested := ""
+		if deps.DefaultModel != nil {
+			requested = deps.DefaultModel()
+		}
+		provider, err := MainSlotProvider(deps.Home, requested)
+		if err != nil {
+			log.Printf("messages: main llm provider unavailable: %v", err)
+			return nil
+		}
+		return provider
+	}
 }
 
 // queenCreateSessionAdapter bridges the queen route hook to the session-create

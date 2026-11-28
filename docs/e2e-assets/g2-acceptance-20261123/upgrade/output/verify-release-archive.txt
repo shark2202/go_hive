@@ -1,0 +1,23 @@
+archive : /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback-rerun/dist/release/hive-1.0.26-go.1-darwin-arm64.tar.gz
+workdir : /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T/hive-release-verify.8io7t5
+members : browserbridge hive hive-browser hive-cred LICENSE NOTICE README.md SHA256SUMS THIRD_PARTY_NOTICES.md 
+target  : darwin/arm64; bridge=127.0.0.1:14940 ws=127.0.0.1:14939 serve=127.0.0.1:8810
+env     : HIVE_BROWSERBRIDGE_BIN unset (sibling resolution is under test)
+
+  ok  : extracted hive is executable
+  ok  : extracted hive-cred is executable
+  ok  : extracted hive-browser is executable
+  ok  : extracted browserbridge is executable
+  ok  : serve announced: Browser bridge: ready on 127.0.0.1:14940 (pid 45761, viewport scale 0.8)
+  bridge child: /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T/hive-release-verify.8io7t5/extract/browserbridge -http 127.0.0.1:14940 -control 127.0.0.1:14831 -artifacts /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T/hive-release-verify.8io7t5/home/tool-artifacts -ws 127.0.0.1:14939 -no-legacy
+  ok  : bridge (pid 45761) is a child of serve (pid 45750)
+  ok  : child command resolves to the extracted archive binary
+  ok  : GET http://127.0.0.1:14940/health -> 200 {"connected":false,"connections":0,"ok":true,"status":"ok","uptime_ms":429}
+  ok  : hive-browser status --json exit=2 (not_connected)
+  ok  : status --json reports connected=false
+  ok  : serve exited on SIGTERM
+  ok  : bridge child 45761 reaped with serve (SIGTERM)
+  ok  : nothing answers http://127.0.0.1:14940/health after shutdown
+
+PASS: release archive brings up and reaps the browser bridge (13 checks)
+evidence: /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T/hive-release-verify.8io7t5

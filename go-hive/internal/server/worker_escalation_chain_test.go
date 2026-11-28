@@ -127,6 +127,21 @@ func (l *resumableDoomLoopLLM) callCount() int {
 	return l.calls
 }
 
+// waitForCall blocks until the scripted LLM has entered the given model call.
+// AComplete increments the counter after the request snapshot is built, so
+// observing call 4 guarantees the queen's reply cannot land in that request:
+// call 4 takes the gate and only call 5 sees the reply and reports success.
+func (l *resumableDoomLoopLLM) waitForCall(t *testing.T, want int) {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	for l.callCount() < want {
+		if time.Now().After(deadline) {
+			t.Fatalf("worker model calls = %d, want call %d in flight before the queen replies", l.callCount(), want)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+}
+
 func (l *resumableDoomLoopLLM) messagesContain(needle string) bool {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -295,6 +310,11 @@ func TestProductionDoomLoopGuidanceResumesTheWorker(t *testing.T) {
 		t.Fatalf("handoff request_id does not match the inbox entry:\n%s", injected)
 	}
 	worker := runtime.GetWorker(workerID)
+	// The gate lives inside the worker's fourth model call: wait for that call
+	// to start before replying. Otherwise the reply can reach the conversation
+	// before call 4 builds its request, call 4 reports immediately, and the
+	// gated call is skipped (4 calls instead of 5).
+	workerLLM.waitForCall(t, 4)
 	if !worker.IsActive() {
 		t.Fatal("worker stopped before the queen could answer")
 	}

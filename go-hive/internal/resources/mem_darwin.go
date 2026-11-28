@@ -2,12 +2,20 @@
 
 package resources
 
-// System-memory probe for macOS without cgo/psutil: total from sysctl
-// hw.memsize, available from vm_stat's free + inactive + speculative pages
-// (the same approximation psutil's macOS backend uses for "available").
+// System-memory probe for macOS without cgo/psutil. The numbers mirror
+// psutil's Darwin backend (psutil/arch/osx/mem.c), which is what upstream's
+// psutil.virtual_memory() reads:
+//
+//	available = (Pages free + Pages inactive) * page size
+//	used      = (Pages active + Pages wired down) * page size
+//	pct       = used / total * 100
+//
+// "Pages speculative" is deliberately absent: psutil only subtracts it from
+// the separate "free" field, never from available/used, so including it here
+// would overstate available memory.
 //
 // Parity: framework/host/runtime_resources.py::ResourceMonitor.sample (system
-// memory branch).
+// memory branch) via psutil.virtual_memory().
 
 import (
 	"encoding/binary"
@@ -21,7 +29,8 @@ var (
 	vmStatPageSize = regexp.MustCompile(`page size of (\d+) bytes`)
 	vmStatFree     = regexp.MustCompile(`Pages free:\s+(\d+)\.`)
 	vmStatInactive = regexp.MustCompile(`Pages inactive:\s+(\d+)\.`)
-	vmStatSpec     = regexp.MustCompile(`Pages speculative:\s+(\d+)\.`)
+	vmStatActive   = regexp.MustCompile(`Pages active:\s+(\d+)\.`)
+	vmStatWired    = regexp.MustCompile(`Pages wired down:\s+(\d+)\.`)
 )
 
 func systemMemorySample() systemMemory {
@@ -32,47 +41,58 @@ func systemMemorySample() systemMemory {
 	totalMB := float64(totalBytes) / 1048576.0
 	out := systemMemory{TotalMB: floatPtr(roundTo(totalMB, 0))}
 
-	avail, ok := darwinAvailableMB()
-	if !ok {
+	out2, err := exec.Command("vm_stat").Output()
+	if err != nil {
 		return out
 	}
-	used := totalMB - avail
-	pct := 0.0
-	if totalMB > 0 {
-		pct = used / totalMB * 100.0
+	availMB, usedMB, hasAvail, hasUsed := parseDarwinVMStat(string(out2))
+	if hasAvail {
+		out.AvailMB = floatPtr(roundTo(availMB, 0))
 	}
-	out.AvailMB = floatPtr(roundTo(avail, 0))
-	out.UsedMB = floatPtr(roundTo(used, 0))
-	out.Pct = floatPtr(roundTo(pct, 1))
+	if hasUsed {
+		out.UsedMB = floatPtr(roundTo(usedMB, 0))
+		if totalMB > 0 {
+			out.Pct = floatPtr(roundTo(usedMB/totalMB*100.0, 1))
+		}
+	}
 	return out
 }
 
-func darwinAvailableMB() (float64, bool) {
-	out, err := exec.Command("vm_stat").Output()
-	if err != nil {
-		return 0, false
-	}
-	text := string(out)
+// parseDarwinVMStat turns `vm_stat` text into psutil's available/used MB.
+// A missing counter degrades only the value it feeds.
+func parseDarwinVMStat(text string) (availMB, usedMB float64, hasAvail, hasUsed bool) {
 	pageSize := int64(4096)
 	if match := vmStatPageSize.FindStringSubmatch(text); match != nil {
 		if parsed, err := strconv.ParseInt(match[1], 10, 64); err == nil && parsed > 0 {
 			pageSize = parsed
 		}
 	}
-	pages := int64(0)
-	found := false
-	for _, re := range []*regexp.Regexp{vmStatFree, vmStatInactive, vmStatSpec} {
-		if match := re.FindStringSubmatch(text); match != nil {
-			if parsed, err := strconv.ParseInt(match[1], 10, 64); err == nil {
-				pages += parsed
-				found = true
-			}
-		}
+	freePages, freeOK := vmStatPages(vmStatFree, text)
+	inactivePages, inactiveOK := vmStatPages(vmStatInactive, text)
+	activePages, activeOK := vmStatPages(vmStatActive, text)
+	wiredPages, wiredOK := vmStatPages(vmStatWired, text)
+
+	if freeOK && inactiveOK {
+		availMB = float64((freePages+inactivePages)*pageSize) / 1048576.0
+		hasAvail = true
 	}
-	if !found {
+	if activeOK && wiredOK {
+		usedMB = float64((activePages+wiredPages)*pageSize) / 1048576.0
+		hasUsed = true
+	}
+	return availMB, usedMB, hasAvail, hasUsed
+}
+
+func vmStatPages(re *regexp.Regexp, text string) (int64, bool) {
+	match := re.FindStringSubmatch(text)
+	if match == nil {
 		return 0, false
 	}
-	return float64(pages*pageSize) / 1048576.0, true
+	parsed, err := strconv.ParseInt(match[1], 10, 64)
+	if err != nil {
+		return 0, false
+	}
+	return parsed, true
 }
 
 // darwinTotalBytes reads hw.memsize through syscall.Sysctl, which returns the

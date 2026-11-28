@@ -154,6 +154,9 @@ export const chatZh: Record<string, string> = {
   "The provider returned an error.": "模型提供方返回了错误。",
   "Model settings →": "模型设置 →",
   "Details": "详情",
+  "Payment required.": "需要付款。",
+  "The model provider rejected this request with 402 Payment Required. Add credit with the provider or switch models, then try again.":
+    "模型服务商以 402 Payment Required 拒绝了本次请求。请为服务商账户充值或切换模型后重试。",
 
   // Composer and colony lock
   "Connecting to agent...": "正在连接智能体…",

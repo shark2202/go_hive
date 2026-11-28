@@ -40,10 +40,17 @@ func NewRegistry(opts ...Option) *Registry {
 	return Register(integrationkit.NewRegistry(rt))
 }
 
+// Catalog returns the three module tools in registration order. It is the
+// exported view the root assembly uses to derive compatibility aliases from
+// the aggregate catalogs.
+func Catalog() []*Tool {
+	return []*Tool{similarWebTool, newsTool, googleMapsTool}
+}
+
 // Register adds the three catalogs and their action implementations to reg.
 // It is the assembly hook the root uses when it owns the kernel registry.
 func Register(reg *Registry) *Registry {
-	for _, tool := range []*Tool{similarWebTool, newsTool, googleMapsTool} {
+	for _, tool := range Catalog() {
 		reg.AddTool(tool)
 	}
 	for action, impl := range similarWebImpls() {

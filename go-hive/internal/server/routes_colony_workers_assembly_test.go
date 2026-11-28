@@ -3,6 +3,8 @@ package server
 import (
 	"net/http"
 	"testing"
+
+	"github.com/shark2202/go_hive/go-hive/internal/server/routesagents"
 )
 
 // Parity-exempt: assembly guard, not an upstream behaviour. A duplicate
@@ -13,7 +15,7 @@ func TestColonyWorkerRoutesRegisterAlongsideExisting(t *testing.T) {
 	mux := http.NewServeMux()
 	RegisterConfigRoutes(mux, ConfigRouteDeps{})
 	RegisterSessionRoutes(mux, SessionRouteDeps{})
-	RegisterAgentRoutes(mux, AgentRouteDeps{})
+	routesagents.RegisterRoutes(mux, routesagents.Deps{})
 	RegisterChatRoutes(mux, ChatRouteDeps{})
 	RegisterColonyWorkerRoutes(mux, ColonyWorkerDeps{})
 }

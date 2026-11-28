@@ -6,20 +6,74 @@
 // in-process; a channel talks to the queen through the ChannelHost object
 // (open_session, send, subscribe, unsubscribe, set_title, judge, state_dir,
 // config) and receives QueenOutput values (message, question, error, files,
-// idle). Go has no entry points, so this package keeps the same object model
-// across a process boundary:
+// idle). A Go host cannot import a Python object, so this package keeps the
+// same object model across a process boundary and offers two runtimes:
 //
 //	configuration.json
-//	  channels.<name>.enabled   start this plugin when truthy
-//	  channels.<name>.command   argv (array of strings) or the executable (string)
-//	  channels.<name>.args      extra argv entries
-//	  channels.<name>.cwd       working directory (default: the serve process cwd)
-//	  channels.<name>.env       KEY=value entries appended to the inherited env
-//	  every other key           passed unchanged in the hello frame's config
+//	  channels.<name>.enabled      start this plugin when truthy
+//	  channels.<name>.entry_point  Python bridge: name of an installed
+//	                               hive.channels entry point (opt-in)
+//	  channels.<name>.interpreter  Python argv for the bridge
+//	                               (default: HIVE_PYTHON, python3, python)
+//	  channels.<name>.python_path  entries prepended to PYTHONPATH
+//	  channels.<name>.command      stdio plugin argv (array of strings) or the
+//	                               executable (string); mutually exclusive with
+//	                               entry_point
+//	  channels.<name>.args         extra argv entries (command only)
+//	  channels.<name>.cwd          working directory (default: the serve process cwd)
+//	  channels.<name>.env          KEY=value entries appended to the inherited env
+//	  every other key              passed unchanged in the hello frame's config
 //
-// An enabled section with no command is reported failed, never skipped:
-// "no command configured (Go host uses stdio plugins; Python hive.channels
-// entry points need the Python adapter)".
+// An enabled section with neither command nor entry_point is reported failed,
+// never skipped:
+// "no command or entry_point configured (set channels.<name>.command for a Go
+// stdio plugin, or channels.<name>.entry_point for a Python hive.channels
+// plugin)".
+//
+// # Python entry points
+//
+// A section with entry_point opts into the embedded bridge (python.go). The
+// host writes bridge.py, which ships inside the Go binary, into a private temp
+// directory and starts it as:
+//
+//	<interpreter> -u <bridge.py> <entry_point>
+//
+// The bridge discovers the name with importlib.metadata in the group
+// “hive.channels“, imports the factory, calls factory(host), and awaits
+// start() with upstream's 30-second budget. Its host object exposes name,
+// config (the section), state_dir, open_session, send, subscribe,
+// unsubscribe, set_title and judge. QueenOutput values have the same five
+// kinds and fields, and each subscription calls its handler one output at a
+// time, in order. stop() gets the same 30-second budget; a refused host call
+// reaches the channel as ChannelError, with the JSON-RPC data.kind available
+// as .kind. subscribe writes its frame immediately and a send issued after it
+// in the same session waits for the subscription to exist, so upstream's
+// subscribe-then-send ordering survives the round trip. The bridge is a stdio
+// plugin from this host's point of view, so start/stop, subscription delivery,
+// error framing and the running/off/failed state map use the exact code path
+// a Go plugin uses.
+//
+// Process-boundary differences, unavoidable because the channel runs in a
+// separate interpreter:
+//
+//   - host calls are JSON round trips to another process, not object calls;
+//   - subscribe and set_title keep upstream's synchronous signatures, so a
+//     host refusal is logged instead of raised at the call site;
+//   - stdout is protocol-only: the bridge points sys.stdout at stderr before
+//     loading the plugin, so print() becomes a channel log line;
+//   - Python logging goes to stderr and is forwarded as “channel <name>: ...“;
+//   - discovery runs in the configured interpreter, so the channel package
+//     must be installed for that interpreter (or reachable through
+//     python_path);
+//   - installed entry points with no configuration section are not listed as
+//     “off“: this host's state map covers configured channels (use
+//     DiscoverEntryPoints to inspect the installed set);
+//   - the bridge uses only the Python standard library; it shares the real
+//     ChannelError/QueenOutput classes when the Hive core is importable in
+//     that interpreter, and compatible stand-ins otherwise.
+//
+// The bridge is attempted only for sections with entry_point, so a command
+// plugin never needs Python.
 //
 // # Wire protocol
 //
@@ -98,9 +152,13 @@
 //
 // Parity: framework/server/channels.py::ChannelHost
 // Parity: framework/server/channels.py::QueenOutput
+// Parity: framework/server/channels.py::Channel
 // Parity: framework/server/channels.py::start_channels
 // Parity: framework/server/channels.py::stop_channels
+// Parity: framework/server/channels.py::_installed
 // Parity: framework/server/channels.py::handle_list_channels
-// Parity-exempt: the stdio JSON-lines transport, Go command extension, frame
-// limits, bounded drop-oldest queue and seq gap reporting are Go-only.
+// Parity-exempt: the stdio JSON-lines transport, Go command extension,
+// entry_point bridge process (interpreter, temp script, PYTHONPATH plumbing),
+// frame limits, bounded drop-oldest queue and seq gap reporting are Go-only.
+// Python entry points never run in the Go process.
 package channels

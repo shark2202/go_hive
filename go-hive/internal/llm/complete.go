@@ -23,23 +23,30 @@ const (
 )
 
 type CompletionResponse struct {
-	Content      string
-	Model        string
-	FinishReason string
-	ToolCalls    []ToolCall
-	Usage        *Usage
-	HiddenParams map[string]any
+	Content        string
+	Model          string
+	FinishReason   string
+	ToolCalls      []ToolCall
+	Usage          *Usage
+	HiddenParams   map[string]any
+	ThinkingBlocks []map[string]any
 }
 
 type CompletionCall func(ctx context.Context, kwargs map[string]any) (CompletionResponse, error)
 
 type CompleteOptions struct {
-	System         string
-	Tools          []ToolDef
-	MaxTokens      int
-	ResponseFormat map[string]any
-	JSONMode       bool
-	MaxRetries     *int
+	System string
+	// SystemDynamicSuffix is the per-turn tail of the system prompt. When a
+	// provider honors cache_control it travels as a second, uncached content
+	// block so the static prefix stays warm across turns.
+	//
+	// Parity: core/framework/llm/litellm.py::_build_system_message
+	SystemDynamicSuffix string
+	Tools               []ToolDef
+	MaxTokens           int
+	ResponseFormat      map[string]any
+	JSONMode            bool
+	MaxRetries          *int
 }
 
 func ResolveAuxMaxTokens(configured int) int {
@@ -93,9 +100,22 @@ func (p *Provider) Complete(ctx context.Context, messages []map[string]any, opts
 		return Completion{}, errors.New("llm: provider has no completion transport")
 	}
 
-	response, err := p.completionWithRetry(ctx, p.buildCompletionKwargs(messages, opts), opts.MaxRetries)
+	kwargs := p.buildCompletionKwargs(messages, opts)
+	response, err := p.completionWithRetry(ctx, kwargs, opts.MaxRetries)
 	if err != nil {
-		return Completion{}, err
+		// A rejected hive streamToken is refreshed once and the call replayed
+		// with the new credential before the failure is surfaced.
+		//
+		// Parity: core/framework/llm/litellm.py (hive_stream_token_invalid ->
+		// try_refresh_now -> retry the same call once)
+		tokenRefreshed := false
+		if token, ok := retryAfterStreamTokenRefresh(ctx, err, &tokenRefreshed); ok {
+			kwargs["api_key"] = token
+			response, err = p.completionWithRetry(ctx, kwargs, opts.MaxRetries)
+		}
+		if err != nil {
+			return Completion{}, err
+		}
 	}
 	return p.completionFromResponse(response), nil
 }
@@ -112,8 +132,8 @@ func (p *Provider) buildCompletionKwargs(messages []map[string]any, opts Complet
 	}
 
 	full := make([]map[string]any, 0, len(messages)+1)
-	if opts.System != "" {
-		full = append(full, map[string]any{"role": "system", "content": opts.System})
+	if systemMessage := BuildSystemMessage(opts.System, opts.SystemDynamicSuffix, p.Model); systemMessage != nil {
+		full = append(full, systemMessage)
 	}
 	for _, message := range messages {
 		copied := make(map[string]any, len(message)+1)
@@ -172,10 +192,11 @@ func (p *Provider) buildCompletionKwargs(messages []map[string]any, opts Complet
 // through Complete, which owns the retry loop.
 func (p *Provider) completionRequestKwargs(req CompletionRequest) map[string]any {
 	return p.buildCompletionKwargs(ChatMessagesToMaps(req.Messages), CompleteOptions{
-		System:    MergedSystemPrompt(req.System, req.SystemDynamicSuffix),
-		Tools:     req.Tools,
-		MaxTokens: req.MaxTokens,
-		JSONMode:  req.JSONMode,
+		System:              req.System,
+		SystemDynamicSuffix: req.SystemDynamicSuffix,
+		Tools:               req.Tools,
+		MaxTokens:           req.MaxTokens,
+		JSONMode:            req.JSONMode,
 	})
 }
 
@@ -191,10 +212,12 @@ func (p *Provider) completionFromResponse(response CompletionResponse) Completio
 		CostUSD:             ExtractCost(response.Usage, response.HiddenParams, p.Model),
 		CachedTokens:        cachedTokens,
 		CacheCreationTokens: cacheCreationTokens,
+		ThinkingBlocks:      response.ThinkingBlocks,
 	}
 	if response.Usage != nil {
 		completion.InputTokens = response.Usage.PromptTokens
 		completion.OutputTokens = response.Usage.CompletionTokens
+		completion.Credits = response.Usage.Credits
 	}
 	if completion.Model == "" {
 		completion.Model = p.Model

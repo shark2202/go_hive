@@ -1,0 +1,98 @@
+{
+ "counts": {
+  "aden_tools_mcp_tools": 866,
+  "aden_tools_python_files": 324,
+  "aden_tools_python_loc": 71393,
+  "aden_tools_python_non_test_files": 316,
+  "aden_tools_tool_dirs": 105,
+  "core_frontend_source_files": 233,
+  "go_frontend_files": 2132,
+  "go_frontend_src_files": 255,
+  "go_integrations_evidence_actions": 864,
+  "go_integrations_evidence_modules": 104,
+  "go_integrations_prod_files": 275,
+  "go_integrations_prod_loc": 65671,
+  "go_integrations_test_files": 109,
+  "tools_src_python_files": 400
+ },
+ "covered_paths": [
+  "core/framework"
+ ],
+ "evidence_grades": {
+  "A": 12,
+  "B": 91,
+  "D": 1
+ },
+ "excluded_paths": [
+  "tools/src/aden_tools",
+  "core/frontend"
+ ],
+ "ledger": "go_hive/docs/package-parity.json",
+ "ledger_scope": "core/framework 的包 + (root) ↔ go_hive/go-hive/internal 的包；C12 模块账本覆盖同一范围",
+ "machine_check": {
+  "covered_paths": [
+   "core/framework"
+  ],
+  "excluded_paths": [
+   "tools/src/aden_tools",
+   "core/frontend"
+  ],
+  "integration_parity": "not_computed",
+  "kind": "scope_marker",
+  "scope_id": "core-framework-only"
+ },
+ "matrix": [
+  {
+   "area": "tools/src/aden_tools",
+   "coverage": "not_computed",
+   "evidence_actions": 864,
+   "evidence_modules": 104,
+   "go_counterpart": "go_hive/go-hive/internal/tools/integrations",
+   "go_prod_files": 275,
+   "go_prod_loc": 65671,
+   "go_test_files": 109,
+   "mcp_tools": 866,
+   "note": "两侧规模可计数，但逐 provider 的 Python↔Go 行为等价未建立；本账本不对这些 MCP tool 给出 ported/unported。",
+   "python_files": 324,
+   "python_loc": 71393,
+   "python_non_test_files": 316,
+   "role": "Python 工具实现与 MCP server（集成、扫描器、文件/媒体工具）",
+   "tool_dirs": 105,
+   "tools_src_python_files": 400
+  },
+  {
+   "area": "core/frontend",
+   "coverage": "not_computed",
+   "go_counterpart": "go_hive/go-hive/frontend",
+   "go_files": 2132,
+   "go_src_files": 255,
+   "note": "前端不在包级账本内，未做逐组件对齐。",
+   "role": "React 前端；由 server 同端口提供静态文件",
+   "source_files": 233
+  },
+  {
+   "area": "core/hive",
+   "coverage": "not_applicable",
+   "note": "只再导出 core/framework 的名字，无独立实现，不构成待移植包。",
+   "python_files": 1,
+   "role": "公共再导出面（derivative projects 的导入面）"
+  }
+ ],
+ "schema_version": 1,
+ "scope_id": "core-framework-only",
+ "separate_modules": [
+  {
+   "go_files": 66,
+   "note": "独立 Go 模块，另有专项矩阵，不在本页包集合内",
+   "path": "go_hive/browserbridge"
+  },
+  {
+   "go_files": 40,
+   "note": "独立 Go 模块，另有专项矩阵，不在本页包集合内",
+   "path": "go_hive/go-hive-cloud"
+  }
+ ],
+ "status": "not_computed",
+ "unported_zero_scope": "C12 账本的 unported: 0 只覆盖 core/framework 的 273 个模块；不含 tools/src/aden_tools 与 core/frontend。",
+ "warning": "本页是 core/framework 的包级对照，不是全仓 parity 证明：tools/src/aden_tools 的 866 个 MCP tool 与 core/frontend 未计入任何 ported/unported 统计；集成面逐 provider 覆盖为 not_computed。"
+}

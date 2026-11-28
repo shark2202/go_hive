@@ -7,6 +7,8 @@
 >
 > 口径：本里程碑只声称**客户端可观察子集**。不声称与真实云内部语义一致；契约未记录的行为一律按
 > `contracts/observed-contract.json` 的 `unknown` 处理，不做假绿。
+>
+> M2 接续：Inbox 契约硬化、真客户端 L2b 闭环、审计/限流见 `docs/m2-notes.md`。本文件的 M1 近似仍然有效。
 
 ## 1. 交付物与验证路径
 
@@ -100,7 +102,8 @@ Python 同），因此 M1 统一返回
   JWT 用于其它端点（401）。
 - 401 body 逐字见 §5；`/health`、`/v1/gateway/availability`、stream-token 刷新为公开面。
 - 密钥：`--jwt-secret/--stream-secret` 或 env，缺省从 `<data_dir>/jwt_secret`、`<data_dir>/stream_secret`
-  读取（首次生成 0600）。双钥轮换窗口：`auth.VerifyAny` 支持多 secret，M3 接入配置。
+  读取（首次生成 0600）。双钥轮换窗口：`auth.VerifyAny` 支持多 secret，M3 已接入
+  `--stream-secret-previous` / `HIVE_CLOUD_STREAM_SECRET_PREVIOUS` / `config.json` / `<data-dir>/stream_secret_previous`。
 
 ## 7. 变更流与审计语义
 
@@ -151,15 +154,17 @@ harness 单独构建：`cd harness/globaldb-smoke && go vet ./... && go build ./
 | --- | --- |
 | 真实云端 401 body（`signed_out` vs 句子） | `UNKNOWN`（§5 登记；按逐字句子实现） |
 | JWT 签发方/算法/登录流 | 自建 HS256；真实云 `UNKNOWN` |
-| `POST /user/refresh-stream-token`（桌面 legacy） | 未实现（契约 `unknown`；M3） |
-| streamToken 轮换/吊销（sid blacklist、master rotation） | M3 |
-| `GET /v1/inbox/stream`（桌面 SSE） | `UNKNOWN`，未实现 |
-| Inbox UI | 闭源；自建前端走 `/internal/inbox/reply` |
-| `/v1/crm/*` 10 端点 + 实体/阶段/claim 语义 | M4；契约覆盖测试显式排除并断言 404 |
+| `POST /user/refresh-stream-token`（桌面 legacy） | 未实现（契约 `unknown`；M3 复核后仍无 request/response，保持 404） |
+| streamToken 轮换/吊销（sid blacklist、master rotation） | M3 ✅ 双钥轮换窗口 + 旧 token 边界；sid blacklist 仍 `UNKNOWN`（docs/m3-notes.md） |
+| `GET /v1/inbox/stream`（桌面 SSE） | `UNKNOWN`，未实现（M2 复核：仍无事件/载荷锚点；404） |
+| 桌面 Inbox UI 列表/回复/已读/未读/心跳端点 | `UNKNOWN`，未实现（M2 登记到 surface；只有设计文档路径，无字段形状） |
+| Inbox L2b 真客户端闭环（escalation→回复→SSE） | M2 ✅（`harness/inbox-smoke`，`evidence/inbox-smoke.json` 7/7） |
+| Inbox 审计 / 限流 | M2 ✅ 本地 `_cloud_audit` + 可选 per-team 限流（默认关闭）；真实云格式/配额 `UNKNOWN` |
+| `/v1/crm/*` 10 端点 + 实体/阶段/claim 语义 | M4 部分：query/group-counts/get/create/patch/delete/stage 已落地；schema/claim/release 无响应形状，保持 404/405（docs/m4-notes.md） |
 | LLM 代理 `/v1/messages`、`/v1/images/generations` | M5（另一 host） |
 | 凭据代理 `/v1/credentials*` | M6（另一 host） |
 | `cloud_sync` 对账协议 | `UNKNOWN`（不在 M1） |
-| 限流/配额/审计格式 | M2；当前只有审计表与请求体/行数上限 |
+| 限流/配额/审计格式 | M2 已落地本地审计 + 可选 per-team 限流；真实云配额/审计格式 `UNKNOWN` |
 | `config.json` 的 `features{...}` 开关 | 未实现（配置文件只读 listen/data_dir/secrets/timeout/row-cap） |
 | Postgres 存储适配器 | M1b（缓存无驱动，登记待联网） |
 | 桌面端能否改云基址 | `UNKNOWN`（M0 已登记） |

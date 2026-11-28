@@ -150,7 +150,7 @@ ul{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin
 
 <h3>曾报未读的 5 个配置键</h3>
 <div class="tablewrap"><table><thead><tr><th style="width:24%">键</th><th style="width:26%">Python 用途</th><th style="width:26%">Go 读取点 / 使用点</th><th>现状</th></tr></thead><tbody>
-<tr><td><code>gcu_enabled</code></td><td>浏览器自动化（GCU）总开关</td><td><code>cli/browser_supervisor.go::browserBridgeRequested</code>（env → configuration.json → 默认开）</td><td><span class="pill ok">已读</span>；env 优先，文件值决定是否拉起 <code>browserbridge</code>。</td></tr>
+<tr><td><code>gcu_enabled</code></td><td>浏览器自动化（GCU）总开关</td><td><code>cli/browsersupervisor/supervisor.go::browserBridgeRequested</code>（env → configuration.json → 默认开）</td><td><span class="pill ok">已读</span>；env 优先，文件值决定是否拉起 <code>browserbridge</code>。</td></tr>
 <tr><td><code>gcu_viewport_scale</code></td><td>GCU 视口缩放（0.1–1.0，默认 0.8）</td><td><code>server.GcuViewportScale</code> → 监督进程注入 <code>HIVE_BROWSER_VIEWPORT_SCALE</code> → 桥 <code>/status.viewport_scale</code> + 启动日志</td><td><span class="pill ok">已读</span>；2026-11-20 实测 0.65 / 0.55（配置文件）/ 0.8（非法值回落）。上游 getter 自扩展化浏览器后已无消费点，Go 侧只读并上报，不改截图/抓取几何。</td></tr>
 <tr><td><code>turn_context</code></td><td>entry-point 插件式 turn context</td><td><code>server.TurnContextSettings</code>/<code>StartTurnContexts</code> → <code>agentloop.TurnContextReminderSource</code> → queen 每回合提示</td><td><span class="pill ok">已读</span>；Go 无 entry point，包在进程内注册（<code>RegisterTurnContextProvider</code>），配置门 <code>turn_context.&lt;name&gt;.enabled</code> 与上游同语义；queen-only，超时/异常跳过。</td></tr>
 <tr><td><code>timeout_minutes</code></td><td>Claude Code queen 单轮超时</td><td><code>qmail/config.go</code></td><td><span class="pill ok">已读</span>；运行器按该值设置单轮超时；默认 10 分钟。</td></tr>

@@ -83,6 +83,23 @@ type NodeConfig struct {
 	FailureCriteria    *string          `json:"failure_criteria"`
 	SkipJudge          bool             `json:"skip_judge"`
 	MaxRetries         *int             `json:"max_retries"`
+
+	// Explicit-zero bookkeeping: pydantic defaults max_iterations to 30 and
+	// max_node_visits to 1, but a supplied 0 must stay 0.
+	maxIterationsSet bool
+	maxNodeVisitsSet bool
+}
+
+// SetMaxIterations records an explicit max_iterations, including 0.
+func (n *NodeConfig) SetMaxIterations(value int) {
+	n.MaxIterations = value
+	n.maxIterationsSet = true
+}
+
+// SetMaxNodeVisits records an explicit max_node_visits, including 0.
+func (n *NodeConfig) SetMaxNodeVisits(value int) {
+	n.MaxNodeVisits = value
+	n.maxNodeVisitsSet = true
 }
 
 func (n NodeConfig) MarshalJSON() ([]byte, error) {
@@ -109,10 +126,10 @@ func (n NodeConfig) MarshalJSON() ([]byte, error) {
 	if v.NullableOutputKeys == nil {
 		v.NullableOutputKeys = []string{}
 	}
-	if v.MaxIterations == 0 {
+	if v.MaxIterations == 0 && !n.maxIterationsSet {
 		v.MaxIterations = 30
 	}
-	if v.MaxNodeVisits == 0 {
+	if v.MaxNodeVisits == 0 && !n.maxNodeVisitsSet {
 		v.MaxNodeVisits = 1
 	}
 	return json.Marshal(v)
@@ -128,13 +145,19 @@ func (n *NodeConfig) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &raw); err != nil {
 		return err
 	}
+	// Pydantic field without a default: id.
+	if err := requireFields(raw, "node", "id"); err != nil {
+		return err
+	}
 	if _, ok := raw["node_type"]; !ok {
 		v.NodeType = "event_loop"
 	}
-	if _, ok := raw["max_iterations"]; !ok {
+	_, iterationsPresent := raw["max_iterations"]
+	if !iterationsPresent {
 		v.MaxIterations = 30
 	}
-	if _, ok := raw["max_node_visits"]; !ok {
+	_, visitsPresent := raw["max_node_visits"]
+	if !visitsPresent {
 		v.MaxNodeVisits = 1
 	}
 	if v.InputKeys == nil {
@@ -147,6 +170,8 @@ func (n *NodeConfig) UnmarshalJSON(b []byte) error {
 		v.NullableOutputKeys = []string{}
 	}
 	*n = NodeConfig(v)
+	n.maxIterationsSet = iterationsPresent
+	n.maxNodeVisitsSet = visitsPresent
 	return nil
 }
 
@@ -159,6 +184,15 @@ type EdgeConfig struct {
 	ConditionExpr *string           `json:"condition_expr"`
 	InputMapping  map[string]string `json:"input_mapping"`
 	Priority      int               `json:"priority"`
+
+	// prioritySet records an explicit "priority" key (including 0).
+	prioritySet bool
+}
+
+// SetPriority records an explicit priority, including 0.
+func (e *EdgeConfig) SetPriority(value int) {
+	e.Priority = value
+	e.prioritySet = true
 }
 
 func (e EdgeConfig) MarshalJSON() ([]byte, error) {
@@ -170,7 +204,7 @@ func (e EdgeConfig) MarshalJSON() ([]byte, error) {
 	if v.InputMapping == nil {
 		v.InputMapping = map[string]string{}
 	}
-	if v.Priority == 0 {
+	if v.Priority == 0 && !e.prioritySet {
 		v.Priority = 1
 	}
 	return json.Marshal(v)
@@ -186,16 +220,22 @@ func (e *EdgeConfig) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &raw); err != nil {
 		return err
 	}
+	// Pydantic fields without defaults: from_node, to_node.
+	if err := requireFields(raw, "edge", "from_node", "to_node"); err != nil {
+		return err
+	}
 	if _, ok := raw["condition"]; !ok {
 		v.Condition = "on_success"
 	}
 	if v.InputMapping == nil {
 		v.InputMapping = map[string]string{}
 	}
-	if _, ok := raw["priority"]; !ok {
+	_, priorityPresent := raw["priority"]
+	if !priorityPresent {
 		v.Priority = 1
 	}
 	*e = EdgeConfig(v)
+	e.prioritySet = priorityPresent
 	return nil
 }
 
@@ -221,6 +261,14 @@ func (g *GoalConfig) UnmarshalJSON(b []byte) error {
 	type plain GoalConfig
 	var v plain
 	if err := json.Unmarshal(b, &v); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+	// Pydantic field without a default: description.
+	if err := requireFields(raw, "goal", "description"); err != nil {
 		return err
 	}
 	if v.SuccessCriteria == nil {
@@ -298,6 +346,24 @@ type MCPServerRef struct {
 	Config map[string]any `json:"config"`
 }
 
+func (m *MCPServerRef) UnmarshalJSON(b []byte) error {
+	type plain MCPServerRef
+	var v plain
+	if err := json.Unmarshal(b, &v); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+	// Pydantic field without a default: name.
+	if err := requireFields(raw, "mcp server", "name"); err != nil {
+		return err
+	}
+	*m = MCPServerRef(v)
+	return nil
+}
+
 type MetadataConfig struct {
 	IntroMessage string `json:"intro_message"`
 }
@@ -324,6 +390,15 @@ type AgentConfig struct {
 	LoopConfig       map[string]any     `json:"loop_config"`
 	Pipeline         map[string]any     `json:"pipeline"`
 	MaxCostPerRun    *float64           `json:"max_cost_per_run"`
+
+	// maxTokensSet records an explicit "max_tokens" key (including 0).
+	maxTokensSet bool
+}
+
+// SetMaxTokens records an explicit max_tokens, including 0.
+func (a *AgentConfig) SetMaxTokens(value int) {
+	a.MaxTokens = value
+	a.maxTokensSet = true
 }
 
 func DefaultLoopConfig() map[string]any {
@@ -393,7 +468,7 @@ func (a AgentConfig) MarshalJSON() ([]byte, error) {
 	if v.MCPServers == nil {
 		v.MCPServers = []MCPServerRef{}
 	}
-	if v.MaxTokens == 0 {
+	if v.MaxTokens == 0 && !a.maxTokensSet {
 		v.MaxTokens = 4096
 	}
 	if v.ConversationMode == "" {
@@ -418,6 +493,10 @@ func (a *AgentConfig) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &raw); err != nil {
 		return err
 	}
+	// Pydantic fields without defaults: name, goal, nodes, edges, entry_node.
+	if err := requireFields(raw, "agent config", "name", "goal", "nodes", "edges", "entry_node"); err != nil {
+		return err
+	}
 	if _, ok := raw["version"]; !ok {
 		v.Version = "1.0.0"
 	}
@@ -439,7 +518,8 @@ func (a *AgentConfig) UnmarshalJSON(b []byte) error {
 	if v.EntryPoints == nil {
 		v.EntryPoints = []EntryPointConfig{}
 	}
-	if _, ok := raw["max_tokens"]; !ok {
+	_, maxTokensPresent := raw["max_tokens"]
+	if !maxTokensPresent {
 		v.MaxTokens = 4096
 	}
 	if _, ok := raw["conversation_mode"]; !ok {
@@ -455,5 +535,6 @@ func (a *AgentConfig) UnmarshalJSON(b []byte) error {
 		v.MCPServers = []MCPServerRef{}
 	}
 	*a = AgentConfig(v)
+	a.maxTokensSet = maxTokensPresent
 	return a.Validate()
 }

@@ -28,13 +28,53 @@ func stripeDelete(resource, idParam string) RestSpec {
 // starting_after for every list tool).
 func stripeList(resource, listKey string) RestSpec {
 	return RestSpec{
-		Method: http.MethodGet, Path: "/v1/" + resource, ListKey: listKey, HasMore: true,
+		Method: http.MethodGet, Path: "/v1/" + resource,
 		Pagination: &PaginationSpec{
-			ItemsPath:     listKey,
+			ItemsPath:     "data",
 			CursorParam:   "starting_after",
 			LastItemField: "id",
 		},
+		Shape: stripeListShape(listKey, stripeResourceFormatter(listKey)),
 	}
+}
+
+// stripeResourceFormatter returns the resource formatter for a list key.
+func stripeResourceFormatter(listKey string) func(any) map[string]any {
+	switch listKey {
+	case "customers":
+		return stripeCustomer
+	case "subscriptions":
+		return stripeSubscription
+	case "payment_intents":
+		return stripePaymentIntent
+	case "charges":
+		return stripeCharge
+	case "refunds":
+		return stripeRefund
+	case "invoices":
+		return stripeInvoice
+	case "invoice_items":
+		return stripeInvoiceItem
+	case "products":
+		return stripeProduct
+	case "prices":
+		return stripePrice
+	case "payment_links":
+		return stripePaymentLink
+	case "coupons":
+		return stripeCoupon
+	case "transactions":
+		return stripeBalanceTransaction
+	case "webhook_endpoints":
+		return stripeWebhookEndpoint
+	case "payment_methods":
+		return stripePaymentMethod
+	case "disputes":
+		return stripeDispute
+	case "events":
+		return stripeEvent
+	}
+	return func(any) map[string]any { return map[string]any{} }
 }
 
 func stripeAction(resource, idParam, action, bodyKey string) RestSpec {

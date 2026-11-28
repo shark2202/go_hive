@@ -327,8 +327,11 @@ func TestScaffoldColonyCreatesMinimalFiles(t *testing.T) {
 	}
 }
 
-// Parity: framework/server/session_manager.py::_ensure_minimal_colony
-func TestScaffoldColonyCreatesDurableLayout(t *testing.T) {
+// Parity: framework/server/session_manager.py::_ensure_minimal_colony — the
+// scaffold writes metadata.json + worker.json only. skills/, runs/ and
+// triggers.json belong to a colony that a real session opened; the scaffold
+// must not invent them (and must never clobber a pre-existing layout).
+func TestScaffoldColonyCreatesMinimalLayoutOnly(t *testing.T) {
 	deps, home := colonyTestDeps(t)
 	mux := colonyMux(deps)
 	recorder, _ := serveColonyRequest(mux, colonyRequest(t, http.MethodPost, "/api/colonies/full_layout/scaffold", map[string]any{}))
@@ -336,26 +339,25 @@ func TestScaffoldColonyCreatesDurableLayout(t *testing.T) {
 		t.Fatalf("status = %d", recorder.Code)
 	}
 	colonyDir := filepath.Join(home.ColoniesDir(), "full_layout")
-	for _, dir := range []string{"skills", "runs"} {
-		info, err := os.Stat(filepath.Join(colonyDir, dir))
-		if err != nil || !info.IsDir() {
-			t.Fatalf("scaffold did not create %s/: %v", dir, err)
+	for _, name := range []string{"skills", "runs", "triggers.json"} {
+		if _, err := os.Stat(filepath.Join(colonyDir, name)); !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("scaffold created %s, want only metadata.json + worker.json (err=%v)", name, err)
 		}
 	}
-	triggersData, err := os.ReadFile(filepath.Join(colonyDir, "triggers.json"))
-	if err != nil {
-		t.Fatalf("scaffold did not create triggers.json: %v", err)
-	}
-	var triggers any
-	if err := json.Unmarshal(triggersData, &triggers); err != nil {
-		t.Fatalf("triggers.json is not JSON: %v", err)
-	}
-	if list, ok := triggers.([]any); !ok || len(list) != 0 {
-		t.Fatalf("triggers.json = %#v, want []", triggers)
+	for _, name := range []string{"metadata.json", "worker.json"} {
+		if _, err := os.Stat(filepath.Join(colonyDir, name)); err != nil {
+			t.Fatalf("scaffold did not create %s: %v", name, err)
+		}
 	}
 
-	// A second scaffold is idempotent: existing skill files and trigger
-	// definitions are never overwritten.
+	// An existing layout is left exactly as it is: a second scaffold never
+	// removes a skill or rewrites trigger definitions.
+	if err := os.MkdirAll(filepath.Join(colonyDir, "skills"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(colonyDir, "runs"), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	skillPath := filepath.Join(colonyDir, "skills", "keep_me.md")
 	if err := os.WriteFile(skillPath, []byte("---\nname: keep_me\n---\nbody\n"), 0o644); err != nil {
 		t.Fatal(err)

@@ -13,6 +13,7 @@ package colony
 // sides and neither asks again.
 
 import (
+	"errors"
 	"time"
 
 	"github.com/shark2202/go_hive/go-hive/internal/agentloop"
@@ -81,16 +82,41 @@ func (r *ColonyRuntime) OverseerPendingQuestions() []map[string]any {
 	return out
 }
 
+// loopRaisedParkReason reports the park an error names, when the loop raised
+// that park itself instead of failing. Both loop guards that end a turn by
+// design (the empty-response ghost stream and the deterministic doom loop)
+// return a typed error carrying the reason; upstream's _await_user_input
+// publishes the wait off exactly that reason. Ordinary errors (LLM failures,
+// persistence errors) carry none and keep the failure path.
+//
+// Parity: framework/agent_loop/agent_loop.py::_await_user_input (reason)
+func loopRaisedParkReason(err error) (agentloop.ParkReason, bool) {
+	var carrier interface{ ParkReason() agentloop.ParkReason }
+	if !errors.As(err, &carrier) {
+		return "", false
+	}
+	if reason := carrier.ParkReason(); reason != "" {
+		return reason, true
+	}
+	return "", false
+}
+
 // overseerTurnParkReason classifies the wait an overseer turn ended on. A
-// question asked during the turn parks it on ask_user — the same reason the
-// chat emitter publishes — so the mirrored turn boundary puts the session
-// snapshot in awaiting_input instead of leaving the last "executing" state to
-// age into a false stall.
+// loop-raised park (the empty-response ghost stream, the deterministic doom
+// loop) keeps the reason its typed error names — the same reason the chat
+// emitter publishes — so the mirrored turn boundary puts the session snapshot
+// in the park's activity instead of leaving the last "executing" state to age
+// into a false stall. An ordinary failure falls back to llm_error, the same
+// default the chat failure path uses; a question asked during the turn parks
+// it on ask_user.
 //
 // Parity: framework/agent_loop/agent_loop.py::_await_user_input
 func (r *ColonyRuntime) overseerTurnParkReason(err error) agentloop.ParkReason {
 	if err != nil {
-		return agentloop.ParkReasonUnknown
+		if reason, parked := loopRaisedParkReason(err); parked {
+			return reason
+		}
+		return agentloop.ParkReasonLLMError
 	}
 	if len(r.OverseerPendingQuestions()) > 0 {
 		return agentloop.ParkReasonAskUser

@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -223,6 +224,9 @@ func TestTraceContextPopulatedInL1L2L3(t *testing.T) {
 	}
 }
 
+// TestTraceContextEmptyWhenNotSet pins the upstream default: with neither a
+// per-run binding nor a process provider, records carry empty trace ids.
+//
 // Parity: core/tests/test_runtime_logger.py::test_trace_context_empty_when_not_set
 func TestTraceContextEmptyWhenNotSet(t *testing.T) {
 	previous := TraceContextProvider
@@ -249,6 +253,122 @@ func TestTraceContextEmptyWhenNotSet(t *testing.T) {
 	summary, _ := store.LoadSummary(runID)
 	if summary == nil || summary.TraceID != "" || summary.ExecutionID != "" {
 		t.Fatalf("summary = %+v", summary)
+	}
+}
+
+// TestSetTraceContextOverridesProcessDefault pins the per-logger binding the
+// production host uses: a bound logger stamps its own pair on L3/L2/L1 even
+// when a process-level provider is configured.
+//
+// Parity-exempt: upstream keeps one ambient ContextVar per async execution;
+// the Go port has no goroutine-scoped equivalent, so the host binds the pair to
+// each session's RuntimeLogger. The provider fallback itself is pinned by
+// TestTraceContextPopulatedInL1L2L3.
+func TestSetTraceContextOverridesProcessDefault(t *testing.T) {
+	previous := TraceContextProvider
+	TraceContextProvider = func() (string, string) {
+		return strings.Repeat("e", 32), strings.Repeat("f", 32)
+	}
+	defer func() { TraceContextProvider = previous }()
+
+	store, logger, runID := newTestLogger(t)
+	traceID := strings.Repeat("a", 32)
+	executionID := strings.Repeat("b", 32)
+	logger.SetTraceContext(traceID, executionID)
+
+	if err := logger.LogStep(StepInput{NodeID: "node-1", NodeType: "event_loop", LLMText: "Step."}); err != nil {
+		t.Fatal(err)
+	}
+	if err := logger.LogNodeComplete(NodeCompleteInput{
+		NodeID: "node-1", NodeName: "Queen", NodeType: "event_loop", Success: true, ExitStatus: "success",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	logger.EndRun("success", 100, []string{"node-1"}, "clean")
+
+	toolLogs, _ := store.LoadToolLogs(runID)
+	if toolLogs == nil || len(toolLogs.Steps) != 1 {
+		t.Fatalf("tool logs = %+v", toolLogs)
+	}
+	if got := toolLogs.Steps[0]; got.TraceID != traceID || got.ExecutionID != executionID {
+		t.Fatalf("step trace = %q/%q, want the bound pair", got.TraceID, got.ExecutionID)
+	}
+	details, _ := store.LoadDetails(runID)
+	if details == nil || len(details.Nodes) != 1 || details.Nodes[0].TraceID != traceID {
+		t.Fatalf("details = %+v", details)
+	}
+	summary, _ := store.LoadSummary(runID)
+	if summary == nil || summary.TraceID != traceID || summary.ExecutionID != executionID {
+		t.Fatalf("summary = %+v", summary)
+	}
+}
+
+// TestTraceContextIsPerLoggerUnderConcurrency pins the concurrency-safety
+// property the production wiring relies on: two sessions logging at the same
+// time keep their own pairs, and no record carries the other session's ids.
+//
+// Parity-exempt: upstream scopes trace context to the async execution
+// ContextVar; Go has no goroutine-local ContextVar, so the port stores the pair
+// on the per-session RuntimeLogger.
+func TestTraceContextIsPerLoggerUnderConcurrency(t *testing.T) {
+	root := t.TempDir()
+	type session struct {
+		store       *RuntimeLogStore
+		logger      *RuntimeLogger
+		runID       string
+		traceID     string
+		executionID string
+	}
+	sessions := []*session{
+		{
+			store:       NewRuntimeLogStore(filepath.Join(root, "a", "runtime_logs")),
+			runID:       "session_concurrent_a",
+			traceID:     strings.Repeat("1", 32),
+			executionID: strings.Repeat("2", 32),
+		},
+		{
+			store:       NewRuntimeLogStore(filepath.Join(root, "b", "runtime_logs")),
+			runID:       "session_concurrent_b",
+			traceID:     strings.Repeat("3", 32),
+			executionID: strings.Repeat("4", 32),
+		},
+	}
+	var wg sync.WaitGroup
+	for _, s := range sessions {
+		s.logger = NewRuntimeLogger(s.store, "agent")
+		s.runID = s.logger.StartRun("", s.runID)
+		s.logger.SetTraceContext(s.traceID, s.executionID)
+		wg.Add(1)
+		go func(s *session) {
+			defer wg.Done()
+			for step := 0; step < 25; step++ {
+				_ = s.logger.LogStep(StepInput{NodeID: "node", NodeType: "event_loop", StepIndex: step})
+			}
+			s.logger.EndRun("success", 1, []string{"node"}, "")
+		}(s)
+	}
+	wg.Wait()
+
+	for i, s := range sessions {
+		other := sessions[1-i]
+		steps, err := s.store.LoadToolLogs(s.runID)
+		if err != nil || steps == nil || len(steps.Steps) != 25 {
+			t.Fatalf("session %d steps = %+v, err=%v", i, steps, err)
+		}
+		for _, step := range steps.Steps {
+			if step.TraceID != s.traceID || step.ExecutionID != s.executionID {
+				t.Fatalf("session %d step trace = %q/%q, want %q/%q",
+					i, step.TraceID, step.ExecutionID, s.traceID, s.executionID)
+			}
+			if step.TraceID == other.traceID || step.ExecutionID == other.executionID {
+				t.Fatalf("session %d step leaked the other session's trace: %q/%q",
+					i, step.TraceID, step.ExecutionID)
+			}
+		}
+		summary, err := s.store.LoadSummary(s.runID)
+		if err != nil || summary == nil || summary.TraceID != s.traceID || summary.ExecutionID != s.executionID {
+			t.Fatalf("session %d summary = %+v, err=%v", i, summary, err)
+		}
 	}
 }
 

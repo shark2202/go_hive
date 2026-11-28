@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/llm"
 	"github.com/shark2202/go_hive/go-hive/internal/mcpregistry"
 	"github.com/shark2202/go_hive/go-hive/internal/tools"
 )
@@ -150,6 +151,34 @@ func (s *MCPRegistryStage) Initialize() error {
 
 // Process is a pass-through: the work happened in Initialize.
 func (s *MCPRegistryStage) Process(_ *Context) (Result, error) { return ContinueResult(), nil }
+
+// ToolDefsFromRegistry renders a registry's tools as model-facing tool
+// definitions in registration order. It is the Go shape of upstream's
+// `list(stage.tool_registry.get_tools().values())` when the runtime adopts the
+// stage's registry as the worker tool surface.
+//
+// Parity: framework/host/colony_runtime.py::ColonyRuntime._apply_pipeline_results
+func ToolDefsFromRegistry(registry *tools.ToolRegistry) []llm.ToolDef {
+	if registry == nil {
+		return nil
+	}
+	names := registry.RegisteredNames()
+	defs := make([]llm.ToolDef, 0, len(names))
+	for _, name := range names {
+		tool, ok := registry.GetTool(name)
+		if !ok {
+			continue
+		}
+		defs = append(defs, llm.ToolDef{
+			Name:            tool.Name,
+			Description:     tool.Description,
+			Parameters:      tool.Parameters,
+			ProducesImage:   tool.ProducesImage,
+			ConcurrencySafe: tool.ConcurrencySafe,
+		})
+	}
+	return defs
+}
 
 func (s *MCPRegistryStage) resolveHome() (hivehome.Home, error) {
 	if s.Home != nil {

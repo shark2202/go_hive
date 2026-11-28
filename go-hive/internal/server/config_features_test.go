@@ -2,9 +2,12 @@ package server
 
 import (
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
@@ -234,6 +237,37 @@ func TestPuttingFeaturesValidatesTheBody(t *testing.T) {
 	}
 	if _, err := os.Stat(home.ConfigurationFile()); !os.IsNotExist(err) {
 		t.Fatal("validation failures must not write configuration.json")
+	}
+}
+
+// Parity: framework/server/routes_config.py::handle_update_features
+// (_apply_adaptive_budget_flag reads manager.list_sessions())
+func TestFeatureUpdateHotAppliesThroughAppDepsSessions(t *testing.T) {
+	home := newFeatureHome(t)
+	colony := &stubFeatureColony{value: true, defined: true}
+	app := newAppForTest(t, AppDeps{
+		Home: home,
+		Sessions: func() []FeatureSession {
+			return []FeatureSession{{Colony: colony, ColonyID: "colony_live"}}
+		},
+	})
+
+	request := httptest.NewRequest(http.MethodPut, "/api/config/features",
+		strings.NewReader(`{"features":{"adaptive_tool_budget":false}}`))
+	recorder := httptest.NewRecorder()
+	app.ServeHTTP(recorder, request)
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
+	}
+	body := map[string]any{}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decode body: %v", err)
+	}
+	if body["colonies_applied"] != float64(1) {
+		t.Fatalf("colonies_applied = %#v, want 1 (body %#v)", body["colonies_applied"], body)
+	}
+	if colony.value {
+		t.Fatal("live colony runtime did not receive the hot-applied flag")
 	}
 }
 

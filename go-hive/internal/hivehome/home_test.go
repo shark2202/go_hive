@@ -41,6 +41,23 @@ func TestResolveEnvOverride(t *testing.T) {
 	}
 }
 
+// Parity: framework/config.py::_resolve_hive_home — Path(override).expanduser().
+func TestResolveExpandsTildeLikePython(t *testing.T) {
+	usr, err := os.UserHomeDir()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv(EnvHome, "~/hive-tilde-check")
+	h, err := Resolve()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := filepath.Join(usr, "hive-tilde-check")
+	if h.Root != want {
+		t.Fatalf("root = %s, want %s (a literal ~ directory must not be created)", h.Root, want)
+	}
+}
+
 // Parity-exempt: empty-root validation is a Go guard with no Python counterpart.
 func TestResolveAtRejectsEmpty(t *testing.T) {
 	if _, err := ResolveAt(""); err == nil {

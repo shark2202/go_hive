@@ -32,46 +32,38 @@ func makeOverseerJudgeRuntime(t *testing.T, goal *schemas.Goal, provider *script
 	return runtime
 }
 
-// Parity-exempt: upstream has no overseer-specific criteria test; this pins the
-// Go inheritance seam that arms the overseer's judge from the colony goal.
-func TestOverseerInheritsGoalCriteriaAndRunsJudge(t *testing.T) {
+// Parity: framework/host/colony_runtime.py::ColonyRuntime.start_overseer
+// (queen_spec skip_judge=True, AgentLoop judge=None). A goal with criteria must
+// not re-enable judgment through the removed Go-only inheritance seam.
+func TestOverseerNaturalStopSkipsJudgeDespiteGoalCriteria(t *testing.T) {
 	bus := eventbus.NewEventBus()
 	verdicts := collectEvents(bus, eventbus.EventJudgeVerdict)
-	provider := newScriptedLLM(
-		textResponse("I will coordinate the hive."),
-		textResponse(`{"passes": true, "explanation": "criteria met"}`),
-	)
-	goal := &schemas.Goal{
-		ID:   "hive-goal",
-		Name: "Hive goal",
-		SuccessCriteria: []schemas.SuccessCriterion{{
-			ID:          "c1",
-			Description: "the overseer reports a plan",
-			Weight:      1,
-		}},
-	}
-	runtime := makeOverseerJudgeRuntime(t, goal, provider, bus)
-	if _, err := runtime.StartOverseer(context.Background(), queenTestCaseSpec(), nil); err != nil {
+	provider := newScriptedLLM(textResponse("I will coordinate the hive."))
+	runtime := makeOverseerJudgeRuntime(t, goalWithCriteria(), provider, bus)
+	overseer, err := runtime.StartOverseer(context.Background(), queenTestCaseSpec(), nil)
+	if err != nil {
 		t.Fatalf("StartOverseer: %v", err)
 	}
-	if !eventually(t, 2*time.Second, func() bool { return verdicts.count() == 1 }) {
-		t.Fatalf("judge verdict events = %d, want 1 (provider calls %d)", verdicts.count(), provider.callCount())
+	if !eventually(t, 2*time.Second, func() bool { return provider.callCount() >= 1 }) {
+		t.Fatal("overseer never called the LLM")
 	}
-	event := verdicts.snapshot()[0]
-	if event.StreamID != "overseer" {
-		t.Fatalf("verdict stream = %q, want the overseer stream", event.StreamID)
+	if !eventually(t, 200*time.Millisecond, func() bool { return verdicts.count() == 0 }) {
+		t.Fatalf("judge verdict events = %d, want 0", verdicts.count())
 	}
-	if event.Data["action"] != string(agentloop.JudgeAccept) {
-		t.Fatalf("verdict action = %v, want ACCEPT", event.Data["action"])
+	if provider.callCount() != 1 {
+		t.Fatalf("provider calls = %d, want exactly the overseer turn", provider.callCount())
 	}
-	if provider.callCount() != 2 {
-		t.Fatalf("provider calls = %d, want the overseer turn plus one judge call", provider.callCount())
+	if got := provider.judgeCallCount(); got != 0 {
+		t.Fatalf("judge calls = %d, want 0 on an overseer natural stop", got)
 	}
+	if overseer == nil || overseer.conversation == nil {
+		t.Fatal("overseer conversation = nil")
+	}
+	assertWorkerConversationHasNoJudgeFeedback(t, overseer)
 }
 
-// Parity-exempt: upstream has no overseer-specific criteria test; this pins
-// that an overseer with no spec criteria and a goal with no criteria still
-// costs exactly one model call (the judge stays off).
+// Parity: framework/host/colony_runtime.py::ColonyRuntime.start_overseer
+// (judge=None). No criteria and no goal criteria still costs one model call.
 func TestOverseerWithoutCriteriaNeverCallsJudge(t *testing.T) {
 	bus := eventbus.NewEventBus()
 	verdicts := collectEvents(bus, eventbus.EventJudgeVerdict)

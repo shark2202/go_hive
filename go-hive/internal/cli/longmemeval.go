@@ -106,7 +106,8 @@ func (r *LMERunner) Ask(ctx context.Context, req longmemeval.AskRequest) (longme
 	if err != nil {
 		return longmemeval.Answer{}, fmt.Errorf("queen provider for %s: %w", sessionID, err)
 	}
-	toolbox := builtin.New("")
+	// Same fileops root as a live chat session: the session directory.
+	toolbox := builtin.New(sessionDir)
 	tools := newSessionToolCatalogue(sessionDir, toolbox, home)
 	manager := hiveserver.NewSessionManager()
 	onTurnStart := enableQueenSessionTools(tools, manager, sessionID, record, home)

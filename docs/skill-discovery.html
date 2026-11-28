@@ -52,12 +52,12 @@ figure.diagram figcaption{color:var(--muted);font-size:12px;margin-top:8px}
 <tr><td>3</td><td><code>~/.agents/skills/</code></td><td><code>user</code></td><td>2</td><td>跨客户端标准（Claude Code / Cursor 共用）；user scope 内最低；<code>:133-137</code></td></tr>
 <tr><td>4</td><td><code>configuration.json → external_skills[]</code> 的每个目录</td><td><code>user</code></td><td>2</td><td>外部 agent 生态根（如 <code>~/.claude/skills</code>、<code>~/.codex/skills</code>）；逐项 <code>expandvars</code> + <code>expanduser</code>；不存在只 warning；<code>:139-159</code></td></tr>
 <tr><td>5</td><td><code>$HIVE_HOME/skills/</code>（默认 <code>~/.hive/skills</code>）</td><td><code>user</code></td><td>2</td><td>user scope 内最高（后扫覆盖 3/4）；<code>HIVE_HOME</code> 环境变量优先；<code>:161-169</code></td></tr>
-<tr><td>6</td><td><code>~/.hive/queens/&lt;queen_id&gt;/skills</code></td><td><code>queen_ui</code></td><td>3</td><td>由 SkillsManager / colony runtime 以 <code>ExtraScope</code> 注入；<code>routes_skills.py:147/166/324</code>、<code>colony_runtime.py:716</code></td></tr>
-<tr><td>7</td><td><code>~/.hive/colonies/&lt;name&gt;/skills</code>、<code>~/.hive/colonies/&lt;name&gt;/.hive/skills</code></td><td><code>colony_ui</code></td><td>4</td><td>colony 覆盖 queen；<code>routes_skills.py:150-151</code>、<code>colony_runtime.py:732-739</code></td></tr>
+<tr><td>6</td><td><code>$HIVE_HOME/queens/&lt;queen_id&gt;/skills</code>（默认 <code>~/.hive/queens/...</code>）</td><td><code>queen_ui</code></td><td>3</td><td>由 SkillsManager / colony runtime 以 <code>ExtraScope</code> 注入；<code>QUEENS_DIR = HIVE_HOME/"queens"</code>（<code>config.py:49-50</code>）；<code>routes_skills.py:147/166/324</code>、<code>colony_runtime.py:716</code></td></tr>
+<tr><td>7</td><td><code>$HIVE_HOME/colonies/&lt;name&gt;/skills</code>、<code>$HIVE_HOME/colonies/&lt;name&gt;/.hive/skills</code>（默认 <code>~/.hive/...</code>）</td><td><code>colony_ui</code></td><td>4</td><td>colony 覆盖 queen；<code>COLONIES_DIR = HIVE_HOME/"colonies"</code>（<code>config.py:51</code>）；<code>routes_skills.py:150-151</code>、<code>colony_runtime.py:732-739</code></td></tr>
 <tr><td>8</td><td><code>&lt;project&gt;/.agents/skills/</code></td><td><code>project</code></td><td>5</td><td>项目级跨客户端；<code>:183-186</code></td></tr>
 <tr><td>9</td><td><code>&lt;project&gt;/.hive/skills/</code></td><td><code>project</code></td><td>5</td><td>项目级 Hive 专属、全局最高；<code>:188-192</code></td></tr>
 </tbody></table></div>
-<p class="sub">补充：只有设置了 <code>DiscoveryConfig.project_root</code> 才会扫 8/9；<code>skip_user_scope</code> 关 3–5；<code>skip_framework_scope</code> 关 1–2。extra_scopes 在 user 之后、project 之前扫描（<code>:171-176</code>）。</p>
+<p class="sub">补充：只有设置了 <code>DiscoveryConfig.project_root</code> 才会扫 8/9；<code>skip_user_scope</code> 关 3–5；<code>skip_framework_scope</code> 关 1–2。extra_scopes 在 user 之后、project 之前扫描（<code>:171-176</code>）。8/9 的 <code>&lt;project&gt;</code> 就是这个 <code>project_root</code>，<b>不是 <code>hive serve</code> 的 cwd</b>：Queen DM 与实时 ColonyRuntime 传 <code>None</code>，AgentLoader 传 <code>agent_path</code>，CLI <code>hive skill ...</code> 传 <code>--project-dir</code> 或 cwd。</p>
 </section>
 
 <section id="s02"><h2><span class="num">02</span>优先级与冲突解析</h2>

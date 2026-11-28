@@ -1,6 +1,6 @@
 # API / 仓库表面审计
 
-- 生成时间：2026-11-23T12:34:58+08:00
+- 生成时间：2026-11-24T21:45:08+08:00
 - 根目录：`/Users/mac/hive`
 - 豁免清单：`/Users/mac/hive/go_hive/scripts/surface_audit_allowlist.json`
 - 重新生成：`uv run python go_hive/scripts/surface_audit.py --write-report`
@@ -14,7 +14,7 @@
 | 项 | 数量 |
 | --- | ---: |
 | 前端路由（去重） | 165 |
-| Go 已注册路由 | 225 |
+| Go 已注册路由 | 226 |
 | Python 上游路由 | 212 |
 | 前端 → Go 缺失 | 0（待修 0） |
 | Python → Go 缺失 | 0（待修 0） |

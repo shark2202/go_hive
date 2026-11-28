@@ -123,7 +123,7 @@ Guarded by: `internal/toolgolden` (canonical rules),
 | `credentials_list` | 未移植 | credentials is a Python-only model tool; Go answers with the explicit not_implemented envelope. |
 | `credentials_usage` | 未移植 | see credentials_list. |
 | `sentinel_setup` | 未移植 → 已移植（记录为抓取时状态） | 抓取时点 Go 无执行器，返回 not_implemented 信封（见 `e2e-assets/tool-output/`，未重抓）。2026-11-22 sentinel-setup lane 已实装（`internal/sentinel/sentinel_tool.go` + `internal/cli/sentinel_setup_tool.go`），help 文案与 Python 记录逐字一致（`SentinelSetupHelpMatchesRecordedPythonPayload` 钉住）。 |
-| `collect_result` | 未移植 | Go has no background tool handles; the envelope points at terminal_job_logs instead. |
+| `collect_result` | 已移植（2026-11-25） | The agent loop runs `LoopConfig.BackgroundTools` asynchronously and answers `collect_result` from its `bg_*` handle registry (waits for the work, `{"status":"pending"}` on a new message). The catalogue-level envelope is only reachable without a loop in the path and says so. |
 | `suggest_colony` | 未移植 | suggest_colony drives the colony popup; Go answers with the explicit not_implemented envelope. |
 | `unloaded_tool_call` | 工具集 | excel_read does not exist in Python ("Unknown tool ... Did you mean 'csv_read'?"); on Go it is a deferred name and the loop refuses it with the select: prompt. Both are actionable is_error envelopes. |
 | `write_file_escape` | 例外 | the Python file tools resolve any path the process can reach (their only ceiling is a credential deny list), while the Go builtin toolbox is rooted at the session workspace and refuses escapes. Both answer plain text (is_error=false); the semantics differ by design. |

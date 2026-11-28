@@ -58,7 +58,7 @@ func TestGitHubListIssuesFollowsLinkHeaderPages(t *testing.T) {
 	if err != nil {
 		t.Fatalf("github_list_issues: %v", err)
 	}
-	issues, ok := result.([]any)
+	issues, ok := result.(map[string]any)["data"].([]any)
 	if !ok || len(issues) != 3 {
 		t.Fatalf("merged issues = %v", result)
 	}
@@ -88,7 +88,7 @@ func TestGitHubListStargazersStopsWithoutLinkHeader(t *testing.T) {
 	if err != nil {
 		t.Fatalf("github_list_stargazers: %v", err)
 	}
-	users, ok := result.([]any)
+	users, ok := result.(map[string]any)["data"].([]any)
 	if !ok || len(users) != 1 {
 		t.Fatalf("stargazers = %v", result)
 	}
@@ -120,8 +120,8 @@ func TestStripeListCustomersFollowsLastItemId(t *testing.T) {
 	if !ok || len(customers) != 3 {
 		t.Fatalf("merged customers = %v", result["customers"])
 	}
-	if _, present := result["has_more"]; present {
-		t.Fatalf("has_more still advertised after the walk: %v", result)
+	if result["has_more"] != false {
+		t.Fatalf("has_more after the walk = %v, want false", result["has_more"])
 	}
 	if recorder.count() != 2 {
 		t.Fatalf("stripe requests = %d, want 2 (has_more=false stops without a third call)", recorder.count())

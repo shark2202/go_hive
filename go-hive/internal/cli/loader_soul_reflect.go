@@ -37,7 +37,7 @@ func newSoulReflectFor(home hivehome.Home, model string) func(string, *soulstore
 			// recording a run that never happened.
 			return fmt.Errorf("soul: queen %q has no chat sessions to read", queenID)
 		}
-		completer, err := resolveChatProvider(home, model)
+		completer, err := soulModelFor(home, model)(queenID, cfg)
 		if err != nil {
 			return err
 		}

@@ -904,6 +904,90 @@ func TestTheRunnerCatchesUpAtStartupAndStops(t *testing.T) {
 	}
 }
 
+// A29: upstream's scheduler sleeps first_after_s (120 s) before its first
+// check so a restart does not reflect on top of a booting server. The port's
+// Run must honour a settle delay and still stop cleanly while waiting.
+//
+// Parity: framework/agents/queen/soul_reflection.py::scheduler
+func TestTheRunnerSettlesBeforeItsFirstPassAndStops(t *testing.T) {
+	home := newReflectionTestHome(t)
+	home.set(t, map[string]any{"mode": "auto"})
+	home.session(t, "s_group", reflectionGroupEvents(), "Night owls", "x")
+	built := make(chan string, 8)
+	runner := NewDailyRunner(DailyRunnerOptions{
+		HomeRoot:  home.root,
+		QueensDir: home.queensDir,
+		Config:    func() map[string]any { return home.config(t) },
+		BuildCompleter: func(queenID string, _ *SoulConfig) (llm.Completer, error) {
+			select {
+			case built <- queenID:
+			default:
+			}
+			return newReflectionTestLLM(), nil
+		},
+		Log: func(string, ...any) {},
+		Now: reflectionTestNow,
+	})
+
+	stop := make(chan struct{})
+	returned := make(chan struct{})
+	go func() {
+		runner.Run(stop, time.Hour, 200*time.Millisecond)
+		close(returned)
+	}()
+
+	select {
+	case queenID := <-built:
+		t.Fatalf("first pass ran during the settle delay (queen %s)", queenID)
+	case <-time.After(50 * time.Millisecond):
+	}
+	select {
+	case <-built:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the first pass never ran after the settle delay")
+	}
+
+	close(stop)
+	select {
+	case <-returned:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the runner did not stop")
+	}
+}
+
+// A29: a stop during the settle delay returns without a pass, as upstream's
+// cancelled scheduler sleep does.
+// Parity-exempt: Go-only reflection scheduler guard; no upstream runner symbol.
+func TestTheRunnerStopsWhileWaitingForItsFirstPass(t *testing.T) {
+	built := make(chan string, 1)
+	runner := NewDailyRunner(DailyRunnerOptions{
+		HomeRoot:  t.TempDir(),
+		QueensDir: t.TempDir(),
+		Config:    func() map[string]any { return map[string]any{} },
+		BuildCompleter: func(queenID string, _ *SoulConfig) (llm.Completer, error) {
+			built <- queenID
+			return newReflectionTestLLM(), nil
+		},
+		Log: func(string, ...any) {},
+		Now: reflectionTestNow,
+	})
+	stop := make(chan struct{})
+	returned := make(chan struct{})
+	go func() {
+		runner.Run(stop, time.Hour, time.Hour)
+		close(returned)
+	}()
+	close(stop)
+	select {
+	case <-returned:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the runner did not stop while waiting for its first pass")
+	}
+	if len(built) != 0 {
+		t.Fatal("a pass ran after the runner was stopped during the settle delay")
+	}
+}
+
 // Parity-exempt: upstream's is_reflecting guards the route; the Go port's
 // reflection must report itself running while the model is answering.
 func TestIsReflectingDuringARun(t *testing.T) {

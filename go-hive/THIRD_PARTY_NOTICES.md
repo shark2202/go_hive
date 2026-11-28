@@ -6,15 +6,16 @@ can be found. It records license names and links only; it does not reproduce
 license texts.
 
 Checked on 2026-11-19 against `go.mod` / `go.sum` and
-`core/frontend/package.json` / `core/frontend/package-lock.json`.
+`core/frontend/package.json` / `core/frontend/package-lock.json`. Section 1 is
+regenerated from the module graph by `go_hive/scripts/dep_inventory.py`; run
+`make deps-check` in `go_hive/go-hive` to verify, `make deps-update` to refresh.
 
 ## 1. Go module dependencies (`go_hive/go-hive`)
 
-Source of truth: `go list -m all` run in `go_hive/go-hive` with Go 1.26.5.
-That command returns 29 modules: the main module `github.com/shark2202/go_hive/go-hive`
-plus the 28 external modules below. License identifiers were read from each
-module's own `LICENSE` file in the Go module cache after `go mod download`,
-not inferred from the module path.
+Source of truth: `go list -m -json all` plus each module's own `LICENSE` /
+`COPYING` / `NOTICE` file in the Go module cache (never inferred from the
+module path). The generated block below is authoritative; the counts it prints
+replace the older hand-maintained numbers.
 
 Role legend:
 
@@ -27,39 +28,59 @@ Role legend:
   test dependencies. Presence here does not by itself mean the code is linked
   into a released binary.
 
-| Module | Version | License | Role | Source |
-| --- | --- | --- | --- | --- |
-| github.com/dustin/go-humanize | v1.0.1 | MIT | Indirect | https://github.com/dustin/go-humanize |
-| github.com/ebitengine/purego | v0.11.3 | Apache-2.0 | Direct | https://github.com/ebitengine/purego |
-| github.com/google/pprof | v0.0.0-20260802141513-ef3492d7dac3 | Apache-2.0 | Build list only | https://github.com/google/pprof |
-| github.com/google/uuid | v1.6.0 | BSD-3-Clause | Indirect | https://github.com/google/uuid |
-| github.com/hashicorp/golang-lru/v2 | v2.0.7 | MPL-2.0 | Build list only | https://github.com/hashicorp/golang-lru |
-| github.com/mattn/go-isatty | v0.0.24 | MIT | Direct | https://github.com/mattn/go-isatty |
-| github.com/ncruces/go-strftime | v1.0.0 | MIT | Indirect | https://github.com/ncruces/go-strftime |
-| github.com/remyoudompheng/bigfft | v0.0.0-20230129092748-24d4a6f8daec | BSD-3-Clause | Indirect | https://github.com/remyoudompheng/bigfft |
-| golang.org/x/mod | v0.41.0 | BSD-3-Clause | Build list only | https://pkg.go.dev/golang.org/x/mod |
-| golang.org/x/sync | v0.23.0 | BSD-3-Clause | Build list only | https://pkg.go.dev/golang.org/x/sync |
-| golang.org/x/sys | v0.48.0 | BSD-3-Clause | Indirect | https://pkg.go.dev/golang.org/x/sys |
-| golang.org/x/tools | v0.50.0 | BSD-3-Clause | Build list only | https://pkg.go.dev/golang.org/x/tools |
-| gopkg.in/check.v1 | v0.0.0-20161208181325-20d25e280405 | BSD-2-Clause | Build list only | https://github.com/go-check/check |
-| gopkg.in/yaml.v3 | v3.0.1 | MIT AND Apache-2.0 (file-level split) | Direct | https://github.com/go-yaml/yaml/tree/v3 |
-| modernc.org/cc/v4 | v4.29.7 | BSD-3-Clause | Build list only | https://gitlab.com/cznic/cc |
-| modernc.org/ccgo/v4 | v4.36.1 | BSD-3-Clause | Build list only | https://gitlab.com/cznic/ccgo |
-| modernc.org/fileutil | v1.4.0 | BSD-3-Clause | Build list only | https://gitlab.com/cznic/fileutil |
-| modernc.org/gc/v2 | v2.6.5 | BSD-3-Clause | Build list only | https://gitlab.com/cznic/gc |
-| modernc.org/gc/v3 | v3.1.5 | BSD-3-Clause | Build list only | https://gitlab.com/cznic/gc |
-| modernc.org/goabi0 | v0.2.0 | BSD-3-Clause | Build list only | https://gitlab.com/cznic/goabi0 |
-| modernc.org/libc | v1.77.1 | BSD-3-Clause | Indirect | https://gitlab.com/cznic/libc |
-| modernc.org/mathutil | v1.7.1 | BSD-3-Clause | Indirect | https://gitlab.com/cznic/mathutil |
-| modernc.org/memory | v1.12.1 | BSD-3-Clause | Indirect | https://gitlab.com/cznic/memory |
-| modernc.org/opt | v0.2.0 | BSD-3-Clause | Build list only | https://gitlab.com/cznic/opt |
-| modernc.org/sortutil | v1.2.1 | BSD-3-Clause | Build list only | https://gitlab.com/cznic/sortutil |
-| modernc.org/sqlite | v1.60.1 | BSD-3-Clause | Direct | https://gitlab.com/cznic/sqlite |
-| modernc.org/strutil | v1.2.1 | BSD-3-Clause | Build list only | https://gitlab.com/cznic/strutil |
-| modernc.org/token | v1.1.0 | BSD-3-Clause | Build list only | https://gitlab.com/cznic/token |
+<!-- BEGIN GENERATED:third-party-notices -->
 
-License count: Apache-2.0 x2, BSD-2-Clause x1, BSD-3-Clause x20, MIT x3,
-MPL-2.0 x1, MIT AND Apache-2.0 x1 (28 modules total).
+<!-- 本文件由 `go_hive/scripts/dep_inventory.py` 生成，请勿手工编辑。 -->
+
+Go module graph as generated from `go.mod` / `go.sum` under `go version go1.26.11 darwin/arm64`: 39 external modules, 19 in the compile closure.
+
+| Module | Version | Licence | Role | Source |
+| --- | --- | --- | --- | --- |
+| `github.com/dustin/go-humanize` | `v1.0.1` | MIT | indirect | [github.com/dustin/go-humanize](https://pkg.go.dev/github.com/dustin/go-humanize@v1.0.1) |
+| `github.com/ebitengine/purego` | `v0.11.3` | Apache-2.0 | direct | [github.com/ebitengine/purego](https://pkg.go.dev/github.com/ebitengine/purego@v0.11.3) |
+| `github.com/go-rod/rod` | `v0.116.2` | MIT | direct | [github.com/go-rod/rod](https://pkg.go.dev/github.com/go-rod/rod@v0.116.2) |
+| `github.com/go-rod/stealth` | `v0.4.9` | MIT | direct | [github.com/go-rod/stealth](https://pkg.go.dev/github.com/go-rod/stealth@v0.4.9) |
+| `github.com/google/pprof` | `v0.0.0-20260802141513-ef3492d7dac3` | Apache-2.0 | build list only | [github.com/google/pprof](https://pkg.go.dev/github.com/google/pprof@v0.0.0-20260802141513-ef3492d7dac3) |
+| `github.com/google/uuid` | `v1.6.0` | BSD-3-Clause | indirect | [github.com/google/uuid](https://pkg.go.dev/github.com/google/uuid@v1.6.0) |
+| `github.com/hashicorp/golang-lru/v2` | `v2.0.7` | MPL-2.0 | build list only | [github.com/hashicorp/golang-lru/v2](https://pkg.go.dev/github.com/hashicorp/golang-lru/v2@v2.0.7) |
+| `github.com/kr/pretty` | `v0.1.0` | UNVERIFIED | build list only | [github.com/kr/pretty](https://pkg.go.dev/github.com/kr/pretty@v0.1.0) |
+| `github.com/mattn/go-isatty` | `v0.0.24` | MIT | direct | [github.com/mattn/go-isatty](https://pkg.go.dev/github.com/mattn/go-isatty@v0.0.24) |
+| `github.com/ncruces/go-strftime` | `v1.0.0` | MIT | indirect | [github.com/ncruces/go-strftime](https://pkg.go.dev/github.com/ncruces/go-strftime@v1.0.0) |
+| `github.com/odvcencio/gotreesitter` | `v0.57.0` | MIT | direct | [github.com/odvcencio/gotreesitter](https://pkg.go.dev/github.com/odvcencio/gotreesitter@v0.57.0) |
+| `github.com/remyoudompheng/bigfft` | `v0.0.0-20230129092748-24d4a6f8daec` | BSD-3-Clause | indirect | [github.com/remyoudompheng/bigfft](https://pkg.go.dev/github.com/remyoudompheng/bigfft@v0.0.0-20230129092748-24d4a6f8daec) |
+| `github.com/ysmood/fetchup` | `v0.2.3` | MIT | indirect | [github.com/ysmood/fetchup](https://pkg.go.dev/github.com/ysmood/fetchup@v0.2.3) |
+| `github.com/ysmood/goob` | `v0.4.0` | MIT | indirect | [github.com/ysmood/goob](https://pkg.go.dev/github.com/ysmood/goob@v0.4.0) |
+| `github.com/ysmood/gop` | `v0.2.0` | UNVERIFIED | build list only | [github.com/ysmood/gop](https://pkg.go.dev/github.com/ysmood/gop@v0.2.0) |
+| `github.com/ysmood/got` | `v0.40.0` | MIT | indirect | [github.com/ysmood/got](https://pkg.go.dev/github.com/ysmood/got@v0.40.0) |
+| `github.com/ysmood/gotrace` | `v0.6.0` | UNVERIFIED | build list only | [github.com/ysmood/gotrace](https://pkg.go.dev/github.com/ysmood/gotrace@v0.6.0) |
+| `github.com/ysmood/gson` | `v0.7.3` | MIT | indirect | [github.com/ysmood/gson](https://pkg.go.dev/github.com/ysmood/gson@v0.7.3) |
+| `github.com/ysmood/leakless` | `v0.9.0` | MIT | indirect | [github.com/ysmood/leakless](https://pkg.go.dev/github.com/ysmood/leakless@v0.9.0) |
+| `golang.org/x/mod` | `v0.41.0` | BSD-3-Clause | build list only | [golang.org/x/mod](https://pkg.go.dev/golang.org/x/mod@v0.41.0) |
+| `golang.org/x/sync` | `v0.23.0` | BSD-3-Clause | build list only | [golang.org/x/sync](https://pkg.go.dev/golang.org/x/sync@v0.23.0) |
+| `golang.org/x/sys` | `v0.48.0` | BSD-3-Clause | indirect | [golang.org/x/sys](https://pkg.go.dev/golang.org/x/sys@v0.48.0) |
+| `golang.org/x/tools` | `v0.50.0` | BSD-3-Clause | build list only | [golang.org/x/tools](https://pkg.go.dev/golang.org/x/tools@v0.50.0) |
+| `gopkg.in/check.v1` | `v1.0.0-20180628173108-788fd7840127` | UNVERIFIED | build list only | [gopkg.in/check.v1](https://pkg.go.dev/gopkg.in/check.v1@v1.0.0-20180628173108-788fd7840127) |
+| `gopkg.in/yaml.v3` | `v3.0.1` | MIT AND Apache-2.0 | direct | [gopkg.in/yaml.v3](https://pkg.go.dev/gopkg.in/yaml.v3@v3.0.1) |
+| `modernc.org/cc/v4` | `v4.29.7` | BSD-3-Clause | build list only | [modernc.org/cc/v4](https://pkg.go.dev/modernc.org/cc/v4@v4.29.7) |
+| `modernc.org/ccgo/v4` | `v4.36.1` | BSD-3-Clause | build list only | [modernc.org/ccgo/v4](https://pkg.go.dev/modernc.org/ccgo/v4@v4.36.1) |
+| `modernc.org/fileutil` | `v1.4.0` | BSD-3-Clause | build list only | [modernc.org/fileutil](https://pkg.go.dev/modernc.org/fileutil@v1.4.0) |
+| `modernc.org/gc/v2` | `v2.6.5` | BSD-3-Clause | build list only | [modernc.org/gc/v2](https://pkg.go.dev/modernc.org/gc/v2@v2.6.5) |
+| `modernc.org/gc/v3` | `v3.1.5` | BSD-3-Clause | build list only | [modernc.org/gc/v3](https://pkg.go.dev/modernc.org/gc/v3@v3.1.5) |
+| `modernc.org/goabi0` | `v0.2.0` | BSD-3-Clause | build list only | [modernc.org/goabi0](https://pkg.go.dev/modernc.org/goabi0@v0.2.0) |
+| `modernc.org/libc` | `v1.77.1` | BSD-3-Clause | indirect | [modernc.org/libc](https://pkg.go.dev/modernc.org/libc@v1.77.1) |
+| `modernc.org/mathutil` | `v1.7.1` | BSD-3-Clause | indirect | [modernc.org/mathutil](https://pkg.go.dev/modernc.org/mathutil@v1.7.1) |
+| `modernc.org/memory` | `v1.12.1` | BSD-3-Clause | indirect | [modernc.org/memory](https://pkg.go.dev/modernc.org/memory@v1.12.1) |
+| `modernc.org/opt` | `v0.2.0` | BSD-3-Clause | build list only | [modernc.org/opt](https://pkg.go.dev/modernc.org/opt@v0.2.0) |
+| `modernc.org/sortutil` | `v1.2.1` | BSD-3-Clause | build list only | [modernc.org/sortutil](https://pkg.go.dev/modernc.org/sortutil@v1.2.1) |
+| `modernc.org/sqlite` | `v1.60.1` | BSD-3-Clause | direct | [modernc.org/sqlite](https://pkg.go.dev/modernc.org/sqlite@v1.60.1) |
+| `modernc.org/strutil` | `v1.2.1` | BSD-3-Clause | build list only | [modernc.org/strutil](https://pkg.go.dev/modernc.org/strutil@v1.2.1) |
+| `modernc.org/token` | `v1.1.0` | BSD-3-Clause | build list only | [modernc.org/token](https://pkg.go.dev/modernc.org/token@v1.1.0) |
+
+Licence count: Apache-2.0 x2, BSD-3-Clause x20, MIT x11, MIT AND Apache-2.0 x1, MPL-2.0 x1, UNVERIFIED x4 (39 modules total).
+
+Licence identifiers were read from each module's own `LICENSE` / `COPYING` / `NOTICE` file in the Go module cache. `UNVERIFIED` means the module was not present in the cache used to generate this table; it must be checked before a release that links it.
+
+<!-- END GENERATED:third-party-notices -->
 
 ### Notes on embedded third-party code
 
@@ -162,7 +183,8 @@ static assets (`tools/src/chart_tools/static/`); see
 
 ```text
 $ cd go_hive/go-hive && go list -m all | wc -l
-29                     # 1 main module + 28 external modules listed above
+40                     # 1 main module + 39 external modules listed above
+$ make deps-check      # regenerates section 1 and compares; exit 0 = current
 $ shasum -a 256 LICENSE go_hive/go-hive/LICENSE
 2cda9484e54c0e82b0f5ea2b5ba372f5875ed260234718c94e70b622d59748de  LICENSE
 2cda9484e54c0e82b0f5ea2b5ba372f5875ed260234718c94e70b622d59748de  go_hive/go-hive/LICENSE

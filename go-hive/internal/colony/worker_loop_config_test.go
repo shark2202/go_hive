@@ -36,6 +36,19 @@ func TestBuildWorkerLoopConfigNoOverridesReturnsWorkerProfile(t *testing.T) {
 	if cfg.ToolCallBudget != 30 {
 		t.Errorf("ToolCallBudget = %d, want 30", cfg.ToolCallBudget)
 	}
+	// A26: the worker profile keeps upstream's response n-gram stall guard.
+	// Python's worker LoopConfig uses stall_detection_threshold=3
+	// (framework/agent_loop/internals/types.py::LoopConfig); the port used to
+	// pin 999, silently disabling the guard for every worker.
+	//
+	// Parity: framework/agent_loop/internals/types.py::LoopConfig.stall_detection_threshold
+	if cfg.StallDetectionThreshold != agentloop.DefaultStallDetectionThreshold {
+		t.Errorf("StallDetectionThreshold = %d, want the upstream default %d",
+			cfg.StallDetectionThreshold, agentloop.DefaultStallDetectionThreshold)
+	}
+	if cfg.StallDetectionThreshold != 3 {
+		t.Errorf("StallDetectionThreshold = %d, want 3", cfg.StallDetectionThreshold)
+	}
 	if cfg.ToolCallHardMultiple != 3 {
 		t.Errorf("ToolCallHardMultiple = %d, want 3", cfg.ToolCallHardMultiple)
 	}

@@ -41,7 +41,6 @@ type sizeWaiver struct {
 var fileWaivers = map[string]sizeWaiver{
 	"internal/tools/integrations/catalog_gen.go": {2074, "生成文件（gen_catalog.py 产出，DO NOT EDIT）：工具目录表的行数由上游 @mcp.tool 数量决定，不应手改"},
 	"internal/credentials/specs_gen.go":          {2523, "生成文件（gen_credential_specs.py 产出，DO NOT EDIT）：85 个模块的凭据规格表，行数由上游注册表决定"},
-	"internal/orchestrator/safe_eval.go":         {2734, "安全求值器的运算符与内建函数分派表集中在一个文件：表驱动结构改动一处就要整批对照，拆分的收益低于保持单表可审"},
 	"internal/mcpregistry/cli.go":                {1746, "MCP 注册表子命令（import/export/list/…）共享一套 flag 解析与错误输出；先冻结规模，拆分留待命令族稳定"},
 	"internal/cli/skill.go":                      {1601, "skill 子命令族与安装/测试流程集中在一个文件；拆分列入后续重构，上限冻结"},
 	"internal/agentloop/conversation.go":         {1549, "会话转换与消息编排集中在一个文件，循环核心语义都在这；拆分需先稳定接口，暂冻结规模"},

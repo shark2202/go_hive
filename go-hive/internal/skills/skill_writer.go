@@ -116,6 +116,29 @@ func skillFileEntries(raw any) ([]any, bool) {
 			out[i] = entry
 		}
 		return out, true
+	case string:
+		// Python checks `if not raw` before the isinstance(list) guard, so
+		// every falsy value ("", 0, false, {}, null, []) means "no files".
+		// An empty string is the shape a model sends for an omitted list.
+		if typed == "" {
+			return nil, true
+		}
+		return nil, false
+	case bool:
+		if !typed {
+			return nil, true
+		}
+		return nil, false
+	case float64:
+		if typed == 0 {
+			return nil, true
+		}
+		return nil, false
+	case map[string]any:
+		if len(typed) == 0 {
+			return nil, true
+		}
+		return nil, false
 	default:
 		return nil, false
 	}

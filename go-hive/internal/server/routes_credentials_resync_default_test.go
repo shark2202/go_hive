@@ -1,10 +1,9 @@
 package server
 
 // Production wiring for POST /api/credentials/resync: with a caller-supplied
-// Home and no explicit Resync hook, the local default is armed so the route no
-// longer answers 500. Upstream's Aden token fetch has no Go counterpart yet
-// (separate backlog item); the local default re-reads the bootstrap keys and
-// re-runs the store → env bridge.
+// Home and no explicit Resync hook, the default is armed so the route no
+// longer answers 500. With ADEN_API_KEY set it force-fetches Aden tokens; the
+// tests inject a fake client so no network is involved.
 
 import (
 	"net/http"
@@ -18,13 +17,13 @@ import (
 
 // Parity: core/framework/server/routes_credentials.py::handle_resync_credentials
 func TestCredentialRoutesResyncDefaultHookArmed(t *testing.T) {
-	home := hivehome.Home{Root: t.TempDir()}
-	t.Setenv("HIVE_HOME", home.Root)
-	t.Setenv("HIVE_CREDENTIAL_KEY", "")
+	home, client := newResyncAdenHome(t)
 	t.Setenv(credentials.AdenEnvVar, "aden-key")
+	t.Setenv("GITHUB_TOKEN", "")
 	mux := credentialRouteTestMux(CredentialRouteDeps{
-		Home:     home,
-		Accounts: func() map[string][]map[string]any { return map[string][]map[string]any{} },
+		Home:       home,
+		AdenClient: client,
+		Accounts:   func() map[string][]map[string]any { return map[string][]map[string]any{} },
 	})
 	recorder, body := doSessionJSON(t, mux, http.MethodPost, "/api/credentials/resync", "")
 	if recorder.Code != http.StatusOK {

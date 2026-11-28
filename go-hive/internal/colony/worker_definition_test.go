@@ -1,12 +1,36 @@
 package colony
 
 import (
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
 )
+
+// A24: the worker system prompt is upstream's text verbatim. The golden is
+// captured from core/framework/agents/queen/worker_definition.py (the module
+// constant WORKER_SYSTEM_PROMPT), so a Go-side editorial addition — e.g. the
+// old hive-cred install sentence — fails here instead of silently drifting
+// from the prompt the Python worker runs with.
+//
+// Regenerate after an upstream prompt change:
+//
+//	uv run python -c "from framework.agents.queen.worker_definition import WORKER_SYSTEM_PROMPT as p; open('go_hive/go-hive/internal/colony/testdata/worker_system_prompt.txt','w').write(p)"
+//
+// Parity: core/framework/agents/queen/worker_definition.py::WORKER_SYSTEM_PROMPT
+func TestWorkerSystemPromptMatchesUpstreamVerbatim(t *testing.T) {
+	golden, err := os.ReadFile(filepath.Join("testdata", "worker_system_prompt.txt"))
+	if err != nil {
+		t.Fatalf("read prompt golden: %v", err)
+	}
+	if WorkerSystemPrompt != string(golden) {
+		t.Fatalf("WorkerSystemPrompt diverged from upstream (go %d bytes, golden %d bytes)",
+			len(WorkerSystemPrompt), len(golden))
+	}
+}
 
 // Parity: core/tests/test_worker_definition.py::test_worker_goal_is_queen_worker
 func TestWorkerGoalIsQueenWorker(t *testing.T) {

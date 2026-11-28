@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"io"
+	"math/big"
 	"net/http"
 	"reflect"
 	"strings"
@@ -33,18 +34,34 @@ func assertWebhookPayloadValue(t *testing.T, got, want any, context string) {
 func TestWebhookServerKeepsAnyJSONPayloadParity(t *testing.T) {
 	// Upstream parses `payload = json.loads(body) if body else {}`: any JSON
 	// type is kept verbatim (array/number/string/bool/null/object), and only a
-	// decode failure falls back to {"raw_body": ...}.
+	// decode failure falls back to {"raw_body": ...}. json.loads types numbers
+	// like Python: integer literals stay int, fractions/exponents become float.
+	bigInteger := mustWebhookBigInt(t, "123456789012345678901234567890")
 	cases := []struct {
 		name string
 		body string
 		want any
 	}{
-		{"object", `{"k":"v","n":2}`, map[string]any{"k": "v", "n": float64(2)}},
-		{"array", `[1,"two",true,null]`, []any{float64(1), "two", true, nil}},
-		{"number", `42`, float64(42)},
+		{"object", `{"k":"v","n":2}`, map[string]any{"k": "v", "n": int64(2)}},
+		{"array", `[1,"two",true,null]`, []any{int64(1), "two", true, nil}},
+		{"number", `42`, int64(42)},
 		{"string", `"hello"`, "hello"},
 		{"bool", `false`, false},
 		{"null", `null`, nil},
+		{
+			"numbers keep int vs float types",
+			`{"int": 42, "neg": -9, "zero": -0, "float": 2.5, "whole_float": 2.0, "exponent": 1e3}`,
+			map[string]any{
+				"int":         int64(42),
+				"neg":         int64(-9),
+				"zero":        int64(0),
+				"float":       2.5,
+				"whole_float": float64(2),
+				"exponent":    float64(1000),
+			},
+		},
+		{"array numbers keep int vs float types", `[1, 1.5, 1e2]`, []any{int64(1), 1.5, float64(100)}},
+		{"integer beyond int64 stays exact", `123456789012345678901234567890`, bigInteger},
 		{"non json raw_body", `not json`, map[string]any{"raw_body": "not json"}},
 		{"empty body", ``, map[string]any{}},
 	}
@@ -148,6 +165,48 @@ func TestWebhookTriggerInjectsPayloadVerbatimParity(t *testing.T) {
 			t.Fatalf("payload = %#v (%T), want empty map", got, got)
 		}
 	})
+}
+
+func mustWebhookBigInt(t *testing.T, text string) *big.Int {
+	t.Helper()
+	value, ok := new(big.Int).SetString(text, 10)
+	if !ok {
+		t.Fatalf("big integer %q did not parse", text)
+	}
+	return value
+}
+
+// Parity: framework/host/webhook_server.py::WebhookServer._handle_request
+// (`payload = json.loads(body) if body else {}`). Number typing and the
+// trailing-content rejection are asserted at the parser boundary so the
+// json.Unmarshal -> UseNumber switch cannot regress them.
+func TestParseWebhookBodyNumberTypingParity(t *testing.T) {
+	cases := []struct {
+		name string
+		body string
+		want any
+	}{
+		{"integer", `42`, int64(42)},
+		{"negative integer", `-7`, int64(-7)},
+		{"negative zero stays integer", `-0`, int64(0)},
+		{"decimal is float", `2.5`, 2.5},
+		{"whole decimal is float", `2.0`, float64(2)},
+		{"lowercase exponent is float", `1e3`, float64(1000)},
+		{"uppercase exponent is float", `1E3`, float64(1000)},
+		{"fraction exponent is float", `1.5e2`, 150.0},
+		{"integer beyond int64 stays exact", `123456789012345678901234567890`, mustWebhookBigInt(t, "123456789012345678901234567890")},
+		{"empty body is empty object", ``, map[string]any{}},
+		{"whitespace body is raw", `  `, map[string]any{"raw_body": "  "}},
+		{"trailing garbage is raw", `{"a":1} trailing`, map[string]any{"raw_body": `{"a":1} trailing`}},
+		{"second JSON value is raw", `{"a":1}{"b":2}`, map[string]any{"raw_body": `{"a":1}{"b":2}`}},
+		{"surrounding whitespace is fine", " \n\t42 ", int64(42)},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := parseWebhookBody([]byte(tc.body))
+			assertWebhookPayloadValue(t, got, tc.want, "parseWebhookBody("+tc.body+")")
+		})
+	}
 }
 
 func startWebhookTriggerForTest(t *testing.T, bus *eventbus.EventBus) (*Session, *fakeQueenNode) {

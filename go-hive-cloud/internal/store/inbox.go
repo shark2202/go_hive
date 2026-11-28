@@ -128,6 +128,7 @@ type Reply struct {
 	CorrelationToken string `json:"correlation_token"`
 	RuntimeID        string `json:"runtime_id"`
 	SessionID        string `json:"session_id"`
+	ColonyID         string `json:"colony_id"`
 	Text             string `json:"text"`
 	CreatedAt        string `json:"created_at"`
 }
@@ -159,6 +160,7 @@ VALUES (?, ?, ?, ?, ?, ?, NULL)`,
 		CorrelationToken: message.CorrelationToken,
 		RuntimeID:        message.RuntimeID,
 		SessionID:        message.SessionID,
+		ColonyID:         message.ColonyID,
 		Text:             text,
 		CreatedAt:        now,
 	}, nil
@@ -171,9 +173,12 @@ func (t *Team) PendingReplies(ctx context.Context, runtimeID string, limit int) 
 		limit = 100
 	}
 	rows, err := t.QueryRaw(ctx, `
-SELECT id, message_id, correlation_token, runtime_id, session_id, text, created_at
-FROM inbox_replies WHERE runtime_id = ? AND delivered_at IS NULL
-ORDER BY id LIMIT ?`, runtimeID, limit)
+SELECT r.id, r.message_id, r.correlation_token, r.runtime_id, r.session_id,
+       COALESCE(m.colony_id, '') AS colony_id, r.text, r.created_at
+FROM inbox_replies r
+LEFT JOIN inbox_messages m ON m.id = r.message_id
+WHERE r.runtime_id = ? AND r.delivered_at IS NULL
+ORDER BY r.id LIMIT ?`, runtimeID, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -185,6 +190,7 @@ ORDER BY id LIMIT ?`, runtimeID, limit)
 			CorrelationToken: asString(row["correlation_token"]),
 			RuntimeID:        asString(row["runtime_id"]),
 			SessionID:        asString(row["session_id"]),
+			ColonyID:         asString(row["colony_id"]),
 			Text:             asString(row["text"]),
 			CreatedAt:        asString(row["created_at"]),
 		})

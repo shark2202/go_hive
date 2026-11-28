@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>go_hive · 原生 HTTP 工具使用与配置</title>
+<style>
+:root{--bg:#0b0f14;--panel:#121923;--panel2:#0f1620;--line:#233041;--text:#e6edf3;--muted:#8b9bb0;--accent:#f0b429;--accent2:#58a6ff;--ok:#3fb950;--warn:#d29922;--bad:#f85149;--code:#0a0e13}
+*{box-sizing:border-box} html{scroll-behavior:smooth} body{margin:0;background:linear-gradient(180deg,#0b0f14,#0d131b 55%,#0b0f14);color:var(--text);font:14.5px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;overflow-wrap:anywhere}
+a{color:var(--accent2);text-decoration:none} a:hover{text-decoration:underline}
+.wrap{max-width:1220px;margin:0 auto;padding:44px 26px 80px}
+header{border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:28px}
+.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+h1{font-size:30px;line-height:1.25;margin:10px 0;letter-spacing:-.02em} h1 span{color:var(--accent)}
+.lede{color:var(--muted);max-width:1020px;font-size:15px} .meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:15px;color:var(--muted);font-size:12.5px} .meta b{color:var(--text)}
+.toc{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px} .toc a{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:3px 10px;color:var(--muted);background:var(--panel2)} .toc a:hover{color:var(--accent2);border-color:#2c4a6e}
+section{margin:38px 0} h2{font-size:22px;margin:0 0 8px} h2 .num{color:var(--accent);font-size:14px;margin-right:8px} h3{font-size:15.5px;margin:18px 0 8px;color:#cfdae6}
+p{color:#c6d2df;margin:8px 0} .sub{color:var(--muted);font-size:12.5px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:14px 0;background:var(--panel2);max-width:100%}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed} th,td{border-bottom:1px solid var(--line);padding:9px 10px;vertical-align:top;text-align:left;overflow-wrap:anywhere;word-break:break-word} th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;background:#0d141d} tr:hover td{background:#121a25} tr:last-child td{border-bottom:0}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--code);border:1px solid #1e2937;border-radius:5px;padding:1px 4px;color:#d7e3f0;overflow-wrap:anywhere}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#cfe0f2;white-space:pre-wrap}
+.callout{border-left:3px solid var(--accent);background:#161207;padding:11px 14px;border-radius:0 9px 9px 0;margin:14px 0;color:#e8d9b4} .callout.info{border-color:var(--accent2);background:#0d1622;color:#cfe3ff} .callout.bad{border-color:var(--bad);background:#1a0f0f;color:#f2c7c7} .callout.ok{border-color:var(--ok);background:#0f1a13;color:#c9f0d4}
+ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin-top:44px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:12px}
+@media(max-width:560px){table{font-size:12px}th,td{padding:7px 6px}.wrap{padding:30px 16px 60px}h1{font-size:24px}}
+</style></head><body><div class="wrap">
+<header><div class="eyebrow">GO_HIVE · HTTP TOOLS · USAGE &amp; CONFIG</div>
+<h1>原生 HTTP <span>工具使用与配置</span></h1>
+<p class="lede">三支工具：<code>http_request</code>、<code>http_download</code>、<code>http_upload</code>。用 Go 标准库 <code>net/http</code> 直接发请求，不依赖 curl、不经过 shell。本文是使用与配置手册；设计与验收链见 <a href="http-tools-design.html">http-tools-design.html</a>，配置根语义见 <a href="config-roots.html">config-roots.html</a>。</p>
+<div class="meta"><span>状态：<b>已实现</b></span><span>配置：<b>$HIVE_HOME/http_tools.json</b></span><span>隔离：<b>按 Hive chat session</b></span><span>版本：<b>1.0.27（拟）</b></span></div>
+<nav class="toc"><a href="#delivery">交付状态</a><a href="#config">配置</a><a href="#loading">加载方式</a><a href="#usage">调用示例</a><a href="#result">结果与排错</a><a href="#security">安全边界</a><a href="#verify">验证</a><a href="#followup">已知后续</a></nav>
+</header>
+
+<section id="delivery"><h2><span class="num">00</span>交付状态</h2>
+<div class="callout ok"><b>代码已交付到工作区并通过测试</b>（未 commit/push）。</div>
+<div class="tablewrap"><table><thead><tr><th style="width:34%">路径</th><th style="width:66%">内容</th></tr></thead><tbody>
+<tr><td><code>internal/netguard/</code></td><td>出站策略：协议白名单、主机白/黑名单、私网/metadata 拒绝、DNS 解析后拨号期 IP 固定（防 rebinding）</td></tr>
+<tr><td><code>internal/nativehttp/</code></td><td>三支工具核心：配置、请求构建、重定向/重试、有界响应、脱敏、下载/上传、per-session cookie jar</td></tr>
+<tr><td><code>internal/tools/builtin/http_tools.go</code></td><td>适配器：输入强制转换与执行路由</td></tr>
+<tr><td><code>internal/tools/builtin/http_tool_schemas.go</code></td><td>模型可见的 schema（与设计稿逐字一致，见 parity 测试）</td></tr>
+<tr><td><code>internal/cli/session_tools_http.go</code></td><td>catalogue 接线：门控、lazy tier、<code>WithRoot</code>、<code>Close</code></td></tr>
+<tr><td><code>internal/tools/tier_defaults.go</code></td><td>新增 <code>http_core</code> 类别；不改 <code>web_core</code>/<code>research</code> 成员</td></tr>
+<tr><td><code>internal/tools/category_additions.go</code></td><td><code>web_core</code> 1.0.27 愈合项（已保存 sidecar 自动授予三支工具）</td></tr>
+<tr><td><code>contracts/env-vars.json</code> 等</td><td>已更新 <code>HIVE_HTTP_TOOLS</code>；env 契约检查通过</td></tr>
+<tr><td><code>docs/http-tools-design.{json,html}</code></td><td>设计/验收链（状态：implemented）</td></tr>
+<tr><td><code>docs/config-roots.html</code></td><td>“没有项目 cwd”的知识与修正记录</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="config"><h2><span class="num">01</span>配置</h2>
+<h3>唯一配置位置</h3>
+<pre>$HIVE_HOME/http_tools.json</pre>
+<ul>
+<li>macOS/Linux：<code>~/.hive/http_tools.json</code></li>
+<li>Windows：<code>%USERPROFILE%\.hive\http_tools.json</code></li>
+<li><b>不读取</b> <code>&lt;sessionDir&gt;/.hive/http_tools.json</code>：会话目录是文件工具的沙箱根、agent 可写，自动发现会允许 agent 放宽自己的出站策略（提权）。</li>
+<li>配置在<b>创建会话时</b>读取；改完需要新建会话（或重启 serve）才生效。</li>
+</ul>
+
+<h3>默认配置（可直接复制）</h3>
+<pre>{
+  "enabled": true,
+  "allow_private_hosts": false,
+  "allowed_hosts": [],
+  "denied_hosts": ["localhost", "*.localhost", "*.internal", "*.local", "metadata.google.internal"],
+  "max_inline_bytes": 65536,
+  "max_response_bytes": 16777216,
+  "max_download_bytes": 1073741824,
+  "max_upload_bytes": 1073741824,
+  "default_timeout_seconds": 30,
+  "max_timeout_seconds": 1800,
+  "connect_timeout_seconds": 10,
+  "follow_redirects": true,
+  "max_redirects": 10,
+  "allow_https_to_http": false,
+  "user_agent": "hive-go/1.0 (+https://github.com/shark2202/go_hive)",
+  "proxy": null,
+  "redact_query_keys": ["token", "access_token", "refresh_token", "api_key", "key", "secret", "password", "sig", "signature"],
+  "cookies": {
+    "enabled": true,
+    "host_only": true,
+    "allowed_domains": [],
+    "max_cookies": 200,
+    "max_value_bytes": 4096
+  }
+}</pre>
+
+<h3>本地调试（访问 localhost）</h3>
+<div class="callout bad"><b>注意：</b>默认 <code>denied_hosts</code> 含 <code>localhost</code>，且 <code>denied_hosts</code> 优先于 <code>allow_private_hosts</code>。只开 <code>allow_private_hosts</code> 不够，必须同时清空/移除 denied 项。</div>
+<pre>{
+  "enabled": true,
+  "allow_private_hosts": true,
+  "denied_hosts": [],
+  "allowed_hosts": ["127.0.0.1", "localhost", "::1"]
+}</pre>
+
+<h3>生产建议</h3>
+<pre>{
+  "enabled": true,
+  "allowed_hosts": ["api.example.com", "*.trusted.example.com"],
+  "allow_private_hosts": false,
+  "max_inline_bytes": 32768,
+  "max_download_bytes": 104857600
+}</pre>
+
+<h3>硬开关</h3>
+<pre>HIVE_HTTP_TOOLS=0 hive serve    # 整组关闭</pre>
+<p class="sub"><code>HIVE_HTTP_TOOLS=1</code> 不会覆盖配置文件里的 <code>enabled=false</code>。</p>
+
+<h3>字段速查</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:34%">字段</th><th style="width:66%">作用</th></tr></thead><tbody>
+<tr><td><code>allow_private_hosts</code></td><td>关闭私网/回环/CGNAT/ULA/metadata 拒绝（显式降级，记日志）</td></tr>
+<tr><td><code>allowed_hosts</code> / <code>denied_hosts</code></td><td>主机白/黑名单；<code>denied</code> 优先；<code>allowed_hosts</code> 非空时只允许名单内主机</td></tr>
+<tr><td><code>max_inline_bytes</code> / <code>max_response_bytes</code></td><td>内联预算（默认 64 KiB）/ 单次抓取硬上限（默认 16 MiB）</td></tr>
+<tr><td><code>max_download_bytes</code> / <code>max_upload_bytes</code></td><td>下载 / 上传上限（默认 1 GiB）</td></tr>
+<tr><td><code>default_timeout_seconds</code> / <code>max_timeout_seconds</code></td><td>默认总预算 / 总预算上限</td></tr>
+<tr><td><code>connect_timeout_seconds</code></td><td>连接预算（TCP + TLS）</td></tr>
+<tr><td><code>follow_redirects</code> / <code>max_redirects</code> / <code>allow_https_to_http</code></td><td>重定向策略；默认拒绝 https→http 降级</td></tr>
+<tr><td><code>user_agent</code> / <code>proxy</code></td><td>默认 UA / 显式代理（默认读 <code>HTTP_PROXY</code>/<code>HTTPS_PROXY</code>/<code>NO_PROXY</code>）</td></tr>
+<tr><td><code>redact_query_keys</code></td><td>URL 查询串中替换为 <code>[redacted]</code> 的键名</td></tr>
+<tr><td><code>cookies.*</code></td><td>本 Hive 会话 cookie jar 的总开关、host-only 默认、Domain 白名单与容量上限</td></tr>
+</tbody></table></div>
+<h3>路径规则（绝对路径）</h3>
+<div class="callout bad"><b>没有相对路径：</b>go_hive 只有会话沙箱根 <code>c.root</code>，没有项目 cwd。所有用户路径输入必须是<b>绝对路径</b>且在 <code>c.root</code> 内；相对路径返回 <code>path_not_absolute</code>，越界/../symlink 返回 <code>path_escape</code>。自动落盘（未给 path）由工具生成 <code>&lt;c.root&gt;/data/tool-output/</code> 下的文件。</div>
+<div class="tablewrap"><table><thead><tr><th style="width:30%">输入</th><th style="width:70%">规则</th></tr></thead><tbody>
+<tr><td><code>response.path</code></td><td>绝对路径；必须在 <code>c.root</code> 内；父目录自动创建。</td></tr>
+<tr><td><code>http_download.path</code></td><td>绝对目标文件；必须在 <code>c.root</code> 内；父目录自动创建；<code>overwrite</code> 控制覆盖。</td></tr>
+<tr><td><code>http_upload.body_file</code></td><td>绝对文件路径；必须在 <code>c.root</code> 内；流式读取。</td></tr>
+<tr><td><code>http_upload.files[].path</code></td><td>绝对文件路径；必须在 <code>c.root</code> 内；流式上传。</td></tr>
+<tr><td><code>tls.ca_file</code> / <code>client_cert_file</code> / <code>client_key_file</code></td><td>绝对路径；必须在 <code>c.root</code> 内；通过 <code>os.Root</code> 打开。</td></tr>
+<tr><td>自动落盘（未给 path）</td><td><code>&lt;c.root&gt;/data/tool-output/http_&lt;hash&gt;.bin</code>；<code>saved_to</code> 为绝对路径。</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="loading"><h2><span class="num">02</span>加载方式</h2>
+<p>默认 <code>flat</code> 模式下，这三支工具<b>不在冻结的 39 个默认面</b>，只进 lazy/searchable 层。三种加载方式：</p>
+<ol>
+<li><b>按名加载（推荐）</b>：<code>search_tools("select:http_request,http_download,http_upload")</code>，加载后同一会话内直接调用。</li>
+<li><b>关键词加载</b>：<code>search_tools("http request")</code>。</li>
+<li><b>直接可见</b>：<code>HIVE_TOOL_SURFACE=grouped hive serve</code>，或把名字写进 queen 的 <code>tools.json</code> 的 <code>enabled_mcp_tools</code>（已有 sidecar 由 <code>CategoryAdditions["web_core"]</code> 自动愈合）。</li>
+</ol>
+<div class="callout info"><b>为什么不进默认 39？</b>保持参考工具面（builtin 14 / flat 39 / 首轮 24）不变。三支工具是 go-only 增量，走 lazy 层即可按需加载。</div>
+</section>
+
+<section id="usage"><h2><span class="num">03</span>调用示例</h2>
+<h3>http_request</h3>
+<pre>{
+  "url": "https://api.github.com/repos/shark2202/go_hive",
+  "headers": {"Accept": "application/vnd.github+json"}
+}</pre>
+<pre>{
+  "url": "https://httpbin.org/post",
+  "method": "POST",
+  "json": {"hello": "world"},
+  "timeout_seconds": 20
+}</pre>
+<pre>{
+  "url": "https://api.example.com/v1/me",
+  "auth": {"type": "bearer", "token": "&lt;token&gt;"}
+}</pre>
+<pre>{
+  "url": "https://example.com/big.json",
+  "response": {"mode": "auto", "path": "/abs/session/downloads/big.json"}
+}</pre>
+
+<h3>http_download</h3>
+<pre>{
+  "url": "https://example.com/file.zip",
+  "path": "/abs/session/downloads/file.zip",
+  "resume": true,
+  "expected_sha256": "&lt;sha256&gt;"
+}</pre>
+<p>结果含 <code>path</code>、<code>bytes</code>、<code>sha256</code>、<code>resumed</code>、<code>etag</code>、<code>last_modified</code>。写入 <code>&lt;path&gt;.part</code>，fsync 后原子 rename。</p>
+
+<h3>http_upload</h3>
+<pre>{
+  "url": "https://httpbin.org/post",
+  "fields": {"name": "demo"},
+  "files": [{"field": "file", "path": "/abs/session/downloads/file.zip"}]
+}</pre>
+<pre>{
+  "url": "https://httpbin.org/put",
+  "body_file": "/abs/session/downloads/file.zip",
+  "content_type": "application/zip"
+}</pre>
+<p class="sub"><code>files</code> 从 workspace 流式读取；<code>body_file</code> 为原始 body（默认 PUT）。文件名会净化（去掉路径与 <code>..</code>）。</p>
+
+<h3>Cookie（登录态）</h3>
+<pre>{
+  "url": "https://example.com/login",
+  "method": "POST",
+  "form": {"user": "u", "pass": "p"},
+  "cookies": {"jar": "session"}
+}</pre>
+<ul>
+<li>同一 Hive 会话后续调用自动带 cookie；</li>
+<li><code>cookies.clear: true</code> 登出；</li>
+<li><code>cookies.jar: "none"</code> 无状态；</li>
+<li>跨会话、跨 worker <b>不共享</b>（<code>WithRoot</code> 新建空 jar）；</li>
+<li>默认 host-only，<code>Domain</code> cookie 需 <code>cookies.allowed_domains</code> 显式放行；</li>
+<li>v1 不落盘，恢复会话从空开始（需重新登录）。</li>
+</ul>
+</section>
+
+<section id="result"><h2><span class="num">04</span>结果与排错</h2>
+<p>三支工具统一返回 JSON 信封：</p>
+<pre>{
+  "tool": "http_request",
+  "url": "https://...",
+  "final_url": "https://...",
+  "method": "GET",
+  "status": 200,
+  "ok": true,
+  "headers": {"content-type": ["application/json"]},
+  "body": "...",
+  "body_encoding": "utf8",
+  "body_bytes": 123,
+  "body_sha256": "...",
+  "saved_to": null,
+  "timing_ms": {"total": 123, "dns": 5, "connect": 20, "tls": 30, "first_byte": 80},
+  "tls": {"version": "TLSv1.3", "subject": "..."},
+  "redirects": [],
+  "cookies_rejected": 0,
+  "error": null,
+  "error_kind": null
+}</pre>
+<div class="tablewrap"><table><thead><tr><th style="width:30%">error_kind</th><th style="width:70%">处理</th></tr></thead><tbody>
+<tr><td><code>ssrf_blocked</code></td><td>目标被出站策略拒绝；本地调试见上面的 <code>allow_private_hosts</code> + <code>denied_hosts: []</code></td></tr>
+<tr><td><code>timeout</code></td><td>调大 <code>timeout_seconds</code> / <code>default_timeout_seconds</code></td></tr>
+<tr><td><code>response_too_large</code></td><td>调大 <code>max_response_bytes</code> / <code>max_bytes</code></td></tr>
+<tr><td><code>too_many_redirects</code></td><td>调大 <code>max_redirects</code></td></tr>
+<tr><td><code>https_downgrade_blocked</code></td><td>需要时显式 <code>allow_https_to_http: true</code></td></tr>
+<tr><td><code>cookie_jar_invalid</code></td><td><code>cookies.jar</code> 只能是 <code>session</code> 或 <code>none</code></td></tr>
+<tr><td><code>checksum_mismatch</code></td><td>下载内容与 <code>expected_sha256</code> 不一致；<code>.part</code> 保留可重试</td></tr>
+<tr><td><code>path_not_absolute</code></td><td>用户路径不是绝对路径；改成会话根内的绝对路径</td></tr>
+<tr><td><code>path_escape</code></td><td>绝对路径逃逸出会话根（<code>..</code> / symlink）；改到根内</td></tr>
+<tr><td><code>write_failed</code></td><td>目标已存在（<code>overwrite=false</code>）或写失败；检查 <code>path</code>/<code>overwrite</code></td></tr>
+</tbody></table></div>
+</section>
+
+<section id="security"><h2><span class="num">05</span>安全边界</h2>
+<ul>
+<li>仅允许 http/https；拒绝回环/私网/链路本地/CGNAT/ULA/metadata 主机名。</li>
+<li>解析后<b>拨号已验证 IP</b>，DNS rebinding 无法在校验与连接之间换成私网地址。</li>
+<li>每一跳重定向重新校验；跨主机剥离 <code>Authorization</code>/<code>Cookie</code>；默认拒绝 https→http。</li>
+<li>结果与日志脱敏；<code>Set-Cookie</code> 默认隐藏；响应头/体有上限。</li>
+<li><b>这是护栏，不是沙箱</b>：<code>terminal_exec</code> 仍可写 <code>HIVE_HOME</code> 或直接跑 curl；高安全部署应同时限制 terminal 工具。</li>
+</ul>
+</section>
+
+<section id="verify"><h2><span class="num">06</span>验证</h2>
+<pre>cd /Users/mac/hive/go_hive/go-hive
+
+go build ./...
+go test ./internal/netguard ./internal/nativehttp ./internal/tools \
+        ./internal/tools/builtin ./internal/cli
+
+# 契约/文档
+cd /Users/mac/hive
+uv run --no-project python go_hive/scripts/gen_http_tools_design.py --check
+uv run --no-project python go_hive/scripts/check_env_config_contract.py
+uv run --no-project python go_hive/scripts/check_doc_paths.py</pre>
+</section>
+
+<section id="followup"><h2><span class="num">07</span>已知后续</h2>
+<ul>
+<li><b>提交</b>：代码在工作区，未 commit/push；按仓库规则，只有明确说 <code>commit</code> 才提交。</li>
+<li><b>冻结清单</b>：<code>contracts/tool-definitions.json</code> 与 <code>docs/tool-contract-diff.md</code> 的 build 需要抓包（<code>freeze_tool_contract.py build --captures &lt;dir&gt;</code>）。当前 <code>check</code> 通过，但三支 go-only 工具尚未写入冻结清单；<code>TestToolContractFreeze</code> 是 report-only。</li>
+<li><b>v2 持久化</b>：当前 cookie 只在内存；若需要跨进程重启恢复登录态，另立“会话级加密持久化”设计（仍按 Hive 会话隔离）。</li>
+</ul>
+</section>
+
+<footer>HTTP 工具使用与配置 · 手写 HTML（非生成物）· 2026-11-27 · 代码已实现并通过测试，未 commit</footer>
+</div></body></html>

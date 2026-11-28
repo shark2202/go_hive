@@ -75,6 +75,8 @@ class CoverageRegistryTests(unittest.TestCase):
                 "gap:env_ledger_anchor",
                 "gap:colony_pivot_lean_handoff",
                 "gap:dm_fork_seed_compaction",
+                "gap:dm_fork_worker_surface",
+                "gap:credentials_aden_client",
             },
         )
         for gap in data["known_gaps"]:

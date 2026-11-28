@@ -11,6 +11,7 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -119,6 +120,25 @@ func ForkQueenSessionWithHandoff(session *Session, deps HandoffForkDeps, handoff
 	}
 	if deps.Home.Root == "" {
 		return nil, &ForkSessionError{Message: "hive home is not configured", Status: 500}
+	}
+
+	// A chat app's thread (a QQ group, say) is one long conversation, and the
+	// channel would follow the queen into a session carrying only her handoff:
+	// everything said there so far would be lost. Her plan belongs in the
+	// session the thread is in. Upstream discriminates handoff mode with
+	// bool(tasks), so only the tool path (tasks provided) is gated; the gate
+	// must run before any new session id, dir, task or session exists.
+	channel := session.Channel()
+	if len(taskSpecs) > 0 && channel != "" {
+		return nil, &ForkSessionError{
+			Message: fmt.Sprintf(
+				"This conversation comes from the %s chat channel and stays in this session: "+
+					"a new one would leave behind everything said here. Create the plan in this session "+
+					"(task_create without new_session).",
+				channel,
+			),
+			Status: 409,
+		}
 	}
 
 	queenName := session.QueenName
@@ -240,6 +260,16 @@ func writeHandoffSeedMessage(sessionDir, handoff string) error {
 		return err
 	}
 	return store.WriteMeta(map[string]any{"system_prompt": "", "max_context_tokens": 180_000})
+}
+
+// WriteHandoffSeedMessage exposes the fork's seq-0 seed writer to the colony
+// loader's lean-handoff accept path: the sibling colony's fresh queen session
+// opens on the same `[Session handoff]\n<handoff>` message the DM fork writes,
+// with no transcript copy and no LLM involved.
+//
+// Parity: framework/server/routes_execution.py::_write_seed_message
+func WriteHandoffSeedMessage(sessionDir, handoff string) error {
+	return writeHandoffSeedMessage(sessionDir, handoff)
 }
 
 // markSessionSuperseded stamps the old session's meta.json with its successor.

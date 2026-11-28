@@ -633,13 +633,32 @@ func (r *Registry) ListInstalled() ([]map[string]any, error) {
 	}
 	servers := asMap(data["servers"])
 	out := make([]map[string]any, 0, len(servers))
-	for _, name := range sortedKeys(servers) {
+	for _, name := range r.installedServerOrder(servers) {
 		entry := asMap(servers[name])
 		row := copyMap(entry)
 		row["name"] = name
 		out = append(out, row)
 	}
 	return out, nil
+}
+
+// installedServerOrder is the file's server order, matching Python's dict
+// iteration in list_installed/list_available. A registry rewritten by Go or
+// Python without the raw file still yields every server via the sorted tail.
+func (r *Registry) installedServerOrder(servers map[string]any) []string {
+	raw, err := os.ReadFile(r.InstalledPath())
+	if err != nil {
+		return sortedKeys(servers)
+	}
+	return orderedServerList(orderedServerNames(raw), servers)
+}
+
+func (r *Registry) indexServerOrder(servers map[string]any) []string {
+	raw, err := os.ReadFile(r.indexPath())
+	if err != nil {
+		return sortedKeys(servers)
+	}
+	return orderedServerList(orderedServerNames(raw), servers)
 }
 
 func (r *Registry) GetServer(name string) (map[string]any, error) {
@@ -667,7 +686,7 @@ func (r *Registry) CLIServers() ([]map[string]any, error) {
 		return nil, err
 	}
 	out := make([]map[string]any, 0)
-	for _, name := range sortedKeys(servers) {
+	for _, name := range r.installedServerOrder(servers) {
 		entry := asMap(servers[name])
 		if !getTruthy(entry, "enabled", true) {
 			continue
@@ -711,7 +730,7 @@ func (r *Registry) ListAvailable() ([]map[string]any, error) {
 	}
 	servers := asMap(index["servers"])
 	out := make([]map[string]any, 0, len(servers))
-	for _, name := range sortedKeys(servers) {
+	for _, name := range r.indexServerOrder(servers) {
 		manifest := asMap(servers[name])
 		row := copyMap(manifest)
 		row["name"] = name
@@ -826,9 +845,21 @@ func (r *Registry) IsIndexStale() bool {
 	if !ok {
 		return true
 	}
-	parsed, err := parseISOTimestamp(stamp)
+	parsed, naive, err := parseISOTimestamp(stamp)
 	if err != nil {
 		return true
+	}
+	if naive {
+		// Legacy Go builds wrote an offset-less stamp. Python's
+		// datetime.fromisoformat turns that into a naive datetime, and
+		// is_index_stale's `datetime.now(UTC) - last_fetched` then raises
+		// TypeError (not caught) -- every Python process sharing this
+		// HIVE_HOME dies until the index is refreshed. Repair the marker in
+		// place with the explicit offset; the instant, and therefore the age
+		// computed below, is unchanged. A read-only cache keeps working.
+		_ = r.writeJSON(lastFetched, map[string]any{
+			"timestamp": parsed.UTC().Format("2006-01-02T15:04:05.000000+00:00"),
+		})
 	}
 	intervalHours, ok := toFloat(config["refresh_interval_hours"])
 	if !ok {
@@ -838,12 +869,21 @@ func (r *Registry) IsIndexStale() bool {
 	return ageHours >= intervalHours
 }
 
-func parseISOTimestamp(raw string) (time.Time, error) {
-	cleaned := strings.TrimSuffix(raw, "Z")
-	if t, err := time.Parse("2006-01-02T15:04:05.999999999", cleaned); err == nil {
-		return t.UTC(), nil
+// parseISOTimestamp parses the last_fetched marker. naive reports that the
+// input carried no UTC offset (a legacy Go-written value): Go reads it as UTC
+// so staleness stays meaningful, and IsIndexStale rewrites it with an explicit
+// offset so Python's datetime.fromisoformat cannot produce a naive datetime.
+func parseISOTimestamp(raw string) (parsed time.Time, naive bool, err error) {
+	// Python writes datetime.now(UTC).isoformat() — an explicit +00:00
+	// offset. RFC3339Nano accepts both that and the "Z" suffix used by
+	// time.Time.MarshalJSON, so try it first and only fall back to the
+	// offset-less legacy form.
+	if t, err := time.Parse(time.RFC3339Nano, raw); err == nil {
+		return t.UTC(), false, nil
 	}
-	return time.Parse(time.RFC3339Nano, raw)
+	cleaned := strings.TrimSuffix(raw, "Z")
+	t, err := time.Parse("2006-01-02T15:04:05.999999999", cleaned)
+	return t, err == nil, err
 }
 
 func (r *Registry) UpdateIndex() (int, error) {
@@ -872,7 +912,11 @@ func (r *Registry) UpdateIndex() (int, error) {
 	if err := r.writeJSON(r.indexPath(), index); err != nil {
 		return 0, err
 	}
-	stamp := map[string]any{"timestamp": r.now().Format("2006-01-02T15:04:05.999999")}
+	// Python's is_index_stale parses this with datetime.fromisoformat and
+	// subtracts it from datetime.now(UTC); a naive stamp raises TypeError
+	// there, so the timestamp must always carry an explicit +00:00 offset on
+	// a shared HIVE_HOME.
+	stamp := map[string]any{"timestamp": r.now().UTC().Format("2006-01-02T15:04:05.000000+00:00")}
 	if err := r.writeJSON(r.lastFetchedPath(), stamp); err != nil {
 		return 0, err
 	}

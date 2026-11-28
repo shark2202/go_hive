@@ -54,7 +54,7 @@ func (e *workerEmitter) LLMTurnComplete(completion llm.Completion, iteration int
 		completion.StopReason, completion.Model,
 		completion.InputTokens, completion.OutputTokens,
 		completion.CachedTokens, completion.CacheCreationTokens,
-		completion.CostUSD, nil,
+		completion.CostUSD, completion.Credits,
 		&e.executionID, &iteration, nil, nil, nil, nil)
 }
 

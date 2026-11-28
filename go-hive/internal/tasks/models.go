@@ -1,8 +1,9 @@
 package tasks
 
-// Parity: framework/tasks/models.py
+// Parity: framework/tasks/models.py::TaskStatus
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -25,6 +26,15 @@ func ValidTaskStatus(value string) bool {
 		return true
 	}
 	return false
+}
+
+// InvalidTaskStatusMessage mirrors the ValueError Python's StrEnum raises
+// before the store is touched: "'bogus' is not a valid TaskStatus".
+func InvalidTaskStatusMessage(value any) string {
+	if text, ok := value.(string); ok {
+		return fmt.Sprintf("'%s' is not a valid TaskStatus", text)
+	}
+	return fmt.Sprintf("%v is not a valid TaskStatus", value)
 }
 
 const IdleTaskThresholdSeconds float64 = 30 * 60

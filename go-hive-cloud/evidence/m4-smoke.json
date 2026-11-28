@@ -1,0 +1,198 @@
+{
+  "harness": "m4-smoke",
+  "base_url": "http://127.0.0.1:52387",
+  "started_at": "2026-11-23T15:03:05.266077Z",
+  "finished_at": "2026-11-23T15:03:05.288646Z",
+  "ok": true,
+  "checks": [
+    {
+      "name": "sql_create_table",
+      "ok": true
+    },
+    {
+      "name": "sql_insert",
+      "ok": true
+    },
+    {
+      "name": "grid_query_select_filter_sort",
+      "ok": true,
+      "detail": {
+        "rows": 2
+      }
+    },
+    {
+      "name": "grid_query_count_search",
+      "ok": true,
+      "detail": {
+        "total": 1
+      }
+    },
+    {
+      "name": "grid_query_group_counts",
+      "ok": true,
+      "detail": {
+        "first": {
+          "count": 2,
+          "value": "new"
+        },
+        "groups": 2
+      }
+    },
+    {
+      "name": "grid_query_ilike_case_insensitive",
+      "ok": true
+    },
+    {
+      "name": "sql_insert_quoted_literal",
+      "ok": true
+    },
+    {
+      "name": "grid_query_delete",
+      "ok": true
+    },
+    {
+      "name": "grid_query_readonly_gate",
+      "ok": true,
+      "detail": {
+        "status": 400
+      },
+      "error": "only read-only statements are allowed on /query"
+    },
+    {
+      "name": "crm_requires_auth",
+      "ok": true,
+      "detail": {
+        "status": 401
+      }
+    },
+    {
+      "name": "crm_create",
+      "ok": true,
+      "detail": {
+        "columns": 8,
+        "id": "d47c842ebfe65f44cccdb561ca5c730f",
+        "total": 1
+      }
+    },
+    {
+      "name": "crm_get",
+      "ok": true,
+      "detail": {
+        "rows": 1,
+        "status": 200
+      }
+    },
+    {
+      "name": "crm_query_filter_search",
+      "ok": true,
+      "detail": {
+        "limit": 10,
+        "status": 200,
+        "total": 1
+      }
+    },
+    {
+      "name": "crm_group_counts",
+      "ok": true,
+      "detail": {
+        "groups": [
+          {
+            "count": 1,
+            "value": "new"
+          }
+        ],
+        "status": 200
+      }
+    },
+    {
+      "name": "crm_patch",
+      "ok": true,
+      "detail": {
+        "status": 200
+      }
+    },
+    {
+      "name": "crm_stage",
+      "ok": true,
+      "detail": {
+        "status": 200
+      }
+    },
+    {
+      "name": "crm_soft_delete",
+      "ok": true,
+      "detail": {
+        "deleted": 1,
+        "status": 200
+      }
+    },
+    {
+      "name": "crm_archived_hidden",
+      "ok": true,
+      "detail": {
+        "status": 200,
+        "total": 0
+      }
+    },
+    {
+      "name": "crm_archived_get_404",
+      "ok": true,
+      "detail": {
+        "status": 404
+      }
+    },
+    {
+      "name": "crm_unknown_entity_404",
+      "ok": true,
+      "detail": {
+        "error": "unknown entity: invoices",
+        "status": 404
+      }
+    },
+    {
+      "name": "crm_invalid_filter_400",
+      "ok": true,
+      "detail": {
+        "error": "filter must be a list",
+        "status": 400
+      }
+    },
+    {
+      "name": "crm_identities_rejected",
+      "ok": true,
+      "detail": {
+        "error": "identities is not supported by this private deployment (shape UNKNOWN)",
+        "status": 400
+      }
+    },
+    {
+      "name": "crm_tables_hidden_from_global_db",
+      "ok": true,
+      "detail": {
+        "status": 200,
+        "tables": 1
+      }
+    },
+    {
+      "name": "crm_schema_planned_404",
+      "ok": true,
+      "detail": {
+        "status": 405
+      }
+    },
+    {
+      "name": "crm_claim_planned_404",
+      "ok": true,
+      "detail": {
+        "status": 404
+      }
+    },
+    {
+      "name": "crm_release_planned_404",
+      "ok": true,
+      "detail": {
+        "status": 404
+      }
+    }
+  ]
+}

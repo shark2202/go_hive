@@ -56,9 +56,15 @@ func handleLoadColony(w http.ResponseWriter, r *http.Request, deps SessionRouteD
 	sessionID := r.PathValue("session_id")
 
 	decoded, err := decodeJSONValue(r)
+	if err != nil {
+		// Upstream's bare `await request.json()` lets a malformed body reach
+		// the error middleware as 500; only an over-limit body is 413.
+		writeJSONBodyFailure(w, err, http.StatusInternalServerError, internalServerError)
+		return
+	}
 	body, ok := decoded.(map[string]any)
-	if err != nil || !ok {
-		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "Invalid JSON body"})
+	if !ok {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": internalServerError})
 		return
 	}
 
@@ -165,6 +171,23 @@ func isCredentialError(err error) bool {
 		return true
 	}
 	return false
+}
+
+// handleDeleteSessionColony serves the explicit DELETE /api/sessions/{session_id}/colony
+// pattern. Python wins the /api/sessions/history/colony overlap for
+// handle_delete_history_session because it registers that route first
+// (core/framework/server/routes_sessions.py:3207) and aiohttp matches in
+// registration order; ServeMux instead ranks the more specific colony pattern
+// above the generic alias. Delegating here restores the Python winner without
+// re-registering the conflicting history pattern.
+func handleDeleteSessionColony(w http.ResponseWriter, r *http.Request, deps SessionRouteDeps) {
+	if r.PathValue("session_id") == "history" {
+		// The history pattern's own session_id is the trailing segment.
+		r.SetPathValue("session_id", "colony")
+		handleDeleteHistorySession(w, r, deps)
+		return
+	}
+	handleUnloadColony(w, r, deps)
 }
 
 func handleUnloadColony(w http.ResponseWriter, r *http.Request, deps SessionRouteDeps) {

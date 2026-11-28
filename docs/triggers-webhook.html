@@ -16,7 +16,7 @@ p{color:#c6d2df;margin:8px 0} .sub{color:var(--muted);font-size:13px}
 .grid{display:grid;gap:12px} .g3{grid-template-columns:repeat(3,minmax(0,1fr))}
 @media(max-width:900px){.g3{grid-template-columns:1fr 1fr}} @media(max-width:560px){.g3{grid-template-columns:1fr}.wrap{padding:30px 16px 60px}h1{font-size:25px}}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:15px} .card .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700} .card .v{font-size:21px;font-weight:800;margin-top:5px;letter-spacing:-.01em} .card .d{color:var(--muted);font-size:12px;margin-top:5px}
-.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:14px 0;background:var(--panel2)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:14px 0;background:var(--panel2);max-width:100%}
 table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed} th,td{border-bottom:1px solid var(--line);padding:9px 10px;vertical-align:top;text-align:left;overflow-wrap:anywhere;word-break:break-word} th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;background:#0d141d;position:sticky;top:0;z-index:1} tr:hover td{background:#121a25} tr:last-child td{border-bottom:0}
 td.num{font-variant-numeric:tabular-nums;text-align:right} code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--code);border:1px solid #1e2937;border-radius:5px;padding:1px 4px;color:#d7e3f0;overflow-wrap:anywhere}
 pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#cfe0f2}
@@ -31,12 +31,12 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 </style>
 </head><body>
 
-<div class="meta"><span>状态：<b>手写参考页 v2（字段级契约）</b> · 2026-11-23</span><span>事实源：<code>framework/tools/queen_lifecycle_tools.py</code> · <code>framework/host/{triggers,webhook_server}.py</code> · <code>framework/agent_loop/internals/{types,cursor_persistence}.py</code>；Go <code>internal/server/{trigger_runtime,webhook_server,queen_lifecycle_triggers}.go</code> · <code>internal/triggers/*.go</code> · <code>internal/eventbus/emit.go</code> · <code>internal/agentloop/types.go</code></span></div>
+<div class="meta"><span>状态：<b>手写参考页 v3（字段级契约）</b> · 2026-11-25</span><span>事实源：<code>framework/tools/queen_lifecycle_tools.py</code> · <code>framework/host/{triggers,webhook_server}.py</code> · <code>framework/agent_loop/internals/{types,cursor_persistence}.py</code>；Go <code>internal/server/{trigger_runtime,webhook_server,queen_lifecycle_triggers}.go</code> · <code>internal/triggers/*.go</code> · <code>internal/eventbus/emit.go</code> · <code>internal/agentloop/types.go</code></span></div>
 <h1>Hive 触发器：timer 与 webhook（字段级契约）</h1>
 <p class="sub">触发器（trigger）是会话级的时间/事件入口：到点或收到 HTTP 请求时，把一条任务以 user 消息注入 queen 会话。两类：<code>timer</code>（cron 或 interval_minutes）与 <code>webhook</code>（本地 HTTP path + methods）。本页给出<b>配置、请求、响应、事件、注入</b>五层字段的<b>类型、必填性、默认值与语义</b>，并登记已知差异。</p>
 
 <h2><span class="num">01</span>触发定义（triggers.json / 列表 API）</h2>
-<table><tr><th>字段</th><th>类型（JSON / Go / Python）</th><th>必填</th><th>默认</th><th>含义</th></tr>
+<div class="tablewrap"><table><tr><th>字段</th><th>类型（JSON / Go / Python）</th><th>必填</th><th>默认</th><th>含义</th></tr>
 <tr><td><code>id</code></td><td>string / string / str</td><td>是</td><td>—</td><td>触发器标识（URL/工具入参 <code>trigger_id</code>）；同一会话内唯一，重设即更新</td></tr>
 <tr><td><code>trigger_type</code></td><td>string 枚举 / string / str</td><td>是</td><td>—</td><td><code>"timer"</code> | <code>"webhook"</code></td></tr>
 <tr><td><code>trigger_config</code></td><td>object / map[string]any / dict</td><td>是</td><td>—</td><td>按类型见 §02/§03；未知键忽略</td></tr>
@@ -44,40 +44,39 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 <tr><td><code>task</code></td><td>string / string / str</td><td>否*</td><td><code>""</code></td><td>注入消息里的任务指令；*空 task 也可触发（只有 payload）</td></tr>
 <tr><td><code>enabled</code></td><td>boolean / bool / bool</td><td>否</td><td><code>false</code></td><td>激活开关；激活时才注册 timer/webhook</td></tr>
 <tr><td><code>last_fired_at</code></td><td>string|null / *string / str|None</td><td>输出</td><td><code>null</code></td><td>最近触发时间，ISO8601 UTC</td></tr>
-<tr><td><code>next_due_at</code></td><td>string|null / *string / str|None</td><td>输出</td><td><code>null</code></td><td>下次到期，ISO8601 UTC（webhook 恒 null）</td></tr></table>
+<tr><td><code>next_due_at</code></td><td>string|null / *string / str|None</td><td>输出</td><td><code>null</code></td><td>下次到期，ISO8601 UTC（webhook 恒 null）</td></tr></table></div>
 
 <p class="sub">存储位置：<code>triggers.json</code> 位于所操作 <b>colony 根目录</b>（agent export dir，<code>&lt;colony&gt;/triggers.json</code>），按 <code>id</code> 唯一；会话只是创建/激活入口与运行载体。</p>
 <h2><span class="num">02</span>timer 的 trigger_config</h2>
-<table><tr><th>字段</th><th>类型</th><th>必填</th><th>默认</th><th>含义与边界</th></tr>
-<tr><td><code>cron</code></td><td>string</td><td>与 interval 二选一</td><td>—</td><td>5 字段（分 时 日 月 周；秒=0）或 6 字段 croniter 布局（<b>秒在最后</b>，<code>second_at_beginning=False</code>）。严格子集：names/macros、<code>L/W/#/?</code>、跨夜区间、7 字段年份均拒绝</td></tr>
-<tr><td><code>interval_minutes</code></td><td>number（float）</td><td>与 cron 二选一</td><td>—</td><td>&gt;0；首触发延迟=值×60s；可为分数（0.5=30s）。<b>无毫秒语义</b></td></tr></table>
+<div class="tablewrap"><table><tr><th>字段</th><th>类型</th><th>必填</th><th>默认</th><th>含义与边界</th></tr>
+<tr><td><code>cron</code></td><td>string</td><td>与 interval 二选一</td><td>—</td><td>与 croniter 6.0.0 接受的触发器语法一致：5 字段（分 时 日 月 周；秒=0）、6 字段（<b>秒在最后</b>，<code>second_at_beginning=False</code>）、7 字段（秒后追加年份，1970–2099）。支持大小写不敏感的月份/星期缩写（<code>JAN</code>/<code>MON</code>）、全部 croniter 宏（<code>@yearly</code>/<code>@annually</code>/<code>@monthly</code>/<code>@weekly</code>/<code>@daily</code>/<code>@midnight</code>/<code>@hourly</code>）、<code>L</code>（月末）与 <code>L5</code>（当月最后一个周五）、<code>#n</code>（第 n 个星期几）、<code>?</code>（仅日/周字段）、跨夜区间（<code>5-1</code>/<code>NOV-FEB</code>）。croniter 6.0.0 本身不接受的 Quartz 扩展继续拒绝：<code>W</code>/<code>LW</code>、<code>L-3</code> 偏移、单独的 DOW <code>L</code>、<code>5L</code>、数字区间 + <code>#n</code></td></tr>
+<tr><td><code>interval_minutes</code></td><td>number（float）</td><td>与 cron 二选一</td><td>—</td><td>&gt;0；首触发延迟=值×60s；可为分数（0.5=30s）。<b>无毫秒语义</b></td></tr></table></div>
 <p class="sub">缺失两者 → 错误 <code>Timer trigger needs 'cron' or 'interval_minutes' in trigger_config.</code>；错过的 tick 不补跑，重开时重建 missed（上限 100 条）→ <code>resolve_missed</code>（<code>fire_latest|skip|reschedule</code>）。</p>
 
 <h2><span class="num">03</span>webhook：请求侧字段</h2>
-<table><tr><th>trigger_config</th><th>类型</th><th>必填</th><th>默认</th><th>含义</th></tr>
+<div class="tablewrap"><table><tr><th>trigger_config</th><th>类型</th><th>必填</th><th>默认</th><th>含义</th></tr>
 <tr><td><code>path</code></td><td>string</td><td>是</td><td>—</td><td>必须以 <code>/</code> 开头；<b>精确匹配</b>（区分大小写，无通配/前缀）。错误文案：<code>Webhook trigger requires 'path' starting with '/' in trigger_config (e.g. '/hooks/github').</code></td></tr>
 <tr><td><code>methods</code></td><td>array&lt;string&gt;</td><td>否</td><td><code>["POST"]</code></td><td>允许的 HTTP 方法；比较前大写化（<code>GET/POST/PUT/PATCH/DELETE...</code>）</td></tr>
-<tr><td><code>port</code></td><td>integer</td><td>否</td><td><b>8090</b></td><td>本地监听端口；host 固定 <code>127.0.0.1</code>。多会话需各自配置不同 port</td></tr></table>
+<tr><td><code>port</code></td><td>integer</td><td>否</td><td><b>8090</b></td><td>本地监听端口；host 固定 <code>127.0.0.1</code>。多会话需各自配置不同 port</td></tr></table></div>
 <p class="sub">路由表以 <code>path</code> 为键：<b>重复注册同一 path = 后者覆盖</b>（两侧一致，<code>routes[path]=route</code>）。secret 字段在服务层存在（HMAC-SHA256），但 queen 触发创建流程不读它 → 实际不鉴权。</p>
-<table><tr><th>HTTP 请求字段</th><th>类型/取值</th><th>约束与语义</th></tr>
+<div class="tablewrap"><table><tr><th>HTTP 请求字段</th><th>类型/取值</th><th>约束与语义</th></tr>
 <tr><td>method</td><td>string</td><td>必须 ∈ <code>methods</code>（大写比较）；否则 405</td></tr>
 <tr><td>path</td><td>string</td><td>精确等于 <code>path</code>；否则 404</td></tr>
 <tr><td>headers</td><td>object&lt;string,string&gt;</td><td>任意；<code>Content-Type</code> <b>不校验</b>。同名头取<b>首值</b>（真实 aiohttp 实测 <code>dict(request.headers)</code> 取首值；Go 已对齐 a91ae182），并额外加入 <code>Host</code></td></tr>
 <tr><td>query_params</td><td>object&lt;string,string&gt;</td><td>任意；同名参数取<b>首值</b>（实测对齐 a91ae182）</td></tr>
 <tr><td>body</td><td>bytes</td><td>可选。上限 <b>1 MiB</b>（两侧一致）：≥1 MiB 一律拒绝并回 <b>400</b>（上游 aiohttp 在 <code>read()</code> 抛 HTTPRequestEntityTooLarge 后由 handler 转 400，<b>不存在 413 路径</b>）。空 body → <code>{}</code></td></tr>
-<tr><td>body 解析</td><td>JSON → object；非 JSON → <code>{"raw_body": string}</code></td><td>非法 UTF-8 以 U+FFFD 替换；<b>JSON 但非 object（array/number/string/bool/null）</b>：两侧均原样保留为 payload（Go 侧 2026-11-23 修复，commit 3597215d；微差见 §09）</td></tr></table>
+<tr><td>body 解析</td><td>JSON → object；非 JSON → <code>{"raw_body": string}</code></td><td>非法 UTF-8 以 U+FFFD 替换；<b>JSON 但非 object（array/number/string/bool/null）</b>：两侧均原样保留为 payload（Go 侧 2026-11-23 修复，commit 3597215d；微差见 §09）</td></tr></table></div>
 <pre>curl -X POST http://127.0.0.1:8090/hooks/github \
   -H 'Content-Type: application/json' \
   -d '{"action":"opened","number":7}'</pre>
 
 <h2><span class="num">04</span>webhook：响应侧字段</h2>
-<table><tr><th>状态</th><th>Content-Type</th><th>body（逐字）</th><th>触发条件</th></tr>
+<div class="tablewrap"><table><tr><th>状态</th><th>Content-Type</th><th>body（逐字）</th><th>触发条件</th></tr>
 <tr><td><code>202</code></td><td>application/json</td><td><code>{"status": "accepted"}</code></td><td>path/method 匹配且 body 读取成功（事件已发布）</td></tr>
 <tr><td><code>404</code></td><td>application/json</td><td><code>{"error": "Not found"}</code></td><td>path 未注册</td></tr>
 <tr><td><code>405</code></td><td>text/plain</td><td><code>405: Method Not Allowed</code></td><td>method 不在 methods（aiohttp 路由默认文案；Go 逐字镜像）</td></tr>
 <tr><td><code>400</code></td><td>application/json</td><td><code>{"error": "Failed to read request body"}</code></td><td>body 读取失败<b>或 ≥1 MiB</b>（与上游同文案；上游无 413）</td></tr>
-<tr><td><code>413</code></td><td>application/json</td><td><code>{"error": "Failed to read request body"}</code></td><td>body 超限（与 400 同文案，刻意镜像）</td></tr>
-<tr><td><code>401</code></td><td>application/json</td><td><code>{"error": "Invalid signature"}</code></td><td>仅当 route.secret 已设且 <code>X-Hub-Signature-256</code> 校验失败；<b>触发流程不设置 secret → 不可达</b></td></tr></table>
+<tr><td><code>401</code></td><td>application/json</td><td><code>{"error": "Invalid signature"}</code></td><td>仅当 route.secret 已设且 <code>X-Hub-Signature-256</code> 校验失败；<b>触发流程不设置 secret → 不可达</b></td></tr></table></div>
 <pre>HTTP/1.1 202 Accepted
 Content-Type: application/json
 
@@ -85,21 +84,21 @@ Content-Type: application/json
 <p class="sub">响应无其它字段；无重试/去重语义（重复请求=重复事件）。</p>
 
 <h2><span class="num">05</span>事件：WEBHOOK_RECEIVED 字段</h2>
-<table><tr><th>字段</th><th>类型</th><th>含义</th></tr>
+<div class="tablewrap"><table><tr><th>字段</th><th>类型</th><th>含义</th></tr>
 <tr><td>type</td><td>string 常量</td><td><code>"webhook_received"</code>（Go <code>EventWebhookReceived</code>；Python <code>EventType.WEBHOOK_RECEIVED</code>）</td></tr>
 <tr><td>stream_id</td><td>string</td><td>= <code>source_id</code> = 触发器的 <code>trigger_id</code>（<b>不在 data 内重复</b>）</td></tr>
 <tr><td>data.path</td><td>string</td><td>请求路径</td></tr>
 <tr><td>data.method</td><td>string</td><td>已大写化的方法</td></tr>
 <tr><td>data.headers</td><td>object&lt;string,string&gt;</td><td>请求头（Go 空则 <code>{}</code>）</td></tr>
 <tr><td>data.payload</td><td>object&lt;string,any&gt;</td><td>解析后的 body；Go 空/非 object 时可能为空 map 或缺失（见 §09）</td></tr>
-<tr><td>data.query_params</td><td>object&lt;string,string&gt;</td><td>查询参数（空则 <code>{}</code>）</td></tr></table>
+<tr><td>data.query_params</td><td>object&lt;string,string&gt;</td><td>查询参数（空则 <code>{}</code>）</td></tr></table></div>
 
 <h2><span class="num">06</span>注入：TriggerEvent 与消息文本</h2>
-<table><tr><th>TriggerEvent 字段</th><th>类型（Go / Python）</th><th>含义</th></tr>
+<div class="tablewrap"><table><tr><th>TriggerEvent 字段</th><th>类型（Go / Python）</th><th>含义</th></tr>
 <tr><td>trigger_type</td><td>string / str</td><td><code>"timer"</code> | <code>"webhook"</code></td></tr>
 <tr><td>source_id</td><td>string / str</td><td>触发器 id</td></tr>
 <tr><td>payload</td><td>map[string]any / dict[str, Any]</td><td>webhook：<code>{task, path, method, headers, payload, query_params}</code></td></tr>
-<tr><td>timestamp</td><td>float64 / float</td><td>epoch 秒（Python <code>time.time()</code>）</td></tr></table>
+<tr><td>timestamp</td><td>float64 / float</td><td>epoch 秒（Python <code>time.time()</code>）</td></tr></table></div>
 <p>注入为用户消息（<code>is_trigger=true</code> 标记，UI 渲染成 banner；LLM 看到逐字文本）：</p>
 <pre>[2026-11-23 09:12 CST]
 [TRIGGER: webhook/t1]
@@ -108,24 +107,25 @@ Task: 处理新 issue
 <p class="sub">模板：<code>[stamp]\n[TRIGGER: &lt;type&gt;/&lt;id&gt;]</code> + 若有 task <code>\nTask: &lt;task&gt;</code> + <code>\n&lt;json(payload)&gt;</code>；stamp 为本地时区 <code>%Y-%m-%d %H:%M %Z</code>。上游会把多个待触发<b>合并成一条</b>（<code>\n\n</code> 连接）；Go 每事件一轮（<b>已知差异</b>，见 §09）。</p>
 
 <h2><span class="num">07</span>实现映射</h2>
-<table><tr><th>面</th><th>Python（参考）</th><th>Go</th></tr>
+<div class="tablewrap"><table><tr><th>面</th><th>Python（参考）</th><th>Go</th></tr>
 <tr><td>定义/校验</td><td><code>host/triggers.py:32-210</code>；<code>tools/queen_lifecycle_tools.py:set_trigger</code></td><td><code>server/queen_lifecycle_triggers.go:42-247</code></td></tr>
 <tr><td>timer 循环</td><td><code>queen_lifecycle_tools.py:810-903</code></td><td><code>server/trigger_runtime.go::runTimerLoop</code>（:452-500）</td></tr>
 <tr><td>webhook 服务</td><td><code>host/webhook_server.py:67-160</code></td><td><code>server/webhook_server.go:44-245</code></td></tr>
 <tr><td>事件发布</td><td><code>host/event_bus.py:1918-1938</code></td><td><code>eventbus/emit.go:539-549</code></td></tr>
-<tr><td>注入/文本</td><td><code>agent_loop/internals/cursor_persistence.py:291-323</code></td><td><code>server/trigger_runtime.go:formatTriggerTurn(:316)</code>、<code>chat_runtime.go:671</code></td></tr></table>
+<tr><td>注入/文本</td><td><code>agent_loop/internals/cursor_persistence.py:291-323</code></td><td><code>server/trigger_runtime.go:formatTriggerTurn(:316)</code>、<code>chat_runtime.go:671</code></td></tr></table></div>
 
 <h2><span class="num">08</span>证据与测试</h2>
-<ul><li>Go：<code>cron_seconds_parity_test.go</code>、<code>routes_session_triggers_test.go</code>（<code>TestWebhookServerResponses</code> 覆盖 404/405/400/401/202（body 上限并入 400） 与 raw_body/非法 UTF-8；<code>TestWebhookTriggerDispatchesMatchingEvent</code>；<code>TestWebhookRouteHitsRegisteredTrigger</code>；<code>TestStartTriggerWebhookWithoutServer</code>）、<code>missed_test.go</code>。</li><li>真机到点注入 + <code>triggers.json</code> 双跑 0 差异（对齐报告）。</li></ul>
+<ul><li><b>cron 语法双跑</b>：<code>testdata/cron_seconds_parity.json</code> 由 <code>core/tests/test_cron_seconds_parity.py --write-fixture</code> 从真实 croniter 6.0.0 生成（126 个表达式、4911 个匹配步，覆盖 numeric / macro / names / dom-last / dow-last / nth-weekday / question-mark / wrap-range / year-field / field-alias / combined 共 11 个语法族），Go <code>cron_seconds_parity_test.go</code> 逐条比对，另含 82 条拒绝语料与 4 条无匹配语料。</li><li>Go：<code>cron_seconds_parity_test.go</code>、<code>routes_session_triggers_test.go</code>（<code>TestWebhookServerResponses</code> 覆盖 404/405/400/401/202（body 上限并入 400） 与 raw_body/非法 UTF-8；<code>TestWebhookTriggerDispatchesMatchingEvent</code>；<code>TestWebhookRouteHitsRegisteredTrigger</code>；<code>TestStartTriggerWebhookWithoutServer</code>）、<code>missed_test.go</code>。</li><li>真机到点注入 + <code>triggers.json</code> 双跑 0 差异（对齐报告）。</li></ul>
 
 <h2><span class="num">09</span>已知差异与限制（登记）</h2>
 <ul>
-<li><b>非 object JSON body（已修复 2026-11-23，3597215d）</b>：两侧均原样保留任意 JSON 类型；剩余微差两条：① 数字统一为 float64（Python 区分 int/float、>2^53 大整数精度不同）；② Python <code>json.loads</code> 接受 <code>NaN/Infinity/-Infinity</code>（非标准），Go 走 <code>raw_body</code> 分支——极端 body 才有差。</li>
+<li><b>cron 调度</b>：解析与 croniter 6.0.0 对齐（§02）；不镜像其三个运行时缺陷：① 受限 day-of-month 含当月不存在的日期（如二月 31）时，croniter 的 next-day 搜索会跳过月初候选，Go 按日历语义；② day-of-month 与 <code>#n</code> 形成不可能交集时 croniter 抛 <code>CroniterBadDateError</code>，Go 返回其展开语义对应的 nth-weekday 计划；③ croniter 默认 50 年搜索上限，Go 按 400 年格里高利周期（已有 Feb-29 世纪测试）。<code>W</code>/<code>L-n</code>/<code>5L</code> 等 croniter 6.0.0 本身不接受的 Quartz 语法两侧都拒绝。</li>
+<li><b>Webhook 响应与数字类型（已修复 2026-11-25，4978b19c1）</b>：202/400/401/404 的响应体改为 aiohttp 精确字节（空格分隔、无尾换行、<code>application/json; charset=utf-8</code>）；payload 整数保留为整数（超出 int64 用 big.Int），小数/指数为 float64。剩余微差：Python <code>json.loads</code> 接受 <code>NaN/Infinity/-Infinity</code>（非标准），Go 走 <code>raw_body</code> 分支——极端 body 才有差。</li>
 <li><b>批量注入（已对齐 2026-11-23，1e8ef0a1）</b>：连续 trigger 合并为一条消息（单 stamp、<code>\n\n</code> 连接、FIFO 不越过 client 消息）。</li>
-<li><b>重复头/query 与 body 上限已对齐（a91ae182）</b>；残留登记三条：头名 wire 拼写（上游保留原拼写，Go net/http canonical 化）、JSON 序列化形态（空格/换行）、超限后连接 drain（aiohttp lingering vs Go ≤256KiB）。</li>
+<li><b>重复头/query 与 body 上限已对齐（a91ae182）</b>；webhook 响应字节与 JSON 数字类型已于 2026-11-25 对齐（4978b19c1）。残留登记两条：头名 wire 拼写（上游保留原拼写，Go net/http canonical 化）、超限后连接 drain（aiohttp lingering vs Go ≤256KiB）。</li>
 <li><b>消息文本编码</b>：上游 <code>json.dumps(default=str)</code> 默认 ensure_ascii=True（非 ASCII 转 <code>\uXXXX</code>）；Go 输出原始 UTF-8（<code>SetEscapeHTML(false)</code>）→ 同一 payload 的文本形态可能不同（语义等价，未做逐字节断言）。</li>
 <li><b>无鉴权</b>（secret 未接线）、<b>只监听 127.0.0.1</b>、<b>不落盘/不重放/无去重</b>、<b>多会话同 port 争用</b>。</li>
 <li><b>无毫秒、无“延迟队列/一次性 after-N”类型</b>（timer 仅 cron/interval；延迟需 interval 近似或外部承担）。</li>
 </ul>
-<footer>手写维护：语义/字段变更时同步本页（2026-11-23 v2：补字段级契约与差异登记）。使用手册：<code>webhook-guide.html</code>；相关：<code>queen-lifecycle-tools.md</code>、<code>event-bus.html</code>（webhook_received）、<code>cloud-dependencies.md</code>（触发器纯本地，不依赖云）。</footer>
+<footer>手写维护：语义/字段变更时同步本页（2026-11-25 v3：cron 升级为 croniter 6.0.0 全语法兼容；2026-11-23 v2：补字段级契约与差异登记）。使用手册：<code>webhook-guide.html</code>；相关：<code>queen-lifecycle-tools.md</code>、<code>event-bus.html</code>（webhook_received）、<code>cloud-dependencies.md</code>（触发器纯本地，不依赖云）。</footer>
 </body></html>

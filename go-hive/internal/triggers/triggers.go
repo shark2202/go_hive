@@ -91,36 +91,32 @@ func missedForCron(cronExpr string, since, now time.Time) (int, []string, *strin
 	// Mirror croniter: ticks are strictly after `since` and at-or-before
 	// `now`, at second resolution. A 6-field schedule can fire several times
 	// within one matching minute, so each matching minute contributes every
-	// matching second instead of a single tick.
-	start := since.Truncate(time.Second).Add(time.Second)
-	lastMinute := now.Truncate(time.Minute)
-	horizonMinute := since.AddDate(cronHorizonYears, 0, 0).Truncate(time.Minute)
-	if horizonMinute.Before(lastMinute) {
-		lastMinute = horizonMinute
-	}
-
+	// matching second instead of a single tick. Croniter has no look-back
+	// horizon, so neither does this walk: a schedule last fired years ago is
+	// counted in full.
 	ticks := []string{}
 	count := 0
-	minute := start.Truncate(time.Minute)
-	firstSecond := start.Second()
-	for !minute.After(lastMinute) {
-		if sched.matchesMinute(minute) {
-			lastSecond := 59
-			if minute.Equal(now.Truncate(time.Minute)) {
-				lastSecond = now.Second()
+	start := since.Truncate(time.Second).Add(time.Second)
+	if !start.After(now) {
+		startDay := time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, start.Location())
+		endDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+		for day := startDay; !day.After(endDay); day = day.AddDate(0, 0, 1) {
+			if !sched.matchesDay(day) {
+				continue
 			}
-			for sec := firstSecond; sec <= lastSecond; sec++ {
-				if sched.seconds&(uint64(1)<<uint(sec)) == 0 {
-					continue
-				}
-				count++
-				if len(ticks) < MaxReportedTicks {
-					ticks = append(ticks, formatISO(minute.Add(time.Duration(sec)*time.Second)))
-				}
+			lo := day
+			if sameDate(day, start) {
+				lo = start
+			}
+			hi := time.Date(day.Year(), day.Month(), day.Day(), 23, 59, 59, 0, day.Location())
+			if sameDate(day, now) {
+				hi = now
+			}
+			count += sched.countBetween(lo, hi)
+			if len(ticks) < MaxReportedTicks {
+				sched.appendTicks(lo, hi, &ticks)
 			}
 		}
-		minute = minute.Add(time.Minute)
-		firstSecond = 0
 	}
 
 	var nextDue *string
@@ -128,6 +124,12 @@ func missedForCron(cronExpr string, since, now time.Time) (int, []string, *strin
 		nextDue = isoPtr(next)
 	}
 	return count, ticks, nextDue
+}
+
+func sameDate(a, b time.Time) bool {
+	aYear, aMonth, aDay := a.Date()
+	bYear, bMonth, bDay := b.Date()
+	return aYear == bYear && aMonth == bMonth && aDay == bDay
 }
 
 func missedForInterval(intervalMinutes float64, since, now time.Time) (int, []string, *string) {

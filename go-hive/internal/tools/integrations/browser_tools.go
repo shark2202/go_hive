@@ -57,11 +57,11 @@ import (
 const BrowserToolGroup = "browser"
 
 // BrowserBridgeHTTPEnv overrides the bridge's local agent API address. Kept in
-// sync with internal/cli/browser_supervisor.go::browserBridgeHTTPEnv.
+// sync with internal/cli/browsersupervisor/supervisor.go::browserBridgeHTTPEnv.
 const BrowserBridgeHTTPEnv = "HIVE_BROWSERBRIDGE_HTTP"
 
 // BrowserSessionEnv stamps the session's browser profile, exactly like the CLI
-// reads it (internal/cli/browser_cli.go::profile).
+// reads it (internal/cli/browsercli/browser_cli.go::profile).
 const BrowserSessionEnv = "HIVE_BROWSER_SESSION"
 
 // browserBridgeDefaultAddr is the documented default bridge HTTP endpoint.

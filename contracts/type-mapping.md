@@ -2,7 +2,8 @@
 
 - 契约基准（reference）：本仓 Python hive checkout，`git rev-parse HEAD` = `1b9c458a19244379ac65dabd4827addb891045ef`，版本 `1.0.14`；`core` 最后一次源码提交 `a756b1e51765bc75b0a40e362859452a0a54081b`，`tools` 最后一次源码提交 `68b6c230f20e237953dea7a3af7bb583b9fbe0fd`。
 - 对齐目标（target）：`go_hive`，版本 `1.0.26-go.1`，HEAD 同上。
-- 规范文件：`go_hive/contracts/api.proto`（proto3 风格，**不引入 protobuf 运行时**，不生成代码）。
+- 规范文件（legacy）：`go_hive/contracts/api.proto`（proto3 风格，**不引入 protobuf 运行时**，不生成代码）。
+- 当前 canonical 文档：`go_hive/contracts/openapi.json`（HTTP）与 `go_hive/contracts/asyncapi.json`（SSE/WS）；维护方式见 `go_hive/contracts/README.md`。`api.proto` 仍保留为旧字段形状证据，迁移完成前不删除。
 - 校验器：`go_hive/scripts/check_api_proto.py`（自写解析器 + 冻结 shape 校验，产出 `api-proto-check.json`）。
 - 冻结产物：`go_hive/contracts/api-responses/`（reference 为契约，target 为观测值）；逐端点差异见 `go_hive/docs/api-contract-diff.md`。
 

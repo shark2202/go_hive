@@ -4,7 +4,7 @@
 
 ## 1.0.27-go.1 — 2026-11-22
 
-预览版：govulncheck 23 OSV→0（go1.26.11）；cold-resume guard + resume 快照/首帧；recall warm p50 12.7ms（9.7×，dump 逐字节相同）；check-agent/resync 实装（前端真实验证）；工具输入 coercion 接线；存储 SC-04/06/08 收口 + `make storage-sweep`；MCP 裸名别名层；C12 triage 修正（273=217/27/9/20）。测试 5,756、refs 6,274、QC 9/9、compat 12/12。
+预览版：govulncheck 23 OSV→0（go1.26.11）；cold-resume guard + resume 快照/首帧；recall warm p50 12.7ms（9.7×，dump 逐字节相同）；check-agent/resync 实装（前端真实验证）；工具输入 coercion 接线；存储 SC-04/06/08 收口 + `make storage-sweep`；MCP 裸名别名层；C12 triage 修正（273=217/27/9/20）。测试 5,756、refs 6,274、QC 9/9、compat 12/12。迁移口径：v1 `exports/` 固定读 `$HIVE_HOME/exports`（D2-A，发布说明已注明）。
 
 ## 1.0.26-go.1 — 2026-11-20
 

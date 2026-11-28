@@ -39,8 +39,9 @@ func installRuntimeLogBuffer(home hivehome.Home) {
 // calls it per request, so a model change in configuration applies without a
 // restart.
 func newSoulProbeAnswerFor(home hivehome.Home, model string) func(string, *soulstore.SoulConfig) (soulstore.ProbeAnswerFunc, error) {
+	resolve := soulModelFor(home, model)
 	return func(queenID string, cfg *soulstore.SoulConfig) (soulstore.ProbeAnswerFunc, error) {
-		provider, err := resolveChatProvider(home, model)
+		completer, err := resolve(queenID, cfg)
 		if err != nil {
 			return nil, err
 		}
@@ -50,7 +51,7 @@ func newSoulProbeAnswerFor(home hivehome.Home, model string) func(string, *souls
 			// The system prompt rides CompletionRequest.System so a Gemini-style
 			// transport (a provider swap) sends it as systemInstruction rather
 			// than dropping a system-role message from the contents.
-			completion, err := provider.AComplete(ctx, llm.CompletionRequest{
+			completion, err := completer.AComplete(ctx, llm.CompletionRequest{
 				Messages: []llm.ChatMessage{{Role: "user", Content: question}},
 				System:   system,
 			})

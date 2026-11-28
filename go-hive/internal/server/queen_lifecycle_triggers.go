@@ -14,7 +14,9 @@ package server
 
 import (
 	"fmt"
+	"math"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/shark2202/go_hive/go-hive/internal/eventbus"
@@ -86,8 +88,7 @@ func (b *QueenLifecycleBinding) setTrigger(input map[string]any) (string, bool) 
 				"error": "Webhook trigger requires 'path' starting with '/' in trigger_config (e.g. '/hooks/github').",
 			}), true
 		}
-		methods := triggerMethodList(tConfig)
-		invalid := make([]string, 0)
+		methods, invalid := triggerMethodList(tConfig)
 		for _, method := range methods {
 			upper := strings.ToUpper(method)
 			if _, ok := validWebhookMethods[upper]; !ok {
@@ -106,6 +107,22 @@ func (b *QueenLifecycleBinding) setTrigger(input map[string]any) (string, bool) 
 			}), true
 		}
 
+		// Python derives the listening port with int(config["port"]) before
+		// reporting the URL; reject a non-numeric value instead of silently
+		// binding 8090, and hand the validated number to the runtime so the
+		// listener and the reported URL cannot disagree.
+		port := 8090
+		if rawPort, present := tConfig["port"]; present {
+			parsed, ok := triggerPortValue(rawPort)
+			if !ok {
+				return queenLifecycleJSON(map[string]any{
+					"error": fmt.Sprintf("Webhook trigger 'port' must be a number between 1 and 65535, got %v", rawPort),
+				}), true
+			}
+			port = parsed
+			tConfig["port"] = port
+		}
+
 		if err := StartTriggerWebhook(b.session, triggerID, &def); err != nil {
 			return queenLifecycleJSON(map[string]any{"error": "Failed to start webhook trigger: " + err.Error()}), true
 		}
@@ -115,10 +132,6 @@ func (b *QueenLifecycleBinding) setTrigger(input map[string]any) (string, bool) 
 		PersistActiveTriggers(b.session, b.session.ID)
 		_ = saveTriggerToAgent(b.session, triggerID, &def)
 		b.publishTriggerActivated(triggerID, tType, tConfig, def)
-		port := 8090
-		if value, ok := floatValue(tConfig["port"]); ok {
-			port = int(value)
-		}
 		return queenLifecycleJSON(map[string]any{
 			"status":       "activated",
 			"trigger_id":   triggerID,
@@ -136,8 +149,11 @@ func (b *QueenLifecycleBinding) setTrigger(input map[string]any) (string, bool) 
 			return queenLifecycleJSON(map[string]any{"error": "Invalid cron expression: " + cronExpr}), true
 		}
 	} else if interval, present := tConfig["interval_minutes"]; present && pyTruthy(interval) {
-		minutes, ok := floatValue(interval)
-		if !ok || minutes <= 0 {
+		// Upstream requires isinstance(interval, (int, float)); a numeric
+		// string is not a number there, so numericValue (not floatValue)
+		// keeps "5" rejected exactly as Python rejects it.
+		minutes, numeric := numericValue(interval)
+		if !numeric || minutes <= 0 {
 			return queenLifecycleJSON(map[string]any{
 				"error": fmt.Sprintf("interval_minutes must be > 0, got %v", interval),
 			}), true
@@ -254,24 +270,99 @@ func (b *QueenLifecycleBinding) publishTriggerActivated(triggerID, triggerType s
 	b.session.EventBus.Publish(event)
 }
 
-// triggerMethodList reads a webhook trigger's methods, defaulting to POST.
-func triggerMethodList(config map[string]any) []string {
+// triggerMethodList reads a webhook trigger's methods. Upstream defaults to
+// ["POST"] and then iterates whatever it got (`[m.upper() for m in methods]`),
+// so a bare string is iterated character by character and a non-string entry
+// raises. This port rejects every shape that is not a list of strings instead
+// of coercing it: the returned invalid entries carry the offending values (a
+// bare string expands to its characters, exactly as Python would iterate it,
+// and an empty string has no characters to report) so the caller reports them
+// through Python's "Invalid HTTP methods" error.
+//
+// Parity: framework/tools/queen_lifecycle_tools.py::set_trigger
+func triggerMethodList(config map[string]any) ([]string, []string) {
 	raw, present := config["methods"]
 	if !present {
-		return []string{"POST"}
+		return []string{"POST"}, nil
 	}
 	switch typed := raw.(type) {
 	case []string:
-		return typed
+		return typed, nil
 	case []any:
-		out := make([]string, 0, len(typed))
+		methods := make([]string, 0, len(typed))
+		var invalid []string
 		for _, item := range typed {
-			out = append(out, stringValue(item))
+			text, ok := item.(string)
+			if !ok {
+				invalid = append(invalid, methodValueRepr(item))
+				continue
+			}
+			methods = append(methods, text)
 		}
-		return out
+		return methods, invalid
 	case string:
-		return []string{typed}
+		if typed == "" {
+			return nil, []string{`""`}
+		}
+		invalid := make([]string, 0, len(typed))
+		for _, char := range typed {
+			invalid = append(invalid, strings.ToUpper(string(char)))
+		}
+		return nil, invalid
 	default:
-		return []string{"POST"}
+		return nil, []string{methodValueRepr(raw)}
 	}
+}
+
+// methodValueRepr renders a non-string methods entry the way Python would
+// print the offending value in the invalid-method error.
+func methodValueRepr(value any) string {
+	if value == nil {
+		return "None"
+	}
+	return fmt.Sprint(value)
+}
+
+// triggerPortValue parses a webhook trigger's "port" the way upstream's
+// int(t_config.get("port", 8090)) does: numbers and numeric strings are
+// accepted, floats truncate toward zero, and anything else is rejected
+// instead of silently falling back to 8090. The result must still be a
+// bindable TCP port, so the caller reports a bad value before starting the
+// listener and hands the parsed number to the runtime.
+//
+// Parity: framework/tools/queen_lifecycle_tools.py::set_trigger
+func triggerPortValue(value any) (int, bool) {
+	if number, ok := numericValue(value); ok {
+		if math.IsNaN(number) || number < 1 || number > 65535 {
+			return 0, false
+		}
+		// Python's int() truncates toward zero; the range check above keeps
+		// the conversion inside int bounds.
+		return int(number), true
+	}
+	text, ok := value.(string)
+	if !ok {
+		return 0, false
+	}
+	// Python's int() accepts surrounding whitespace and single underscores
+	// between digits ("80_92" == 8092).
+	trimmed := strings.TrimSpace(text)
+	sign := ""
+	if trimmed != "" && (trimmed[0] == '+' || trimmed[0] == '-') {
+		sign, trimmed = trimmed[:1], trimmed[1:]
+	}
+	if trimmed == "" || strings.HasPrefix(trimmed, "_") || strings.HasSuffix(trimmed, "_") || strings.Contains(trimmed, "__") {
+		return 0, false
+	}
+	digits := strings.ReplaceAll(trimmed, "_", "")
+	for _, char := range digits {
+		if char < '0' || char > '9' {
+			return 0, false
+		}
+	}
+	parsed, err := strconv.Atoi(sign + digits)
+	if err != nil || parsed < 1 || parsed > 65535 {
+		return 0, false
+	}
+	return parsed, true
 }

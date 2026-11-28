@@ -168,19 +168,19 @@ func TestBuildInitialMessageIncludesGoalContext(t *testing.T) {
 	}
 }
 
-// Parity: framework/agent_loop/prompting.py::build_system_prompt_static (the
-// goal block joins the agent's system prompt, so criteria and MUST/SHOULD
-// constraints are model-visible on every turn).
-func TestBuildSystemPromptCarriesGoalContext(t *testing.T) {
+// Parity: framework/agent_loop/agent_loop.py::_build_initial_message (the goal
+// block rides the initial user message, not the static system prompt).
+func TestBuildSystemPromptDoesNotDuplicateGoalContext(t *testing.T) {
 	ctx := &AgentContext{
 		AgentSpec:   NewAgentSpec("worker", "Worker", "test worker"),
 		GoalContext: "# Goal: Report\n- [MUST] cite every claim",
 	}
 	prompt := BuildSystemPrompt(BuildPromptSpec(ctx, PromptOverrides{}))
-	if !strings.Contains(prompt, "# Goal: Report") {
-		t.Fatalf("system prompt = %q, want the goal block", prompt)
+	if strings.Contains(prompt, "# Goal: Report") {
+		t.Fatalf("system prompt = %q, want no goal block (it belongs to the initial message)", prompt)
 	}
-	if !strings.Contains(prompt, "[MUST] cite every claim") {
-		t.Fatalf("system prompt = %q, want the MUST constraint", prompt)
+	initial := BuildInitialMessage(ctx)
+	if !strings.Contains(initial, "# Goal: Report") || !strings.Contains(initial, "[MUST] cite every claim") {
+		t.Fatalf("initial message = %q, want the goal block exactly once", initial)
 	}
 }

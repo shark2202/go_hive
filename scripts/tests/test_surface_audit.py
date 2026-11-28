@@ -310,6 +310,50 @@ class HygieneTests(unittest.TestCase):
         self.assertEqual(result["hygiene"]["empty_dirs"][0]["status"], "allowlisted")
         self.assertTrue(result["ok"])
 
+    def test_hive_go_runtime_empty_dirs_are_ignored(self):
+        """HIVE_HOME（.hive_go）是运行时状态，运行期间的空目录不算落地残渣。"""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = make_root(Path(tmp))
+            # 真实布局：仓库根的 go_hive/.hive_go，以及 internal/server 下的夹具。
+            (root / "go_hive/.hive_go/memories/global").mkdir(parents=True)
+            (root / "go_hive/.hive_go/credentials/credentials").mkdir(parents=True)
+            (root / "go_hive/go-hive/internal/server/.hive_go/_misc/session_1/logs").mkdir(parents=True)
+            # 普通空目录仍然阻断；非 .hive_go 的 .hive 不能被顺手跳过。
+            (root / "go_hive/go-hive/internal/platform/term").mkdir(parents=True)
+            (root / "go_hive/go-hive/internal/platform/.hive/state").mkdir(parents=True)
+            result = sa.audit(root)
+
+        self.assertEqual(
+            {item["path"] for item in result["hygiene"]["empty_dirs"]},
+            {
+                "go_hive/go-hive/internal/platform/term",
+                "go_hive/go-hive/internal/platform/.hive/state",
+            },
+        )
+        self.assertEqual(result["counts"]["empty_dirs"], 2)
+        self.assertFalse(result["ok"])
+
+    def test_hive_go_skip_keeps_empty_dir_allowlist_semantics(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = make_root(Path(tmp))
+            (root / "go_hive/.hive_go/memories/global").mkdir(parents=True)
+            (root / "go_hive/go-hive/parity/fixtures").mkdir(parents=True)
+            allowlist = root / "allow.json"
+            allowlist.write_text(json.dumps({
+                "empty_dirs": [{
+                    "path": "go_hive/go-hive/parity/fixtures",
+                    "reason": "fixtures 由脚本生成",
+                }],
+            }), encoding="utf-8")
+            result = sa.audit(root, allowlist)
+
+        self.assertEqual(result["counts"]["empty_dirs"], 0)
+        self.assertEqual(
+            [(item["path"], item["status"]) for item in result["hygiene"]["empty_dirs"]],
+            [("go_hive/go-hive/parity/fixtures", "allowlisted")],
+        )
+        self.assertTrue(result["ok"])
+
 
 class ReportTests(unittest.TestCase):
     def test_markdown_lists_counts_and_missing_paths(self):

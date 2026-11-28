@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/sentinel"
 )
 
 const (
@@ -86,6 +87,18 @@ type SentinelRouteDeps struct {
 	TelegramAPIBase  string
 	SlackAPIBase     string
 	RefreshListeners func()
+}
+
+// refreshSentinelListeners is SentinelRouteDeps.RefreshListeners' production
+// hook: a saved notification config may have just connected (or disconnected)
+// a channel, so the process-global manager re-evaluates its inbound listeners
+// now instead of on the next restart. An unstarted manager is a no-op.
+//
+// Parity: framework/server/routes_sentinel.py::handle_put_notifications
+func refreshSentinelListeners() {
+	if manager := sentinel.GetSentinelManager(); manager != nil {
+		manager.RefreshListeners()
+	}
 }
 
 func RegisterSentinelRoutes(mux *http.ServeMux, deps SentinelRouteDeps) {

@@ -1,6 +1,9 @@
 package integrations
 
-import "net/http"
+import (
+	"encoding/json"
+	"net/http"
+)
 
 // Slack's Web API is uniformly POST <base>/<method> with a JSON body; a
 // handful of actions compose multiple calls and live in slack_local.go.
@@ -10,6 +13,7 @@ type slackRoute struct {
 	body       []string
 	rename     map[string]string
 	join       []string
+	jsonParams []string
 	builder    func(map[string]any) map[string]any
 	constant   map[string]any
 	pagination *PaginationSpec
@@ -49,12 +53,15 @@ func slackSpecs() map[string]RestSpec {
 		{action: "slack_pin_message", method: "pins.add"},
 		{action: "slack_unpin_message", method: "pins.remove"},
 		{action: "slack_list_pins", method: "pins.list"},
-		{action: "slack_add_bookmark", method: "bookmarks.add"},
+		{action: "slack_add_bookmark", method: "bookmarks.add", rename: map[string]string{"channel": "channel_id"}},
 		{action: "slack_list_scheduled_messages", method: "chat.scheduledMessages.list"},
 		{action: "slack_delete_scheduled_message", method: "chat.deleteScheduledMessage"},
 		{action: "slack_get_permalink", method: "chat.getPermalink", rename: map[string]string{"message_ts": "message_ts"}},
 		{action: "slack_send_ephemeral", method: "chat.postEphemeral"},
-		{action: "slack_post_blocks", method: "chat.postMessage"},
+		{
+			action: "slack_post_blocks", method: "chat.postMessage",
+			jsonParams: []string{"blocks"},
+		},
 		{
 			action: "slack_open_modal", method: "views.open",
 			body: []string{}, builder: slackModalView,
@@ -103,6 +110,7 @@ func slackSpecs() map[string]RestSpec {
 			Body:       route.body,
 			Rename:     route.rename,
 			JoinLists:  route.join,
+			JSONParams: route.jsonParams,
 			Build:      route.builder,
 			Constants:  route.constant,
 			Pagination: route.pagination,
@@ -115,14 +123,10 @@ func slackSpecs() map[string]RestSpec {
 func slackModalView(input map[string]any) map[string]any {
 	view := map[string]any{
 		"type":   "modal",
-		"title":  map[string]any{"type": "plain_text", "text": stringArg(input, "title")},
-		"blocks": input["blocks"],
-	}
-	if label := stringArg(input, "submit_label"); label != "" {
-		view["submit"] = map[string]any{"type": "plain_text", "text": label}
-	}
-	if label := stringArg(input, "close_label"); label != "" {
-		view["close"] = map[string]any{"type": "plain_text", "text": label}
+		"title":  map[string]any{"type": "plain_text", "text": truncateText(stringArg(input, "title"), 24)},
+		"submit": map[string]any{"type": "plain_text", "text": stringArg(input, "submit_label")},
+		"close":  map[string]any{"type": "plain_text", "text": stringArg(input, "close_label")},
+		"blocks": slackBlocks(input),
 	}
 	if callback := stringArg(input, "callback_id"); callback != "" {
 		view["callback_id"] = callback
@@ -135,9 +139,23 @@ func slackHomeView(input map[string]any) map[string]any {
 		"user_id": stringArg(input, "user_id"),
 		"view": map[string]any{
 			"type":   "home",
-			"blocks": input["blocks"],
+			"blocks": slackBlocks(input),
 		},
 	}
+}
+
+// slackBlocks decodes the blocks JSON string the upstream tool parses. An
+// unparseable value is sent as-is; the provider then reports the error.
+func slackBlocks(input map[string]any) any {
+	raw, ok := input["blocks"].(string)
+	if !ok {
+		return input["blocks"]
+	}
+	var blocks any
+	if err := json.Unmarshal([]byte(raw), &blocks); err != nil {
+		return raw
+	}
+	return blocks
 }
 
 func slackProfile(input map[string]any) map[string]any {
@@ -167,7 +185,7 @@ func slackCreateCanvas(input map[string]any) map[string]any {
 func slackEditCanvas(input map[string]any) map[string]any {
 	operation := stringArg(input, "operation")
 	if operation == "" {
-		operation = "insert_after"
+		operation = "insert_at_end"
 	}
 	return map[string]any{
 		"canvas_id": stringArg(input, "canvas_id"),

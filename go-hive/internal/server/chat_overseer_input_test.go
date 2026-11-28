@@ -1,5 +1,9 @@
 package server
 
+// Parity-exempt (Go-only opt-in): these tests manually start the dormant live
+// overseer; Hive 1.0.15 production never attaches one (the chat Queen is the
+// executor), so the relay behavior they pin is a Go-side extension.
+
 import (
 	"context"
 	"strings"

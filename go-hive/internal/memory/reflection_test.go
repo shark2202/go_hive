@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -711,44 +712,71 @@ func mustAbs(t *testing.T, path string) string {
 	return abs
 }
 
-// Parity-exempt: the Python reflection prompt text in reflection_agent.py is
-func TestReflectionPrompts(t *testing.T) {
-	short := BuildUnifiedShortReflectSystem("queen_technology")
-	for _, want := range []string{
-		"profile, preference, environment, feedback",
-		"- `queen`: durable learnings specific to how queen 'queen_technology' should work with this user",
-		"user-profile.md",
-		"Do NOT exceed 4096 bytes per file or 200 total files per scope.",
-	} {
-		if !strings.Contains(short, want) {
-			t.Fatalf("short prompt missing %q", want)
-		}
+// The goldens under testdata/prompt are rendered by the Python reference
+// (framework/agents/queen/reflection_agent.py::_build_unified_short_reflect_system
+// and ::_build_unified_long_reflect_system); comparing Go's composition against
+// them makes the port text-exact: a re-typed paragraph or a dropped blank line
+// fails here instead of silently changing what the model is told. In particular
+// the maintenance rules (author/learned/confirmed are the system's, an
+// `author: owner` file can't be changed, a delete must give its reason) are
+// upstream prompt text, not Go local copy.
+func readReflectionPromptGolden(t *testing.T, name string) string {
+	t.Helper()
+	path := filepath.Join("testdata", "prompt", name)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read golden %s: %v", path, err)
 	}
-	if strings.Contains(BuildUnifiedShortReflectSystem(""), "durable learnings specific") {
-		t.Fatal("global-only prompt advertises a queen scope")
-	}
-	// Upstream's f-string leaves a blank line after the {queen_scope}
-	// placeholder even when it expands to nothing; the prompt must match
-	// byte for byte (three newlines before "Expected").
-	if !strings.Contains(short, "should work with this user\n\n\nExpected format for each memory file:") {
-		t.Fatalf("short prompt lost upstream's blank line: %q", short[strings.Index(short, "Available memory scopes"):][:260])
-	}
+	return string(data)
+}
 
-	long := BuildUnifiedLongReflectSystem("queen_technology")
-	for _, want := range []string{
-		"periodic housekeeping pass",
-		"max 200 files and 4096 bytes per file in each scope",
-		"Do NOT invent new information",
-	} {
-		if !strings.Contains(long, want) {
-			t.Fatalf("long prompt missing %q", want)
-		}
+// firstReflectionPromptDifference reports the offset and neighbourhood of the
+// first differing byte, so a golden failure is a diff instead of two blobs.
+func firstReflectionPromptDifference(got, want string) string {
+	limit := len(got)
+	if len(want) < limit {
+		limit = len(want)
 	}
-	if strings.Contains(BuildUnifiedLongReflectSystem(""), "memories specific to how queen") {
-		t.Fatal("global-only long prompt advertises a queen scope")
+	index := 0
+	for index < limit && got[index] == want[index] {
+		index++
 	}
-	if !strings.Contains(long, "should work with this user\n\n\nWorkflow:") {
-		t.Fatalf("long prompt lost upstream's blank line: %q", long[strings.Index(long, "Available memory scopes"):][:220])
+	start := index - 60
+	if start < 0 {
+		start = 0
+	}
+	gotEnd, wantEnd := index+120, index+120
+	if gotEnd > len(got) {
+		gotEnd = len(got)
+	}
+	if wantEnd > len(want) {
+		wantEnd = len(want)
+	}
+	return "\n  offset " + strconv.Itoa(index) +
+		"\n  got:  " + strconv.Quote(got[start:gotEnd]) +
+		"\n  want: " + strconv.Quote(want[start:wantEnd])
+}
+
+// Parity: framework/agents/queen/reflection_agent.py::_build_unified_short_reflect_system, ::_build_unified_long_reflect_system
+func TestReflectionPromptsMatchUpstreamGolden(t *testing.T) {
+	cases := []struct {
+		name string
+		file string
+		got  string
+	}{
+		{"short.queen", "reflect-short.queen.txt", BuildUnifiedShortReflectSystem("queen_technology")},
+		{"short.global", "reflect-short.global.txt", BuildUnifiedShortReflectSystem("")},
+		{"long.queen", "reflect-long.queen.txt", BuildUnifiedLongReflectSystem("queen_technology")},
+		{"long.global", "reflect-long.global.txt", BuildUnifiedLongReflectSystem("")},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			want := readReflectionPromptGolden(t, tc.file)
+			if tc.got != want {
+				t.Fatalf("reflection prompt differs from the upstream-rendered golden: got %d bytes, want %d%s",
+					len(tc.got), len(want), firstReflectionPromptDifference(tc.got, want))
+			}
+		})
 	}
 }
 
@@ -864,5 +892,216 @@ func TestHousekeepingDoesNotConfirmWhatItRewrites(t *testing.T) {
 	}
 	if day, ok := ConfirmedOn(string(data)); !ok || day != "2026-03-02" {
 		t.Fatalf("confirmed = %q (%v), want 2026-03-02", day, ok)
+	}
+}
+
+// P0-21: the maintenance rules are not only prompt text. Through the
+// reflection loop a file the owner wrote refuses both rewrite and delete, a
+// deletion keeps its reason and the text it had, and the system stamps
+// author/confirmed even when the model sends its own values. The refused write
+// is also surfaced to the model and not counted as a changed file.
+//
+// Parity: tests/test_queen_memory.py::test_reflection_cannot_overwrite_or_delete_what_the_owner_wrote,
+// tests/test_queen_memory.py::test_a_file_reflection_deletes_stays_in_the_log_with_her_reason
+func TestReflectionLoopEnforcesTheMaintenanceRules(t *testing.T) {
+	dir := t.TempDir()
+	dirs := []ScopeDir{{Scope: "global", Dir: dir}}
+	fixed := time.Date(2026, 11, 24, 12, 0, 0, 0, time.Local)
+
+	ownerNote, err := Write(dir, "owner.md",
+		"---\nname: owner-note\ntype: preference\ndescription: the owner's own words\n---\nThe owner wrote this.\n",
+		WriteOptions{Author: "owner", Now: fixed})
+	if err != nil {
+		t.Fatalf("seed owner file: %v", err)
+	}
+	teaNote, err := Write(dir, "tea.md",
+		"---\nname: tea\ntype: preference\ndescription: what Ava drinks\n---\nAva drinks oolong.\n",
+		WriteOptions{Author: "reflection", Now: fixed})
+	if err != nil {
+		t.Fatalf("seed reflection file: %v", err)
+	}
+
+	model := &fakeCompleter{responses: []llm.Completion{
+		callsCompletion(
+			toolCall("tc_owner", "write_memory_file", map[string]any{
+				"filename": "owner.md",
+				"content":  "---\nname: owner-note\ntype: preference\ndescription: rewritten\n---\nRewritten.\n",
+			}),
+			toolCall("tc_delete", "delete_memory_file", map[string]any{
+				"filename": "tea.md",
+				"reason":   "merged into drinks.md",
+			}),
+			toolCall("tc_write", "write_memory_file", map[string]any{
+				"filename": "sencha.md",
+				"content": "---\nname: sencha\ntype: preference\ndescription: what Ava drinks now\n" +
+					"author: owner\nconfirmed: 1999-01-01\n---\nAva drinks sencha now.\n",
+			}),
+		),
+		textCompletion("Done."),
+	}}
+
+	result := ReflectionLoopAt(context.Background(), model, BuildUnifiedShortReflectSystem(""),
+		"## Recent conversation\n\n[user]: I switched to sencha.", dirs, ReflectionMaxTurns, 4096, "", fixed)
+
+	ownerData, err := os.ReadFile(filepath.Join(dir, "owner.md"))
+	if err != nil {
+		t.Fatalf("owner file disappeared: %v", err)
+	}
+	if string(ownerData) != ownerNote {
+		t.Fatalf("owner file changed: %q", ownerData)
+	}
+	if _, statErr := os.Stat(filepath.Join(dir, "tea.md")); !os.IsNotExist(statErr) {
+		t.Fatalf("tea.md still exists after its deletion (err = %v)", statErr)
+	}
+	retired := Retired(dir)
+	if len(retired) != 1 || retired[0].Reason != "merged into drinks.md" ||
+		retired[0].Before == nil || *retired[0].Before != teaNote {
+		t.Fatalf("retired = %#v, want the deleted text and its reason", retired)
+	}
+
+	senchaData, err := os.ReadFile(filepath.Join(dir, "sencha.md"))
+	if err != nil {
+		t.Fatalf("new memory missing: %v", err)
+	}
+	if got := AuthorOf(string(senchaData)); got != "reflection" {
+		t.Fatalf("author = %q, want the system's reflection stamp", got)
+	}
+	if day, ok := ConfirmedOn(string(senchaData)); !ok || day != "2026-11-24" {
+		t.Fatalf("confirmed = %q (%v), want the reflection's day", day, ok)
+	}
+	if strings.Contains(string(senchaData), "author: owner") {
+		t.Fatalf("the model's forged author survived: %q", senchaData)
+	}
+
+	changed := strings.Join(result.ChangedFiles, ",")
+	if !strings.Contains(changed, "global:tea.md") || !strings.Contains(changed, "global:sencha.md") {
+		t.Fatalf("changed files = %v, want the delete and the write", result.ChangedFiles)
+	}
+	if strings.Contains(changed, "global:owner.md") {
+		t.Fatalf("a refused owner write was reported as a change: %v", result.ChangedFiles)
+	}
+
+	// The guard is part of the conversation: the next model turn sees it.
+	requests := model.calls()
+	if len(requests) < 2 {
+		t.Fatalf("model calls = %d, want a turn after the tools", len(requests))
+	}
+	ownerResult := ""
+	for _, message := range requests[1].Messages {
+		if message.Role == "tool" && message.ToolCallID == "tc_owner" {
+			ownerResult = message.Content
+		}
+	}
+	if !strings.HasPrefix(ownerResult, "ERROR: owner.md was written by the owner") ||
+		!strings.Contains(ownerResult, "write what you learned to another file") {
+		t.Fatalf("owner guard result = %q, want upstream's refusal telling her where to write instead", ownerResult)
+	}
+}
+
+// A27: a replay's clock governs every stamped artifact, not just the day in
+// the frontmatter: the learned/confirmed days and the log.jsonl entries for
+// both the write and the retirement use the replay instant. Upstream's
+// reflect_on_messages(now=...) is what dates a seeded conversation's notes by
+// its haystack session rather than by the benchmark's wall clock.
+//
+// Parity: framework/agents/queen/reflection_agent.py::reflect_on_messages
+func TestReflectionReplayClockStampsFrontmatterAndLog(t *testing.T) {
+	dir := t.TempDir()
+	dirs := []ScopeDir{{Scope: "global", Dir: dir}}
+	replay := time.Date(2026, 3, 2, 9, 30, 0, 0, time.Local)
+
+	if _, err := Write(dir, "tea.md",
+		"---\nname: tea\ntype: preference\ndescription: tea\n---\nOolong.\n",
+		WriteOptions{Author: "reflection", Now: replay.Add(-24 * time.Hour)}); err != nil {
+		t.Fatalf("seed reflection file: %v", err)
+	}
+
+	model := &fakeCompleter{responses: []llm.Completion{
+		callsCompletion(
+			toolCall("tc_write", "write_memory_file", map[string]any{
+				"filename": "sencha.md",
+				"content":  "---\nname: sencha\ntype: preference\ndescription: tea now\n---\nSencha now.\n",
+			}),
+			toolCall("tc_delete", "delete_memory_file", map[string]any{
+				"filename": "tea.md",
+				"reason":   "replaced by sencha.md",
+			}),
+		),
+		textCompletion("Done."),
+	}}
+
+	result := ReflectionLoopAt(context.Background(), model, BuildUnifiedShortReflectSystem(""),
+		"## Recent conversation\n\n[user]: I switched to sencha.", dirs, ReflectionMaxTurns, 4096, "", replay)
+	if !result.Success {
+		t.Fatal("replay reflection failed")
+	}
+
+	data, err := os.ReadFile(filepath.Join(dir, "sencha.md"))
+	if err != nil {
+		t.Fatalf("replayed write missing: %v", err)
+	}
+	front := ParseFrontmatter(string(data))
+	if front["learned"] != "2026-03-02" || front["confirmed"] != "2026-03-02" {
+		t.Fatalf("learned/confirmed = %q/%q, want the replay day 2026-03-02",
+			front["learned"], front["confirmed"])
+	}
+
+	var writeAt, retireAt, retireReason string
+	for _, entry := range History(dir, nil) {
+		switch {
+		case entry.Op == "write" && entry.File == "sencha.md":
+			writeAt = entry.At
+		case entry.Op == "retire" && entry.File == "tea.md":
+			retireAt = entry.At
+			retireReason = entry.Reason
+		}
+	}
+	if !strings.HasPrefix(writeAt, "2026-03-02T09:30:00") {
+		t.Fatalf("write log at = %q, want the replay instant", writeAt)
+	}
+	if !strings.HasPrefix(retireAt, "2026-03-02T09:30:00") {
+		t.Fatalf("retire log at = %q, want the replay instant", retireAt)
+	}
+	if retireReason != "replaced by sencha.md" {
+		t.Fatalf("retire reason = %q", retireReason)
+	}
+}
+
+// P0-21: the three maintenance rules are upstream prompt text, not a Go
+// paraphrase. Assert the exact sentences in both scopes so a regenerated
+// golden cannot silently drop them.
+// Parity: framework/agents/queen/reflection_agent.py::_build_unified_short_reflect_system, ::_build_unified_long_reflect_system
+func TestReflectionPromptsCarryTheUpstreamMaintenanceRules(t *testing.T) {
+	shortRules := []string{
+		"- The `author`, `learned` and `confirmed` lines are kept by the system: leave them out. A file\n" +
+			"  marked `author: owner` was written by the user and can't be changed; when you learn something\n" +
+			"  that differs from it, write it to another file.\n",
+		"- Writing a file you didn't change confirms it as of this conversation, so only write what this\n" +
+			"  conversation supports. A deleted file is kept in a history the user can restore from: give the\n" +
+			"  reason.\n",
+	}
+	longRules := []string{
+		"- Files marked `author: owner` were written by the user: leave them as they are. Leave the\n" +
+			"  `author`, `learned` and `confirmed` lines out; the system keeps them.\n",
+		"- When you merge files, give each deleted one the reason (e.g. \"merged into user-diet.md\").\n",
+	}
+	cases := []struct {
+		name   string
+		prompt string
+		rules  []string
+	}{
+		{"short.global", BuildUnifiedShortReflectSystem(""), shortRules},
+		{"short.queen", BuildUnifiedShortReflectSystem("queen_technology"), shortRules},
+		{"long.global", BuildUnifiedLongReflectSystem(""), longRules},
+		{"long.queen", BuildUnifiedLongReflectSystem("queen_technology"), longRules},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			for _, rule := range tc.rules {
+				if !strings.Contains(tc.prompt, rule) {
+					t.Fatalf("prompt is missing the upstream maintenance rule %q", rule)
+				}
+			}
+		})
 	}
 }

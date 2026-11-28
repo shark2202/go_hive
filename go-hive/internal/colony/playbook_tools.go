@@ -47,6 +47,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/shark2202/go_hive/go-hive/internal/llm"
@@ -259,10 +260,25 @@ func RunPlaybook(ctx context.Context, spawner RunWorkerSpawner, input map[string
 	// Persist an inline native playbook so a later run_playbook(playbook_name=…)
 	// resumes from the tracker without re-sending the script (upstream parity).
 	savedPath := sourcePath
+	mirrorBase := ""
+	playbooksDir := filepath.Join(binding.Dir, "playbooks")
 	if strings.TrimSpace(stringValue(input["playbook"])) != "" {
 		if path, ok := persistNativePlaybook(binding.Dir, spec.Name, scriptText); ok {
 			savedPath = path
 		}
+		mirrorBase = spec.Name
+	} else if strings.HasSuffix(strings.ToLower(sourcePath), ".play.json") {
+		// A native playbook loaded from the colony library has a Python-blind
+		// `.play.json`; keep a generated `.play.py` beside it so the Python
+		// runtime can list and run the same playbook after a switch. A path
+		// outside the library is run-only and is not mirrored into it.
+		if rel, relErr := filepath.Rel(playbooksDir, sourcePath); relErr == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
+			mirrorBase = strings.TrimSuffix(filepath.Base(sourcePath), ".play.json")
+		}
+	}
+	if mirrorBase != "" {
+		_, _, _ = playbook.EnsureNativePythonMirror(
+			playbooksDir, mirrorBase, nativeExportOptions(spec))
 	}
 
 	executor := &workerDispatchExecutor{
@@ -591,6 +607,27 @@ func (s *nativePlaybookSpec) resolvedConcurrency() int {
 	return n
 }
 
+// nativeExportOptions projects the parsed spec onto the Python mirror's input.
+func nativeExportOptions(spec *nativePlaybookSpec) playbook.NativeExportOptions {
+	return playbook.NativeExportOptions{
+		Name:           spec.Name,
+		Description:    spec.Description,
+		Concurrency:    spec.Concurrency,
+		PendingSQL:     spec.PendingSQL,
+		Task:           spec.Task,
+		Goal:           spec.Goal,
+		Profile:        spec.Profile,
+		Skill:          spec.Skill,
+		DataColumns:    spec.DataColumns,
+		Retries:        spec.Retries,
+		Backoff:        spec.Backoff,
+		TimeoutSeconds: spec.TimeoutSeconds,
+		MaxRounds:      spec.MaxRounds,
+		Chunk:          spec.Chunk,
+		CircuitBreaker: spec.CircuitBreaker,
+	}
+}
+
 func parseNativePlaybook(script string) (*nativePlaybookSpec, error) {
 	trimmed := strings.TrimSpace(script)
 	if trimmed == "" {
@@ -742,6 +779,14 @@ func renderPlaybookTemplate(template string, row map[string]any) string {
 type workerDispatchExecutor struct {
 	runtime playbookRuntime
 	runID   string
+	// seq is the run-scoped dispatch counter. Playbook dispatches are size-1
+	// batches that all share one batch_id, so batch_index is always 1 and
+	// cannot disambiguate peers; a monotonic worker_seq can. Concurrent
+	// dispatches share one executor, so the counter is atomic (upstream's
+	// itertools.count runs on a single asyncio loop instead).
+	//
+	// Parity: framework/tools/playbook_tools.py::run_playbook (_dispatch_seq)
+	seq atomic.Int64
 }
 
 // dispatchOne spawns one size-1 batch and awaits its terminal report, exactly
@@ -762,6 +807,10 @@ func (e *workerDispatchExecutor) dispatchOne(ctx context.Context, task string, o
 		ProfileName:  opts.Profile,
 		Goal:         goal,
 		ReportSchema: opts.Schema,
+		// Run-scoped ordinal as batch metadata, NOT task input: it lets the
+		// dashboard badge and the cloud-usage suffix tell apart peers that all
+		// share this run's batch_id with a degenerate batch_index of 1.
+		WorkerSeq: int(e.seq.Add(1)),
 	}}, SpawnBatchOptions{BatchID: e.runID})
 	if err != nil {
 		return nil, err

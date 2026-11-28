@@ -20,12 +20,12 @@
 | DB schema | tracker `PRAGMA user_version` / `_tracker_meta.schema_version` = **3**（两侧常数一致：Python `SCHEMA_VERSION`、Go `SchemaVersion`）；session `state.json` `schema_version` = **1.1** | `check_compat_contracts.py` C5（版本常数 + bootstrap DDL 表集） | schema 升级必须**两侧同时**推进并带迁移；单侧先行 = 破坏性 |
 | `configuration.json` | 135 个键（`contracts/config-keys.json`） | `freeze_env_config_contract.py`（重生成）；C1/C3（清单、锚点） | 新键必须带默认值、旧文件缺键可用；删键/改名/改默认语义 = 破坏性 |
 | 环境变量 | 124 个名字：Python 89 / Go 118 / 共有 83 / Python 独有 6（GCU 平台差异）/ Go 独有 35（`contracts/env-vars.json`） | `freeze_env_config_contract.py --check`（重生成）；C2（审计计数） | 新增 env 必须向后兼容（未设置时行为不变）；删除 env 或翻转解析口径（如 deny-list）= 破坏性 |
-| HTTP API | Python 217 路由 / Go 220 路由（`contracts/api-routes.json`；`missing_in_target_effective=0`）；响应形状 77 端点（`contracts/api-responses/`）+ `api.proto` | `export_api_routes.py --check`（C6）；`check_api_proto.py`（C7）；`api-responses` 语料（C9） | 新增路由/新增字段 = 兼容；删除路由、改状态码语义、改字段类型/必填性 = 破坏性 |
+| HTTP API | Python 217 路由 / Go 226 路由（`contracts/api-routes.json`；`missing_in_target_effective=0`）；canonical 文档 `contracts/openapi.json`（OpenAPI 3.1）与 `contracts/asyncapi.json`（SSE/WS）；legacy 响应形状 107 端点（`contracts/api-responses/`）+ `api.proto` | `export_api_routes.py --check`（C6）；`check_openapi_contract.py`（C13）；`check_api_proto.py`（C7）；`api-responses` 语料（C9） | 新增路由/新增字段 = 兼容；删除路由、改状态码语义、改字段类型/必填性 = 破坏性 |
 | 工具面（LLM 可见） | `contracts/tool-definitions.json`：54 个参考工具 + 103 个 Go 侧工具；名称/描述/`input_schema` 逐字冻结 | `freeze_tool_contract.py check`（C8）；`gen_tool_surface_flat.py --check`、`gen_browser_tool_defs.py --check`（C10） | 删除/改名工具、收紧 `input_schema`（新增必填、收窄 enum）= 破坏性；新增工具/新增可选参数 = 兼容 |
 | CLI | `contracts/cli-surface.json`（递归子命令树 / flag / 默认值 / 无副作用退出码探针） | `cli_surface_contract.py --check`（全量重采，发布时跑；不进 `ci`）；**C11** 逐 slot 外观门禁（进 `ci`） | 删除子命令/flag、改默认值、退出码语义或 usage 行 = 破坏性；新增子命令/flag = 兼容（需重采契约） |
 | 交付形态 | 四二进制同级（`hive`、`hive-cred`、`hive-browser`、`browserbridge`）+ `SHA256SUMS` + `install.sh` | `release.sh`、`install.sh`、`verify_release_archive.sh` | 归档布局、文件名、SHA256 校验与 `install.sh` 原地升级语义不变 |
 
-**判据来源**：上表的“当前值”由 `make compat-check`（C1–C12）在每次 `make ci` 中
+**判据来源**：上表的“当前值”由 `make compat-check`（C1–C13）在每次 `make ci` 中
 核对；任何一项变化都必须同步更新对应冻结产物，并在发布说明里写明兼容影响。
 
 ---
@@ -86,7 +86,7 @@
 
 | # | 检查 | 命令 | 通过标准 |
 | --- | --- | --- | --- |
-| 1 | 契约自洽（env/config/storage/DB schema/API 路由/响应形状/工具面/CLI 外观） | `make compat-check`（`make ci` 已包含；C11 还需本机能 `go build` 且 `python hive` 可用） | `verdict=PASS`；`SKIP` 逐条列出且不计为通过 |
+| 1 | 契约自洽（env/config/storage/DB schema/API 路由/OpenAPI+AsyncAPI 文档/响应形状/工具面/CLI 外观） | `make compat-check`（`make ci` 已包含；C11 还需本机能 `go build` 且 `python hive` 可用） | `verdict=PASS`；`SKIP` 逐条列出且不计为通过 |
 | 2 | 冻结产物重生成（车道内，不进 `ci`） | `freeze_env_config_contract.py`；`freeze_tool_contract.py build`；`export_api_routes.py`；`freeze_api_responses.py`；`gen_storage_contract.py` | 产物 diff 已审阅并提交 |
 | 3 | **升级兼容**（对上一交付） | `bash go_hive/scripts/upgrade_compat_check.sh --old-dir <上一交付目录> --new-dir <候选目录>`（或 `make upgrade-compat-check PREV_SLOT=...`） | `verdict=PASS`（3 夹具 × 19 项）；报告 JSON 落盘 |
 | 4 | 归档 + 安装 + 回滚 | `release.sh` → `shasum -c SHA256SUMS` → `verify_release_archive.sh` → `install.sh`；G2 方向演练 `g2_rollback_drill.sh` | 归档 4 二进制 + SHA 校验；`verify_release_archive.sh` 全 PASS；`install.sh` 原地升级后 `--version` 正确 |
@@ -132,7 +132,7 @@ M9 已有 DB 逻辑零变化、M10 幂等、M11 旧 CLI 退出码 0 + 零写入�
 
 ### 6.2 契约自洽门禁（`make compat-check`）
 
-`check_compat_contracts.py` 的 C1–C12 见 §1 表；纯 stdlib、离线、不依赖项目
+`check_compat_contracts.py` 的 C1–C13 见 §1 表；纯 stdlib、离线、不依赖项目
 venv；`make ci` 已引用。`freeze_* --check` 的逐字节重生成不进 `ci`：冻结产物
 记录读点行号，代码移动即 STALE（当前 main 上 env/config 清单即因行号漂移而
 STALE，语义面无变化）；语义漂移由 C1–C3 捕获。
@@ -147,6 +147,15 @@ Python 侧对照。自检 `make compat-cli-selftest`（`--self-test`）拿契约
 「删一个 flag」「改一个 usage 行」两类合成漂移，必须判定 FAIL、基线副本不得
 误报。全量重采/退出码探针仍由 `cli_surface_contract.py --check`（`make
 cli-surface-check`，发布时跑）负责；C11 是每次提交的廉价常设门禁。
+
+**C13（OpenAPI/AsyncAPI 文档）**：`make compat-check` 直接调用
+`check_openapi_contract.py`（纯 stdlib、离线、约 4 秒），要求已提交的
+`contracts/openapi.json`（OpenAPI 3.1）与 `contracts/asyncapi.json`（AsyncAPI 3）
+仍与生成器逐字节一致、`api-routes.json` 的每条路由恰好覆盖一次、107 个冻结快照
+全部映射到对应 operation、所有本地 `$ref` 可解析、`x-contract.sources` 摘要未
+漂移。检查器退出码 1（校验/漂移）或 2（文档不可读）一律转为门禁 FAIL，脚本缺失
+同样 FAIL——不静默降级为 SKIP。`api.proto` 仍保留为字段形状证据（C7），本项只守
+canonical 文档。
 
 ---
 
@@ -170,3 +179,4 @@ cli-surface-check`，发布时跑）负责；C11 是每次提交的廉价常设�
 | --- | --- |
 | 2026-11-21 | 首版：把 G2 一次性证据升级为常设门禁（三夹具升级兼容测试器、slot 联动、`make compat-check` 进 `ci`）；首次实测见 `e2e-assets/upgrade-compat/REPORT.md` |
 | 2026-11-21 | C11：CLI 外观逐 slot 接入 `make compat-check`（契约基线旧构建 vs 当前新构建 vs Python，usage 行 + 命令路径/flag 集合；任一漂移 FAIL）；新增 `--self-test` 合成漂移自检；`docs/cli-surface-diff.md` 与 `docs/delivery-governance.html` 同步声明 |
+| 2026-11-24 | C13：`check_openapi_contract.py` 接入 `make compat-check`（即 `make ci`）：OpenAPI 3.1 / AsyncAPI 3 canonical 文档的生成器逐字节一致、路由/快照覆盖、`$ref`、源摘要全部在每次提交复核；检查器非 0 退出码 → 门禁 FAIL。`api.proto` 保留为 legacy 字段形状证据（C7） |

@@ -40,6 +40,20 @@ var workerSpecExtensions = map[string]struct{}{
 	".yml":  {},
 }
 
+// workerSpecExcludedStems are the sidecar stems AgentLoader.load skips when it
+// picks the first worker config: ("agent", "flowchart", "triggers",
+// "configuration", "metadata"). Discovery's excludedJSONStems additionally
+// skips "tasks", but that is a discovery-only rule -- upstream's worker loader
+// does not exclude tasks.json, and a directory holding only tasks.json loads it
+// as the worker definition.
+var workerSpecExcludedStems = map[string]struct{}{
+	"agent":         {},
+	"flowchart":     {},
+	"triggers":      {},
+	"configuration": {},
+	"metadata":      {},
+}
+
 const (
 	workerSpecDefaultMaxTokens   = 4096
 	workerSpecDefaultAgentType   = "event_loop"
@@ -84,15 +98,21 @@ type WorkerSpec struct {
 	// ConversationMode is the config's conversation_mode, defaulting to the
 	// "continuous" mode upstream gives a colony worker graph.
 	ConversationMode string
+	// ProtocolsPrompt is the config's operational-protocols block (written by
+	// the fork's build_meta). The colony runtime consumes it through the
+	// worker context, so the block reaches the worker's system prompt instead
+	// of staying an unread worker.json field.
+	ProtocolsPrompt string
 }
 
 // HostFields are the host.Config fields a colony directory defines. Callers
-// building a host.Config fill these three straight from the parsed spec;
-// storage, LLM, and the tool surface stay caller-owned.
+// building a host.Config fill these straight from the parsed spec; storage,
+// LLM, and the tool surface stay caller-owned.
 type HostFields struct {
-	ColonyID  string
-	AgentSpec agentloop.AgentSpec
-	Goal      *schemas.Goal
+	ColonyID        string
+	AgentSpec       agentloop.AgentSpec
+	Goal            *schemas.Goal
+	ProtocolsPrompt string
 }
 
 // HostFields returns the host.Config spec fields for this worker.
@@ -100,7 +120,12 @@ func (s *WorkerSpec) HostFields() HostFields {
 	if s == nil {
 		return HostFields{}
 	}
-	return HostFields{ColonyID: s.ColonyID, AgentSpec: s.AgentSpec, Goal: s.Goal}
+	return HostFields{
+		ColonyID:        s.ColonyID,
+		AgentSpec:       s.AgentSpec,
+		Goal:            s.Goal,
+		ProtocolsPrompt: s.ProtocolsPrompt,
+	}
 }
 
 // LoadAgentSpec resolves agentDir and returns the worker spec defined there.
@@ -192,7 +217,13 @@ func FindWorkerSpecFiles(agentDir string) []string {
 		if _, isConfig := workerSpecExtensions[suffix]; !isConfig {
 			continue
 		}
-		if _, excluded := excludedJSONStems[stem]; excluded {
+		if _, excluded := workerSpecExcludedStems[stem]; excluded {
+			continue
+		}
+		// YAML is a Go-side extension with no Python counterpart; keep the
+		// discovery-only "tasks" sidecar out of the non-JSON forms so a
+		// tasks.yaml data file is never mistaken for a worker definition.
+		if stem == "tasks" && suffix != ".json" {
 			continue
 		}
 		configs = append(configs, path)
@@ -240,6 +271,7 @@ type workerSpecConfig struct {
 	LoopConfig         map[string]any     `json:"loop_config" yaml:"loop_config"`
 	MaxTokens          *int               `json:"max_tokens" yaml:"max_tokens"`
 	ConversationMode   string             `json:"conversation_mode" yaml:"conversation_mode"`
+	ProtocolsPrompt    string             `json:"protocols_prompt" yaml:"protocols_prompt"`
 	MaxRetries         *int               `json:"max_retries" yaml:"max_retries"`
 	RetryOn            []string           `json:"retry_on" yaml:"retry_on"`
 	MaxNodeVisits      *int               `json:"max_node_visits" yaml:"max_node_visits"`
@@ -523,6 +555,7 @@ func buildWorkerSpec(dir, configPath string, config *workerSpecConfig) *WorkerSp
 		IdentityPrompt:   identityPrompt,
 		MaxTokens:        maxTokens,
 		ConversationMode: conversationMode,
+		ProtocolsPrompt:  config.ProtocolsPrompt,
 	}
 }
 

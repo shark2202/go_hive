@@ -1,6 +1,7 @@
 package mcpregistry
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -109,6 +110,96 @@ func sortedKeys(m map[string]any) []string {
 	}
 	sort.Strings(keys)
 	return keys
+}
+
+// orderedServerNames returns the keys of the file's top-level "servers" object
+// in the order they appear in the JSON text. Python reads the same file into a
+// dict, so its list_installed/list_available preserve file order; Go maps lose
+// that order unless the raw token stream is walked. A missing or malformed
+// object yields nil and callers fall back to sorted keys.
+func orderedServerNames(raw []byte) []string {
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	token, err := decoder.Token()
+	if err != nil {
+		return nil
+	}
+	delim, ok := token.(json.Delim)
+	if !ok || delim != '{' {
+		return nil
+	}
+	for decoder.More() {
+		keyToken, err := decoder.Token()
+		if err != nil {
+			return nil
+		}
+		key, ok := keyToken.(string)
+		if !ok {
+			return nil
+		}
+		var value json.RawMessage
+		if err := decoder.Decode(&value); err != nil {
+			return nil
+		}
+		if key == "servers" {
+			return orderedObjectKeys(value)
+		}
+	}
+	return nil
+}
+
+// orderedObjectKeys lists one JSON object's keys in source order.
+func orderedObjectKeys(raw []byte) []string {
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	token, err := decoder.Token()
+	if err != nil {
+		return nil
+	}
+	delim, ok := token.(json.Delim)
+	if !ok || delim != '{' {
+		return nil
+	}
+	keys := []string{}
+	for decoder.More() {
+		keyToken, err := decoder.Token()
+		if err != nil {
+			return keys
+		}
+		key, ok := keyToken.(string)
+		if !ok {
+			return keys
+		}
+		var value json.RawMessage
+		if err := decoder.Decode(&value); err != nil {
+			return keys
+		}
+		keys = append(keys, key)
+	}
+	return keys
+}
+
+// orderedServerList merges a file's server order with the live map, appending
+// any map entries the raw file does not list under a sorted tail so a caller
+// never drops a server.
+func orderedServerList(order []string, servers map[string]any) []string {
+	out := make([]string, 0, len(servers))
+	seen := make(map[string]struct{}, len(servers))
+	for _, name := range order {
+		if _, present := servers[name]; !present {
+			continue
+		}
+		if _, duplicate := seen[name]; duplicate {
+			continue
+		}
+		seen[name] = struct{}{}
+		out = append(out, name)
+	}
+	for _, name := range sortedKeys(servers) {
+		if _, duplicate := seen[name]; duplicate {
+			continue
+		}
+		out = append(out, name)
+	}
+	return out
 }
 
 func pyListRepr(values []string) string {

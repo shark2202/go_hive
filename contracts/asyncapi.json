@@ -1,0 +1,2958 @@
+{
+  "asyncapi": "3.0.0",
+  "channels": {
+    "channelWebsocket": {
+      "address": "/channel/websocket/{name}",
+      "bindings": {
+        "ws": {
+          "bindingVersion": "0.1.0"
+        }
+      },
+      "description": "Designed WebSocket transport for channels.<name>. The path is derived from the channel key, authentication is a channel-specific bearer token, and exactly one connection per channel is allowed. This route does not exist in the production route table yet; it is design-only.",
+      "parameters": {
+        "name": {
+          "description": "Channel key; equals channels.<name> and hello.params.name.",
+          "location": "$message.payload#/params/name"
+        }
+      },
+      "servers": [
+        {
+          "$ref": "#/servers/channelWebsocketServer"
+        }
+      ],
+      "title": "Channel WebSocket transport (design-only)",
+      "x-auth": "channel-specific bearer token",
+      "x-contract-status": "design-only",
+      "x-design-doc": "go_hive/docs/channel-websocket-design.json",
+      "x-production": false,
+      "x-single-connection-per-channel": true,
+      "x-subprotocol": "hive-channel/1"
+    },
+    "sessionEventsHistory": {
+      "address": "/api/sessions/{session_id}/events/history",
+      "bindings": {
+        "http": {
+          "bindingVersion": "0.3.0",
+          "method": "GET"
+        }
+      },
+      "description": "Complete history log (`GET /api/sessions/{session_id}/events/history`). Frozen in contracts/sse-frames/reference/history.json.",
+      "parameters": {
+        "session_id": {
+          "description": "Session path parameter; names match the Go target route."
+        }
+      },
+      "servers": [
+        {
+          "$ref": "#/servers/sseServer"
+        }
+      ],
+      "title": "Session history event log",
+      "x-contract-status": "implemented",
+      "x-frame-count": 43,
+      "x-route": "GET /api/sessions/{session_id}/events/history",
+      "x-source-artifact": "go_hive/contracts/sse-frames/reference/history.json",
+      "x-stream": "history",
+      "x-transport": "sse"
+    },
+    "sessionEventsLive": {
+      "address": "/api/sessions/{session_id}/events",
+      "bindings": {
+        "http": {
+          "bindingVersion": "0.3.0",
+          "method": "GET"
+        }
+      },
+      "description": "Live SSE stream for one session (`GET /api/sessions/{session_id}/events`). Frame names and payloads are frozen in contracts/sse-frames/reference/live.json.",
+      "parameters": {
+        "session_id": {
+          "description": "Session path parameter; names match the Go target route."
+        }
+      },
+      "servers": [
+        {
+          "$ref": "#/servers/sseServer"
+        }
+      ],
+      "title": "Session live event stream",
+      "x-contract-status": "implemented",
+      "x-frame-count": 35,
+      "x-route": "GET /api/sessions/{session_id}/events",
+      "x-source-artifact": "go_hive/contracts/sse-frames/reference/live.json",
+      "x-stream": "live",
+      "x-transport": "sse"
+    },
+    "sessionEventsReplay": {
+      "address": "/api/sessions/{session_id}/events",
+      "bindings": {
+        "http": {
+          "bindingVersion": "0.3.0",
+          "method": "GET"
+        }
+      },
+      "description": "Reconnect replay on the live endpoint. The client resumes with the last seen sequence id; the replayed frame set is frozen in contracts/sse-frames/reference/replay.json. This is a resume behavior, not a separate HTTP route.",
+      "parameters": {
+        "session_id": {
+          "description": "Session path parameter; names match the Go target route."
+        }
+      },
+      "servers": [
+        {
+          "$ref": "#/servers/sseServer"
+        }
+      ],
+      "title": "Session replay after reconnect",
+      "x-contract-status": "implemented",
+      "x-frame-count": 17,
+      "x-resume-header": "Last-Event-ID",
+      "x-route": "GET /api/sessions/{session_id}/events",
+      "x-source-artifact": "go_hive/contracts/sse-frames/reference/replay.json",
+      "x-stream": "replay",
+      "x-transport": "sse"
+    },
+    "sessionEventsStop": {
+      "address": "/api/sessions/{session_id}/events",
+      "bindings": {
+        "http": {
+          "bindingVersion": "0.3.0",
+          "method": "GET"
+        }
+      },
+      "description": "Shutdown tail of the live stream observed around DELETE /api/sessions/{session_id}; frozen in contracts/sse-frames/reference/stop.json. Not a separate route.",
+      "parameters": {
+        "session_id": {
+          "description": "Session path parameter; names match the Go target route."
+        }
+      },
+      "servers": [
+        {
+          "$ref": "#/servers/sseServer"
+        }
+      ],
+      "title": "Session shutdown tail",
+      "x-contract-status": "implemented",
+      "x-frame-count": 18,
+      "x-note": "Captured shutdown tail; not a distinct route.",
+      "x-route": "GET /api/sessions/{session_id}/events",
+      "x-source-artifact": "go_hive/contracts/sse-frames/reference/stop.json",
+      "x-stream": "stop",
+      "x-transport": "sse"
+    }
+  },
+  "components": {
+    "messages": {
+      "HelloRequest": {
+        "contentType": "application/json",
+        "name": "HelloRequest",
+        "payload": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/ChannelRequest"
+            },
+            {
+              "properties": {
+                "method": {
+                  "const": "hello"
+                },
+                "params": {
+                  "properties": {
+                    "config": {
+                      "description": "channels.<name> 配置段原样传递（含 enabled、command 等 Go 宿主键）；插件只读取自己认识的键。可能含密钥，禁止写日志。",
+                      "type": "object"
+                    },
+                    "name": {
+                      "description": "通道名，等于 configuration.json 的 channels.<name> 键。",
+                      "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$",
+                      "type": "string"
+                    },
+                    "protocol": {
+                      "const": "hive-channel/1",
+                      "description": "协议版本；插件按自己支持的版本处理。宿主不回读 welcome.protocol。"
+                    },
+                    "state_dir": {
+                      "description": "宿主创建并交给插件的目录：$HIVE_HOME/channels/<name>；实际权限来自 MkdirAll(0755) 与 umask。",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "protocol",
+                    "name",
+                    "config",
+                    "state_dir"
+                  ],
+                  "type": "object"
+                }
+              },
+              "required": [
+                "method",
+                "params"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "summary": "宿主宣告协议版本、通道名、配置段与状态目录。",
+        "title": "hello request",
+        "x-direction": "host_to_plugin",
+        "x-method": "hello"
+      },
+      "JudgeRequest": {
+        "contentType": "application/json",
+        "name": "JudgeRequest",
+        "payload": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/ChannelRequest"
+            },
+            {
+              "properties": {
+                "method": {
+                  "const": "judge"
+                },
+                "params": {
+                  "properties": {
+                    "criteria": {
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "description": "可选：描述 true/false 判定标准的键值对。",
+                      "type": "object"
+                    },
+                    "question": {
+                      "description": "要判断的问题；空字符串返回 invalid_params。",
+                      "type": "string"
+                    },
+                    "state": {
+                      "description": "judge 读取的状态字典。",
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "question",
+                    "state"
+                  ],
+                  "type": "object"
+                }
+              },
+              "required": [
+                "method",
+                "params"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "summary": "调用配置的 judge 模型，对 question 在给定 state 下回答 yes 的概率打分。",
+        "title": "judge request",
+        "x-direction": "plugin_to_host",
+        "x-method": "judge"
+      },
+      "JudgeResponse": {
+        "contentType": "application/json",
+        "name": "JudgeResponse",
+        "payload": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/ChannelResponse"
+            },
+            {
+              "properties": {
+                "result": {
+                  "properties": {
+                    "probability": {
+                      "description": "0..1 的概率；null 表示未配置 judge 或当前无法回答（原因写日志）。",
+                      "maximum": 1,
+                      "minimum": 0,
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "probability"
+                  ],
+                  "type": "object"
+                }
+              },
+              "required": [
+                "result"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "summary": "调用配置的 judge 模型，对 question 在给定 state 下回答 yes 的概率打分。",
+        "title": "judge response",
+        "x-direction": "plugin_to_host",
+        "x-method": "judge"
+      },
+      "OpenSessionRequest": {
+        "contentType": "application/json",
+        "name": "OpenSessionRequest",
+        "payload": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/ChannelRequest"
+            },
+            {
+              "properties": {
+                "method": {
+                  "const": "open_session"
+                },
+                "params": {
+                  "properties": {
+                    "queen_id": {
+                      "description": "queen 档案 id；不存在时返回 no_queen。",
+                      "type": "string"
+                    },
+                    "session_id": {
+                      "description": "上次使用的会话 id；宿主会沿 superseded_by 找到最新后继并恢复。",
+                      "type": "string"
+                    },
+                    "title": {
+                      "description": "新建会话时写入的标题；恢复时忽略。",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "queen_id"
+                  ],
+                  "type": "object"
+                }
+              },
+              "required": [
+                "method",
+                "params"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "summary": "为一个外部会话（群聊/私聊）打开对应的 queen 会话；已有 session_id 时优先恢复。",
+        "title": "open_session request",
+        "x-direction": "plugin_to_host",
+        "x-method": "open_session"
+      },
+      "OpenSessionResponse": {
+        "contentType": "application/json",
+        "name": "OpenSessionResponse",
+        "payload": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/ChannelResponse"
+            },
+            {
+              "properties": {
+                "result": {
+                  "properties": {
+                    "session_id": {
+                      "description": "可直接用于 send/subscribe 的会话 id；queen 迁移会话后可能不同于请求值。",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "session_id"
+                  ],
+                  "type": "object"
+                }
+              },
+              "required": [
+                "result"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "summary": "为一个外部会话（群聊/私聊）打开对应的 queen 会话；已有 session_id 时优先恢复。",
+        "title": "open_session response",
+        "x-direction": "plugin_to_host",
+        "x-method": "open_session"
+      },
+      "OutputNotification": {
+        "contentType": "application/json",
+        "name": "output",
+        "payload": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/ChannelNotification"
+            },
+            {
+              "properties": {
+                "method": {
+                  "const": "output"
+                },
+                "params": {
+                  "$ref": "#/components/schemas/ChannelOutput"
+                }
+              },
+              "required": [
+                "method",
+                "params"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "summary": "Host pushes subscription output; no id, monotonically increasing seq.",
+        "title": "output notification",
+        "x-direction": "host_to_plugin",
+        "x-method": "output"
+      },
+      "ProtocolErrorResponse": {
+        "contentType": "application/json",
+        "name": "error",
+        "payload": {
+          "$ref": "#/components/schemas/ChannelErrorResponse"
+        },
+        "summary": "Error response envelope; codes and data kinds are frozen in channel-plugin-protocol.json.",
+        "title": "JSON-RPC error response",
+        "x-direction": "both",
+        "x-method": "error"
+      },
+      "SendRequest": {
+        "contentType": "application/json",
+        "name": "SendRequest",
+        "payload": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/ChannelRequest"
+            },
+            {
+              "properties": {
+                "method": {
+                  "const": "send"
+                },
+                "params": {
+                  "properties": {
+                    "correlation_id": {
+                      "description": "标记本次 client_input_received 事件；不传则宿主生成一个。",
+                      "type": "string"
+                    },
+                    "display_text": {
+                      "description": "dashboard 上替代 text 显示的文本；不传则显示 text。",
+                      "type": "string"
+                    },
+                    "images": {
+                      "description": "base64 字符串（可带 data: 前缀）。宿主解码后按内容类型嗅探；非图片跳过；超过 4 MiB 或非 base64 返回 invalid_params。",
+                      "items": {
+                        "type": "string"
+                      },
+                      "maxItems": 8,
+                      "type": "array"
+                    },
+                    "session_id": {
+                      "description": "目标会话；不存在或不可恢复时返回 no_session。",
+                      "type": "string"
+                    },
+                    "text": {
+                      "description": "送入模型的文本；与 images 至少有一个能产生内容。",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "session_id"
+                  ],
+                  "type": "object"
+                }
+              },
+              "required": [
+                "method",
+                "params"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "summary": "把用户消息（可带图片）送进会话；必要时恢复已停止的会话。",
+        "title": "send request",
+        "x-direction": "plugin_to_host",
+        "x-method": "send"
+      },
+      "SendResponse": {
+        "contentType": "application/json",
+        "name": "SendResponse",
+        "payload": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/ChannelResponse"
+            },
+            {
+              "properties": {
+                "result": {
+                  "properties": {
+                    "session_id": {
+                      "description": "实际收到消息的会话 id；queen 迁移后可能与请求值不同，后续调用应使用它。",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "session_id"
+                  ],
+                  "type": "object"
+                }
+              },
+              "required": [
+                "result"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "summary": "把用户消息（可带图片）送进会话；必要时恢复已停止的会话。",
+        "title": "send response",
+        "x-direction": "plugin_to_host",
+        "x-method": "send"
+      },
+      "SetTitleRequest": {
+        "contentType": "application/json",
+        "name": "SetTitleRequest",
+        "payload": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/ChannelRequest"
+            },
+            {
+              "properties": {
+                "method": {
+                  "const": "set_title"
+                },
+                "params": {
+                  "properties": {
+                    "session_id": {
+                      "description": "目标会话。",
+                      "type": "string"
+                    },
+                    "title": {
+                      "description": "新标题；空字符串表示清除。",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "session_id",
+                    "title"
+                  ],
+                  "type": "object"
+                }
+              },
+              "required": [
+                "method",
+                "params"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "summary": "在 dashboard 给会话命名或清除标题；自动标题不会覆盖用户标题。",
+        "title": "set_title request",
+        "x-direction": "plugin_to_host",
+        "x-method": "set_title"
+      },
+      "SetTitleResponse": {
+        "contentType": "application/json",
+        "name": "SetTitleResponse",
+        "payload": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/ChannelResponse"
+            },
+            {
+              "properties": {
+                "result": {
+                  "description": "空对象表示已写入。",
+                  "properties": {},
+                  "type": "object"
+                }
+              },
+              "required": [
+                "result"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "summary": "在 dashboard 给会话命名或清除标题；自动标题不会覆盖用户标题。",
+        "title": "set_title response",
+        "x-direction": "plugin_to_host",
+        "x-method": "set_title"
+      },
+      "SseClientInputCommittedEvent": {
+        "contentType": "application/json",
+        "name": "client_input_committed",
+        "payload": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/SseFrame"
+            },
+            {
+              "properties": {
+                "data": {
+                  "$ref": "#/components/schemas/SseClientInputCommittedData"
+                },
+                "type": {
+                  "const": "client_input_committed"
+                }
+              },
+              "required": [
+                "type",
+                "data"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "summary": "SSE `client_input_committed` frame observed in streams: history, live, replay, stop.",
+        "title": "client_input_committed",
+        "x-event-type": "client_input_committed",
+        "x-observed-count": 12,
+        "x-observed-streams": [
+          "history",
+          "live",
+          "replay",
+          "stop"
+        ]
+      },
+      "SseClientInputReceivedEvent": {
+        "contentType": "application/json",
+        "name": "client_input_received",
+        "payload": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/SseFrame"
+            },
+            {
+              "properties": {
+                "data": {
+                  "$ref": "#/components/schemas/SseClientInputReceivedData"
+                },
+                "type": {
+                  "const": "client_input_received"
+                }
+              },
+              "required": [
+                "type",
+                "data"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "summary": "SSE `client_input_received` frame observed in streams: history, live, replay, stop.",
+        "title": "client_input_received",
+        "x-event-type": "client_input_received",
+        "x-observed-count": 12,
+        "x-observed-streams": [
+          "history",
+          "live",
+          "replay",
+          "stop"
+        ]
+      },
+      "SseClientInputRequestedEvent": {
+        "contentType": "application/json",
+        "name": "client_input_requested",
+        "payload": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/SseFrame"
+            },
+            {
+              "properties": {
+                "data": {
+                  "$ref": "#/components/schemas/SseClientInputRequestedData"
+                },
+                "type": {
+                  "const": "client_input_requested"
+                }
+              },
+              "required": [
+                "type",
+                "data"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "summary": "SSE `client_input_requested` frame observed in streams: history, live, replay, stop.",
+        "title": "client_input_requested",
+        "x-event-type": "client_input_requested",
+        "x-observed-count": 10,
+        "x-observed-streams": [
+          "history",
+          "live",
+          "replay",
+          "stop"
+        ]
+      },
+      "SseClientOutputDeltaEvent": {
+        "contentType": "application/json",
+        "name": "client_output_delta",
+        "payload": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/SseFrame"
+            },
+            {
+              "properties": {
+                "data": {
+                  "$ref": "#/components/schemas/SseClientOutputDeltaData"
+                },
+                "type": {
+                  "const": "client_output_delta"
+                }
+              },
+              "required": [
+                "type",
+                "data"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "summary": "SSE `client_output_delta` frame observed in streams: history, live, replay, stop.",
+        "title": "client_output_delta",
+        "x-event-type": "client_output_delta",
+        "x-observed-count": 12,
+        "x-observed-streams": [
+          "history",
+          "live",
+          "replay",
+          "stop"
+        ]
+      },
+      "SseContextUsageUpdatedEvent": {
+        "contentType": "application/json",
+        "name": "context_usage_updated",
+        "payload": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/SseFrame"
+            },
+            {
+              "properties": {
+                "data": {
+                  "$ref": "#/components/schemas/SseContextUsageUpdatedData"
+                },
+                "type": {
+                  "const": "context_usage_updated"
+                }
+              },
+              "required": [
+                "type",
+                "data"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "summary": "SSE `context_usage_updated` frame observed in streams: history, live.",
+        "title": "context_usage_updated",
+        "x-event-type": "context_usage_updated",
+        "x-observed-count": 11,
+        "x-observed-streams": [
+          "history",
+          "live"
+        ]
+      },
+      "SseJudgeVerdictEvent": {
+        "contentType": "application/json",
+        "name": "judge_verdict",
+        "payload": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/SseFrame"
+            },
+            {
+              "properties": {
+                "data": {
+                  "$ref": "#/components/schemas/SseJudgeVerdictData"
+                },
+                "type": {
+                  "const": "judge_verdict"
+                }
+              },
+              "required": [
+                "type",
+                "data"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "summary": "SSE `judge_verdict` frame observed in streams: history.",
+        "title": "judge_verdict",
+        "x-event-type": "judge_verdict",
+        "x-observed-count": 3,
+        "x-observed-streams": [
+          "history"
+        ]
+      },
+      "SseLlmTurnCompleteEvent": {
+        "contentType": "application/json",
+        "name": "llm_turn_complete",
+        "payload": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/SseFrame"
+            },
+            {
+              "properties": {
+                "data": {
+                  "$ref": "#/components/schemas/SseLlmTurnCompleteData"
+                },
+                "type": {
+                  "const": "llm_turn_complete"
+                }
+              },
+              "required": [
+                "type",
+                "data"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "summary": "SSE `llm_turn_complete` frame observed in streams: history, live, replay, stop.",
+        "title": "llm_turn_complete",
+        "x-event-type": "llm_turn_complete",
+        "x-observed-count": 16,
+        "x-observed-streams": [
+          "history",
+          "live",
+          "replay",
+          "stop"
+        ]
+      },
+      "SseLoopStateChangedEvent": {
+        "contentType": "application/json",
+        "name": "loop_state_changed",
+        "payload": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/SseFrame"
+            },
+            {
+              "properties": {
+                "data": {
+                  "$ref": "#/components/schemas/SseLoopStateChangedData"
+                },
+                "type": {
+                  "const": "loop_state_changed"
+                }
+              },
+              "required": [
+                "type",
+                "data"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "summary": "SSE `loop_state_changed` frame observed in streams: history, live, stop.",
+        "title": "loop_state_changed",
+        "x-event-type": "loop_state_changed",
+        "x-observed-count": 14,
+        "x-observed-streams": [
+          "history",
+          "live",
+          "stop"
+        ]
+      },
+      "SseNodeLoopIterationEvent": {
+        "contentType": "application/json",
+        "name": "node_loop_iteration",
+        "payload": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/SseFrame"
+            },
+            {
+              "properties": {
+                "data": {
+                  "$ref": "#/components/schemas/SseNodeLoopIterationData"
+                },
+                "type": {
+                  "const": "node_loop_iteration"
+                }
+              },
+              "required": [
+                "type",
+                "data"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "summary": "SSE `node_loop_iteration` frame observed in streams: history, live.",
+        "title": "node_loop_iteration",
+        "x-event-type": "node_loop_iteration",
+        "x-observed-count": 7,
+        "x-observed-streams": [
+          "history",
+          "live"
+        ]
+      },
+      "SseNodeLoopStartedEvent": {
+        "contentType": "application/json",
+        "name": "node_loop_started",
+        "payload": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/SseFrame"
+            },
+            {
+              "properties": {
+                "data": {
+                  "$ref": "#/components/schemas/SseNodeLoopStartedData"
+                },
+                "type": {
+                  "const": "node_loop_started"
+                }
+              },
+              "required": [
+                "type",
+                "data"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "summary": "SSE `node_loop_started` frame observed in streams: history.",
+        "title": "node_loop_started",
+        "x-event-type": "node_loop_started",
+        "x-observed-count": 1,
+        "x-observed-streams": [
+          "history"
+        ]
+      },
+      "SseQueenIdentitySelectedEvent": {
+        "contentType": "application/json",
+        "name": "queen_identity_selected",
+        "payload": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/SseFrame"
+            },
+            {
+              "properties": {
+                "data": {
+                  "$ref": "#/components/schemas/SseQueenIdentitySelectedData"
+                },
+                "type": {
+                  "const": "queen_identity_selected"
+                }
+              },
+              "required": [
+                "type",
+                "data"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "summary": "SSE `queen_identity_selected` frame observed in streams: history.",
+        "title": "queen_identity_selected",
+        "x-event-type": "queen_identity_selected",
+        "x-observed-count": 1,
+        "x-observed-streams": [
+          "history"
+        ]
+      },
+      "SseReminderInjectedEvent": {
+        "contentType": "application/json",
+        "name": "reminder_injected",
+        "payload": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/SseFrame"
+            },
+            {
+              "properties": {
+                "data": {
+                  "$ref": "#/components/schemas/SseReminderInjectedData"
+                },
+                "type": {
+                  "const": "reminder_injected"
+                }
+              },
+              "required": [
+                "type",
+                "data"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "summary": "SSE `reminder_injected` frame observed in streams: history.",
+        "title": "reminder_injected",
+        "x-event-type": "reminder_injected",
+        "x-observed-count": 1,
+        "x-observed-streams": [
+          "history"
+        ]
+      },
+      "SseSessionSnapshotEvent": {
+        "contentType": "application/json",
+        "name": "session_snapshot",
+        "payload": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/SseFrame"
+            },
+            {
+              "properties": {
+                "data": {
+                  "$ref": "#/components/schemas/SseSessionSnapshotData"
+                },
+                "type": {
+                  "const": "session_snapshot"
+                }
+              },
+              "required": [
+                "type",
+                "data"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "summary": "SSE `session_snapshot` frame observed in streams: live, replay, stop.",
+        "title": "session_snapshot",
+        "x-event-type": "session_snapshot",
+        "x-observed-count": 3,
+        "x-observed-streams": [
+          "live",
+          "replay",
+          "stop"
+        ]
+      },
+      "SseSessionTitleUpdatedEvent": {
+        "contentType": "application/json",
+        "name": "session_title_updated",
+        "payload": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/SseFrame"
+            },
+            {
+              "properties": {
+                "data": {
+                  "$ref": "#/components/schemas/SseSessionTitleUpdatedData"
+                },
+                "type": {
+                  "const": "session_title_updated"
+                }
+              },
+              "required": [
+                "type",
+                "data"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "summary": "SSE `session_title_updated` frame observed in streams: history, live.",
+        "title": "session_title_updated",
+        "x-event-type": "session_title_updated",
+        "x-observed-count": 2,
+        "x-observed-streams": [
+          "history",
+          "live"
+        ]
+      },
+      "SseToolCallCompletedEvent": {
+        "contentType": "application/json",
+        "name": "tool_call_completed",
+        "payload": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/SseFrame"
+            },
+            {
+              "properties": {
+                "data": {
+                  "$ref": "#/components/schemas/SseToolCallCompletedData"
+                },
+                "type": {
+                  "const": "tool_call_completed"
+                }
+              },
+              "required": [
+                "type",
+                "data"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "summary": "SSE `tool_call_completed` frame observed in streams: history, live, replay, stop.",
+        "title": "tool_call_completed",
+        "x-event-type": "tool_call_completed",
+        "x-observed-count": 4,
+        "x-observed-streams": [
+          "history",
+          "live",
+          "replay",
+          "stop"
+        ]
+      },
+      "SseToolCallStartedEvent": {
+        "contentType": "application/json",
+        "name": "tool_call_started",
+        "payload": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/SseFrame"
+            },
+            {
+              "properties": {
+                "data": {
+                  "$ref": "#/components/schemas/SseToolCallStartedData"
+                },
+                "type": {
+                  "const": "tool_call_started"
+                }
+              },
+              "required": [
+                "type",
+                "data"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "summary": "SSE `tool_call_started` frame observed in streams: history, live, replay, stop.",
+        "title": "tool_call_started",
+        "x-event-type": "tool_call_started",
+        "x-observed-count": 4,
+        "x-observed-streams": [
+          "history",
+          "live",
+          "replay",
+          "stop"
+        ]
+      },
+      "StartRequest": {
+        "contentType": "application/json",
+        "name": "StartRequest",
+        "payload": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/ChannelRequest"
+            },
+            {
+              "properties": {
+                "method": {
+                  "const": "start"
+                },
+                "params": {
+                  "description": "空对象；配置已在 hello 中给出。",
+                  "properties": {},
+                  "type": "object"
+                }
+              },
+              "required": [
+                "method",
+                "params"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "summary": "启动通道。插件应把平台连接等工作交给后台任务后尽快返回，或在本调用内完成并在 30s 内返回。",
+        "title": "start request",
+        "x-direction": "host_to_plugin",
+        "x-method": "start"
+      },
+      "StartResponse": {
+        "contentType": "application/json",
+        "name": "StartResponse",
+        "payload": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/ChannelResponse"
+            },
+            {
+              "properties": {
+                "result": {
+                  "description": "空对象表示已启动；超时或 error 都会让宿主标记 failed 并终止进程。",
+                  "properties": {},
+                  "type": "object"
+                }
+              },
+              "required": [
+                "result"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "summary": "启动通道。插件应把平台连接等工作交给后台任务后尽快返回，或在本调用内完成并在 30s 内返回。",
+        "title": "start response",
+        "x-direction": "plugin_to_host",
+        "x-method": "start"
+      },
+      "StopRequest": {
+        "contentType": "application/json",
+        "name": "StopRequest",
+        "payload": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/ChannelRequest"
+            },
+            {
+              "properties": {
+                "method": {
+                  "const": "stop"
+                },
+                "params": {
+                  "description": "空对象。",
+                  "properties": {},
+                  "type": "object"
+                }
+              },
+              "required": [
+                "method",
+                "params"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "summary": "停止通道。宿主在关闭会话之前调用，避免通道在关闭中途 resume 会话。",
+        "title": "stop request",
+        "x-direction": "host_to_plugin",
+        "x-method": "stop"
+      },
+      "StopResponse": {
+        "contentType": "application/json",
+        "name": "StopResponse",
+        "payload": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/ChannelResponse"
+            },
+            {
+              "properties": {
+                "result": {
+                  "description": "空对象表示已停止；超时后宿主关闭 stdin，等待 2s，再杀死进程。",
+                  "properties": {},
+                  "type": "object"
+                }
+              },
+              "required": [
+                "result"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "summary": "停止通道。宿主在关闭会话之前调用，避免通道在关闭中途 resume 会话。",
+        "title": "stop response",
+        "x-direction": "plugin_to_host",
+        "x-method": "stop"
+      },
+      "SubscribeRequest": {
+        "contentType": "application/json",
+        "name": "SubscribeRequest",
+        "payload": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/ChannelRequest"
+            },
+            {
+              "properties": {
+                "method": {
+                  "const": "subscribe"
+                },
+                "params": {
+                  "properties": {
+                    "session_id": {
+                      "description": "要监听的会话 id。",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "session_id"
+                  ],
+                  "type": "object"
+                }
+              },
+              "required": [
+                "method",
+                "params"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "summary": "订阅一个会话的 queen 输出；返回 subscription_id，宿主随后推送 output 通知。",
+        "title": "subscribe request",
+        "x-direction": "plugin_to_host",
+        "x-method": "subscribe"
+      },
+      "SubscribeResponse": {
+        "contentType": "application/json",
+        "name": "SubscribeResponse",
+        "payload": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/ChannelResponse"
+            },
+            {
+              "properties": {
+                "result": {
+                  "properties": {
+                    "subscription_id": {
+                      "description": "本次订阅的 id（形如 sub_1）；同一通道对同一会话再次 subscribe 会替换旧订阅，旧 id 失效。",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "subscription_id"
+                  ],
+                  "type": "object"
+                }
+              },
+              "required": [
+                "result"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "summary": "订阅一个会话的 queen 输出；返回 subscription_id，宿主随后推送 output 通知。",
+        "title": "subscribe response",
+        "x-direction": "plugin_to_host",
+        "x-method": "subscribe"
+      },
+      "UnsubscribeRequest": {
+        "contentType": "application/json",
+        "name": "UnsubscribeRequest",
+        "payload": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/ChannelRequest"
+            },
+            {
+              "properties": {
+                "method": {
+                  "const": "unsubscribe"
+                },
+                "params": {
+                  "properties": {
+                    "subscription_id": {
+                      "description": "subscribe 返回的 id。",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "subscription_id"
+                  ],
+                  "type": "object"
+                }
+              },
+              "required": [
+                "method",
+                "params"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "summary": "停止接收某个订阅的输出。未知 id 是幂等空操作。",
+        "title": "unsubscribe request",
+        "x-direction": "plugin_to_host",
+        "x-method": "unsubscribe"
+      },
+      "UnsubscribeResponse": {
+        "contentType": "application/json",
+        "name": "UnsubscribeResponse",
+        "payload": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/ChannelResponse"
+            },
+            {
+              "properties": {
+                "result": {
+                  "description": "空对象；宿主不回报是否真的移除。",
+                  "properties": {},
+                  "type": "object"
+                }
+              },
+              "required": [
+                "result"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "summary": "停止接收某个订阅的输出。未知 id 是幂等空操作。",
+        "title": "unsubscribe response",
+        "x-direction": "plugin_to_host",
+        "x-method": "unsubscribe"
+      },
+      "WelcomeResponse": {
+        "contentType": "application/json",
+        "name": "WelcomeResponse",
+        "payload": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/ChannelResponse"
+            },
+            {
+              "properties": {
+                "result": {
+                  "$ref": "#/components/schemas/ChannelWelcome"
+                }
+              },
+              "required": [
+                "result"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "summary": "宿主宣告协议版本、通道名、配置段与状态目录。",
+        "title": "hello response",
+        "x-direction": "plugin_to_host",
+        "x-method": "hello"
+      }
+    },
+    "schemas": {
+      "ChannelError": {
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "data": {
+            "properties": {
+              "kind": {
+                "enum": [
+                  "no_queen",
+                  "no_session",
+                  "session_locked",
+                  "queen_unavailable",
+                  "invalid_params",
+                  "internal"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind"
+            ],
+            "type": "object"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "ChannelErrorResponse": {
+        "not": {
+          "required": [
+            "result"
+          ]
+        },
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ChannelError"
+          },
+          "id": {
+            "$ref": "#/components/schemas/ChannelId"
+          },
+          "jsonrpc": {
+            "const": "2.0"
+          }
+        },
+        "required": [
+          "jsonrpc",
+          "id",
+          "error"
+        ],
+        "type": "object"
+      },
+      "ChannelId": {
+        "oneOf": [
+          {
+            "type": "integer"
+          },
+          {
+            "minLength": 1,
+            "type": "string"
+          }
+        ]
+      },
+      "ChannelNotification": {
+        "not": {
+          "required": [
+            "id"
+          ]
+        },
+        "properties": {
+          "jsonrpc": {
+            "const": "2.0"
+          },
+          "method": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "params": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "jsonrpc",
+          "method",
+          "params"
+        ],
+        "type": "object"
+      },
+      "ChannelOutput": {
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "message"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "text": {
+                  "minLength": 1
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "error"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "text": {
+                  "minLength": 1
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "question"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "questions": {
+                  "minItems": 1
+                }
+              },
+              "required": [
+                "questions"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "files"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "files": {
+                  "minItems": 1
+                }
+              },
+              "required": [
+                "files"
+              ]
+            }
+          }
+        ],
+        "properties": {
+          "files": {
+            "description": "files kind 的附件路径列表；其它 kind 省略。",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "kind": {
+            "description": "输出种类；决定 text/questions/files 哪个有内容。",
+            "enum": [
+              "message",
+              "question",
+              "error",
+              "files",
+              "idle"
+            ],
+            "type": "string"
+          },
+          "questions": {
+            "description": "question kind 的 ask_user 问题列表；其它 kind 省略。",
+            "items": {
+              "$ref": "#/components/schemas/ChannelQuestion"
+            },
+            "type": "array"
+          },
+          "seq": {
+            "description": "宿主投递时按订阅从 1 递增；缺口表示队列满丢帧。",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "session_id": {
+            "description": "输出所属会话；queen 迁移后变为新 id，插件下次 send 应使用它。",
+            "type": "string"
+          },
+          "subscription_id": {
+            "description": "subscribe 返回的订阅 id。",
+            "type": "string"
+          },
+          "text": {
+            "description": "message/error 的文本；其它 kind 为空字符串。",
+            "type": "string"
+          }
+        },
+        "required": [
+          "subscription_id",
+          "session_id",
+          "kind",
+          "text",
+          "seq"
+        ],
+        "type": "object"
+      },
+      "ChannelQuestion": {
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "options": {
+            "description": "多选问题的选项；上游原样传递。",
+            "items": {
+              "type": [
+                "string",
+                "object"
+              ]
+            },
+            "type": "array"
+          },
+          "prompt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "prompt"
+        ],
+        "type": "object"
+      },
+      "ChannelRequest": {
+        "not": {
+          "anyOf": [
+            {
+              "required": [
+                "result"
+              ]
+            },
+            {
+              "required": [
+                "error"
+              ]
+            }
+          ]
+        },
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/ChannelId"
+          },
+          "jsonrpc": {
+            "const": "2.0"
+          },
+          "method": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "params": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "jsonrpc",
+          "id",
+          "method",
+          "params"
+        ],
+        "type": "object"
+      },
+      "ChannelResponse": {
+        "not": {
+          "required": [
+            "error"
+          ]
+        },
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/ChannelId"
+          },
+          "jsonrpc": {
+            "const": "2.0"
+          },
+          "result": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "jsonrpc",
+          "id",
+          "result"
+        ],
+        "type": "object"
+      },
+      "ChannelWelcome": {
+        "properties": {
+          "capabilities": {
+            "description": "咨询性能力列表；未知字符串保留，宿主不据此裁剪 output。",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "plugin_version": {
+            "description": "插件版本；宿主只校验它非空，空或缺失会让 handshake failed。",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "plugin_version"
+        ],
+        "type": "object"
+      },
+      "SseClientInputCommittedData": {
+        "additionalProperties": true,
+        "properties": {
+          "seq": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "seq"
+        ],
+        "type": "object",
+        "x-schema-source": "contracts/sse-frames/reference/*.json"
+      },
+      "SseClientInputReceivedData": {
+        "additionalProperties": true,
+        "properties": {
+          "content": {
+            "type": "string"
+          },
+          "image_count": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "content",
+          "image_count"
+        ],
+        "type": "object",
+        "x-schema-source": "contracts/sse-frames/reference/*.json"
+      },
+      "SseClientInputRequestedData": {
+        "additionalProperties": true,
+        "properties": {
+          "park_reason": {
+            "type": "string"
+          },
+          "questions": {
+            "items": {
+              "additionalProperties": true,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "options": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "prompt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "options",
+                "prompt"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "park_reason"
+        ],
+        "type": "object",
+        "x-schema-source": "contracts/sse-frames/reference/*.json"
+      },
+      "SseClientOutputDeltaData": {
+        "additionalProperties": true,
+        "properties": {
+          "content": {
+            "type": "string"
+          },
+          "inner_turn": {
+            "type": "integer"
+          },
+          "iteration": {
+            "type": "integer"
+          },
+          "snapshot": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "content",
+          "inner_turn",
+          "iteration",
+          "snapshot"
+        ],
+        "type": "object",
+        "x-schema-source": "contracts/sse-frames/reference/*.json"
+      },
+      "SseContextUsageUpdatedData": {
+        "additionalProperties": true,
+        "properties": {
+          "breakdown": {
+            "additionalProperties": true,
+            "properties": {
+              "conversation_chars": {
+                "type": "integer"
+              },
+              "image_blocks": {
+                "type": "integer"
+              },
+              "image_tokens": {
+                "type": "integer"
+              },
+              "system_chars": {
+                "type": "integer"
+              },
+              "tool_defs_chars": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "conversation_chars",
+              "image_blocks",
+              "image_tokens",
+              "system_chars",
+              "tool_defs_chars"
+            ],
+            "type": "object"
+          },
+          "estimated_tokens": {
+            "type": "integer"
+          },
+          "max_context_tokens": {
+            "type": "integer"
+          },
+          "message_count": {
+            "type": "integer"
+          },
+          "trigger": {
+            "type": "string"
+          },
+          "usage_pct": {
+            "type": "integer"
+          },
+          "usage_ratio": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "breakdown",
+          "estimated_tokens",
+          "max_context_tokens",
+          "message_count",
+          "trigger",
+          "usage_pct",
+          "usage_ratio"
+        ],
+        "type": "object",
+        "x-schema-source": "contracts/sse-frames/reference/*.json"
+      },
+      "SseFrame": {
+        "additionalProperties": true,
+        "description": "SSE frame as observed in contracts/sse-frames. Volatile leaves are canonicalised to placeholders; field presence, event names and data shapes are frozen.",
+        "properties": {
+          "colony_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "correlation_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "data": {
+            "type": "object"
+          },
+          "event": {
+            "description": "Optional SSE `event:` field; observed frames use the default message event.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "execution_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "node_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "run_id": {
+            "description": "Canonicalised run id (`<run_id>` or `<absent>`).",
+            "type": "string"
+          },
+          "seq": {
+            "description": "Monotonic per-stream sequence number.",
+            "type": "integer"
+          },
+          "stream_id": {
+            "type": "string"
+          },
+          "timestamp": {
+            "description": "ISO-8601 timestamp.",
+            "type": "string"
+          },
+          "type": {
+            "description": "Event type / SSE event name.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "data"
+        ],
+        "type": "object",
+        "x-schema-source": "contracts/sse-frames/reference/*.json"
+      },
+      "SseJudgeVerdictData": {
+        "additionalProperties": true,
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "feedback": {
+            "type": "string"
+          },
+          "iteration": {
+            "type": "integer"
+          },
+          "judge_type": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "action",
+          "feedback",
+          "iteration",
+          "judge_type"
+        ],
+        "type": "object",
+        "x-schema-source": "contracts/sse-frames/reference/*.json"
+      },
+      "SseLlmTurnCompleteData": {
+        "additionalProperties": true,
+        "properties": {
+          "cache_creation_tokens": {
+            "type": "integer"
+          },
+          "cached_tokens": {
+            "type": "integer"
+          },
+          "cost_usd": {
+            "type": "number"
+          },
+          "history_anchor_idx": {
+            "type": "integer"
+          },
+          "input_tokens": {
+            "type": "integer"
+          },
+          "iteration": {
+            "type": "integer"
+          },
+          "message_count": {
+            "type": "integer"
+          },
+          "model": {
+            "type": "string"
+          },
+          "output_tokens": {
+            "type": "integer"
+          },
+          "stop_reason": {
+            "type": "string"
+          },
+          "system_prefix_sha": {
+            "type": "string"
+          },
+          "system_suffix_sha": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "cache_creation_tokens",
+          "cached_tokens",
+          "cost_usd",
+          "history_anchor_idx",
+          "input_tokens",
+          "iteration",
+          "message_count",
+          "model",
+          "output_tokens",
+          "stop_reason",
+          "system_prefix_sha",
+          "system_suffix_sha"
+        ],
+        "type": "object",
+        "x-schema-source": "contracts/sse-frames/reference/*.json"
+      },
+      "SseLoopStateChangedData": {
+        "additionalProperties": true,
+        "properties": {
+          "activity": {
+            "type": "string"
+          },
+          "interrupt_cause": {
+            "type": "null"
+          },
+          "park_reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "questions": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "activity",
+          "interrupt_cause",
+          "park_reason",
+          "questions"
+        ],
+        "type": "object",
+        "x-schema-source": "contracts/sse-frames/reference/*.json"
+      },
+      "SseNodeLoopIterationData": {
+        "additionalProperties": true,
+        "properties": {
+          "iteration": {
+            "type": "integer"
+          },
+          "phase": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "iteration",
+          "phase"
+        ],
+        "type": "object",
+        "x-schema-source": "contracts/sse-frames/reference/*.json"
+      },
+      "SseNodeLoopStartedData": {
+        "additionalProperties": true,
+        "properties": {
+          "max_iterations": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "max_iterations"
+        ],
+        "type": "object",
+        "x-schema-source": "contracts/sse-frames/reference/*.json"
+      },
+      "SseQueenIdentitySelectedData": {
+        "additionalProperties": true,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "queen_id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "queen_id",
+          "title"
+        ],
+        "type": "object",
+        "x-schema-source": "contracts/sse-frames/reference/*.json"
+      },
+      "SseReminderInjectedData": {
+        "additionalProperties": true,
+        "properties": {
+          "detail": {
+            "type": "string"
+          },
+          "meta": {
+            "additionalProperties": true,
+            "properties": {
+              "point": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "point"
+            ],
+            "type": "object"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "detail",
+          "meta",
+          "source"
+        ],
+        "type": "object",
+        "x-schema-source": "contracts/sse-frames/reference/*.json"
+      },
+      "SseSessionSnapshotData": {
+        "additionalProperties": true,
+        "properties": {
+          "activity": {
+            "type": "string"
+          },
+          "awaiting_input": {
+            "type": "boolean"
+          },
+          "current_execution_id": {
+            "type": "null"
+          },
+          "current_tool_calls": {
+            "description": "No elements observed in the reference snapshot; item shape is not frozen.",
+            "items": {},
+            "type": "array"
+          },
+          "interrupt_cause": {
+            "type": "null"
+          },
+          "interrupted": {
+            "type": "boolean"
+          },
+          "is_executing": {
+            "type": "boolean"
+          },
+          "last_event_at": {
+            "type": "string"
+          },
+          "last_event_seq": {
+            "type": "integer"
+          },
+          "last_queen_event_at": {
+            "type": "string"
+          },
+          "park_reason": {
+            "type": "string"
+          },
+          "pending_questions": {
+            "type": "null"
+          },
+          "queen_busy_reason": {
+            "type": "string"
+          },
+          "snapshot_seq": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "activity",
+          "awaiting_input",
+          "current_execution_id",
+          "current_tool_calls",
+          "interrupt_cause",
+          "interrupted",
+          "is_executing",
+          "last_event_at",
+          "last_event_seq",
+          "last_queen_event_at",
+          "park_reason",
+          "pending_questions",
+          "queen_busy_reason",
+          "snapshot_seq"
+        ],
+        "type": "object",
+        "x-schema-source": "contracts/sse-frames/reference/*.json"
+      },
+      "SseSessionTitleUpdatedData": {
+        "additionalProperties": true,
+        "properties": {
+          "session_id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "title"
+        ],
+        "type": "object",
+        "x-schema-source": "contracts/sse-frames/reference/*.json"
+      },
+      "SseToolCallCompletedData": {
+        "additionalProperties": true,
+        "properties": {
+          "is_error": {
+            "type": "boolean"
+          },
+          "result": {
+            "type": "string"
+          },
+          "tool_index": {
+            "type": "integer"
+          },
+          "tool_name": {
+            "type": "string"
+          },
+          "tool_use_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "is_error",
+          "result",
+          "tool_index",
+          "tool_name",
+          "tool_use_id"
+        ],
+        "type": "object",
+        "x-schema-source": "contracts/sse-frames/reference/*.json"
+      },
+      "SseToolCallStartedData": {
+        "additionalProperties": true,
+        "properties": {
+          "tool_index": {
+            "type": "integer"
+          },
+          "tool_input": {
+            "additionalProperties": true,
+            "properties": {
+              "questions": {
+                "items": {
+                  "additionalProperties": true,
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "options": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "prompt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "options",
+                    "prompt"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "questions"
+            ],
+            "type": "object"
+          },
+          "tool_name": {
+            "type": "string"
+          },
+          "tool_use_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "tool_index",
+          "tool_input",
+          "tool_name",
+          "tool_use_id"
+        ],
+        "type": "object",
+        "x-schema-source": "contracts/sse-frames/reference/*.json"
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "description": "Channel-specific bearer token (design-only).",
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  },
+  "defaultContentType": "application/json",
+  "id": "urn:hive:realtime-contract",
+  "info": {
+    "description": "AsyncAPI 3 contract for Hive's realtime surfaces. The SSE channels are backed by frozen frame goldens in contracts/sse-frames. The channel WebSocket transport is design-only and is not a production route; the existing stdio channel transport remains unchanged.",
+    "title": "Hive realtime surfaces",
+    "version": "1.0.27-go.1",
+    "x-perspective": "Operations are described from the channel plugin's perspective: action send means plugin -> host, action receive means host -> plugin."
+  },
+  "operations": {
+    "receiveError": {
+      "action": "receive",
+      "channel": {
+        "$ref": "#/channels/channelWebsocket"
+      },
+      "messages": [
+        {
+          "$ref": "#/components/messages/ProtocolErrorResponse"
+        }
+      ],
+      "summary": "Plugin receives a JSON-RPC error response.",
+      "title": "receiveError"
+    },
+    "receiveHello": {
+      "action": "receive",
+      "channel": {
+        "$ref": "#/channels/channelWebsocket"
+      },
+      "messages": [
+        {
+          "$ref": "#/components/messages/HelloRequest"
+        }
+      ],
+      "summary": "Channel plugin receives hello.",
+      "title": "receiveHello"
+    },
+    "receiveJudgeResponse": {
+      "action": "receive",
+      "channel": {
+        "$ref": "#/channels/channelWebsocket"
+      },
+      "messages": [
+        {
+          "$ref": "#/components/messages/JudgeResponse"
+        }
+      ],
+      "summary": "Host returns the judge probability.",
+      "title": "receiveJudgeResponse"
+    },
+    "receiveOpenSessionResponse": {
+      "action": "receive",
+      "channel": {
+        "$ref": "#/channels/channelWebsocket"
+      },
+      "messages": [
+        {
+          "$ref": "#/components/messages/OpenSessionResponse"
+        }
+      ],
+      "summary": "Host returns the usable session id.",
+      "title": "receiveOpenSessionResponse"
+    },
+    "receiveOutput": {
+      "action": "receive",
+      "channel": {
+        "$ref": "#/channels/channelWebsocket"
+      },
+      "messages": [
+        {
+          "$ref": "#/components/messages/OutputNotification"
+        }
+      ],
+      "summary": "Host pushes subscription output.",
+      "title": "receiveOutput"
+    },
+    "receiveSendResponse": {
+      "action": "receive",
+      "channel": {
+        "$ref": "#/channels/channelWebsocket"
+      },
+      "messages": [
+        {
+          "$ref": "#/components/messages/SendResponse"
+        }
+      ],
+      "summary": "Host returns the session id that received the turn.",
+      "title": "receiveSendResponse"
+    },
+    "receiveSessionEventsHistory": {
+      "action": "receive",
+      "channel": {
+        "$ref": "#/channels/sessionEventsHistory"
+      },
+      "messages": [
+        {
+          "$ref": "#/components/messages/SseClientInputCommittedEvent"
+        },
+        {
+          "$ref": "#/components/messages/SseClientInputReceivedEvent"
+        },
+        {
+          "$ref": "#/components/messages/SseClientInputRequestedEvent"
+        },
+        {
+          "$ref": "#/components/messages/SseClientOutputDeltaEvent"
+        },
+        {
+          "$ref": "#/components/messages/SseContextUsageUpdatedEvent"
+        },
+        {
+          "$ref": "#/components/messages/SseJudgeVerdictEvent"
+        },
+        {
+          "$ref": "#/components/messages/SseLlmTurnCompleteEvent"
+        },
+        {
+          "$ref": "#/components/messages/SseLoopStateChangedEvent"
+        },
+        {
+          "$ref": "#/components/messages/SseNodeLoopIterationEvent"
+        },
+        {
+          "$ref": "#/components/messages/SseNodeLoopStartedEvent"
+        },
+        {
+          "$ref": "#/components/messages/SseQueenIdentitySelectedEvent"
+        },
+        {
+          "$ref": "#/components/messages/SseReminderInjectedEvent"
+        },
+        {
+          "$ref": "#/components/messages/SseSessionTitleUpdatedEvent"
+        },
+        {
+          "$ref": "#/components/messages/SseToolCallCompletedEvent"
+        },
+        {
+          "$ref": "#/components/messages/SseToolCallStartedEvent"
+        }
+      ],
+      "summary": "Frames observed in the history SSE stream.",
+      "title": "receive history stream frames"
+    },
+    "receiveSessionEventsLive": {
+      "action": "receive",
+      "channel": {
+        "$ref": "#/channels/sessionEventsLive"
+      },
+      "messages": [
+        {
+          "$ref": "#/components/messages/SseClientInputCommittedEvent"
+        },
+        {
+          "$ref": "#/components/messages/SseClientInputReceivedEvent"
+        },
+        {
+          "$ref": "#/components/messages/SseClientInputRequestedEvent"
+        },
+        {
+          "$ref": "#/components/messages/SseClientOutputDeltaEvent"
+        },
+        {
+          "$ref": "#/components/messages/SseContextUsageUpdatedEvent"
+        },
+        {
+          "$ref": "#/components/messages/SseLlmTurnCompleteEvent"
+        },
+        {
+          "$ref": "#/components/messages/SseLoopStateChangedEvent"
+        },
+        {
+          "$ref": "#/components/messages/SseNodeLoopIterationEvent"
+        },
+        {
+          "$ref": "#/components/messages/SseSessionSnapshotEvent"
+        },
+        {
+          "$ref": "#/components/messages/SseSessionTitleUpdatedEvent"
+        },
+        {
+          "$ref": "#/components/messages/SseToolCallCompletedEvent"
+        },
+        {
+          "$ref": "#/components/messages/SseToolCallStartedEvent"
+        }
+      ],
+      "summary": "Frames observed in the live SSE stream.",
+      "title": "receive live stream frames"
+    },
+    "receiveSessionEventsReplay": {
+      "action": "receive",
+      "channel": {
+        "$ref": "#/channels/sessionEventsReplay"
+      },
+      "messages": [
+        {
+          "$ref": "#/components/messages/SseClientInputCommittedEvent"
+        },
+        {
+          "$ref": "#/components/messages/SseClientInputReceivedEvent"
+        },
+        {
+          "$ref": "#/components/messages/SseClientInputRequestedEvent"
+        },
+        {
+          "$ref": "#/components/messages/SseClientOutputDeltaEvent"
+        },
+        {
+          "$ref": "#/components/messages/SseLlmTurnCompleteEvent"
+        },
+        {
+          "$ref": "#/components/messages/SseSessionSnapshotEvent"
+        },
+        {
+          "$ref": "#/components/messages/SseToolCallCompletedEvent"
+        },
+        {
+          "$ref": "#/components/messages/SseToolCallStartedEvent"
+        }
+      ],
+      "summary": "Frames observed in the replay SSE stream.",
+      "title": "receive replay stream frames"
+    },
+    "receiveSessionEventsStop": {
+      "action": "receive",
+      "channel": {
+        "$ref": "#/channels/sessionEventsStop"
+      },
+      "messages": [
+        {
+          "$ref": "#/components/messages/SseClientInputCommittedEvent"
+        },
+        {
+          "$ref": "#/components/messages/SseClientInputReceivedEvent"
+        },
+        {
+          "$ref": "#/components/messages/SseClientInputRequestedEvent"
+        },
+        {
+          "$ref": "#/components/messages/SseClientOutputDeltaEvent"
+        },
+        {
+          "$ref": "#/components/messages/SseLlmTurnCompleteEvent"
+        },
+        {
+          "$ref": "#/components/messages/SseLoopStateChangedEvent"
+        },
+        {
+          "$ref": "#/components/messages/SseSessionSnapshotEvent"
+        },
+        {
+          "$ref": "#/components/messages/SseToolCallCompletedEvent"
+        },
+        {
+          "$ref": "#/components/messages/SseToolCallStartedEvent"
+        }
+      ],
+      "summary": "Frames observed in the stop SSE stream.",
+      "title": "receive stop stream frames"
+    },
+    "receiveSetTitleResponse": {
+      "action": "receive",
+      "channel": {
+        "$ref": "#/channels/channelWebsocket"
+      },
+      "messages": [
+        {
+          "$ref": "#/components/messages/SetTitleResponse"
+        }
+      ],
+      "summary": "Host acknowledges set_title.",
+      "title": "receiveSetTitleResponse"
+    },
+    "receiveStart": {
+      "action": "receive",
+      "channel": {
+        "$ref": "#/channels/channelWebsocket"
+      },
+      "messages": [
+        {
+          "$ref": "#/components/messages/StartRequest"
+        }
+      ],
+      "summary": "Channel plugin receives start.",
+      "title": "receiveStart"
+    },
+    "receiveStop": {
+      "action": "receive",
+      "channel": {
+        "$ref": "#/channels/channelWebsocket"
+      },
+      "messages": [
+        {
+          "$ref": "#/components/messages/StopRequest"
+        }
+      ],
+      "summary": "Plugin receives stop on shutdown.",
+      "title": "receiveStop"
+    },
+    "receiveSubscribeResponse": {
+      "action": "receive",
+      "channel": {
+        "$ref": "#/channels/channelWebsocket"
+      },
+      "messages": [
+        {
+          "$ref": "#/components/messages/SubscribeResponse"
+        }
+      ],
+      "summary": "Host returns the subscription id.",
+      "title": "receiveSubscribeResponse"
+    },
+    "receiveUnsubscribeResponse": {
+      "action": "receive",
+      "channel": {
+        "$ref": "#/channels/channelWebsocket"
+      },
+      "messages": [
+        {
+          "$ref": "#/components/messages/UnsubscribeResponse"
+        }
+      ],
+      "summary": "Host acknowledges unsubscribe.",
+      "title": "receiveUnsubscribeResponse"
+    },
+    "sendJudge": {
+      "action": "send",
+      "channel": {
+        "$ref": "#/channels/channelWebsocket"
+      },
+      "messages": [
+        {
+          "$ref": "#/components/messages/JudgeRequest"
+        }
+      ],
+      "summary": "Plugin asks the host judge for a probability.",
+      "title": "sendJudge"
+    },
+    "sendOpenSession": {
+      "action": "send",
+      "channel": {
+        "$ref": "#/channels/channelWebsocket"
+      },
+      "messages": [
+        {
+          "$ref": "#/components/messages/OpenSessionRequest"
+        }
+      ],
+      "summary": "Plugin opens or resumes a session.",
+      "title": "sendOpenSession"
+    },
+    "sendSend": {
+      "action": "send",
+      "channel": {
+        "$ref": "#/channels/channelWebsocket"
+      },
+      "messages": [
+        {
+          "$ref": "#/components/messages/SendRequest"
+        }
+      ],
+      "summary": "Plugin sends user text and/or images.",
+      "title": "sendSend"
+    },
+    "sendSetTitle": {
+      "action": "send",
+      "channel": {
+        "$ref": "#/channels/channelWebsocket"
+      },
+      "messages": [
+        {
+          "$ref": "#/components/messages/SetTitleRequest"
+        }
+      ],
+      "summary": "Plugin sets or clears the session title.",
+      "title": "sendSetTitle"
+    },
+    "sendStartResponse": {
+      "action": "send",
+      "channel": {
+        "$ref": "#/channels/channelWebsocket"
+      },
+      "messages": [
+        {
+          "$ref": "#/components/messages/StartResponse"
+        }
+      ],
+      "summary": "Channel plugin acknowledges start.",
+      "title": "sendStartResponse"
+    },
+    "sendStopResponse": {
+      "action": "send",
+      "channel": {
+        "$ref": "#/channels/channelWebsocket"
+      },
+      "messages": [
+        {
+          "$ref": "#/components/messages/StopResponse"
+        }
+      ],
+      "summary": "Plugin acknowledges stop.",
+      "title": "sendStopResponse"
+    },
+    "sendSubscribe": {
+      "action": "send",
+      "channel": {
+        "$ref": "#/channels/channelWebsocket"
+      },
+      "messages": [
+        {
+          "$ref": "#/components/messages/SubscribeRequest"
+        }
+      ],
+      "summary": "Plugin subscribes to session output.",
+      "title": "sendSubscribe"
+    },
+    "sendUnsubscribe": {
+      "action": "send",
+      "channel": {
+        "$ref": "#/channels/channelWebsocket"
+      },
+      "messages": [
+        {
+          "$ref": "#/components/messages/UnsubscribeRequest"
+        }
+      ],
+      "summary": "Plugin drops a subscription.",
+      "title": "sendUnsubscribe"
+    },
+    "sendWelcome": {
+      "action": "send",
+      "channel": {
+        "$ref": "#/channels/channelWebsocket"
+      },
+      "messages": [
+        {
+          "$ref": "#/components/messages/WelcomeResponse"
+        }
+      ],
+      "summary": "Channel plugin answers hello.",
+      "title": "sendWelcome"
+    }
+  },
+  "servers": {
+    "channelWebsocketServer": {
+      "description": "Designed channel WebSocket endpoint; not implemented in the target yet.",
+      "host": "{host}",
+      "protocol": "ws",
+      "security": [
+        {
+          "bearerAuth": []
+        }
+      ],
+      "variables": {
+        "host": {
+          "default": "localhost",
+          "description": "Bind host."
+        }
+      },
+      "x-contract-status": "design-only",
+      "x-production": false
+    },
+    "hiveServe": {
+      "description": "hive serve listener; host and port are deployment-configured.",
+      "host": "{host}",
+      "protocol": "http",
+      "variables": {
+        "host": {
+          "default": "localhost",
+          "description": "Bind host."
+        }
+      }
+    },
+    "sseServer": {
+      "description": "hive serve SSE endpoints (text/event-stream).",
+      "host": "{host}",
+      "protocol": "sse",
+      "variables": {
+        "host": {
+          "default": "localhost",
+          "description": "Bind host."
+        }
+      }
+    }
+  },
+  "x-contract": {
+    "canonical": true,
+    "checker": "go_hive/scripts/check_openapi_contract.py",
+    "coverage": {
+      "channels": 5,
+      "messages": 36,
+      "operations": 24,
+      "schemas": 26,
+      "sse_channels": 4,
+      "sse_event_types": 16,
+      "sse_frames": {
+        "history": 43,
+        "live": 35,
+        "replay": 17,
+        "stop": 18
+      },
+      "websocket_methods": 6,
+      "websocket_operations": 20,
+      "websocket_status": "design-only"
+    },
+    "generator": "go_hive/scripts/gen_openapi_contract.py",
+    "notes": [
+      "The WebSocket address is design-only and must not be described as a production route.",
+      "SSE replay is a resume behavior on the live route, not a separate route.",
+      "The SSE stop stream is the shutdown tail captured around DELETE, not a route."
+    ],
+    "schema": "hive-asyncapi-contract/1",
+    "sources": [
+      {
+        "path": "go_hive/contracts/channel-plugin-protocol.json",
+        "sha256": "9fec7becede32b90c9f6fd22ff484659dc826d23290262943e87da73da6294e3"
+      },
+      {
+        "path": "go_hive/docs/channel-websocket-design.json",
+        "sha256": "440694dc31ac4021e429f7dfd60dda01b761df62e82d645200ebada5e93e3686"
+      },
+      {
+        "path": "go_hive/contracts/sse-frames/index.json",
+        "sha256": "e8e11460771ba0d120b709e3e1875fc9902da84268557fb6a7e95cf3b80f9c58"
+      },
+      {
+        "files": 4,
+        "kind": "sse-frame-dir",
+        "path": "go_hive/contracts/sse-frames/reference",
+        "sha256": "3d42ab40016ae19ccca9d8bee1a78cce8e91e0d99cb6b80b894d974a666cf8f4"
+      },
+      {
+        "path": "go_hive/docs/e2e-assets/sse-payload-parity/capture-reference.json",
+        "sha256": "fadf64914bafd5515f97e32f8d9cdcb256daa0c5fff14fce2bb98b031b5d60c5"
+      }
+    ],
+    "sse": {
+      "frame_golden": "go_hive/contracts/sse-frames/reference",
+      "not_frozen": [
+        "GET /api/events/global",
+        "GET /api/sessions/live",
+        "GET /api/sessions/{session_id}/workers/stream",
+        "GET /api/browser/status/stream"
+      ],
+      "status": "implemented",
+      "streams": [
+        "live",
+        "history",
+        "replay",
+        "stop"
+      ]
+    },
+    "status": "partial",
+    "websocket": {
+      "auth": "channel-specific bearer token",
+      "close_codes": [
+        {
+          "code": 1000,
+          "meaning": "normal close"
+        },
+        {
+          "code": 1001,
+          "meaning": "server going away"
+        },
+        {
+          "code": 1008,
+          "meaning": "policy violation (auth/origin)"
+        },
+        {
+          "code": 1009,
+          "meaning": "message too big"
+        },
+        {
+          "code": 1011,
+          "meaning": "internal error"
+        },
+        {
+          "code": 4001,
+          "meaning": "authentication failed or expired"
+        },
+        {
+          "code": 4002,
+          "meaning": "protocol violation (malformed frame or unexpected response)"
+        },
+        {
+          "code": 4003,
+          "meaning": "request before ready"
+        },
+        {
+          "code": 4004,
+          "meaning": "connection replaced"
+        },
+        {
+          "code": 4005,
+          "meaning": "host shutting down"
+        },
+        {
+          "code": 4006,
+          "meaning": "concurrency or backpressure limit"
+        }
+      ],
+      "design_doc": "go_hive/docs/channel-websocket-design.json",
+      "plugin_methods": [
+        "judge",
+        "open_session",
+        "send",
+        "set_title",
+        "subscribe",
+        "unsubscribe"
+      ],
+      "production": false,
+      "route": "/channel/websocket/{name}",
+      "status": "design-only",
+      "subprotocol": "hive-channel/1"
+    }
+  },
+  "x-contract-status": "partial"
+}

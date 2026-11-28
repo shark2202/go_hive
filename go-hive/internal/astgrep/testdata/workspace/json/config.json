@@ -1,0 +1,7 @@
+{
+  "name": "hive",
+  "version": "1.0",
+  "nested": {
+    "name": "inner"
+  }
+}

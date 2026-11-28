@@ -10,8 +10,6 @@ package colony
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -33,6 +31,14 @@ const (
 	// runWorkerHardTimeoutCap bounds the derived hard cutoff (1 hour).
 	runWorkerHardTimeoutCap = 3600 * time.Second
 )
+
+// WorkerToolScopeProvider is implemented by a spawner that can hand the
+// queen's live worker tool surface to a resume (upstream run_worker's
+// tools_override). Optional: a fake spawner without it resumes with the
+// runtime's own worker surface.
+type WorkerToolScopeProvider interface {
+	WorkerToolScope() []llm.ToolDef
+}
 
 // RunWorkerSpawner is the slice of ColonyRuntime run_worker drives. The
 // interface keeps the tool testable with a fake spawner and documents exactly
@@ -258,8 +264,15 @@ func RunWorker(ctx context.Context, spawner RunWorkerSpawner, input map[string]a
 				"requested_worker_ids": resumeIDs,
 			}, true)
 		}
-		batchID := newRunWorkerBatchID()
-		resumed, failures := resumer.ResumeWorkers(ctx, resumeIDs,
+		batchID := newResumeBatchID()
+		// A23: resume with the queen's current worker tool scope, the port's
+		// counterpart of upstream run_worker's tools_override. A spawner that
+		// cannot report a scope leaves the runtime default in place.
+		var toolsOverride []llm.ToolDef
+		if provider, ok := spawner.(WorkerToolScopeProvider); ok {
+			toolsOverride = provider.WorkerToolScope()
+		}
+		resumed, failures := resumer.ResumeWorkers(ctx, resumeIDs, toolsOverride,
 			stringValue(input["guidance"]), loopOverrides, batchID)
 		if len(resumed) == 0 {
 			return jsonPayload(map[string]any{
@@ -289,47 +302,9 @@ func RunWorker(ctx context.Context, spawner RunWorkerSpawner, input map[string]a
 		}, false)
 	}
 
-	specs := taskSpecs(input["tasks"])
-	if items, ok := input["tasks"].([]any); ok {
-		for index, item := range items {
-			if _, isDict := item.(map[string]any); !isDict {
-				return jsonPayload(map[string]any{
-					"error": fmt.Sprintf("tasks[%d] is not a dict: %T", index, item),
-				}, true)
-			}
-		}
-	}
-	if len(specs) == 0 {
-		return jsonPayload(map[string]any{
-			"error": "tasks must be a non-empty list of {task, data?} dicts",
-		}, true)
-	}
-
-	tasks := make([]BatchTask, 0, len(specs))
-	for i, spec := range specs {
-		taskText := strings.TrimSpace(stringValue(spec["task"]))
-		if taskText == "" {
-			return jsonPayload(map[string]any{
-				"error": fmt.Sprintf("tasks[%d].task is empty", i),
-			}, true)
-		}
-		data := map[string]any{}
-		for key, value := range mapValue(spec["data"]) {
-			data[key] = value
-		}
-		// Keep the task text reachable from the worker's input_data, as
-		// upstream does once a per-task data payload is present.
-		if _, exists := data["task"]; !exists {
-			data["task"] = taskText
-		}
-		task := BatchTask{Task: taskText, Data: data}
-		if goal := strings.TrimSpace(stringValue(spec["goal"])); goal != "" {
-			task.Goal = goal
-		}
-		if preload, ok := stringSliceInput(spec["preload_tools"]); ok {
-			task.PreloadTools = preload
-		}
-		tasks = append(tasks, task)
+	tasks, taskErr := runWorkerBatchTasks(input["tasks"])
+	if taskErr != nil {
+		return jsonPayload(taskErr, true)
 	}
 
 	batchID := newRunWorkerBatchID()
@@ -399,6 +374,69 @@ func RunWorker(ctx context.Context, spawner RunWorkerSpawner, input map[string]a
 	}, false)
 }
 
+// runWorkerBatchTasks normalizes run_worker's `tasks` list into spawn specs: the
+// per-task data payload, the worker-profile override, the preload set and the
+// optional dispatch ordinal. A malformed list returns the error payload the tool
+// surfaces unchanged (upstream validates the same way before dispatching).
+//
+// Parity: framework/tools/queen_lifecycle_tools.py::run_worker (task
+// normalization)
+// Parity: framework/host/colony_runtime.py::ColonyRuntime.spawn_batch
+// (per-task profile_name / preload_tools / worker_seq precedence)
+func runWorkerBatchTasks(raw any) ([]BatchTask, map[string]any) {
+	specs := taskSpecs(raw)
+	if items, ok := raw.([]any); ok {
+		for index, item := range items {
+			if _, isDict := item.(map[string]any); !isDict {
+				return nil, map[string]any{
+					"error": fmt.Sprintf("tasks[%d] is not a dict: %T", index, item),
+				}
+			}
+		}
+	}
+	if len(specs) == 0 {
+		return nil, map[string]any{"error": "tasks must be a non-empty list of {task, data?} dicts"}
+	}
+
+	tasks := make([]BatchTask, 0, len(specs))
+	for index, spec := range specs {
+		taskText := strings.TrimSpace(stringValue(spec["task"]))
+		if taskText == "" {
+			return nil, map[string]any{"error": fmt.Sprintf("tasks[%d].task is empty", index)}
+		}
+		data := map[string]any{}
+		for key, value := range mapValue(spec["data"]) {
+			data[key] = value
+		}
+		// Keep the task text reachable from the worker's input_data, as
+		// upstream does once a per-task data payload is present.
+		if _, exists := data["task"]; !exists {
+			data["task"] = taskText
+		}
+		task := BatchTask{Task: taskText, Data: data}
+		if goal := strings.TrimSpace(stringValue(spec["goal"])); goal != "" {
+			task.Goal = goal
+		}
+		// Per-task worker-profile override (spawn_batch precedence: a task's
+		// profile beats the batch default). The runtime resolves the on-disk
+		// profile binding at spawn.
+		if profileName := strings.TrimSpace(stringValue(spec["profile_name"])); profileName != "" {
+			task.ProfileName = profileName
+		}
+		if preload, ok := stringSliceInput(spec["preload_tools"]); ok {
+			task.PreloadTools = preload
+		}
+		// Per-task dispatch ordinal (playbook dispatches stamp one so their
+		// size-1 batches stay individually identifiable). Ordinary fan-out
+		// leaves it 0 and relies on batch_index.
+		if seq, ok := intInput(spec["worker_seq"]); ok && seq > 0 {
+			task.WorkerSeq = seq
+		}
+		tasks = append(tasks, task)
+	}
+	return tasks, nil
+}
+
 // ComputeHardTimeout is the exported derivation used by the tool and by tests:
 // max(4× soft, soft + 600), capped at one hour.
 //
@@ -419,13 +457,7 @@ func computeHardTimeout(soft time.Duration) time.Duration {
 	return hard
 }
 
-func newRunWorkerBatchID() string {
-	suffix := make([]byte, 4)
-	if _, err := rand.Read(suffix); err != nil {
-		suffix = []byte{0, 0, 0, 0}
-	}
-	return "rpw_" + time.Now().UTC().Format("20060102T150405Z") + "_" + hex.EncodeToString(suffix)
-}
+func newRunWorkerBatchID() string { return newWorkerBatchID() }
 
 // FormatWorkerReport renders one worker's terminal report as the structured
 // block the queen reads. Field order and tags mirror the upstream
@@ -619,10 +651,14 @@ func (r *ColonyRuntime) WatchBatchTimeouts(workerIDs []string, soft, hard time.D
 		runCtx = context.Background()
 	}
 
-	go func() {
+	name := "batch-timeout"
+	if len(workerIDs) > 0 {
+		name = "batch-timeout:" + workerIDs[0]
+	}
+	r.backgroundTasks().Start(runCtx, name, func(ctx context.Context) error {
 		select {
-		case <-runCtx.Done():
-			return
+		case <-ctx.Done():
+			return ctx.Err()
 		case <-time.After(soft):
 		}
 		for _, id := range workerIDs {
@@ -634,8 +670,8 @@ func (r *ColonyRuntime) WatchBatchTimeouts(workerIDs []string, soft, hard time.D
 		}
 
 		select {
-		case <-runCtx.Done():
-			return
+		case <-ctx.Done():
+			return ctx.Err()
 		case <-time.After(grace):
 		}
 		for _, id := range workerIDs {
@@ -645,7 +681,8 @@ func (r *ColonyRuntime) WatchBatchTimeouts(workerIDs []string, soft, hard time.D
 			}
 			r.StopWorker(id)
 		}
-	}()
+		return nil
+	})
 }
 
 func jsonPayload(payload map[string]any, isError bool) (string, bool) {

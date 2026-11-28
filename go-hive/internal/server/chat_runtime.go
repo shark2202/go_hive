@@ -24,6 +24,7 @@ import (
 	"github.com/shark2202/go_hive/go-hive/internal/memory"
 	"github.com/shark2202/go_hive/go-hive/internal/runtimelogs"
 	"github.com/shark2202/go_hive/go-hive/internal/sentinel"
+	"github.com/shark2202/go_hive/go-hive/internal/tools"
 )
 
 // chatStreamID and chatNodeID are the upstream queen identifiers: the
@@ -67,8 +68,20 @@ type ChatRuntimeDeps struct {
 	// tool returned, so attach_file attachments reach the model as real
 	// multimodal parts instead of text.
 	ExecuteBlocks func(ctx context.Context, name string, input map[string]any) (content string, isError bool, imageContent []map[string]any, err error)
-	Store         agentloop.ConversationStore
-	Root          string
+	// ToolProber and ToolKiller are the tool executor's liveness handles for
+	// the shared MCP connection pool. Execute/ExecuteBlocks are plain
+	// closures and cannot carry methods, so the loader passes the registry
+	// executor here: a tool that times out is probed and, when the server is
+	// provably dead, force-disconnected instead of left unknown. Nil keeps
+	// upstream's fastest path — probe reads "unknown" and nothing is
+	// disconnected.
+	//
+	// Parity: framework/loader/tool_registry.py (executor.probe_for_tool /
+	// executor.kill_for_tool wired onto the tool executor)
+	ToolProber tools.LivenessProber
+	ToolKiller tools.ToolKiller
+	Store      agentloop.ConversationStore
+	Root       string
 	// Bus is the session's event bus. When set, the runtime mirrors the
 	// upstream agent loop's emissions (execution / loop lifecycle, assistant
 	// text, tool calls, per-LLM-call usage) so the dashboard's session SSE
@@ -101,10 +114,9 @@ type ChatRuntimeDeps struct {
 	// SkillsCatalog supplies the queen's rendered skills catalog for the
 	// skills reminder. Nil (or an empty return) keeps that source silent.
 	SkillsCatalog func() string
-	// SuccessCriteria is the optional success-criteria paragraph the loop
-	// judge evaluates each turn against. Nil (or blank) keeps the judge off,
-	// so a plain chat turn costs no extra model call. A colony-bound session
-	// that arrives without it inherits the colony goal's criteria on bind.
+	// SuccessCriteria is retained as the generic chat-runtime criteria seam.
+	// The production queen spec sets SkipJudge=true (upstream queen_orchestrator
+	// and the static queen node both do), so a queen turn is never judged.
 	SuccessCriteria *string
 	// Colony is the session's live colony runtime. When set (at construction
 	// or later through Session.BindChatColony), the queen gains run_worker and
@@ -167,6 +179,14 @@ type ChatRuntimeDeps struct {
 	// connected": the block still renders, so she knows the credentials tool
 	// exists. The loader injects the same adapter the credential routes read.
 	Credentials func() []map[string]any
+	// PinnedCredentials renders the full per-account detail of the credentials
+	// this session pinned with credentials(action=attach). It is re-read on
+	// every prompt build, so an attach/detach shows up on the next model
+	// request instead of waiting for a restart. Nil keeps the summary-only
+	// block (embedded hosts and tests).
+	//
+	// Parity: framework/server/queen_orchestrator.py::_build_credentials_provider
+	PinnedCredentials func() string
 	// MCPCLI reports the command-line MCP servers configured in the registry
 	// ("hive mcp run …" list). It renders into the static prompt right after
 	// the credentials block. Nil (or an empty return) drops the segment, which
@@ -255,10 +275,21 @@ type ChatRuntime struct {
 	// events; auxiliary callers keep using deps.LLM directly.
 	streamLLM *chatStreamingCompleter
 
-	queenName       string
-	globalMemoryDir string
-	queenMemoryDir  string
-	reflection      *memory.ReflectionScheduler
+	queenName string
+	// appliedQueenIdentity is the identity segment currently baked into the
+	// system prompt. A persona edit that lands while a turn is running is
+	// deferred (RefreshQueenIdentity refuses to write mid-turn); the turn
+	// boundary compares the phase state's profile against this and rebases the
+	// prompt, so the edit reaches the next model request instead of being
+	// dropped.
+	appliedQueenIdentity string
+	globalMemoryDir      string
+	queenMemoryDir       string
+	reflection           *memory.ReflectionScheduler
+	// shutdownGrace is the one budget Close gives the shutdown reflection and
+	// the timeline flush (chatShutdownGrace); tests shrink it so the budget is
+	// observable without waiting six seconds.
+	shutdownGrace time.Duration
 	// contextCompactedUnsub removes the session-bus subscription that turns a
 	// completed compaction into the queen's long memory reflection.
 	contextCompactedUnsub func()
@@ -317,6 +348,20 @@ type ChatRuntime struct {
 	turnActive   atomic.Bool
 	firstEvent   atomic.Bool
 	awaiting     atomic.Bool
+	// userStopped is the explicit Stop flag. The cancel-queen route sets it
+	// before cancelling the turn, the idle-nudge gate reads it through
+	// reminderSignals, and the next real client input clears it.
+	userStopped atomic.Bool
+
+	// turnMu guards the in-flight turn's cancellation handle. The run
+	// goroutine installs it for the duration of runTurn; the Stop route
+	// cancels through it and waits on turnDone for the unwind. turnSeq keeps
+	// a finishing turn from clearing a handle a newer turn already owns.
+	turnMu     sync.Mutex
+	turnSeq    uint64
+	turnCtx    context.Context
+	turnCancel context.CancelFunc
+	turnDone   chan struct{}
 	// openingStarted guards StartOpeningTurn so a session's first iteration is
 	// queued at most once.
 	openingStarted atomic.Bool
@@ -386,6 +431,19 @@ type ChatRuntime struct {
 	done chan struct{}
 }
 
+func chatRuntimeStore(deps ChatRuntimeDeps) (agentloop.ConversationStore, error) {
+	if deps.Store != nil {
+		return deps.Store, nil
+	}
+	if deps.Root == "" {
+		return nil, ErrChatRuntimeNoStore
+	}
+	return agentloop.NewFileConversationStore(filepath.Join(deps.Root, "conversations")), nil
+}
+
+// NewChatRuntime builds the session runtime and starts its worker. Its phases
+// run in a fixed order — base state, agent context, loop collaborators, then
+// session reminder/log wiring — because their side effects are order-sensitive.
 func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 	if deps.LLM == nil {
 		return nil, ErrChatRuntimeNoLLM
@@ -393,14 +451,36 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 	if len(deps.Tools) > 0 && deps.Execute == nil && deps.ExecuteBlocks == nil {
 		return nil, ErrChatRuntimeNoToolExecutor
 	}
-	store := deps.Store
-	if store == nil {
-		if deps.Root == "" {
-			return nil, ErrChatRuntimeNoStore
-		}
-		store = agentloop.NewFileConversationStore(filepath.Join(deps.Root, "conversations"))
+	store, err := chatRuntimeStore(deps)
+	if err != nil {
+		return nil, err
 	}
+	runtime, restoredPark := newChatRuntimeBase(deps, store)
+	agentCtx := newChatAgentContext(runtime, deps)
+	runtime.attachRuntimeLogger(deps, agentCtx)
+	systemPrompt := chatQueenStaticPrompt(deps, runtime.queenName)
 
+	conv, err := restoreChatConversation(store, systemPrompt)
+	if err != nil {
+		runtime.cancel()
+		return nil, err
+	}
+	runtime.agentCtx = agentCtx
+	runtime.conv = conv
+	// The identity segment baked into this session's static prompt: a persona
+	// edit rebases against it at the next turn boundary.
+	runtime.appliedQueenIdentity = agentCtx.IdentityPrompt
+	runtime.wireChatLoop(deps)
+	runtime.wireChatSession(deps, restoredPark)
+
+	go runtime.run()
+	return runtime, nil
+}
+
+// newChatRuntimeBase builds the runtime's zero-turn state: store/bus bindings,
+// the pinned/streaming/memory model slots, and the restored parks.
+// restoredPark reports a cold-interrupt park the caller must re-announce.
+func newChatRuntimeBase(deps ChatRuntimeDeps, store agentloop.ConversationStore) (*ChatRuntime, bool) {
 	ctx, cancel := context.WithCancel(context.Background())
 	runtime := &ChatRuntime{
 		deps:      deps,
@@ -412,6 +492,9 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 		cancel:    cancel,
 		wake:      make(chan struct{}, 1),
 		done:      make(chan struct{}),
+		// Upstream's server-wide shutdown grace is the cap on everything a
+		// session starts as it stops (finish_background_tasks(6s)).
+		shutdownGrace: chatShutdownGrace,
 	}
 	runtime.markProgress()
 	// The session's transport may be a ProviderSlot (a model-slot PUT
@@ -423,11 +506,6 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 		runtime.pinnedLLM = deps.LLM
 	}
 	runtime.streamLLM = newChatStreamingCompleter(runtime.pinnedLLM)
-	// Memory work (reflection, the dated timeline) resolves its model at each
-	// call: the worker_llm slot while memory_reflection.model is "worker" (the
-	// default) and one is configured, else this session's provider. A Settings
-	// edit therefore reaches a running session on its next reflection.
-	//
 	// Parity: framework/server/session_manager.py::_MemoryLLM.current
 	runtime.memoryLLM = deps.LLM
 	if root := strings.TrimSpace(deps.HomeRoot); root != "" {
@@ -441,6 +519,11 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 	// a restart over a mid-turn conversation restores the cold-interrupt park
 	// (upstream §6b1½), so the in-flight work is never silently resumed.
 	restoredPark := runtime.restoreParkForNewRuntime(deps.InitialInputPending)
+	// The explicit-stop flag outlives the process: the idle-nudge gate must
+	// stay closed on a restarted session until the user's next real message.
+	//
+	// Parity: framework/agent_loop/internals/cursor_persistence.py::restore
+	runtime.restoreUserStopped()
 	runtime.queenName = strings.TrimSpace(deps.QueenName)
 	if runtime.queenName == "" {
 		runtime.queenName = "default"
@@ -448,7 +531,12 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 	// Memory scopes only exist under a HIVE_HOME; without one the runtime keeps
 	// its pre-memory behaviour (no recall, no reflection).
 	runtime.configureMemoryScopes()
+	return runtime, restoredPark
+}
 
+// newChatAgentContext builds the queen's agent context. The loop completer is
+// the streaming wrapper so every iteration passes the stream watchdog.
+func newChatAgentContext(runtime *ChatRuntime, deps ChatRuntimeDeps) *agentloop.AgentContext {
 	loopLLM := runtime.pinnedLLM
 	if runtime.streamLLM != nil {
 		loopLLM = runtime.streamLLM
@@ -457,14 +545,19 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 	// llm.max_tokens, else the model catalog's entry, else 8192 — upstream's
 	// AgentContext(max_tokens=lc.get("max_tokens", get_max_tokens())).
 	maxTokens := chatTurnMaxTokens(deps.HomeRoot)
-	agentCtx := &agentloop.AgentContext{
+	return &agentloop.AgentContext{
 		AgentID: "queen",
 		AgentSpec: agentloop.AgentSpec{
 			ID:        "queen",
 			Name:      "Queen",
 			AgentType: "event_loop",
-			// The judge only evaluates a spec that carries criteria; a plain
-			// chat session leaves this nil and its loop Judge stays nil.
+			// The queen is a forever-alive conversational agent. Upstream sets
+			// skip_judge=True on both the runtime queen spec
+			// (queen_orchestrator.py) and the static queen node, so no queen
+			// turn is evaluated by the loop judge — including a colony-bound
+			// queen. SuccessCriteria is carried for the generic AgentSpec
+			// contract but does not arm the judge.
+			SkipJudge:       true,
 			SuccessCriteria: deps.SuccessCriteria,
 		},
 		LLM:            loopLLM,
@@ -488,21 +581,27 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 		// never race the popup event.
 		PivotPayloadSink: runtime.sinkColonyPivot,
 	}
-	// Three-level runtime logs (L1 summary.json / L2 details.jsonl / L3
-	// tool_logs.jsonl): session-shaped roots (<storage>/sessions/<id>) get the
-	// store upstream's RuntimeLogStore(.../runtime_logs) feeds, keyed by the
-	// session id. The loop writes L3/L2 through AgentContext.RuntimeLogger as
-	// it runs; Close writes the L1 summary.
+}
+
+// attachRuntimeLogger wires the three-level runtime logs (L1 summary.json /
+// L2 details.jsonl / L3 tool_logs.jsonl): session-shaped roots
+// (<storage>/sessions/<id>) get the store upstream's
+// RuntimeLogStore(.../runtime_logs) feeds, keyed by the session id. The loop
+// writes L3/L2 through AgentContext.RuntimeLogger as it runs; Close writes the
+// L1 summary.
+func (r *ChatRuntime) attachRuntimeLogger(deps ChatRuntimeDeps, agentCtx *agentloop.AgentContext) {
 	if logger := newChatRuntimeLogger(deps.Root, deps.SessionID); logger != nil {
-		runtime.runtimeLogger = logger
-		runtime.runtimeLogStartedAt = time.Now()
+		r.runtimeLogger = logger
+		r.runtimeLogStartedAt = time.Now()
 		agentCtx.RuntimeLogger = logger
 	}
-	systemPrompt := chatQueenStaticPrompt(deps, runtime.queenName)
+}
 
+// restoreChatConversation loads the transcript, seeding a new one with the
+// static prompt; an existing transcript has its prompt rebased instead.
+func restoreChatConversation(store agentloop.ConversationStore, systemPrompt string) (*agentloop.NodeConversation, error) {
 	conv, err := agentloop.RestoreConversation(store, nil, nil)
 	if err != nil {
-		cancel()
 		return nil, err
 	}
 	if conv == nil {
@@ -513,10 +612,42 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 	} else {
 		conv.UpdateSystemPrompt(systemPrompt, nil)
 	}
+	return conv, nil
+}
 
-	runtime.agentCtx = agentCtx
-	runtime.conv = conv
+// wireChatLoop builds the turn loop and attaches the collaborators it reads
+// per iteration: the restored cold-resume cursor, the replay/stream events,
+// the MCP probe pair, the vision captioner, the compaction bridge, the stream
+// watchdog budgets, the stall-nudge sink and the criteria judge.
+func (runtime *ChatRuntime) wireChatLoop(deps ChatRuntimeDeps) {
 	runtime.loop = agentloop.NewAgentLoop(chatLoopConfig(deps.Root, deps.HomeRoot, runtime.queenName), runtime.executeTool)
+	// Cold-resume state owned by the loop: the cumulative tool-call count (so
+	// the lifetime budget caps across restarts instead of refilling) and the
+	// turn-level doom fingerprint window. Restoring replaces the fresh loop's
+	// zero state with the cursor's, once, before any turn runs.
+	//
+	// Parity: framework/agent_loop/internals/cursor_persistence.py::restore
+	// Parity: framework/agent_loop/agent_loop.py::execute (restored counters)
+	if err := runtime.loop.RestoreCursorState(runtime.conv); err != nil {
+		log.Printf("chat runtime %s: restore loop cursor state: %v", deps.SessionID, err)
+	}
+	// P0-14: the loop's soft replay tier publishes tool_call_replay_detected
+	// for a cross-turn repeat. Hand it the session bus so the event reaches
+	// SSE and events.jsonl instead of dying on a nil writer.
+	//
+	// Parity: framework/host/event_bus.py::emit_tool_call_replay_detected
+	if runtime.bus != nil {
+		runtime.loop.ReplayEvents = runtime.bus
+	}
+	// A timed-out tool call must probe the shared MCP connection before the
+	// loop gives up on it: the executor closures above cannot carry methods,
+	// so the loader's registry handles ride the loop directly (same pair
+	// ExecuteTool uses on its own timeout path).
+	//
+	// Parity: framework/agent_loop/internals/tool_result_handler.py (timeout
+	// handler: probe_for_tool / kill_for_tool)
+	runtime.loop.ToolProber = deps.ToolProber
+	runtime.loop.ToolKiller = deps.ToolKiller
 	// A text-only main model cannot see tool images: with vision_fallback
 	// configured, each image is captioned (viewport coordinates included) and
 	// dropped before the model sees the result.
@@ -532,33 +663,37 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 	// A continue-nudge is a session event, not just a conversation write:
 	// publish the watchdog verdict, the nudge and the reminder-injected event.
 	runtime.loop.OnStreamStallNudge = runtime.emitStreamStallDiagnostics
-	// A session with configured criteria evaluates its turns; without them the
-	// judge stays nil and the turn costs exactly one model call.
-	runtime.configureCriteriaJudge()
+}
+
+// wireChatSession performs the post-loop wiring: late colony binding, the
+// reminder sources and their hub (before the hub binds its agent context), the
+// timeline, the REST mirror registration, the model label and session event
+// log, then the re-announcement of a restored park once that log exists.
+func (r *ChatRuntime) wireChatSession(deps ChatRuntimeDeps, restoredPark bool) {
 	if deps.Colony != nil {
-		runtime.BindColony(deps.Colony)
+		r.BindColony(deps.Colony)
 	}
 	// Register the per-session reminder sources and start the hub's idle
-	// ticker; Close stops it with the rest of the session.
-	runtime.configureReminderProviders()
-	// Sentinel registers before the hub binds its agent context: binding
-	// filters the consulted sources, so a source added afterwards would never
-	// be polled. The autopilot gate it sets is read by that same binding.
-	runtime.configureSentinel()
-	runtime.configureReminders(deps.IdleNudge)
-	runtime.startTimeline()
+	// ticker; Close stops it with the rest of the session. The Sentinel
+	// escalation source is one of them: configureReminders owns the hub's
+	// membership and registers it in upstream's slot, before the hub binds its
+	// agent context (binding filters the consulted sources, so a source added
+	// afterwards would never be polled).
+	r.configureReminderProviders()
+	r.configureReminders(deps.IdleNudge)
+	r.startTimeline()
 	// Publish the session's loop hub for the REST reminder mirror. The mirror
 	// is read-only; the loop remains the only consumer that drains it.
-	runtime.unregisterReminders = registerSessionReminderHub(runtime.sessionID, runtime.hub)
+	r.unregisterReminders = registerSessionReminderHub(r.sessionID, r.hub)
 
 	if namer, ok := deps.LLM.(llm.ModelNamer); ok {
-		runtime.model = namer.ModelName()
+		r.model = namer.ModelName()
 	}
 	// The dashboard's /events/history reads <session dir>/events.jsonl — the
 	// same file the bus appends every published event to. Wiring it here keeps
 	// the live SSE channel and the reload history consistent.
-	if runtime.bus != nil && deps.Root != "" {
-		if err := runtime.bus.SetSessionLog(filepath.Join(deps.Root, "events.jsonl"), 0); err != nil {
+	if r.bus != nil && deps.Root != "" {
+		if err := r.bus.SetSessionLog(filepath.Join(deps.Root, "events.jsonl"), 0); err != nil {
 			log.Printf("chat runtime %s: session event log unavailable: %v", deps.SessionID, err)
 		}
 	}
@@ -567,180 +702,17 @@ func NewChatRuntime(deps ChatRuntimeDeps) (*ChatRuntime, error) {
 		// now that the session log is attached, so the snapshot endpoint and
 		// the SSE first frame project the parked state (and /events/history
 		// keeps the announcement).
-		runtime.announceRestoredPark()
+		r.announceRestoredPark()
 	}
-
-	go runtime.run()
-	return runtime, nil
-}
-
-// Deliver queues a user message and wakes the worker. It never blocks on a
-// running turn: turns are serialized by the queue, not by the caller. On a
-// colony-bound session with a live overseer the message is relayed to it
-// instead: the overseer is the session's executor and the chat queen its front
-// end, so exactly one loop acts on the user's request.
-func (r *ChatRuntime) Deliver(message string) error {
-	if r == nil {
-		return ErrChatRuntimeNoLLM
-	}
-	if r.relayClientInputToOverseer(message) {
-		// The overseer owns the turn; the session transcript still records the
-		// ask. The record rides the queue so the conversation keeps a single
-		// writer, and a closed runtime only loses the record, not the relay.
-		recorded := message
-		if block := r.takeRelayCatalogBlock(); block != "" {
-			recorded = block + "\n\n" + message
-		}
-		_ = r.enqueueTurn(chatTurnRequest{message: recorded, clientInput: true, recordOnly: true})
-		return nil
-	}
-	return r.enqueueTurn(chatTurnRequest{message: message, clientInput: true})
-}
-
-// DeliverClientInput is DeliverClientInputWithImages without attachments; it
-// stays the seam every text-only caller (queen mail, sentinel resume, trigger
-// runtimes) already uses.
-func (r *ChatRuntime) DeliverClientInput(message, correlationID string) error {
-	return r.DeliverClientInputWithImages(message, nil, correlationID)
-}
-
-// DeliverClientInputWithImages is Deliver for the HTTP chat route: the
-// correlation id the handler published on CLIENT_INPUT_RECEIVED rides the
-// turn so the committed boundary can carry the same id, as upstream's
-// deliver_to_queen → _drain_injection_queue pair does. The images are the
-// prepared user content blocks; they join the transcript turn so the model
-// request carries them.
-//
-// Parity: framework/agent_loop/agent_loop.py::inject_event (image_content)
-func (r *ChatRuntime) DeliverClientInputWithImages(message string, images []map[string]any, correlationID string) error {
-	if r == nil {
-		return ErrChatRuntimeNoLLM
-	}
-	if r.relayClientInputToOverseer(message) {
-		recorded := message
-		if block := r.takeRelayCatalogBlock(); block != "" {
-			recorded = block + "\n\n" + message
-		}
-		_ = r.enqueueTurn(chatTurnRequest{message: recorded, clientInput: true, recordOnly: true, correlationID: correlationID, images: images})
-		return nil
-	}
-	return r.enqueueTurn(chatTurnRequest{message: message, clientInput: true, correlationID: correlationID, images: images})
-}
-
-// InjectQueenMail queues a letter or reply from another queen: it enters as a
-// client message (the way a chat app's message does, so she credits the
-// writer) but is marked as queen mail, so the chain depth continues instead of
-// starting over.
-//
-// Parity: framework/server/queen_mail.py::QueenMail._send_to_hive_queen
-func (r *ChatRuntime) InjectQueenMail(content string) error {
-	if r == nil {
-		return ErrChatRuntimeNoLLM
-	}
-	if strings.TrimSpace(content) == "" {
-		return nil
-	}
-	return r.enqueueTurn(chatTurnRequest{message: content, clientInput: true, fromQueenMail: true})
-}
-
-// InjectWorkerReport queues a worker's [WORKER_REPORT] block as the queen's
-// next turn. It is delivered as a non-client ("[External event]") user message,
-// exactly like the upstream AgentLoop.inject_event(notification) the worker
-// report handler calls, and never counted as a real user message.
-//
-// Parity: framework/server/queen_orchestrator.py::_on_worker_report (inject_event)
-func (r *ChatRuntime) InjectWorkerReport(report string) error {
-	if r == nil {
-		return ErrChatRuntimeNoLLM
-	}
-	if strings.TrimSpace(report) == "" {
-		return nil
-	}
-	return r.enqueueTurn(chatTurnRequest{message: report, clientInput: false})
-}
-
-// InjectEvent queues content as the queen's next turn. A client input is a
-// real user message; anything else is delivered as an "[External event]" user
-// turn and never counted as a real user message. This is the QueenNode seam
-// the session's trigger timers and the Sentinel manager resume path call.
-//
-// Parity: framework/agent_loop/agent_loop.py::inject_event
-func (r *ChatRuntime) InjectEvent(content string, isClientInput bool) error {
-	if r == nil {
-		return ErrChatRuntimeNoLLM
-	}
-	if strings.TrimSpace(content) == "" {
-		return nil
-	}
-	if isClientInput {
-		return r.Deliver(content)
-	}
-	return r.enqueueTurn(chatTurnRequest{message: content, clientInput: false})
-}
-
-// InjectTrigger queues a framework trigger (timer tick or webhook hit) as the
-// queen's next turn. Triggers are delivered as their own user message, tagged
-// is_trigger so the dashboard renders a banner instead of the raw block; they
-// are never counted as client input.
-//
-// Parity: framework/agent_loop/agent_loop.py::inject_trigger
-// Parity: framework/agent_loop/internals/cursor_persistence.py::drain_trigger_queue
-func (r *ChatRuntime) InjectTrigger(event agentloop.TriggerEvent) error {
-	if r == nil {
-		return ErrChatRuntimeNoLLM
-	}
-	pending := event
-	// A live overseer owns the session's turns: the trigger goes to it alone,
-	// so the chat queen does not answer the same tick a second time.
-	if r.relayTriggerToOverseer(pending) {
-		return nil
-	}
-	if err := r.enqueueTurn(chatTurnRequest{triggers: []agentloop.TriggerEvent{pending}}); err != nil {
-		return err
-	}
-	// The colony's persistent overseer is the second lead for a bound colony;
-	// give it the same trigger so it is not a Queen with no input source.
-	r.forwardTriggerToOverseer(pending)
-	return nil
-}
-
-func (r *ChatRuntime) enqueueTurn(request chatTurnRequest) error {
-	r.mu.Lock()
-	if r.closed {
-		r.mu.Unlock()
-		return ErrChatRuntimeClosed
-	}
-	r.queue = append(r.queue, request)
-	r.mu.Unlock()
-	select {
-	case r.wake <- struct{}{}:
-	default:
-	}
-	return nil
-}
-
-// LastError reports the outcome of the most recent turn (nil after a
-// successful turn).
-func (r *ChatRuntime) LastError() error {
-	if r == nil {
-		return ErrChatRuntimeNoLLM
-	}
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	return r.lastErr
-}
-
-// Transcript reads the persisted conversation parts from the store.
-func (r *ChatRuntime) Transcript() ([]map[string]any, error) {
-	if r == nil || r.store == nil {
-		return nil, nil
-	}
-	return r.store.ReadParts()
 }
 
 // Close stops the worker, cancels the in-flight turn, drains any background
 // memory reflection (with a final pass so the last turns are persisted), and
-// releases the store.
+// releases the store. Everything stopping the session starts — the final short
+// reflection and the timeline flush — shares one bounded grace
+// (chatShutdownGrace, upstream's finish_background_tasks(6s) at server exit);
+// past it the work is cancelled rather than waited on, and Close still blocks
+// until both goroutines have exited so nothing writes after it returns.
 func (r *ChatRuntime) Close() error {
 	if r == nil {
 		return nil
@@ -764,20 +736,37 @@ func (r *ChatRuntime) Close() error {
 
 	r.cancel()
 	<-r.done
-	// Upstream's session_manager.stop_session flushes the timeline after the
-	// turn loop is quiescent, so messages that arrived inside the live
-	// coalescing window are not lost. The runtime context is already
-	// cancelled here, so the flush gets its own bounded context; timelineWG
-	// keeps Close's promise that nothing writes after it returns.
+	// Drop any uncollected background-tool handles: no later turn can collect
+	// them. ToolExecutor has no cancel hook, so in-flight work runs to its own
+	// budget and its result is discarded when it lands.
+	//
+	// Parity: framework/agent_loop/agent_loop.py::AgentLoop._background_calls
+	if r.loop != nil {
+		r.loop.ReleaseBackgroundTools()
+	}
+	// Upstream's stop_session flushes the timeline after the turn loop is
+	// quiescent, so messages that arrived inside the live coalescing window are
+	// not lost. It starts the flush fire-and-forget; the port runs it here so a
+	// stopped session's directory is complete before teardown returns, sharing
+	// one bounded budget with the final reflection (see below).
 	//
 	// Parity: core/framework/server/session_manager.py::SessionManager.stop_session
+	grace := r.shutdownGrace
+	if grace <= 0 {
+		grace = chatShutdownGrace
+	}
+	// One budget for everything stopping a session starts, the way
+	// finish_background_tasks gives one 6s grace to every task stop_session
+	// spawned. Both paths honour the shared context, and Close still waits for
+	// their goroutines to exit below, so its promise holds: once Close returns,
+	// nothing writes into the session directory any more.
+	shutdownCtx, stopShutdown := context.WithTimeout(context.Background(), grace)
+	var shutdownWG sync.WaitGroup
 	if r.timelineEnabled && r.deps.LLM != nil && r.deps.Root != "" {
-		ctx, cancel := context.WithTimeout(context.Background(), memoryTimelineStopFlushTimeout)
-		r.timelineWG.Add(1)
+		shutdownWG.Add(1)
 		go func() {
-			defer r.timelineWG.Done()
-			defer cancel()
-			_, _ = memory.UpdateSessionTimeline(ctx, r.deps.LLM, r.deps.Root)
+			defer shutdownWG.Done()
+			_, _ = memory.UpdateSessionTimeline(shutdownCtx, r.deps.LLM, r.deps.Root)
 		}()
 	}
 	// The timeline writers run on their own goroutines and write into the
@@ -798,15 +787,24 @@ func (r *ChatRuntime) Close() error {
 	}
 	// Parity: core/framework/server/session_manager.py::SessionManager.stop_session
 	// Teardown cancels the queen's reflection triggers and runs the final
-	// reflection: reflections run on the scheduler's own context, so this
-	// waits for one already in flight instead of aborting it mid-write.
+	// reflection: reflections run on the scheduler's own context, so it waits
+	// for one already in flight, cancels it when the shared budget is spent, and
+	// then runs the final pass with whatever the budget still holds.
 	if r.contextCompactedUnsub != nil {
 		r.contextCompactedUnsub()
 		r.contextCompactedUnsub = nil
 	}
 	if r.reflection != nil {
-		r.reflection.Close(memory.ReflectionCloseGrace)
+		shutdownWG.Add(1)
+		go func() {
+			defer shutdownWG.Done()
+			r.reflection.Shutdown(shutdownCtx)
+		}()
 	}
+	// Both shutdown paths exit on the shared context: after this wait nothing
+	// writes into the session directory, and no goroutine is left behind.
+	shutdownWG.Wait()
+	stopShutdown()
 	if r.bus != nil {
 		// Flushes any pending delta snapshots and releases the session log fd.
 		r.bus.CloseSessionLog()
@@ -889,24 +887,31 @@ func coalesceQueuedTurn(queue []chatTurnRequest) (chatTurnRequest, []chatTurnReq
 //
 // Parity: core/framework/server/queen_orchestrator.py::_recall_on_user_input
 func (r *ChatRuntime) runTurn(request chatTurnRequest) {
+	// Every turn runs under its own context so the Stop route can abort just
+	// this turn's stream. The handle lives until runTurn returns: the deferred
+	// endTurn closes the done channel the route waits on after the emitter and
+	// park cleanup below have finished.
+	turnCtx, turnSeq := r.beginTurn()
+	defer r.endTurn(turnSeq)
 	if request.opening {
-		r.runOpeningTurn()
+		r.runOpeningTurn(turnCtx)
 		return
 	}
+	// A persona edit that landed while the previous turn was running reaches
+	// this turn's system prompt here, before anything reads it (upstream reads
+	// the phase identity per turn).
+	r.rebaseQueenIdentityFromPhaseState()
 	r.pinTurnProvider()
+	// A real client message lifts an explicit Stop: the loop is about to run a
+	// turn on this message, so it is no longer "stopped". Upstream clears
+	// _user_stopped as the event arrives, before it is queued.
+	//
+	// Parity: framework/agent_loop/agent_loop.py::AgentLoop.inject_event
+	if request.clientInput {
+		r.clearUserStopped()
+	}
 	if request.recordOnly {
-		// A message the overseer executed: append the turn so the transcript
-		// keeps the ask, without running the chat queen again. The overseer's
-		// own reply is an assistant record, not a second user turn.
-		if request.externalAssistant {
-			r.recordExternalAssistant(request.message)
-			return
-		}
-		if request.external {
-			r.recordExternalTurn(request.message)
-			return
-		}
-		r.recordRelayedClientTurn(request.message, request.images)
+		r.recordOnlyTurn(request)
 		return
 	}
 	message := request.message
@@ -937,6 +942,10 @@ func (r *ChatRuntime) runTurn(request chatTurnRequest) {
 	// non-streaming path stays in charge.
 	if r.streamLLM != nil && emitter != nil {
 		r.streamLLM.beginTurn(r.conv.SystemPrompt(), emitter.StreamTextDelta)
+		// A 402 on this turn's stream publishes payment_required on the
+		// session feed under the turn's execution, so the client can reopen
+		// the upgrade popup instead of parsing execution_failed.
+		r.streamLLM.setPaymentRequiredSink(r.bus, chatStreamID, executionID)
 		defer r.streamLLM.endTurn()
 	}
 
@@ -983,20 +992,25 @@ func (r *ChatRuntime) runTurn(request chatTurnRequest) {
 		// Parity: framework/agent_loop/agent_loop.py::execute — SESSION_START
 		// fires before the first user message so the situational frame
 		// precedes the request.
-		if r.conv.MessageCount() == 0 {
+		sessionStart := r.conv.MessageCount() == 0
+		if sessionStart {
 			r.fireReminderPoint(agentloop.SESSION_START, message, nil)
 		}
 		// Parity: framework/agent_loop/agent_loop.py::_drain_injection_queue
 		// — USER_PROMPT_SUBMIT fires before the queued user message is added.
 		// A trigger is drained separately upstream, so it never fires this
 		// point (there is no user prompt to frame).
-		if len(request.triggers) == 0 {
-			r.fireReminderPoint(agentloop.USER_PROMPT_SUBMIT, message, nil)
+		//
+		// The first turn's text already reached SESSION_START; upstream's
+		// pending-user-text queue only carries queued client messages, so the
+		// same text must not be replayed here (that would render the
+		// past-conversations source twice).
+		userText := message
+		if sessionStart {
+			userText = ""
 		}
-		// The past-conversations source fires at that same point upstream, so
-		// its excerpts land ahead of the user's message rather than after it.
-		if request.clientInput {
-			r.injectPastConversationRecall(message)
+		if len(request.triggers) == 0 {
+			r.fireReminderPoint(agentloop.USER_PROMPT_SUBMIT, userText, nil)
 		}
 		if !r.commitTurnUserMessage(message, stamp, request, emitter, executionID) {
 			return
@@ -1017,19 +1031,9 @@ func (r *ChatRuntime) runTurn(request chatTurnRequest) {
 			r.seedRecall(message)
 		}
 	}
-	result, err := r.loop.ExecuteTurn(r.ctx, r.agentCtx, r.conv, r.toolsForTurn())
+	result, err := r.loop.ExecuteTurn(turnCtx, r.agentCtx, r.conv, r.toolsForTurn())
 	if err != nil {
-		// A cancelled turn (session teardown) is not a failure worth
-		// broadcasting: the runtime is going away, not the model failing.
-		if r.ctx.Err() == nil {
-			// A loop-raised park (the deterministic doom loop) outranks the
-			// generic failure reason: the event and the runtime park state must
-			// name the same reason the TurnResult carries.
-			parkReason := turnFailureParkReason(result, agentloop.ParkReasonLLMError)
-			emitter.executionFailed(err, parkReason)
-			r.setParkState(parkReason, true)
-		}
-		r.setLastError(err)
+		r.handleTurnError(turnCtx, err, result, emitter)
 		return
 	}
 	if !result.Success {
@@ -1061,6 +1065,62 @@ func (r *ChatRuntime) runTurn(request chatTurnRequest) {
 	}
 	r.timelineAfterTurn()
 	r.setLastError(nil)
+}
+
+// recordOnlyTurn appends a message the overseer already executed so the
+// transcript keeps the ask, without running the chat queen again. The
+// overseer's own reply is an assistant record, not a second user turn.
+func (r *ChatRuntime) recordOnlyTurn(request chatTurnRequest) {
+	if request.externalAssistant {
+		r.recordExternalAssistant(request.message)
+		return
+	}
+	if request.external {
+		r.recordExternalTurn(request.message)
+		return
+	}
+	r.recordRelayedClientTurn(request.message, request.images)
+}
+
+// handleTurnError classifies a failed turn execution. A runtime teardown, a
+// Stop cancellation and a loop-raised park each end the turn without a
+// failure frame; only a genuine failure publishes execution_failed and
+// records the error.
+func (r *ChatRuntime) handleTurnError(turnCtx context.Context, err error, result agentloop.TurnResult, emitter *chatTurnEmitter) {
+	// A cancelled turn (session teardown) is not a failure worth
+	// broadcasting: the runtime is going away, not the model failing.
+	if r.ctx.Err() != nil {
+		r.setLastError(err)
+		return
+	}
+	// The Stop route cancelled only this turn. Upstream parks the loop on
+	// user_stopped and waits for the next message instead of failing the
+	// execution, so announce that park and leave lastErr alone.
+	//
+	// Parity: framework/agent_loop/agent_loop.py::_run_turn_loop (_turn_cancelled)
+	if turnCtx.Err() != nil {
+		emitter.executionParked(agentloop.ParkReasonUserStopped, nil)
+		r.setParkState(agentloop.ParkReasonUserStopped, true)
+		return
+	}
+	// A loop-raised park is a designed stop, not a failure: the empty
+	// response guard and the deterministic doom loop end the turn with
+	// a reason-tagged error, and upstream announces that wait on the
+	// bus (client_input_requested) instead of failing the execution.
+	//
+	// Parity: framework/agent_loop/agent_loop.py::_await_user_input
+	if parkReason, parked := loopParkReason(err); parked {
+		emitter.executionParked(parkReason, nil)
+		r.setParkState(parkReason, true)
+		return
+	}
+	// A loop-raised park (the deterministic doom loop) outranks the
+	// generic failure reason: the event and the runtime park state must
+	// name the same reason the TurnResult carries.
+	parkReason := turnFailureParkReason(result, agentloop.ParkReasonLLMError)
+	emitter.executionFailed(err, parkReason)
+	r.setParkState(parkReason, true)
+	r.setLastError(err)
 }
 
 // commitTurnUserMessage is runTurn's user-message commit step: it stamps the
@@ -1126,7 +1186,13 @@ func (r *ChatRuntime) StartOpeningTurn() {
 // runOpeningTurn is runTurn for the message-less first iteration. It has no
 // user turn to add: the loop's SESSION_START reminder is the first message the
 // model reads, which is what gives a fresh session an opening reply upstream.
-func (r *ChatRuntime) runOpeningTurn() {
+// ctx is the runTurn per-turn context, so the Stop route aborts this iteration
+// the same way it aborts a message turn.
+func (r *ChatRuntime) runOpeningTurn(ctx context.Context) {
+	// Same turn-boundary rebase as runTurn: the opening iteration is the first
+	// model request of the session, so a profile materialized after
+	// construction must reach it.
+	r.rebaseQueenIdentityFromPhaseState()
 	r.pinTurnProvider()
 	// Upstream runs the queen loop under the session id as the execution id;
 	// the turn carries no per-execution envelope, but the park events keep it.
@@ -1143,6 +1209,7 @@ func (r *ChatRuntime) runOpeningTurn() {
 	}
 	if r.streamLLM != nil && emitter != nil {
 		r.streamLLM.beginTurn(r.conv.SystemPrompt(), emitter.StreamTextDelta)
+		r.streamLLM.setPaymentRequiredSink(r.bus, chatStreamID, executionID)
 		defer r.streamLLM.endTurn()
 	}
 
@@ -1156,13 +1223,31 @@ func (r *ChatRuntime) runOpeningTurn() {
 		r.fireReminderPoint(agentloop.SESSION_START, "", nil)
 	}
 
-	result, err := r.loop.ExecuteTurn(r.ctx, r.agentCtx, r.conv, r.toolsForTurn())
+	result, err := r.loop.ExecuteTurn(ctx, r.agentCtx, r.conv, r.toolsForTurn())
 	if err != nil {
-		if r.ctx.Err() == nil {
-			parkReason := turnFailureParkReason(result, agentloop.ParkReasonLLMError)
-			emitter.executionFailed(err, parkReason)
-			r.setParkState(parkReason, true)
+		if r.ctx.Err() != nil {
+			r.setLastError(err)
+			return
 		}
+		// The Stop route cancelled this iteration: park on user_stopped, the
+		// same way runTurn's counterpart does, without a failure frame.
+		//
+		// Parity: framework/agent_loop/agent_loop.py::_run_turn_loop (_turn_cancelled)
+		if ctx.Err() != nil {
+			emitter.executionParked(agentloop.ParkReasonUserStopped, nil)
+			r.setParkState(agentloop.ParkReasonUserStopped, true)
+			return
+		}
+		// A loop-raised park announces the wait, not a failure (upstream's
+		// _await_user_input); see the runTurn counterpart.
+		if parkReason, parked := loopParkReason(err); parked {
+			emitter.executionParked(parkReason, nil)
+			r.setParkState(parkReason, true)
+			return
+		}
+		parkReason := turnFailureParkReason(result, agentloop.ParkReasonLLMError)
+		emitter.executionFailed(err, parkReason)
+		r.setParkState(parkReason, true)
 		r.setLastError(err)
 		return
 	}
@@ -1200,52 +1285,6 @@ func (r *ChatRuntime) parkQuestionsFor(parkReason agentloop.ParkReason) []map[st
 	return cloneParkQuestions(r.pendingQuestions)
 }
 
-// pinTurnProvider resolves the session's provider slot at the start of a turn.
-// A model-slot PUT rebuilds the slot in place; resolving here is what makes
-// the change "session-level": the turn that was already running kept its
-// pinned provider, and the first turn started afterwards runs on the rebuilt
-// one. The run goroutine is the only writer of agentCtx.LLM, so no lock is
-// needed beyond the slot's own.
-//
-// Parity: framework/server/queen_models.py::apply,
-// framework/server/routes_config.py::_hot_swap_sessions (the reconfigure half;
-// the pin keeps an in-flight turn on the provider it started with).
-func (r *ChatRuntime) pinTurnProvider() {
-	pinned := llm.ResolveCompleter(r.deps.LLM)
-	if pinned == nil || pinned == r.pinnedLLM {
-		return
-	}
-	r.pinnedLLM = pinned
-	r.streamLLM = newChatStreamingCompleter(pinned)
-	if r.streamLLM != nil && r.loop != nil {
-		ttft, interEvent := streamWatchdogBudgets(r.loop.Config)
-		r.streamLLM.setStreamWatchdog(ttft, interEvent)
-	}
-	var loopLLM llm.Completer = pinned
-	if r.streamLLM != nil {
-		loopLLM = r.streamLLM
-	}
-	r.agentCtx.LLM = loopLLM
-	if namer, ok := pinned.(llm.ModelNamer); ok {
-		r.model = namer.ModelName()
-	} else {
-		r.model = ""
-	}
-}
-
-// turnFailureParkReason keeps a loop-raised park on a failed turn. The loop's
-// TurnResult.ParkReason is set when the guard itself stopped the turn (the
-// deterministic doom loop); a turn that merely errored leaves it nil and the
-// caller's generic reason applies. Returning the carried reason keeps the
-// published loop_state_changed, the persisted pending_input, and the
-// TurnResult naming the same park.
-func turnFailureParkReason(result agentloop.TurnResult, fallback agentloop.ParkReason) agentloop.ParkReason {
-	if result.ParkReason != nil && *result.ParkReason != "" {
-		return *result.ParkReason
-	}
-	return fallback
-}
-
 // newChatExecutionID returns the per-turn execution id the loop and the
 // published events carry. Parity: framework/host/execution_manager.py uses a
 // fresh uuid per queen execution.
@@ -1255,148 +1294,6 @@ func newChatExecutionID() string {
 		return fmt.Sprintf("exec-%d", time.Now().UnixNano())
 	}
 	return hex.EncodeToString(b[:])
-}
-
-// injectRecall gives the turn the block picked for an earlier message and
-// starts the pick for this message in the background; it is the upstream
-// "background" mode (_recall_on_user_input). The EventBus drops a handler at
-// 15s, so upstream's handler must return fast: it delivers only what is
-// already cached and fires the pick as a task that joins the queen's next
-// drain — in practice her next message. This method therefore never calls the
-// model on the turn's critical path. "wait" and "index" are reminder sources,
-// so it is silent while either is set.
-//
-// Parity: core/framework/server/queen_orchestrator.py::_recall_on_user_input
-// Parity: core/framework/server/queen_orchestrator.py::_inject_recall_if_changed
-// (cached delivery, deduped against _last_injected_recall)
-func (r *ChatRuntime) injectRecall(query, stamp string) {
-	if r.globalMemoryDir == "" {
-		return
-	}
-	if r.memoryRecallSettings().Mode != memory.MemoryRecallBackground {
-		return
-	}
-	// Upstream: await _inject_recall_if_changed() — cached block only, no
-	// model call; then asyncio.create_task(_bg_refresh()).
-	r.deliverCachedRecall(stamp)
-	r.pickRecallInBackground(query)
-}
-
-// deliverCachedRecall appends the cached pick as a <system-reminder> when it
-// differs from the last one injected. Upstream's drain queues passive
-// injections after anything already queued, so the reminder lands after the
-// user's message. It runs on the turn goroutine; conversation writes stay
-// single-writer.
-//
-// Parity: core/framework/server/queen_orchestrator.py::_inject_recall_if_changed
-func (r *ChatRuntime) deliverCachedRecall(stamp string) {
-	r.recallMu.Lock()
-	block := joinRecallBlocks(r.recallGlobalCache, r.recallQueenCache)
-	r.recallMu.Unlock()
-	if block == "" || block == r.lastRecall {
-		return
-	}
-	r.lastRecall = block
-	reminder := "<system-reminder>\n" + agentloop.MemoryRecallHeader + "\n\n" + block + "\n</system-reminder>"
-	// Recall is context, never a reason to fail a turn: a write error leaves
-	// the conversation as it was and the turn runs without the reminder.
-	_, _ = r.conv.AddUserMessage("["+stamp+"] [External event] "+reminder, agentloop.UserMessageOptions{})
-}
-
-// joinRecallBlocks renders the two cached scope blocks as one deliverable
-// block: global first, then queen, blank line between, empty scopes skipped.
-//
-// Parity: core/framework/tools/queen_lifecycle_tools.py::QueenPhaseState.render_recall_block
-func joinRecallBlocks(global, queen string) string {
-	parts := make([]string, 0, 2)
-	if global != "" {
-		parts = append(parts, global)
-	}
-	if queen != "" {
-		parts = append(parts, queen)
-	}
-	return strings.Join(parts, "\n\n")
-}
-
-// pickRecallInBackground runs the pick off the turn goroutine, mirroring
-// upstream's _bg_refresh task: the result is cached, and the next drain (the
-// next message) delivers it if it differs. The pick swallows its own failures
-// the way select_memories does — an empty result overwrites the cache, as
-// upstream's _refresh_recall_cache assigns whatever the pick returned.
-//
-// Parity: core/framework/server/queen_orchestrator.py::_recall_on_user_input (_bg_refresh)
-func (r *ChatRuntime) pickRecallInBackground(query string) {
-	if r == nil {
-		return
-	}
-	go r.refreshRecallCache(query)
-}
-
-// refreshRecallCache picks the scoped recall blocks for query and stores them
-// as the deliverable cache. The empty-query guard mirrors upstream
-// _refresh_recall_cache (`if not query`): an empty message makes no pick call,
-// and any cached block is still delivered at the next drain.
-//
-// Parity: core/framework/server/queen_orchestrator.py::_refresh_recall_cache
-func (r *ChatRuntime) refreshRecallCache(query string) {
-	if r == nil || query == "" {
-		return
-	}
-	globalBlock, queenBlock := r.recallBlocksForQuery(query)
-	r.storeRecallBlocks(globalBlock, queenBlock)
-}
-
-// storeRecallBlocks hands a picked (global, queen) pair to the next turn.
-func (r *ChatRuntime) storeRecallBlocks(global, queen string) {
-	r.recallMu.Lock()
-	r.recallGlobalCache = global
-	r.recallQueenCache = queen
-	r.recallMu.Unlock()
-}
-
-// recallSeedTimeout bounds the session-start seed pick. Upstream awaits
-// select_memories inside asyncio.wait_for(..., 3.0) before the first model
-// call, so a slow model never delays the first turn past three seconds.
-const recallSeedTimeout = 3 * time.Second
-
-// seedRecall warms the global recall cache on a session's first message,
-// mirroring the seed the upstream identity hook runs at session_start
-// (queen_orchestrator.py:1461-1479) with the session's initial message as its
-// trigger: global scope only, up to 5 picks (the selector's default — the
-// per-scope refresh uses 3), a 3s wait, and silent failure. It runs on the
-// turn goroutine after the first message's own delivery and before the model
-// call, the same place upstream awaits its session_start hook: the first
-// message itself carries no recall, and the seed surfaces on a later message
-// when the first message's refresh is slow or empty — its upstream effect too.
-//
-// Parity: core/framework/server/queen_orchestrator.py::_queen_identity_hook
-func (r *ChatRuntime) seedRecall(query string) {
-	r.seedRecallWithin(query, recallSeedTimeout)
-}
-
-// seedRecallWithin is seedRecall with the timeout injected for tests.
-func (r *ChatRuntime) seedRecallWithin(query string, timeout time.Duration) {
-	if r == nil || r.globalMemoryDir == "" || query == "" {
-		return
-	}
-	if r.memoryRecallSettings().Mode != memory.MemoryRecallBackground {
-		return
-	}
-	ctx, cancel := context.WithTimeout(r.ctx, timeout)
-	defer cancel()
-	selected := memory.SelectMemories(ctx, query, r.deps.LLM, r.globalMemoryDir, 5, llm.AuxMaxTokens())
-	// Upstream's wait_for cancels the whole pick, so on timeout nothing is
-	// written and the cache keeps what it had (TimeoutError branch). SelectMemories
-	// would return its profile pins on a context error, so the cancellation is
-	// checked here before the seed stores anything.
-	if ctx.Err() != nil {
-		return
-	}
-	// Upstream assigns whatever format_recall_injection returned, "" included.
-	block := memory.FormatRecallInjection(selected, r.globalMemoryDir, "Global Memories")
-	r.recallMu.Lock()
-	r.recallGlobalCache = block
-	r.recallMu.Unlock()
 }
 
 // injectHubReminders drains reminders the hub parked (the idle ticker) into the
@@ -1438,6 +1335,15 @@ func (r *ChatRuntime) executeTool(req agentloop.ToolCallRequest) (agentloop.Tool
 	r.markProgress()
 	if req.Name == "ask_user" {
 		return r.executeAskUser(req.Input), nil
+	}
+	// The single CLI-style credentials tool (help/collect/attach/detach). It
+	// runs here because collect parks the loop and attach/detach rebase the
+	// session's credentials block — both need runtime state the tool registry
+	// does not see.
+	//
+	// Parity: framework/agent_loop/agent_loop.py (credentials branch)
+	if req.Name == tools.CredentialsToolName {
+		return r.executeCredentialsTool(req.Input), nil
 	}
 	if r.mcpToolBlocked(req.Name) {
 		return mcpToolRefusal(req.Name), nil

@@ -28,6 +28,7 @@ import (
 	"testing"
 
 	"github.com/shark2202/go_hive/go-hive/internal/agentloop"
+	"github.com/shark2202/go_hive/go-hive/internal/cli/toolcatalog"
 	"github.com/shark2202/go_hive/go-hive/internal/colony"
 	"github.com/shark2202/go_hive/go-hive/internal/llm"
 	hiveserver "github.com/shark2202/go_hive/go-hive/internal/server"
@@ -223,7 +224,7 @@ func TestSameNameToolDescriptionsMatchFrozenContract(t *testing.T) {
 	// memory_timeline is off in parityCatalogueDefs; the contract records
 	// search_timeline as an llm_request-layer definition, so add the definition
 	// the catalogue advertises when the feature is on.
-	live[SearchTimelineToolName] = searchTimelineToolDef()
+	live[SearchTimelineToolName] = toolcatalog.SearchTimelineToolDef()
 
 	matched := 0
 	want := 0

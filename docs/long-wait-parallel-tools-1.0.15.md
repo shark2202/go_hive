@@ -34,7 +34,7 @@
 | A6 | 新消息结束等待，并拿到已到达的内容 | `_input_waiting()`（`_input_unread or 队列非空`）为真即停，随后读取 | `InputWaiting()`（`unread || queue>0`，`loop.go:289`）；`TestAMessageSentDuringTheResponseStopsItsToolFromWaiting` 断言等待被跳过、恰好 1 次读取、消息进入下一轮上下文 | 一致 |
 | A7 | 未知 job 不等待直接回报 | `_job_status` 非 running 即跳出 | 探针 `TestAJobThatCantBeFoundIsReportedWithoutWaiting`：2 次 executor 调用（1 状态检查+1 读取）、<1s 返回错误 | 一致 |
 | A8 | 工具面文案/schema | `wait_timeout_sec: float = 600.0`；描述含 "up to 600"/新消息措辞；tool 内 clamp 45s | `internal/tools/builtin/terminal_tools.go:137` schema 默认 `600.0`；`terminal_jobs.go:25-26` clamp 45s；描述逐字含同两句（`terminal_tool_descriptions.go:135-152`） | 一致（工具面 sha 不变） |
-| A9 | `collect_result` 长等待（worker/后台结果） | 循环等待（同 A4/A5），结束条件为完成/预算/新消息；取消不杀后台工作 | **Go 无 background tool 机制**：`collect_result` 是 flat 表面的 shim（"not implemented in this build (no background tool handles)"，`internal/cli/tool_surface_flat.go:171,528`） | **差异→登记**（见 §3.1；不重写：Go 未实现 background tools，单独移植项） |
+| A9 | `collect_result` 长等待（worker/后台结果） | 循环等待（同 A4/A5），结束条件为完成/预算/新消息；取消不杀后台工作 | **已实装（2026-11-25 background-tools lane）**：`LoopConfig.BackgroundTools` + `_start_background_tool`/`_collect_background_result` 语义（grace 窗口、`bg_*` handle、`{status:pending}`、600s `wait_seconds` 预算）落在 `internal/agentloop/background_tools.go`；flat 表面的 `collect_result` 由 loop 拦截，不再返回 not-implemented | **一致**（见 §3.1 更新） |
 | A10 | colony worker 等待默认时长 | `wait_for_worker_reports(timeout: float = 600.0)` | 修前 `DefaultReportWait = 60s`；**本次修为 600s**（`internal/colony/runtime.go:31`），探针 `TestDefaultReportWaitIsTenMinutes` | **差异→已修** |
 | A11 | playbook 等 worker 的时长 | `PlaybookRun(default_timeout=600)`，`dispatch_one` 等待 600s；`run_playbook` 先给 1.5s fast-grace（`HIVE_PLAYBOOK_FAST_GRACE`），超窗转后台 + `[PLAYBOOK_COMPLETE]` 通知 | `playbookDefaultTimeout = 600s`（`internal/colony/playbook_tools.go:62`）；fast-grace 默认 1.5s（`internal/playbook/grace.go`）；`dispatchOne` 用 `WaitForWorkerReports(timeout)`（`playbook_tools.go:772`） | 一致 |
 | A12 | playbook 父侧静默守护（Go 特有保护） | 上游进程内执行，无父侧守护（无对应物） | 900s = 600s（dispatch 默认）+ 300s grace，任何子进程输出都会重置（`internal/playbook/python.go:68-72,345,485`）；探针 `TestDefaultStallTimeoutOutlastsAWorkerDispatch` 断言 900s 且不短于一次完整 dispatch。它是「桥死了」的守护，不在模型回合内，也无新消息中断语义（与上游 playbook 等待一致） | 一致（保护性差异，登记说明） |
@@ -64,6 +64,7 @@
 - 事实：Go 的 flat/工具面保留了 `collect_result` 名字与契约文案（`internal/agentloop/synthetic_tools.go:270-283`），但执行时返回「not implemented in this build (no background tool handles)」。上游 1.0.15 改的是**已有** background tools 的等待方式；Go 没有这套机制（`LoopConfig.background_tools`、`_start_background_tool`、grace 后台化均未移植）。
 - 所以「collect_result 拉长到 600s、新消息提前返回、轮询不耗回合」在 Go 上无载体；`TestAJobWaitSpendsNoModelTurnPerStatusCheck` 已把**循环侧等待**的等价行为钉住，一旦 background tools 落地，同一 `_wait_budget/_input_waiting` 机制可直接复用。
 - 重看条件：G1 新增 background tools 移植项时，把 `collect_result` 的 `{status:pending}`/真实结果契约与 `wait_seconds` 预算一并实现并补探针。
+- **2026-11-25 更新（background-tools lane）**：已实装。`LoopConfig.BackgroundTools`（默认 `image_generate`、`terminal_exec`）、`BackgroundToolGraceSeconds`、`BackgroundToolTimeoutSeconds` 与 handle 注册表在 `internal/agentloop/background_tools.go`；`collect_result` 由 loop 在 `executeTool` 最先拦截（复用 `waitBudget`/`InputWaiting`），`bg_*` handle 在 grace 窗口前注册、取消后仍可收集；探针见 `background_tools_test.go`。catalogue 级 fallback 只解释 loop 所有权，不再声称未实现。
 
 ### 3.2 chat-app 运行时接线（B7）——已接 `queens`，外部渠道宿主仍为前置
 

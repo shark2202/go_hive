@@ -66,6 +66,7 @@ func (m *preloadedChatLLM) AComplete(_ context.Context, req llm.CompletionReques
 // chat Queen — Chat + queen executor set, and a queued user message can
 // dispatch a worker through the bound colony.
 func TestPreloadedColonySessionChatsAndDispatches(t *testing.T) {
+	// The preloaded chat runtime owns the turn; no live overseer is started.
 	root := testTempDir(t)
 	home, err := hivehome.ResolveAt(filepath.Join(root, "hive"))
 	if err != nil {
@@ -139,6 +140,14 @@ func TestPreloadedColonySessionChatsAndDispatches(t *testing.T) {
 	provider.mu.Lock()
 	queenTurns := provider.queenTurns
 	provider.mu.Unlock()
+	// The worker report is asynchronous; wait for the queen's tool-result turn
+	// instead of reading the count the instant the worker finishes.
+	for time.Now().Before(deadline) && queenTurns < 2 {
+		time.Sleep(10 * time.Millisecond)
+		provider.mu.Lock()
+		queenTurns = provider.queenTurns
+		provider.mu.Unlock()
+	}
 	if queenTurns < 2 {
 		t.Fatalf("queen turns = %d, want the tool result turn as well", queenTurns)
 	}

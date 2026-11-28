@@ -27,7 +27,7 @@ func NewClaudeCodeQueenRouteDeps(mail *queenmail.Mail, store *claudecode.Store, 
 		return ClaudeCodeQueenRouteDeps{}
 	}
 	config := mail.Config()
-	queens := sortedClaudeQueens(config.ClaudeCode)
+	queens := configuredClaudeQueens(config)
 	return ClaudeCodeQueenRouteDeps{
 		Enabled: config.Enabled,
 		Queens: func() []ClaudeCodeQueenView {
@@ -67,20 +67,12 @@ func NewClaudeCodeQueenRouteDeps(mail *queenmail.Mail, store *claudecode.Store, 
 	}
 }
 
-// sortedClaudeQueens is the configured queens in id order. Upstream keeps the
-// configuration's own order; Go's configuration parse keeps them in a map, so
-// the list is sorted to stay the same from one request to the next.
-func sortedClaudeQueens(configured map[string]queenmail.ClaudeQueen) []queenmail.ClaudeQueen {
-	ids := make([]string, 0, len(configured))
-	for id := range configured {
-		ids = append(ids, id)
-	}
-	sort.Strings(ids)
-	queens := make([]queenmail.ClaudeQueen, 0, len(ids))
-	for _, id := range ids {
-		queens = append(queens, configured[id])
-	}
-	return queens
+// configuredClaudeQueens is the configured queens in the configuration's own
+// order. Upstream keeps the queen_mail.claude_code dict's insertion order;
+// queenmail.Config preserves it from the JSON source (LoadConfig) and falls
+// back to sorted ids only when the order is unavailable.
+func configuredClaudeQueens(config queenmail.Config) []queenmail.ClaudeQueen {
+	return config.ClaudeQueens()
 }
 
 // claudeConversations lists one queen's conversations, newest activity first:

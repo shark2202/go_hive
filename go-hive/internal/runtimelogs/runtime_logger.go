@@ -10,17 +10,32 @@ import (
 	"encoding/hex"
 	"log"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
-// TraceContextProvider returns the ambient (trace_id, execution_id) pair the
-// logger stamps on every record. Upstream reads it from the observability
-// ContextVar (framework/observability :: get_trace_context) which defaults to
-// empty strings when nothing set it; the port keeps the same default and lets
-// a host override it.
+// TraceContextProvider returns the process-level default (trace_id,
+// execution_id) pair the logger stamps on every record. Upstream reads it from
+// the observability ContextVar (framework/observability :: get_trace_context)
+// which defaults to empty strings when nothing set it; the port keeps the same
+// default and lets a host override it.
+//
+// Production hosts that run several sessions in one process should bind each
+// run's pair with RuntimeLogger.SetTraceContext instead of assigning this
+// global at request time: the variable is not synchronized, so a per-request
+// assignment would race and could stamp one session's trace onto another's
+// records.
 //
 // Parity: framework/observability/logging.py::get_trace_context
 var TraceContextProvider func() (traceID, executionID string)
+
+// tracePair is one logger's immutable trace binding. The value is replaced as
+// a whole through an atomic pointer, so a record can never observe a half-old
+// (trace_id, execution_id) mix.
+type tracePair struct {
+	traceID     string
+	executionID string
+}
 
 // ToolCallInput is one tool call as the loop records it: upstream log_step
 // consumes dicts with these keys (content maps to ToolCallLog.result).
@@ -86,6 +101,10 @@ type RuntimeLogger struct {
 	goalID      string
 	startedAt   string
 	loggedNodes map[string]struct{}
+	// trace is this run's (trace_id, execution_id) binding. Nil falls back to
+	// TraceContextProvider; a production host sets it per logger so sessions
+	// sharing the process cannot read each other's trace.
+	trace atomic.Pointer[tracePair]
 }
 
 // NewRuntimeLogger mirrors RuntimeLogger(store=store, agent_id=...).
@@ -95,6 +114,35 @@ func NewRuntimeLogger(store *RuntimeLogStore, agentID string) *RuntimeLogger {
 		AgentID:     agentID,
 		loggedNodes: map[string]struct{}{},
 	}
+}
+
+// SetTraceContext binds the (trace_id, execution_id) pair this logger stamps
+// on every record. Hosts call it once per run, before logging; passing two
+// empty strings restores the TraceContextProvider fallback.
+//
+// The binding is per logger, mirroring the execution-scoped ContextVar
+// upstream's get_trace_context reads: concurrent sessions in one process keep
+// their own ids instead of racing on a global.
+//
+// Parity: framework/observability/logging.py::set_trace_context
+func (l *RuntimeLogger) SetTraceContext(traceID, executionID string) {
+	if l == nil {
+		return
+	}
+	if traceID == "" && executionID == "" {
+		l.trace.Store(nil)
+		return
+	}
+	l.trace.Store(&tracePair{traceID: traceID, executionID: executionID})
+}
+
+// NewTraceContext returns a fresh (trace_id, execution_id) pair: two
+// independent 32-lowercase-hex ids, the shape upstream's uuid.uuid4().hex
+// produces for each. A host binds one pair per run with SetTraceContext.
+//
+// Parity: framework/observability/logging.py::set_trace_context (uuid4().hex)
+func NewTraceContext() (traceID, executionID string) {
+	return randomHex(16), randomHex(16)
 }
 
 // RunID returns the run id StartRun assigned ("" before StartRun).
@@ -150,7 +198,7 @@ func (l *RuntimeLogger) LogStep(in StepInput) error {
 			DurationS:      tc.DurationS,
 		})
 	}
-	traceID, executionID := traceContext()
+	traceID, executionID := l.traceContext()
 	step := NodeStepLog{
 		NodeID:          in.NodeID,
 		NodeType:        in.NodeType,
@@ -204,7 +252,7 @@ func (l *RuntimeLogger) LogNodeComplete(in NodeCompleteInput) error {
 		needsAttention = true
 		reasons = append(reasons, "Many iterations: "+itoa(in.TotalSteps))
 	}
-	traceID, _ := traceContext()
+	traceID, _ := l.traceContext()
 	attempt := in.Attempt
 	if attempt == 0 {
 		attempt = 1
@@ -298,7 +346,7 @@ func (l *RuntimeLogger) EndRun(status string, durationMS int, nodePath []string,
 		}
 		attentionReasons = append(attentionReasons, nd.AttentionReasons...)
 	}
-	traceID, executionID := traceContext()
+	traceID, executionID := l.traceContext()
 	if nodePath == nil {
 		nodePath = []string{}
 	}
@@ -326,8 +374,14 @@ func (l *RuntimeLogger) EndRun(status string, durationMS int, nodePath []string,
 	log.Printf("runtimelogs: runtime logs saved: run_id=%s status=%s nodes=%d", runID, status, len(nodeDetails))
 }
 
-// traceContext reads the ambient trace context, defaulting to empty strings.
-func traceContext() (string, string) {
+// traceContext reads this run's trace binding, falling back to the
+// process-level provider default (empty strings when neither is set).
+func (l *RuntimeLogger) traceContext() (string, string) {
+	if l != nil {
+		if pair := l.trace.Load(); pair != nil {
+			return pair.traceID, pair.executionID
+		}
+	}
 	if TraceContextProvider == nil {
 		return "", ""
 	}

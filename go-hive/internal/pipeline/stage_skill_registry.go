@@ -2,6 +2,7 @@ package pipeline
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/shark2202/go_hive/go-hive/internal/skills"
 )
@@ -12,9 +13,9 @@ import (
 // Config keys (config.*): project_root, interactive (default true),
 // skills_config (`{skill: {"enabled": bool}}`, `_all` supported), and
 // extra_scope_dirs (`[{"directory": ..., "label": ..., "priority": N}]`,
-// layered between user and project scope). The live file watcher upstream
-// starts is not ported; the Go manager reloads on demand
-// (SkillsManager.Reload) and the stage records the same manager output.
+// layered between user and project scope). Initialize also starts the live
+// SKILL.md watcher upstream runs: a change reloads the manager so the next
+// turn's catalog prompt reflects it.
 //
 // Parity: framework/pipeline/stages/skill_registry.py::SkillRegistryStage
 type SkillRegistryStage struct {
@@ -30,6 +31,15 @@ type SkillRegistryStage struct {
 	ExtraScopeDirs []skills.ExtraScope
 	// SkillsManager is the loaded manager (output).
 	SkillsManager *skills.SkillsManager
+	// WatchInterval overrides the hot-reload polling cadence; zero uses
+	// the package default.
+	WatchInterval time.Duration
+	// WatchDebounce overrides the quiet window before a reload; zero uses
+	// the package default.
+	WatchDebounce time.Duration
+	// Watcher is the running hot-reload loop (output; nil when there is
+	// nothing to watch).
+	Watcher *SkillWatcher
 }
 
 // NewSkillRegistryStage builds the stage from its declarative config.
@@ -92,7 +102,18 @@ func (s *SkillRegistryStage) Initialize() error {
 	manager := skills.NewSkillsManager(config)
 	manager.Load()
 	s.SkillsManager = manager
+	s.Watcher = StartSkillWatcher(manager, s.WatchInterval, s.WatchDebounce)
 	return nil
+}
+
+// StopWatching halts the hot-reload loop (if any). Tests and runtimes that
+// tear a stage down without tearing down the process call it; the stage output
+// stays readable afterwards.
+func (s *SkillRegistryStage) StopWatching() {
+	if s.Watcher != nil {
+		s.Watcher.Stop()
+		s.Watcher = nil
+	}
 }
 
 // Process is a pass-through: the work happened in Initialize.

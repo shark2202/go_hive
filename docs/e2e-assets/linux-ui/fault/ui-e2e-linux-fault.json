@@ -1,0 +1,526 @@
+{
+  "schema": "hive.ui-e2e-linux/v1",
+  "status": "FAIL",
+  "ok": false,
+  "exit_code": 1,
+  "generated_at": "2026-11-23T12:17:21+00:00",
+  "duration_ms": 1625.1,
+  "image": "hive-linux-qa:ui",
+  "arch": "arm64",
+  "binary_sha256": "6c79254eb4d04dc30e907d72274a7138031e8ad2039aa6cd2d55d2f255f50851",
+  "serve_port": 52391,
+  "environment": {
+    "image": "hive-linux-qa:ui",
+    "arch": "arm64",
+    "platform": "Linux-7.0.14-linuxkit-aarch64-with-glibc2.41",
+    "python": "3.13.5",
+    "chromium": "/usr/bin/chromium",
+    "binary": "/repo/go_hive/go-hive/dist/hive-embed-linux-arm64",
+    "binary_format": "ELF",
+    "binary_arch": "arm64",
+    "binary_sha256": "6c79254eb4d04dc30e907d72274a7138031e8ad2039aa6cd2d55d2f255f50851",
+    "hive_home": "/tmp/ui-e2e-linux-1-a751f3eb",
+    "home_kept": false,
+    "colony_id": "ui_gate_linux",
+    "route_id": "ui-gate-linux",
+    "base_url": "http://127.0.0.1:52391",
+    "serve_port": 52391,
+    "serve_pid": 8,
+    "health_status": 200,
+    "evidence_dir": "/repo/go_hive/docs/e2e-assets/linux-ui/fault",
+    "_dm_session": "session_20261123_121720_e257603a",
+    "_child_session": "session_20261123_121720_f00f9c35",
+    "_colony_id": "ui_gate_linux",
+    "spawn_state": {
+      "child_response": {
+        "colony_spawned": false,
+        "spawned_colony_id": null
+      },
+      "source_meta": {
+        "colony_spawned": true,
+        "spawned_colony_id": "ui_gate_linux",
+        "path": "/tmp/ui-e2e-linux-1-a751f3eb/queens/queen_growth/sessions/session_20261123_121720_e257603a/meta.json"
+      },
+      "verdict": "completed",
+      "explanation": "colony_spawned/spawned_colony_id describe the SOURCE DM session that forked the colony. The child colony session's response carries false/null by design; reading it as the spawn state is a harness bug."
+    }
+  },
+  "spawn_state": {
+    "child_response": {
+      "colony_spawned": false,
+      "spawned_colony_id": null
+    },
+    "source_meta": {
+      "colony_spawned": true,
+      "spawned_colony_id": "ui_gate_linux",
+      "path": "/tmp/ui-e2e-linux-1-a751f3eb/queens/queen_growth/sessions/session_20261123_121720_e257603a/meta.json"
+    },
+    "verdict": "completed",
+    "explanation": "colony_spawned/spawned_colony_id describe the SOURCE DM session that forked the colony. The child colony session's response carries false/null by design; reading it as the spawn state is a harness bug."
+  },
+  "api": {
+    "b": {
+      "http_status": 200,
+      "status": "pass",
+      "actual": "http://127.0.0.1:52391 · HIVE_HOME=/tmp/ui-e2e-linux-1-a751f3eb · pid=8"
+    },
+    "c": {
+      "http_status": 201,
+      "status": "pass",
+      "actual": "HTTP 201 session=session_20261123_121720_e257603a queen=queen_growth"
+    },
+    "c2": {
+      "http_status": 200,
+      "status": "pass",
+      "actual": "HTTP 200 queen='queen_growth' name='Steve Jobs' title='Head of Growth'"
+    },
+    "d": {
+      "http_status": 201,
+      "status": "pass",
+      "actual": "HTTP 201 colony='ui_gate_linux' session=session_20261123_121720_f00f9c35 worker=True"
+    },
+    "e": {
+      "http_status": null,
+      "status": "pass",
+      "actual": "colony_spawned=True spawned_colony_id='ui_gate_linux'"
+    },
+    "f": {
+      "http_status": 200,
+      "status": "pass",
+      "actual": "discover=True tools=True created_at=1795436240.1537073"
+    }
+  },
+  "dom_assertions": [
+    {
+      "step": "h",
+      "name": "sidebar rendered colony links",
+      "ok": false,
+      "actual": "0 link(s)"
+    },
+    {
+      "step": "h",
+      "name": "sidebar contains #/colony/ui-gate-linux",
+      "ok": false,
+      "actual": "target=None links=[]"
+    },
+    {
+      "step": "h",
+      "name": "sidebar label names this colony",
+      "ok": false,
+      "actual": "want~'uigatelinux' got=[]"
+    },
+    {
+      "step": "h",
+      "name": "sidebar uses the English Colonies label",
+      "ok": false,
+      "actual": "sections=[]"
+    }
+  ],
+  "steps": [
+    {
+      "id": "a",
+      "title": "Linux server binary is runnable here",
+      "status": "pass",
+      "actual": "hive-embed-linux-arm64: ELF/arm64 (6c79254eb4d04dc3…)",
+      "checks": [
+        {
+          "name": "server binary exists",
+          "ok": true,
+          "actual": "/repo/go_hive/go-hive/dist/hive-embed-linux-arm64"
+        },
+        {
+          "name": "server binary is ELF",
+          "ok": true,
+          "actual": "ELF"
+        },
+        {
+          "name": "server binary matches container arch",
+          "ok": true,
+          "actual": "binary=arm64 container=arm64"
+        }
+      ],
+      "fields": {
+        "format": "ELF",
+        "arch": "arm64",
+        "sha256": "6c79254eb4d04dc30e907d72274a7138031e8ad2039aa6cd2d55d2f255f50851"
+      },
+      "http_status": null,
+      "duration_ms": null
+    },
+    {
+      "id": "a2",
+      "title": "slugToColonyId mapping matches the frontend",
+      "status": "pass",
+      "actual": "cases={'ui_gate_linux': 'ui-gate-linux', 'email_inbound_agent': 'inbound', 'email_inbound': 'inbound', 'outbound_agent': 'outbound', 'demo': 'demo'} mismatches={}",
+      "checks": [
+        {
+          "name": "slug -> route id",
+          "ok": true,
+          "actual": "{}"
+        }
+      ],
+      "fields": {},
+      "http_status": null,
+      "duration_ms": null
+    },
+    {
+      "id": "b",
+      "title": "hive-embed serve answers on the throwaway home",
+      "status": "pass",
+      "actual": "http://127.0.0.1:52391 · HIVE_HOME=/tmp/ui-e2e-linux-1-a751f3eb · pid=8",
+      "checks": [
+        {
+          "name": "/api/health is 200",
+          "ok": true,
+          "actual": "HTTP 200"
+        }
+      ],
+      "fields": {},
+      "http_status": 200,
+      "duration_ms": null
+    },
+    {
+      "id": "c",
+      "title": "create the source queen DM session",
+      "status": "pass",
+      "actual": "HTTP 201 session=session_20261123_121720_e257603a queen=queen_growth",
+      "checks": [
+        {
+          "name": "DM create is 201",
+          "ok": true,
+          "actual": "HTTP 201"
+        },
+        {
+          "name": "DM carries session_id",
+          "ok": true,
+          "actual": "'session_20261123_121720_e257603a'"
+        },
+        {
+          "name": "DM is an independent queen session",
+          "ok": true,
+          "actual": "'independent'"
+        }
+      ],
+      "fields": {
+        "session_id": "session_20261123_121720_e257603a",
+        "queen_id": "queen_growth",
+        "body": {
+          "agent_path": "",
+          "colony_id": null,
+          "colony_spawned": false,
+          "description": "",
+          "goal": "",
+          "has_worker": false,
+          "loaded_at": 1795436240.1311579,
+          "node_count": 0,
+          "queen_id": "queen_growth",
+          "queen_name": "Steve Jobs",
+          "queen_phase": "independent",
+          "queen_supports_images": true,
+          "session_id": "session_20261123_121720_e257603a",
+          "spawned_colony_id": null,
+          "uptime_seconds": 0
+        }
+      },
+      "http_status": 201,
+      "duration_ms": null
+    },
+    {
+      "id": "c2",
+      "title": "resolve the queen's display title",
+      "status": "pass",
+      "actual": "HTTP 200 queen='queen_growth' name='Steve Jobs' title='Head of Growth'",
+      "checks": [
+        {
+          "name": "queen title available",
+          "ok": true,
+          "actual": "'Head of Growth'"
+        }
+      ],
+      "fields": {},
+      "http_status": 200,
+      "duration_ms": null
+    },
+    {
+      "id": "d",
+      "title": "fork the DM into a colony through the popup path",
+      "status": "pass",
+      "actual": "HTTP 201 colony='ui_gate_linux' session=session_20261123_121720_f00f9c35 worker=True",
+      "checks": [
+        {
+          "name": "fork create is 201",
+          "ok": true,
+          "actual": "HTTP 201"
+        },
+        {
+          "name": "fork returns a session",
+          "ok": true,
+          "actual": "'session_20261123_121720_f00f9c35'"
+        },
+        {
+          "name": "fork is bound to the colony",
+          "ok": true,
+          "actual": "'ui_gate_linux'"
+        },
+        {
+          "name": "fork has a worker",
+          "ok": true,
+          "actual": "True"
+        },
+        {
+          "name": "fork phase is colony",
+          "ok": true,
+          "actual": "'colony'"
+        }
+      ],
+      "fields": {
+        "body": {
+          "agent_path": "/tmp/ui-e2e-linux-1-a751f3eb/colonies/ui_gate_linux",
+          "colony_id": "ui_gate_linux",
+          "colony_spawned": false,
+          "description": "",
+          "goal": "",
+          "has_worker": true,
+          "loaded_at": 1795436240.6750326,
+          "node_count": 0,
+          "queen_id": "queen_growth",
+          "queen_name": "Steve Jobs",
+          "queen_phase": "colony",
+          "queen_supports_images": true,
+          "session_id": "session_20261123_121720_f00f9c35",
+          "spawned_colony_id": null,
+          "uptime_seconds": 0
+        },
+        "request": {
+          "source_session_id": "session_20261123_121720_e257603a",
+          "colony_id": "ui_gate_linux",
+          "queen_name": "queen_growth",
+          "initial_phase": "colony"
+        }
+      },
+      "http_status": 201,
+      "duration_ms": null
+    },
+    {
+      "id": "e",
+      "title": "source session records the spawn lock",
+      "status": "pass",
+      "actual": "colony_spawned=True spawned_colony_id='ui_gate_linux'",
+      "checks": [
+        {
+          "name": "source meta.json exists",
+          "ok": true,
+          "actual": "/tmp/ui-e2e-linux-1-a751f3eb/queens/queen_growth/sessions/session_20261123_121720_e257603a/meta.json"
+        },
+        {
+          "name": "colony_spawned is true",
+          "ok": true,
+          "actual": "True"
+        },
+        {
+          "name": "spawned_colony_id names this colony",
+          "ok": true,
+          "actual": "'ui_gate_linux'"
+        }
+      ],
+      "fields": {
+        "meta_path": "/tmp/ui-e2e-linux-1-a751f3eb/queens/queen_growth/sessions/session_20261123_121720_e257603a/meta.json",
+        "meta": {
+          "colony_spawned": true,
+          "created_at": 1795436240.1388037,
+          "phase": "independent",
+          "queen_id": "queen_growth",
+          "spawned_colony_at": "2026-11-23T12:17:20.696396+00:00",
+          "spawned_colony_id": "ui_gate_linux"
+        }
+      },
+      "http_status": null,
+      "duration_ms": null
+    },
+    {
+      "id": "f",
+      "title": "API, disk metadata and the live session agree",
+      "status": "pass",
+      "actual": "discover=True tools=True created_at=1795436240.1537073",
+      "checks": [
+        {
+          "name": "/api/discover lists the colony",
+          "ok": true,
+          "actual": "HTTP 200 rows=1"
+        },
+        {
+          "name": "/api/colonies/tools-index lists the colony",
+          "ok": true,
+          "actual": "HTTP 200"
+        },
+        {
+          "name": "tools-index queen matches",
+          "ok": true,
+          "actual": "'queen_growth'"
+        },
+        {
+          "name": "colony metadata.json exists",
+          "ok": true,
+          "actual": "/tmp/ui-e2e-linux-1-a751f3eb/colonies/ui_gate_linux/metadata.json"
+        },
+        {
+          "name": "API and disk created_at agree",
+          "ok": true,
+          "actual": "api=1795436240.1537073 disk=1795436240.1537073"
+        },
+        {
+          "name": "colony metadata records the queen session",
+          "ok": true,
+          "actual": "queen_session_id='session_20261123_121720_f00f9c35'"
+        }
+      ],
+      "fields": {
+        "discover_row": {
+          "category": "Your Agents",
+          "created_at": 1795436240.1537073,
+          "description": "Colony ui_gate_linux",
+          "icon": null,
+          "is_loaded": true,
+          "last_active": "2026-11-23T12:17:20.676982",
+          "name": "Ui Gate Linux",
+          "node_count": 1,
+          "path": "/tmp/ui-e2e-linux-1-a751f3eb/colonies/ui_gate_linux",
+          "run_count": 0,
+          "session_count": 1,
+          "tags": [],
+          "tool_count": 9,
+          "workers": [
+            {
+              "colony_id": "ui_gate_linux",
+              "config_path": "/tmp/ui-e2e-linux-1-a751f3eb/colonies/ui_gate_linux/worker.json",
+              "description": "Colony ui_gate_linux",
+              "name": "Ui Gate Linux",
+              "queen_name": "queen_growth",
+              "spawned_at": "",
+              "task": "UI E2E gate: prove the colony renders in the sidebar and on its page.",
+              "tool_count": 9
+            }
+          ]
+        },
+        "tools_row": {
+          "created_at": 1795436240.1537073,
+          "enabled_count": null,
+          "has_allowlist": false,
+          "name": "ui_gate_linux",
+          "queen_name": "queen_growth"
+        },
+        "colony_metadata": {
+          "created_at": 1795436240.1537073,
+          "name": "ui_gate_linux",
+          "queen_name": "queen_growth",
+          "queen_session_id": "session_20261123_121720_f00f9c35",
+          "source_session_id": "session_20261123_121720_e257603a"
+        }
+      },
+      "http_status": 200,
+      "duration_ms": null
+    },
+    {
+      "id": "g0",
+      "title": "headless Chromium starts and exposes CDP",
+      "status": "pass",
+      "actual": "/usr/bin/chromium · profile=/tmp/ui-e2e-linux-1-a751f3eb/chrome-profile",
+      "checks": [],
+      "fields": {
+        "chromium": "/usr/bin/chromium"
+      },
+      "http_status": null,
+      "duration_ms": null
+    },
+    {
+      "id": "g",
+      "title": "fault injection: the page renders no app DOM",
+      "status": "fail",
+      "actual": "about:blank (negative self-check, not a product run)",
+      "checks": [],
+      "fields": {},
+      "http_status": null,
+      "duration_ms": null
+    },
+    {
+      "id": "h",
+      "title": "colony appears in the sidebar after real JS renders",
+      "status": "fail",
+      "actual": "0 link(s) · target=absent · labels=[]",
+      "checks": [
+        {
+          "name": "sidebar rendered colony links",
+          "ok": false,
+          "actual": "0 link(s)"
+        },
+        {
+          "name": "sidebar contains #/colony/ui-gate-linux",
+          "ok": false,
+          "actual": "target=None links=[]"
+        },
+        {
+          "name": "sidebar label names this colony",
+          "ok": false,
+          "actual": "want~'uigatelinux' got=[]"
+        },
+        {
+          "name": "sidebar uses the English Colonies label",
+          "ok": false,
+          "actual": "sections=[]"
+        }
+      ],
+      "fields": {
+        "links": [],
+        "sections": [],
+        "badges": [],
+        "body": ""
+      },
+      "http_status": null,
+      "duration_ms": null
+    }
+  ],
+  "failed": [
+    "g",
+    "h"
+  ],
+  "cleanup": [
+    {
+      "action": "delete the colony through the API",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "action": "colony directory removed",
+      "ok": true,
+      "detail": "/tmp/ui-e2e-linux-1-a751f3eb/colonies/ui_gate_linux"
+    },
+    {
+      "action": "stop the colony session",
+      "ok": true,
+      "detail": "HTTP 404 session=session_20261123_121720_f00f9c35 (already stopped by the colony purge)"
+    },
+    {
+      "action": "stop the source DM session",
+      "ok": true,
+      "detail": "HTTP 200 session=session_20261123_121720_e257603a"
+    },
+    {
+      "action": "stop serve",
+      "ok": true,
+      "detail": "serve stopped (rc=0)"
+    },
+    {
+      "action": "delete temp HIVE_HOME",
+      "ok": true,
+      "detail": "/tmp/ui-e2e-linux-1-a751f3eb"
+    }
+  ],
+  "cleanup_ok": true,
+  "product_findings": [],
+  "notes": [
+    "fault injection active: browser will load about:blank, so the positive DOM assertions must fail",
+    "fork response colony_spawned=False spawned_colony_id=None is the CHILD session; the source session's meta.json is authoritative for the spawn lock",
+    "sidebar probe: {\"links\": [], \"body\": \"\"}"
+  ],
+  "screenshots": []
+}

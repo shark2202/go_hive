@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/pyenv"
 )
 
 type RetentionConfig struct {
@@ -144,14 +144,14 @@ func intFromRaw(raw json.RawMessage) (int64, bool) {
 }
 
 func intEnv(dst *int, v string) {
-	if n, err := strconv.Atoi(strings.TrimSpace(v)); err == nil {
+	if n, ok := pyenv.ParseInt(v); ok {
 		*dst = n
 	}
 }
 
 func int64Env(dst *int64, v string) {
-	if n, err := strconv.ParseInt(strings.TrimSpace(v), 10, 64); err == nil {
-		*dst = n
+	if n, ok := pyenv.ParseInt(v); ok {
+		*dst = int64(n)
 	}
 }
 

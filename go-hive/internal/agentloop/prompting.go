@@ -2,7 +2,6 @@ package agentloop
 
 import (
 	"encoding/json"
-	"strings"
 
 	"github.com/shark2202/go_hive/go-hive/internal/hiveclock"
 	"github.com/shark2202/go_hive/go-hive/internal/skills"
@@ -21,10 +20,6 @@ type PromptSpec struct {
 	AgentType               string
 	OutputKeys              []string
 	ReportSchemaInstruction string
-	// GoalPrompt is the colony goal block (criteria, MUST/SHOULD constraints,
-	// context). It is rendered into the static system prompt so the model
-	// reasons with the declared outcome on every turn.
-	GoalPrompt string
 }
 
 type PromptOverrides struct {
@@ -137,7 +132,6 @@ func BuildPromptSpec(ctx *AgentContext, overrides PromptOverrides) PromptSpec {
 		AgentType:               agentType,
 		OutputKeys:              outputKeys,
 		ReportSchemaInstruction: BuildStructuredOutputInstruction(ctx.AgentSpec.ReportSchema),
-		GoalPrompt:              strings.TrimSpace(ctx.GoalContext),
 	}
 }
 
@@ -165,9 +159,6 @@ func BuildSystemPromptStatic(spec PromptSpec) string {
 	if spec.FocusPrompt != "" {
 		parts = append(parts, "\n"+spec.FocusPrompt)
 	}
-	if spec.GoalPrompt != "" {
-		parts = append(parts, "\n"+spec.GoalPrompt)
-	}
 	if spec.ReportSchemaInstruction != "" {
 		parts = append(parts, "\n"+spec.ReportSchemaInstruction)
 	}
@@ -183,10 +174,12 @@ func BuildSystemPromptDynamicSuffix(spec PromptSpec) string {
 	return joinWithNewline(parts)
 }
 
-// Parity: framework/agent_loop/prompting.py build_system_prompt.
-func BuildSystemPrompt(spec PromptSpec) string {
-	static := BuildSystemPromptStatic(spec)
-	suffix := BuildSystemPromptDynamicSuffix(spec)
+// JoinSystemPromptParts recombines the split prompt the way upstream's
+// build_system_prompt does: the dynamic suffix rides after the static prefix,
+// separated by a blank line. An empty leg contributes nothing (no stray
+// separators), so a context with no narrative and no catalog renders exactly
+// the static text.
+func JoinSystemPromptParts(static, suffix string) string {
 	if suffix == "" {
 		return static
 	}
@@ -194,6 +187,11 @@ func BuildSystemPrompt(spec PromptSpec) string {
 		return suffix
 	}
 	return static + "\n\n" + suffix
+}
+
+// Parity: framework/agent_loop/prompting.py build_system_prompt.
+func BuildSystemPrompt(spec PromptSpec) string {
+	return JoinSystemPromptParts(BuildSystemPromptStatic(spec), BuildSystemPromptDynamicSuffix(spec))
 }
 
 func BuildSystemPromptForContext(ctx *AgentContext, overrides PromptOverrides) string {

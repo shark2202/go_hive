@@ -33,6 +33,18 @@ func (h *Host) GetStats() map[string]any {
 	return h.runtime.GetStats()
 }
 
+// AdaptiveToolBudget exposes the runtime's adaptive-budget toggle to the
+// server's feature hot-apply, which walks live sessions and mutates the colony
+// behind them (framework/server/routes_config.py::_apply_adaptive_budget_flag).
+func (h *Host) AdaptiveToolBudget() (value bool, defined bool) {
+	return h.runtime.AdaptiveToolBudget()
+}
+
+// SetAdaptiveToolBudget hot-applies the global feature flag to the runtime.
+func (h *Host) SetAdaptiveToolBudget(enabled bool) {
+	h.runtime.SetAdaptiveToolBudget(enabled)
+}
+
 // GetWorker returns the live worker object (janitor safety context).
 func (h *Host) GetWorker(id string) *colony.Worker {
 	return h.runtime.GetWorker(id)

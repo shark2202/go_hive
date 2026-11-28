@@ -12,6 +12,7 @@ import (
 	"github.com/shark2202/go_hive/go-hive/internal/agentloop"
 	"github.com/shark2202/go_hive/go-hive/internal/agents"
 	"github.com/shark2202/go_hive/go-hive/internal/colony"
+	"github.com/shark2202/go_hive/go-hive/internal/eventbus"
 	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
 	colonyhost "github.com/shark2202/go_hive/go-hive/internal/host"
 	"github.com/shark2202/go_hive/go-hive/internal/llm"
@@ -34,7 +35,7 @@ func TestForkedWorkerJSONCarriesWorkerIdentityNotQueenPersona(t *testing.T) {
 		InitialPrompt:   &task,
 	}
 
-	if err := writeColonyFromSession(colonyPath, "forked", "queen_alpha", params); err != nil {
+	if _, err := writeColonyFromSession(colonyPath, "forked", "queen_alpha", nil, params); err != nil {
 		t.Fatalf("writeColonyFromSession: %v", err)
 	}
 	data, err := os.ReadFile(filepath.Join(colonyPath, "worker.json"))
@@ -140,7 +141,7 @@ func TestForkedColonyWorkerRunsWorkerIdentity(t *testing.T) {
 	}
 	colonyPath := home.ColonyDir("forked")
 	task := "compile the weekly digest"
-	if err := writeColonyFromSession(colonyPath, "forked", "queen_alpha",
+	if _, err := writeColonyFromSession(colonyPath, "forked", "queen_alpha", nil,
 		hiveserver.CreateColonyFromSourceParams{SourceSessionID: "session_src", ColonyID: "forked", InitialPrompt: &task}); err != nil {
 		t.Fatalf("writeColonyFromSession: %v", err)
 	}
@@ -199,6 +200,7 @@ func (p *promptCaptureLLM) firstSystem() string {
 }
 
 // Parity: tests/test_run_worker_tool.py::test_run_worker_workers_inherit_only_queens_tools
+// Parity: framework/agents/queen/worker_definition.py::build_meta (live tool snapshot)
 func TestForkedWorkerDeclaredCategoriesResolveToPoolTools(t *testing.T) {
 	root := testTempDir(t)
 	home, err := hivehome.ResolveAt(filepath.Join(root, "hive"))
@@ -207,7 +209,30 @@ func TestForkedWorkerDeclaredCategoriesResolveToPoolTools(t *testing.T) {
 	}
 	colonyPath := home.ColonyDir("forked")
 	task := "build the supplier sheet"
-	if err := writeColonyFromSession(colonyPath, "forked", "queen_operations",
+	// The worker's declared tools are the source queen's live snapshot, so the
+	// fixture carries a live runtime whose surface is the names the colony
+	// tool pool can resolve.
+	source := hiveserver.NewSession("session_src", eventbus.NewEventBus())
+	source.QueenName = "queen_operations"
+	liveQueen, err := hiveserver.NewChatRuntime(hiveserver.ChatRuntimeDeps{
+		LLM: &lifecycleTestLLM{},
+		Tools: []llm.ToolDef{
+			{Name: "terminal_rg", Description: "search"},
+			{Name: "attach_file", Description: "attach"},
+		},
+		Execute: func(context.Context, string, map[string]any) (string, bool, error) {
+			return "ok", false, nil
+		},
+		Root:      t.TempDir(),
+		Bus:       eventbus.NewEventBus(),
+		SessionID: "session_src",
+	})
+	if err != nil {
+		t.Fatalf("build source queen runtime: %v", err)
+	}
+	t.Cleanup(func() { _ = liveQueen.Close() })
+	source.Chat = liveQueen
+	if _, err := writeColonyFromSession(colonyPath, "forked", "queen_operations", source,
 		hiveserver.CreateColonyFromSourceParams{SourceSessionID: "session_src", ColonyID: "forked", InitialPrompt: &task}); err != nil {
 		t.Fatalf("writeColonyFromSession: %v", err)
 	}
@@ -215,8 +240,8 @@ func TestForkedWorkerDeclaredCategoriesResolveToPoolTools(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadAgentSpec: %v", err)
 	}
-	if !specContains(spec.AgentSpec.Tools, "terminal_basic") {
-		t.Fatalf("forked tools = %v, want the queen profile's declared categories", spec.AgentSpec.Tools)
+	if !specContains(spec.AgentSpec.Tools, "terminal_rg") {
+		t.Fatalf("forked tools = %v, want the queen's live tool snapshot", spec.AgentSpec.Tools)
 	}
 
 	base, declared, execute := colonyWorkerToolSurface(colonyPath, builtin.New(colonyPath), home)

@@ -65,7 +65,7 @@ func handleQueenMailQueens(w http.ResponseWriter, r *http.Request, deps QueenMai
 func handleQueenMailLetter(w http.ResponseWriter, r *http.Request, deps QueenMailRouteDeps) {
 	decoded, err := decodeJSONValue(r)
 	if err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "The body isn't JSON"})
+		writeJSONBodyFailure(w, err, http.StatusBadRequest, "The body isn't JSON")
 		return
 	}
 	body, ok := decoded.(map[string]any)

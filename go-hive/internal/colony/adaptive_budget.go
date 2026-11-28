@@ -23,9 +23,38 @@ func (r *ColonyRuntime) AdaptiveToolBudgetStats() map[string]any {
 	}
 }
 
+// AdaptiveToolBudget reports whether adaptive worker budgets are enabled and
+// whether the value is defined. The runtime always seeds the flag (env default
+// or ColonyOptions.AdaptiveToolBudget), so defined is true — Python's
+// ColonyConfig.adaptive_tool_budget is likewise never None. The server's
+// feature hot-apply uses this seam to count only colonies whose flag changed.
+func (r *ColonyRuntime) AdaptiveToolBudget() (value bool, defined bool) {
+	r.budgetMu.Lock()
+	defer r.budgetMu.Unlock()
+	return r.adaptiveEnabled, true
+}
+
+// SetAdaptiveToolBudget hot-applies the global feature flag to a live colony.
+// Disabling stops new sampling and clamps immediately; workers already clamped
+// keep their shrunk budget (the AgentLoop setter is shrink-only), matching
+// upstream's _apply_adaptive_budget_flag.
+func (r *ColonyRuntime) SetAdaptiveToolBudget(enabled bool) {
+	r.budgetMu.Lock()
+	defer r.budgetMu.Unlock()
+	r.adaptiveEnabled = enabled
+}
+
+// adaptiveBudgetEnabled is the lock-holding read used by the sampling and
+// admission paths, which run concurrently with the server's hot-apply.
+func (r *ColonyRuntime) adaptiveBudgetEnabled() bool {
+	r.budgetMu.Lock()
+	defer r.budgetMu.Unlock()
+	return r.adaptiveEnabled
+}
+
 // Parity: framework/host/colony_runtime.py::ColonyRuntime._maybe_adapt_colony_budget
 func (r *ColonyRuntime) maybeAdaptColonyBudget(data map[string]any) {
-	if !r.adaptiveEnabled {
+	if !r.adaptiveBudgetEnabled() {
 		return
 	}
 	if status, _ := data["status"].(string); status != "success" {
@@ -111,7 +140,7 @@ func (r *ColonyRuntime) ApplyAdaptiveBudget(worker *Worker) {
 	if !applied || worker.BudgetPinned || worker.IsPersistent() {
 		return
 	}
-	if !r.adaptiveEnabled {
+	if !r.adaptiveBudgetEnabled() {
 		return
 	}
 	if loop := worker.AgentLoop(); loop != nil {

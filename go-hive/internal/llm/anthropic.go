@@ -80,12 +80,12 @@ func (a *AnthropicProvider) AComplete(ctx context.Context, req CompletionRequest
 	if a == nil || a.Provider == nil {
 		return Completion{}, errors.New("llm: anthropic provider is not initialised")
 	}
-	system := MergedSystemPrompt(req.System, req.SystemDynamicSuffix)
 	return a.Provider.Complete(ctx, ChatMessagesToMaps(req.Messages), CompleteOptions{
-		System:    system,
-		Tools:     req.Tools,
-		MaxTokens: req.MaxTokens,
-		JSONMode:  req.JSONMode,
+		System:              req.System,
+		SystemDynamicSuffix: req.SystemDynamicSuffix,
+		Tools:               req.Tools,
+		MaxTokens:           req.MaxTokens,
+		JSONMode:            req.JSONMode,
 	})
 }
 
@@ -104,6 +104,18 @@ func ChatMessagesToMaps(messages []ChatMessage) []map[string]any {
 		}
 		if message.ToolCallID != "" {
 			entry["tool_call_id"] = message.ToolCallID
+		}
+		// Signed reasoning blocks ride assistant turns only; the Anthropic
+		// transform re-emits them as thinking content blocks ahead of text and
+		// tool_use. Other transports strip the key (openAIRequestBody).
+		//
+		// Parity: core/framework/agent_loop/conversation.py::Message.to_llm_dict
+		if message.Role == "assistant" && len(message.ThinkingBlocks) > 0 {
+			blocks := make([]any, 0, len(message.ThinkingBlocks))
+			for _, block := range message.ThinkingBlocks {
+				blocks = append(blocks, block)
+			}
+			entry["thinking_blocks"] = blocks
 		}
 		if len(message.ToolCalls) > 0 {
 			calls := make([]map[string]any, 0, len(message.ToolCalls))

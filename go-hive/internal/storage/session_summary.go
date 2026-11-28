@@ -264,7 +264,9 @@ func writeSummary(sessionDir string, summary *SessionSummary) {
 	if err != nil {
 		return
 	}
-	_ = atomicfs.WriteFile(path, payload, 0o644)
+	// session_summary.py::_write_summary uses framework/utils/io.py::atomic_write
+	// (mkstemp 0600); the summary carries transcript excerpts, so keep it private.
+	_ = atomicfs.WriteFile(path, payload, 0o600)
 }
 
 func fileMtimeSeconds(info os.FileInfo) float64 {

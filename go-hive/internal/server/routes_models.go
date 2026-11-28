@@ -289,7 +289,7 @@ func handlePutModelSlot(w http.ResponseWriter, r *http.Request, deps ModelRouteD
 
 	decoded, err := decodeJSONValue(r)
 	if err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "The body isn't JSON"})
+		writeJSONBodyFailure(w, err, http.StatusBadRequest, "The body isn't JSON")
 		return
 	}
 	body, ok := decoded.(map[string]any)
@@ -729,7 +729,7 @@ func handlePutModelEndpoint(w http.ResponseWriter, r *http.Request, deps ModelRo
 	}
 	decoded, err := decodeJSONValue(r)
 	if err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "The body isn't JSON"})
+		writeJSONBodyFailure(w, err, http.StatusBadRequest, "The body isn't JSON")
 		return
 	}
 	body, ok := decoded.(map[string]any)

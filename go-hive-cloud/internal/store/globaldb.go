@@ -458,7 +458,11 @@ func (t *Team) Changes(ctx context.Context, since string) (*ChangesResponse, err
 	}
 	coveredNames := make([]string, 0, len(covered))
 	for _, row := range covered {
-		coveredNames = append(coveredNames, asString(row["table_name"]))
+		name := asString(row["table_name"])
+		if strings.HasPrefix(name, "crm_") {
+			continue
+		}
+		coveredNames = append(coveredNames, name)
 	}
 	cursor, err := t.ChangeCursor(ctx)
 	if err != nil {
@@ -490,6 +494,9 @@ func (t *Team) Changes(ctx context.Context, since string) (*ChangesResponse, err
 	}
 	for _, row := range rows {
 		table := asString(row["table_name"])
+		if strings.HasPrefix(table, "crm_") {
+			continue
+		}
 		group, ok := out.Tables[table]
 		if !ok {
 			group = &TableChanges{Rows: []ChangedRow{}}

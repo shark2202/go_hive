@@ -242,19 +242,18 @@ func MainSlotProvider(home hivehome.Home, requestedModel string) (llm.Completer,
 		return AntigravityProviderFor(home, MainSlotModel(home, requestedModel)), nil
 	}
 
-	model := MainSlotModel(home, requestedModel)
-	apiBase := MainSlotAPIBase(home)
+	runtime := LoadRuntimeConfig(home, requestedModel)
 
-	if llm.IsLocalModel(model) {
-		local := llm.NewHTTPProvider(llm.ProviderOptions{Model: model, APIBase: apiBase})
-		if extra := MainSlotExtraKwargs(home, ""); extra != nil {
-			local.ExtraKwargs = extra
+	if llm.IsLocalModel(runtime.Model) {
+		local := llm.NewHTTPProvider(llm.ProviderOptions{Model: runtime.Model, APIBase: runtime.APIBase})
+		if runtime.ExtraKwargs != nil {
+			local.ExtraKwargs = runtime.ExtraKwargs
 		}
 		return local, nil
 	}
 
 	provider := MainSlotProviderName(section)
-	apiKey := MainSlotKey(home)
+	apiKey := runtime.APIKey
 	if apiKey == "" {
 		envVar := strings.TrimSpace(pyStrOrEmpty(section["api_key_env_var"]))
 		if envVar == "" {
@@ -263,16 +262,16 @@ func MainSlotProvider(home hivehome.Home, requestedModel string) (llm.Completer,
 		if envVar == "" {
 			envVar = "OPENAI_API_KEY"
 		}
-		return nil, errors.New("no API key configured for model " + quoteErr(model) +
+		return nil, errors.New("no API key configured for model " + quoteErr(runtime.Model) +
 			" (set " + envVar + " or configure the LLM in hive settings)")
 	}
 
-	built := llm.NewHTTPProvider(llm.ProviderOptions{Model: model, APIKey: apiKey, APIBase: apiBase})
+	built := llm.NewHTTPProvider(llm.ProviderOptions{Model: runtime.Model, APIKey: apiKey, APIBase: runtime.APIBase})
 	if pool := MainSlotKeyPool(home); pool != nil {
 		built.KeyPool = pool
 	}
-	if extra := MainSlotExtraKwargs(home, apiKey); extra != nil {
-		built.ExtraKwargs = extra
+	if runtime.ExtraKwargs != nil {
+		built.ExtraKwargs = runtime.ExtraKwargs
 	}
 	return built, nil
 }

@@ -10,7 +10,7 @@
 
 本轮确认并修复 **14 类可复现缺陷**，其中 4 类高严重度：调用方自定义 `session_id` 的路径穿越、report-bundle 的归档/临时文件越权、skills 安装的路径穿越与 git 参数注入、history 删除/打开接口的校验绕过。另有 8 项残余风险已记录（主要为本地攻击面、tar 解压体量、DNS rebinding TOCTOU），未在本轮扩大改动。
 
-威胁模型说明：桌面版默认只监听 `127.0.0.1`，未设置 `HIVE_DESKTOP_TOKEN` 时 API 无鉴权。因此“路径/注入”漏洞在本机浏览器、被 prompt 注入的 agent、同机其他进程仍有实际影响；本轮同时增加了“非 loopback 监听必须配置 token”的 fail-closed 逻辑。
+威胁模型说明：桌面版默认只监听 `127.0.0.1`，未设置 `HIVE_DESKTOP_TOKEN` 时 API 无鉴权。因此“路径/注入”漏洞在本机浏览器、被 prompt 注入的 agent、同机其他进程仍有实际影响；本轮增加了“命名非 loopback 监听必须配置 token”的提醒。**2026-11-24 运维决策例外：显式 `--host 0.0.0.0` 或 `::` 通配绑定允许不设 `HIVE_DESKTOP_TOKEN`；这会暴露无鉴权 API，只应在受控网络使用。**
 
 ---
 
@@ -161,7 +161,7 @@
     附件上传 100 MiB（`http.MaxBytesReader`），超限删半成品并返回 413。
   - 主 server 设 `ReadHeaderTimeout=10s`、`IdleTimeout=120s`、`MaxHeaderBytes=1 MiB`；
     webhook server 另加 `ReadTimeout=30s`。
-  - 非 loopback 监听且未配置 `HIVE_DESKTOP_TOKEN` 时拒绝启动（fail-closed）。
+  - 非 loopback 且非显式 `0.0.0.0`/`::` 通配监听，且未配置 `HIVE_DESKTOP_TOKEN` 时打印警告（不阻断启动）；通配绑定按运维决策允许无 token。
 - 回归：`TestReadLimitedBodyRejectsOversizedJSON`、`TestLoopbackListenHost`；
   既有 server 测试确认正常请求不受影响。
 - 残余：multipart 的每个 part 仍可很多（总字节受限）。
@@ -281,7 +281,7 @@
 | R-03 | Medium | `scrape.go:302`、`pdf.go:443` | DNS 解析与 HTTP 拨号是两次解析，存在 rebinding TOCTOU | 自定义 `DialContext` 固定已校验 IP，或在 transport 层做 IP 校验 |
 | R-04 | Low | `routes_colonies_import.go:1000` | `secureTarget` 校验后到 `os.Create/Rename` 之间存在本地 symlink 替换窗口 | 解压到独立临时目录后整体 rename；或使用 `openat`/`O_NOFOLLOW` |
 | R-05 | Low | `server/app.go:395` | 只脱敏 query，path 段中的秘密仍会进日志（如 webhook 自定义路径） | 对已知 token 形状（`/bot<digits>:...`）或配置的 webhook secret 做 path 脱敏 |
-| R-06 | Low | `server/app.go:378` | `HIVE_DESKTOP_TOKEN` 为空时本地 API 无鉴权 | 保持默认 loopback；已加非 loopback fail-closed；如需远程强烈建议配 token |
+| R-06 | Low | `server/app.go:378` | `HIVE_DESKTOP_TOKEN` 为空时 API 无鉴权 | 默认 loopback；命名非 loopback 有警告；`0.0.0.0`/`::` 通配绑定按 2026-11-24 运维决策允许无 token，但等于暴露无鉴权 API，必须限制在受控网络 |
 | R-07 | Info | `internal/skills/_default_skills/image-generation/SKILL.md` | Go 运行时未实现 `image_generate`/`reference_images`，因此没有对应 SSRF 面 | 实现时复用 `batch3CheckURLTarget` + 重定向逐跳检查，并限制本地路径在会话根内 |
 | R-08 | Low | `tools/builtin/exec.go:19` | 终端工具按设计可执行任意命令；被 prompt 注入的模型可直接获得 shell | 依赖工具 tier/审批策略；不要把不可信网页内容直接喂给拥有 terminal 的会话 |
 | R-09 | Low | `platform/open.go:8` | `open`/`xdg-open` 可能把以 `-` 开头的 path 当选项；当前路径均为服务端生成绝对路径 | 可加 `--`（macOS `open -- path`、`xdg-open -- path`）作为纵深防御 |

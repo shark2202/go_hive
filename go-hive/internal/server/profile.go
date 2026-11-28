@@ -270,7 +270,15 @@ func SyncUserProfileMemory(home hivehome.Home, displayName, about any) {
 		description = "User identity: " + pyStrValue(displayName)
 	}
 	content := memory.BuildMemoryDocument("User Profile", description, "profile", body)
-	_ = os.WriteFile(memoryPath, []byte(content), 0o644)
+	// The identity lines are the owner's and the rest the reflection's, so the
+	// write leaves the file whoever's it was (upstream claim=False). The memory
+	// mirror is best-effort: a refused or oversized write must not fail the
+	// profile save.
+	_, _ = memory.Write(memDir, "user-profile.md", content, memory.WriteOptions{
+		Author:     memory.AuthorOwner,
+		Reason:     "profile settings",
+		KeepAuthor: true,
+	})
 }
 
 const maxAvatarBytes = 2 * 1024 * 1024

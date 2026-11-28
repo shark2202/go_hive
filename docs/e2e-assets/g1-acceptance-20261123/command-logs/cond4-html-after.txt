@@ -1,0 +1,1 @@
+stale: /Users/mac/hive/.wt/w91-g1-acceptance/go_hive/docs/configuration.html differs from /Users/mac/hive/.wt/w91-g1-acceptance/go_hive/contracts/config-keys.json; run gen_configuration_html.py

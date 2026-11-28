@@ -11,12 +11,17 @@
 #   make test-v     详细输出
 #   make vet        go vet
 #   make fmt-check  gofmt 检查（不修改文件）
+#   make staticcheck-check  staticcheck 基线门禁（只拒绝新增问题）
+#   make lint       fmt-check + gofumpt-check + vet + staticcheck-check
+#                   + deadcode-check + gosec-check + deps-check
 #   make build      编译全部包；若 cmd/ 下存在 main 包则产出二进制
 #   make embed-ui   构建前端并把 dist 嵌入单二进制（-tags embed_ui）
 #   make cross      CGO_ENABLED=0 交叉编译 6 个平台到 dist/
 #   make parity          每个 Test 必须带 // Parity: 或 // Parity-exempt:
 #   make parity-targets  // Parity: 引用的 Python 测试必须真实存在
-#   make ci              依次执行 fmt-check vet test cross parity parity-targets wiring-check compat-check arch-check
+#   make ci              依次执行 fmt-check gofumpt-check vet staticcheck-check
+#                        deadcode-check gosec-check deps-check test cross parity
+#                        parity-targets wiring-check compat-check arch-check
 #
 # 入口约定：./cmd/... 是 CLI 入口目录。当前该目录尚未落地 main 包，
 # 因此 build/cross 只做编译验证，不会产出二进制；等 cmd/hive 落地后
@@ -24,6 +29,15 @@
 
 GO        ?= go
 GOFMT     ?= gofmt
+GOFUMPT   ?= gofumpt
+STATICCHECK ?= staticcheck
+STATICCHECK_GATE ?= ../scripts/staticcheck_gate.py
+DEADCODE  ?= $(abspath $(DIST))/tools/deadcode
+DEADCODE_GATE ?= ../scripts/deadcode_gate.py
+GOSEC     ?= gosec
+GOSEC_GATE ?= ../scripts/gosec_gate.py
+DEP_INVENTORY ?= ../scripts/dep_inventory.py
+TOOLS_MODULE ?= tools
 DIST      ?= dist
 PARITY    ?= ../scripts/check_parity.sh
 PARITY_TARGETS ?= ../scripts/check_parity_targets.sh
@@ -37,7 +51,7 @@ PLATFORMS  = darwin/amd64 darwin/arm64 linux/amd64 linux/arm64 windows/amd64 win
 # test 门禁必须每次真跑。
 TEST_FLAGS ?= -count=1
 
-.PHONY: all test test-v vet fmt-check build embed-ui cross parity parity-targets specs-check tool-contract-check tool-contract-report tool-surface-check browser-tool-check tool-output-check cli-surface-check compat-check compat-cli-selftest module-inventory-check module-inventory-selftest upgrade-compat-check vulncheck install-verify arch-check refactor-freeze storage-sweep ci clean help
+.PHONY: all test test-v vet fmt-check gofumpt-check staticcheck-check staticcheck-update tools deadcode-check deadcode-update gosec-check gosec-update gosec-report deps-check deps-update lint build embed-ui cross parity parity-targets specs-check tool-contract-check tool-contract-report tool-surface-check browser-tool-check tool-output-check cli-surface-check compat-check compat-cli-selftest module-inventory-check module-inventory-selftest upgrade-compat-check vulncheck install-verify arch-check refactor-freeze storage-sweep ci clean help
 
 all: ci
 
@@ -47,6 +61,18 @@ help:
 	@echo "  make test-v      同上，-v"
 	@echo "  make vet         go vet ./..."
 	@echo "  make fmt-check   gofmt -l 检查，非空即失败"
+	@echo "  make staticcheck-check  staticcheck 基线门禁（只拒绝新增问题）"
+	@echo "  make staticcheck-update 重建 staticcheck 基线（需明确接受当前债务）"
+	@echo "  make gofumpt-check  gofumpt -l 检查（工具缺失时明确 SKIP）"
+	@echo "  make tools       构建 tools/ 模块里的固定版本开发工具（deadcode）"
+	@echo "  make deadcode-check  deadcode 基线门禁（只拒绝新增）"
+	@echo "  make deadcode-update 重建 deadcode 基线"
+	@echo "  make gosec-check      gosec 安全基线门禁（只拒绝新增；不含不确定的污点规则）"
+	@echo "  make gosec-report     全量 gosec 规则报告（含 G703/G706，不阻断）"
+	@echo "  make gosec-update     重建 gosec 基线"
+	@echo "  make deps-check       依赖清单/许可证台账与模块图一致性"
+	@echo "  make deps-update      重生成 DEPENDENCY_INVENTORY.md 与 notices 区块"
+	@echo "  make lint        fmt-check + gofumpt-check + vet + staticcheck-check + deadcode-check + gosec-check + deps-check"
 	@echo "  make build       go build ./...，有 cmd 入口时产出 dist/hive"
 	@echo "  make embed-ui    构建前端（必要时 npm）并嵌入单二进制 dist/hive-embed"
 	@echo "  make cross       交叉编译 6 平台到 dist/"
@@ -65,7 +91,7 @@ help:
 	@echo "  make vulncheck          依赖漏洞门禁（govulncheck；离线降级明确 UNVERIFIED，退出码 3）"
 	@echo "  make install-verify     安装/升级端到端复验（SLOT_DIR=<slot 目录> [OLD_DIR=...]）"
 	@echo "  make refactor-freeze  结构重构的行为冻结验收（compare wave15-base；不进 ci）"
-	@echo "  make ci          fmt-check + vet + test + cross + parity + parity-targets + wiring + compat-check + arch-check"
+	@echo "  make ci          fmt-check + vet + staticcheck-check + test + cross + parity + parity-targets + wiring + compat-check + arch-check"
 
 test:
 	$(OFFLINE) $(GO) test $(TEST_FLAGS) ./...
@@ -84,6 +110,69 @@ fmt-check:
 		exit 1; \
 	fi; \
 	echo "gofmt: OK"
+
+# staticcheck 是 Go 的长期静态分析器。存量债务冻结在
+# internal/quality/staticcheck_baseline.json：只拒绝新增问题，行号移动
+# 不算新增；只有明确接受当前债务时才运行 staticcheck-update。
+staticcheck-check:
+	@python3 $(STATICCHECK_GATE) --module .
+
+staticcheck-update:
+	@python3 $(STATICCHECK_GATE) --module . --update
+
+# gofumpt 是 gofmt 的超集（更严、输出确定）。它不在离线 module cache 中时
+# 明确 SKIP 而不是假装通过；安装：go install mvdan.cc/gofumpt@v0.9.2
+gofumpt-check:
+	@if ! command -v $(GOFUMPT) >/dev/null 2>&1; then \
+		echo "gofumpt-check: SKIP — gofumpt not installed (go install mvdan.cc/gofumpt@v0.9.2)"; \
+		exit 0; \
+	fi; \
+	unformatted="$$( $(GOFUMPT) -l . )"; \
+	if [ -n "$$unformatted" ]; then \
+		echo "gofumpt 需要处理以下文件："; \
+		echo "$$unformatted"; \
+		exit 1; \
+	fi; \
+	echo "gofumpt: OK"
+
+# tools/ 是独立 module：开发工具不进入主模块依赖图，也不链接进发行二进制。
+tools:
+	@mkdir -p "$(dir $(DEADCODE))"
+	cd $(TOOLS_MODULE) && $(OFFLINE) $(GO) build -o "$(DEADCODE)" golang.org/x/tools/cmd/deadcode
+	@echo "tools: built $(DEADCODE)"
+
+# deadcode 报告无入口可达的函数/方法。存量冻结在
+# internal/quality/deadcode_baseline.json：只拒绝新增，退役后必须降基线。
+deadcode-check:
+	@if [ ! -x "$(DEADCODE)" ]; then $(MAKE) --no-print-directory tools; fi
+	@python3 $(DEADCODE_GATE) --module . --binary "$(DEADCODE)"
+
+deadcode-update:
+	@if [ ! -x "$(DEADCODE)" ]; then $(MAKE) --no-print-directory tools; fi
+	@python3 $(DEADCODE_GATE) --module . --binary "$(DEADCODE)" --update
+
+# gosec 覆盖污点路径、命令执行、弱加密等规则；存量冻结在
+# internal/quality/gosec_baseline.json，生成文件由分析器自身排除。
+gosec-check:
+	@python3 $(GOSEC_GATE) --module . --binary "$(GOSEC)"
+
+gosec-update:
+	@python3 $(GOSEC_GATE) --module . --binary "$(GOSEC)" --update
+
+# 全量规则（含不确定的污点分析 G703/G706）只做报告，不参与门禁。
+gosec-report:
+	@mkdir -p "$(DIST)"
+	$(GOSEC) -fmt=json -quiet -exclude-generated -out "$(abspath $(DIST))/gosec-report.json" ./... || true
+	@echo "gosec-report: $(abspath $(DIST))/gosec-report.json（含 G703/G706，仅供人工审阅）"
+
+# 依赖清单与许可证台账：从模块图生成，禁止手工维护数字。
+deps-check:
+	@python3 $(DEP_INVENTORY) --module . --check
+
+deps-update:
+	@python3 $(DEP_INVENTORY) --module . --write
+
+lint: fmt-check gofumpt-check vet staticcheck-check deadcode-check gosec-check deps-check
 
 build:
 	@mkdir -p $(DIST)
@@ -286,7 +375,7 @@ arch-check:
 refactor-freeze:
 	@bash ../scripts/refactor_freeze.sh compare wave15-base
 
-ci: fmt-check vet test cross parity parity-targets wiring-check compat-check arch-check
+ci: fmt-check gofumpt-check vet staticcheck-check deadcode-check gosec-check deps-check test cross parity parity-targets wiring-check compat-check arch-check
 
 clean:
 	rm -rf $(DIST) internal/server/uiembed/dist

@@ -10,9 +10,10 @@ import (
 	"github.com/shark2202/go_hive/go-hive/internal/llm"
 )
 
-// Parity-exempt: upstream detects stalls with a judge (framework/server/
-// stall_check.py) and has no fingerprint rule; this locks the deterministic
-// half — argument order must not disguise a repeated call.
+// Parity-exempt: this locks the deterministic tool-fingerprint half; the
+// response-text n-gram guard lives in stall_detector_test.go. Upstream also has
+// an exact-fingerprint branch, but its warn/escalate/park semantics differ from
+// this port's 3-warn / 5-park policy.
 func TestToolCallFingerprintIgnoresArgumentOrder(t *testing.T) {
 	a := ToolCallFingerprint("read_file", map[string]any{"path": "a.txt", "limit": 10})
 	b := ToolCallFingerprint("read_file", map[string]any{"limit": 10, "path": "a.txt"})
@@ -252,7 +253,7 @@ func TestDoomLoopEscalatesOnceThroughTheWorkerSink(t *testing.T) {
 	}
 	recorder := &escalationRecorder{requestID: "req-doom"}
 	completer := &scriptedCompleter{scenarios: scenarios}
-	loop := NewAgentLoop(LoopConfig{MaxIterations: 10}, successToolExecutor)
+	loop := NewAgentLoop(LoopConfig{MaxIterations: 10, StallDetectionThreshold: 999}, successToolExecutor)
 	ctx := judgeTestContext(completer, nil, "read_file")
 	ctx.StreamID = "worker:doom"
 	ctx.ExecutionID = "exec_doom"
@@ -307,15 +308,16 @@ func TestDoomLoopReportsOnceThroughTheEventSink(t *testing.T) {
 		}})
 	}
 	type report struct {
-		tool   string
-		streak int
+		tool        string
+		streak      int
+		description string
 	}
 	var reports []report
 	completer := &scriptedCompleter{scenarios: scenarios}
-	loop := NewAgentLoop(LoopConfig{MaxIterations: 10}, successToolExecutor)
+	loop := NewAgentLoop(LoopConfig{MaxIterations: 10, StallDetectionThreshold: 999}, successToolExecutor)
 	ctx := judgeTestContext(completer, nil, "read_file")
-	loop.DoomLoopSink = func(tool string, streak int) {
-		reports = append(reports, report{tool: tool, streak: streak})
+	loop.DoomLoopSink = func(tool string, streak int, description string) {
+		reports = append(reports, report{tool: tool, streak: streak, description: description})
 	}
 
 	if _, err := loop.ExecuteTurn(context.Background(), ctx, NewNodeConversation("system"), nil); err == nil {
@@ -328,7 +330,7 @@ func TestDoomLoopReportsOnceThroughTheEventSink(t *testing.T) {
 		t.Fatalf("doom-loop report = %#v, want read_file at the warning threshold %d",
 			reports[0], DefaultDoomLoopThreshold)
 	}
-	description := DoomLoopDescription(reports[0].tool, reports[0].streak)
+	description := reports[0].description
 	if !strings.Contains(description, "read_file") || !strings.Contains(description, "3 times") {
 		t.Fatalf("description = %q, want the repeating call and streak", description)
 	}
@@ -348,7 +350,7 @@ func TestDoomLoopWithoutRepetitionPublishesNoEscalation(t *testing.T) {
 		{content: "all done"},
 	}}
 	recorder := &escalationRecorder{requestID: "never"}
-	loop := NewAgentLoop(LoopConfig{MaxIterations: 8}, successToolExecutor)
+	loop := NewAgentLoop(LoopConfig{MaxIterations: 8, StallDetectionThreshold: 999}, successToolExecutor)
 	ctx := judgeTestContext(completer, nil, "read_file")
 	ctx.StreamID = "worker:varied"
 	ctx.EscalationSink = recorder.sink
@@ -388,12 +390,12 @@ func TestDoomLoopEscalationIsAtMostOnePerTurn(t *testing.T) {
 		{content: "done"},
 	}}
 	recorder := &escalationRecorder{requestID: "req-one"}
-	loop := NewAgentLoop(LoopConfig{MaxIterations: 10}, successToolExecutor)
+	loop := NewAgentLoop(LoopConfig{MaxIterations: 10, StallDetectionThreshold: 999}, successToolExecutor)
 	ctx := judgeTestContext(completer, nil, "read_file")
 	ctx.StreamID = "worker:thrash"
 	ctx.EscalationSink = recorder.sink
 	reported := 0
-	loop.DoomLoopSink = func(string, int) { reported++ }
+	loop.DoomLoopSink = func(string, int, string) { reported++ }
 
 	result, err := loop.ExecuteTurn(context.Background(), ctx, NewNodeConversation("system"), nil)
 	if err != nil {
@@ -410,5 +412,62 @@ func TestDoomLoopEscalationIsAtMostOnePerTurn(t *testing.T) {
 	}
 	if reported != 1 {
 		t.Fatalf("doom-loop event reports = %d, want 1 (the per-turn latch despite two streaks)", reported)
+	}
+}
+
+// Parity: framework/agent_loop/agent_loop.py::_execute_impl (6f' escalation
+// branch gates on not supports_direct_user_io, not event_triggered, and stream
+// not in ("queen", "judge")).
+//
+// A host that mistakenly gives the queen or a judge an EscalationSink must not
+// publish a worker->queen request on a doom loop, and an event-triggered turn
+// (no live human/queen audience) stays silent too. The detector still warns;
+// only the automatic escalation is suppressed.
+func TestDoomLoopEscalationSkipsQueenJudgeAndEventTriggeredStreams(t *testing.T) {
+	const path = `{"path":"status.txt"}`
+	cases := []struct {
+		name           string
+		streamID       string
+		eventTriggered bool
+	}{
+		{name: "queen", streamID: "queen"},
+		{name: "judge", streamID: "judge"},
+		{name: "event-triggered worker", streamID: "worker:auto", eventTriggered: true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			scenarios := []scriptedResponse{
+				{toolCalls: []llm.ToolCall{{ID: "c0", Name: "read_file", Arguments: path}}},
+				{toolCalls: []llm.ToolCall{{ID: "c1", Name: "read_file", Arguments: path}}},
+				{toolCalls: []llm.ToolCall{{ID: "c2", Name: "read_file", Arguments: path}}},
+				{content: "done"},
+			}
+			recorder := &escalationRecorder{requestID: "req-guard"}
+			completer := &scriptedCompleter{scenarios: scenarios}
+			// The replay breaker is off so the call reaches the detector; this
+			// test is about the detector's escalation gate.
+			loop := NewAgentLoop(LoopConfig{MaxIterations: 10, ReplayDetectorEnabled: false, StallDetectionThreshold: 999}, successToolExecutor)
+			ctx := judgeTestContext(completer, nil, "read_file")
+			ctx.StreamID = tc.streamID
+			ctx.EventTriggered = tc.eventTriggered
+			ctx.EscalationSink = recorder.sink
+
+			result, err := loop.ExecuteTurn(context.Background(), ctx, NewNodeConversation("system"), nil)
+			if err != nil {
+				t.Fatalf("ExecuteTurn: %v", err)
+			}
+			if !result.Success {
+				t.Fatalf("turn failed: %#v", result)
+			}
+			if got := loop.Stats()["doom_loop_warned"]; got != 1 {
+				t.Fatalf("stats[doom_loop_warned] = %d, want 1 (the warning still fires)", got)
+			}
+			if requests := recorder.snapshot(); len(requests) != 0 {
+				t.Fatalf("escalation requests = %#v, want none for stream %q", requests, tc.streamID)
+			}
+			if got := loop.Counter("doom_loop_escalated"); got != 0 {
+				t.Fatalf("stats[doom_loop_escalated] = %d, want 0", got)
+			}
+		})
 	}
 }

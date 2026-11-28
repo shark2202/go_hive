@@ -9,18 +9,51 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/shark2202/go_hive/go-hive/internal/eventbus"
+	"github.com/shark2202/go_hive/go-hive/internal/triggers"
 )
 
-const sessionEventsHeartbeatInterval = 20 * time.Second
+const sessionEventsHeartbeatInterval = 15 * time.Second
 
-const sessionEventsQueueSize = 256
+// sessionEventsQueueSize matches upstream's per-client asyncio.Queue(maxsize=1000).
+const sessionEventsQueueSize = 1000
+
+// sessionEventsCriticalTypes mirrors routes_events.py::_CRITICAL_EVENTS: the
+// lifecycle events that drive frontend state transitions. A full queue on one
+// of these drops the SSE connection (the client reconnects and resyncs from
+// the snapshot) instead of silently losing a state transition. Non-critical
+// high-frequency events may be dropped under backpressure.
+var sessionEventsCriticalTypes = map[eventbus.EventType]struct{}{
+	eventbus.EventExecutionStarted:     {},
+	eventbus.EventExecutionCompleted:   {},
+	eventbus.EventExecutionFailed:      {},
+	eventbus.EventExecutionPaused:      {},
+	eventbus.EventClientInputRequested: {},
+	eventbus.EventClientInputReceived:  {},
+	eventbus.EventNodeLoopIteration:    {},
+	eventbus.EventNodeLoopStarted:      {},
+	eventbus.EventCredentialsRequired:  {},
+	// Upstream's set still names the legacy "worker_graph_loaded"; keep the
+	// dead entry so the critical set matches verbatim.
+	eventbus.EventType("worker_graph_loaded"): {},
+	eventbus.EventQueenPhaseChanged:           {},
+	eventbus.EventLLMTurnComplete:             {},
+	eventbus.EventLoopStateChanged:            {},
+	eventbus.EventToolCallCompleted:           {},
+	eventbus.EventSkillInstallRequested:       {},
+	eventbus.EventSkillInstallDecided:         {},
+}
+
+func isCriticalSessionEvent(t eventbus.EventType) bool {
+	_, ok := sessionEventsCriticalTypes[t]
+	return ok
+}
 
 // ChatRouteDeps resolves the live session a chat message targets. Manager is
 // the live store the server uses; Sessions covers app builds that expose a
@@ -50,10 +83,11 @@ func chatSession(deps ChatRouteDeps, sessionID string) *Session {
 }
 
 func decodeChatBody(r *http.Request, target any) error {
-	if r.Body == nil {
-		return io.EOF
+	data, err := readLimitedBody(r, maxJSONBodyBytes)
+	if err != nil {
+		return err
 	}
-	return json.NewDecoder(r.Body).Decode(target)
+	return json.Unmarshal(data, target)
 }
 
 func handleSessionChat(w http.ResponseWriter, r *http.Request, deps ChatRouteDeps) {
@@ -107,11 +141,9 @@ func handleSessionChat(w http.ResponseWriter, r *http.Request, deps ChatRouteDep
 		Images         []map[string]any `json:"images"`
 	}
 	if err := decodeChatBody(r, &body); err != nil {
-		if errors.Is(err, io.EOF) {
-			writeJSON(w, http.StatusBadRequest, map[string]any{"error": "message is required"})
-			return
-		}
-		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "Invalid JSON body"})
+		// Upstream's bare `await request.json()` treats a malformed (or
+		// missing) body as a 500; an over-limit body is 413.
+		writeJSONBodyFailure(w, err, http.StatusInternalServerError, internalServerError)
 		return
 	}
 
@@ -229,6 +261,11 @@ func handleSessionEventsStream(w http.ResponseWriter, r *http.Request, deps Chat
 	// detail only reaches a client that asked to watch that worker.
 	watchAll, watched := eventbus.ParseWatch(r.URL.Query().Get("watch"))
 	queue := make(chan map[string]any, sessionEventsQueueSize)
+	// A critical event that cannot be queued disconnects the client instead of
+	// being silently dropped; it reconnects and resyncs from the snapshot.
+	disconnected := make(chan struct{})
+	var disconnectOnce sync.Once
+	markDisconnected := func() { disconnectOnce.Do(func() { close(disconnected) }) }
 	subID := session.EventBus.Subscribe(eventbus.AllEventTypes, func(event *eventbus.AgentEvent) {
 		if event == nil {
 			return
@@ -245,9 +282,21 @@ func handleSessionEventsStream(w http.ResponseWriter, r *http.Request, deps Chat
 		select {
 		case queue <- payload:
 		default:
+			if isCriticalSessionEvent(event.Type) {
+				log.Printf("SSE client queue full on critical event; disconnecting session=%q", session.ID)
+				markDisconnected()
+			}
 		}
 	})
 	defer session.EventBus.Unsubscribe(subID)
+	// A live UI client is now attached. Sentinel reads this to decide whether a
+	// human is watching, so it only messages/escalates when nobody is. The
+	// decrement runs on every return path (disconnect, stop, handler error).
+	//
+	// Parity: framework/server/routes_events.py::handle_events
+	// (session.sse_client_count += 1 / -= 1).
+	session.SSEClientCount.Add(1)
+	defer session.SSEClientCount.Add(-1)
 
 	header := w.Header()
 	header.Set("Content-Type", "text/event-stream")
@@ -278,11 +327,18 @@ func handleSessionEventsStream(w http.ResponseWriter, r *http.Request, deps Chat
 	// suppressed so a resolved question never re-opens.
 	replaySessionEvents(session.EventBus, queue, types, watchAll, watched)
 
+	// Rehydrate the FULL trigger set from live session state AFTER the replay:
+	// bounded history can miss triggers whose lifecycle events aged out, and
+	// current state must be the final word (upstream does the same).
+	enqueueAuthoritativeTriggerEvents(session, queue)
+
 	heartbeat := time.NewTicker(sessionEventsHeartbeatInterval)
 	defer heartbeat.Stop()
 	for {
 		select {
 		case <-r.Context().Done():
+			return
+		case <-disconnected:
 			return
 		case payload := <-queue:
 			writeSSEData(w, flusher, payload)
@@ -420,6 +476,59 @@ func replaySessionEvents(bus *eventbus.EventBus, queue chan map[string]any, type
 		default:
 			// Queue full: the client is behind; the snapshot already carried
 			// the state, and the live stream picks up from here.
+			return
+		}
+	}
+}
+
+// authoritativeTriggerEvents mirrors routes_events.py::_authoritative_trigger_events:
+// it rebuilds the complete trigger set as lifecycle-event frames from the live
+// session — the source of truth — for replay to a (re)connecting client.
+//
+// Why this exists: the ring-buffer replay is bounded, so on a chatty colony a
+// trigger's activation can age out of history before a client connects. The
+// connect-time rebuild makes every (re)connect rehydrate the full set,
+// independent of history retention: enabled triggers as trigger_activated
+// ("running"), disabled ones as trigger_available ("pending").
+//
+// The frames are ephemeral and never published to the bus, so they cannot
+// enter the bounded history and be replayed a second time on the next
+// connect. Trigger lifecycle events already in history stay replayed (and the
+// frontend keys trigger state by trigger_id, so the overlap is idempotent).
+//
+// Parity: framework/server/routes_events.py::_authoritative_trigger_events
+func authoritativeTriggerEvents(session *Session) []map[string]any {
+	if session == nil {
+		return nil
+	}
+	views := triggers.BuildTriggerView(session)
+	events := make([]map[string]any, 0, len(views))
+	for _, view := range views {
+		eventType := eventbus.EventTriggerAvailable
+		if view.Enabled {
+			eventType = eventbus.EventTriggerActivated
+		}
+		event := eventbus.NewAgentEvent(eventType, "queen")
+		event.Data = map[string]any{
+			"trigger_id":     view.TriggerID,
+			"trigger_type":   view.TriggerType,
+			"trigger_config": view.TriggerConfig,
+			"name":           view.Name,
+		}
+		events = append(events, event.ToDict())
+	}
+	return events
+}
+
+// enqueueAuthoritativeTriggerEvents queues the live trigger rebuild after the
+// ring replay, so current state is the final word. A full queue stops the
+// seed exactly like upstream's QueueFull break; the live stream picks up from
+// there.
+func enqueueAuthoritativeTriggerEvents(session *Session, queue chan map[string]any) {
+	for _, payload := range authoritativeTriggerEvents(session) {
+		select {
+		case queue <- payload:
+		default:
 			return
 		}
 	}

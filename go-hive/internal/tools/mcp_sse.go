@@ -173,11 +173,27 @@ func (c *sseMCPClient) Reconnect() error {
 }
 
 func (c *sseMCPClient) ProbeLiveness() bool {
-	if !c.IsConnected() {
+	c.mu.Lock()
+	session := c.session
+	connected := c.conn
+	c.mu.Unlock()
+	if !connected || session == nil {
 		return false
 	}
+	// A live SSE session answers ping over the same stream; a fake session in
+	// tests may not implement Ping, so keep the pre-ping "connected" answer
+	// for it instead of failing the probe.
+	pinger, ok := session.(interface{ Ping(time.Duration) error })
+	if !ok {
+		return true
+	}
+	err := pinger.Ping(5 * time.Second)
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if err != nil {
+		c.probeFailures++
+		return false
+	}
 	c.probeFailures = 0
 	return true
 }
@@ -416,6 +432,10 @@ func (s *realSSESession) notify(method string, params map[string]any) error {
 }
 
 func (s *realSSESession) rpc(method string, params map[string]any) (json.RawMessage, error) {
+	return s.rpcWithTimeout(method, params, MCPCallResultTimeout())
+}
+
+func (s *realSSESession) rpcWithTimeout(method string, params map[string]any, timeout time.Duration) (json.RawMessage, error) {
 	s.mu.Lock()
 	if s.endpoint == "" {
 		s.mu.Unlock()
@@ -440,7 +460,6 @@ func (s *realSSESession) rpc(method string, params map[string]any) (json.RawMess
 		return nil, err
 	}
 
-	timeout := MCPCallResultTimeout()
 	timer := time.NewTimer(timeout)
 	defer timer.Stop()
 	select {
@@ -462,46 +481,37 @@ func (s *realSSESession) rpc(method string, params map[string]any) (json.RawMess
 }
 
 func (s *realSSESession) Initialize() error {
-	if _, err := s.rpc("initialize", map[string]any{
+	result, err := s.rpc("initialize", map[string]any{
 		"protocolVersion": mcpProtocolVersion,
 		"capabilities":    map[string]any{},
 		"clientInfo":      map[string]any{"name": "hive-go", "version": "0.1.0"},
-	}); err != nil {
+	})
+	if err != nil {
+		return err
+	}
+	if err := validateMCPProtocolVersion(result); err != nil {
 		return err
 	}
 	return s.notify("notifications/initialized", map[string]any{})
 }
 
+// Ping answers the tool-timeout liveness probe. A busy server still replies to
+// ping because MCP multiplexes requests over the SSE session, so a miss means
+// the stream is dead rather than merely occupied (upstream send_ping).
+func (s *realSSESession) Ping(timeout time.Duration) error {
+	_, err := s.rpcWithTimeout("ping", map[string]any{}, timeout)
+	return err
+}
+
 func (s *realSSESession) ListTools() ([]MCPTool, error) {
-	raw, err := s.rpc("tools/list", map[string]any{})
+	tools, err := mcpListToolsPaged(func(cursor string) (json.RawMessage, error) {
+		return s.rpc("tools/list", mcpToolsListParams(cursor))
+	})
 	if err != nil {
 		return nil, err
 	}
-	var result struct {
-		Tools []struct {
-			Name        string         `json:"name"`
-			Description string         `json:"description"`
-			InputSchema map[string]any `json:"inputSchema"`
-		} `json:"tools"`
-	}
-	if err := json.Unmarshal(raw, &result); err != nil {
-		return nil, err
-	}
-	tools := make([]MCPTool, 0, len(result.Tools))
-	for _, t := range result.Tools {
-		if t.Name == "" {
-			continue
-		}
-		schema := t.InputSchema
-		if schema == nil {
-			schema = map[string]any{}
-		}
-		tools = append(tools, MCPTool{
-			Name:        t.Name,
-			Description: t.Description,
-			InputSchema: schema,
-			ServerName:  s.server,
-		})
+	for i := range tools {
+		tools[i].ServerName = s.server
 	}
 	return tools, nil
 }

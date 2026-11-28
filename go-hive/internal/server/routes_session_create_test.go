@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/shark2202/go_hive/go-hive/internal/credentials"
@@ -24,6 +25,78 @@ func createSessionRequest(t *testing.T, deps SessionRouteDeps, body string) (int
 func createSessionHome(t *testing.T) hivehome.Home {
 	t.Helper()
 	return hivehome.Home{Root: t.TempDir()}
+}
+
+// Parity-exempt: Go-only colony queen fallback; without it a colony-bound
+// create with no queen_name binds the static default queen (queen_growth)
+// instead of the queen recorded on the colony.
+func TestCreateSessionColonyInheritsQueenName(t *testing.T) {
+	home := createSessionHome(t)
+	colonyDir := filepath.Join(home.ColoniesDir(), "go_hive")
+	if err := os.MkdirAll(colonyDir, 0o755); err != nil {
+		t.Fatalf("mkdir colony: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(colonyDir, "metadata.json"),
+		[]byte(`{"colony_id":"go_hive","queen_name":"queen_custom_72601"}`), 0o644); err != nil {
+		t.Fatalf("write metadata: %v", err)
+	}
+	queenTestWriteProfile(t, home, "queen_custom_72601", map[string]any{"name": "Custom Queen"})
+
+	var captured CreateSessionParams
+	deps := SessionRouteDeps{
+		Home: home,
+		CreateSession: func(params CreateSessionParams) (*Session, error) {
+			captured = params
+			return &Session{ID: "s1", ColonyID: "go_hive", LoadedAt: 1000000.0}, nil
+		},
+	}
+	status, data := createSessionRequest(t, deps, `{"colony_id":"go_hive"}`)
+	if status != http.StatusCreated {
+		t.Fatalf("status = %d, want 201 (body %#v)", status, data)
+	}
+	if captured.QueenName == nil || *captured.QueenName != "queen_custom_72601" {
+		t.Fatalf("queen_name = %#v, want queen_custom_72601 (not the static default)", captured.QueenName)
+	}
+
+	// An explicit queen_name still wins over the colony metadata.
+	status, data = createSessionRequest(t, deps, `{"colony_id":"go_hive","queen_name":"queen_operations"}`)
+	if status != http.StatusCreated {
+		t.Fatalf("explicit status = %d, want 201 (body %#v)", status, data)
+	}
+	if captured.QueenName == nil || *captured.QueenName != "queen_operations" {
+		t.Fatalf("explicit queen_name = %#v, want queen_operations", captured.QueenName)
+	}
+}
+
+// Parity-exempt: Go-only colony queen fallback; a malformed colony metadata
+// document must fail the create instead of silently binding the default queen.
+func TestCreateSessionMalformedColonyMetadataFails(t *testing.T) {
+	home := createSessionHome(t)
+	colonyDir := filepath.Join(home.ColoniesDir(), "go_hive")
+	if err := os.MkdirAll(colonyDir, 0o755); err != nil {
+		t.Fatalf("mkdir colony: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(colonyDir, "metadata.json"), []byte(`{"queen_name":`), 0o644); err != nil {
+		t.Fatalf("write metadata: %v", err)
+	}
+	called := false
+	deps := SessionRouteDeps{
+		Home: home,
+		CreateSession: func(CreateSessionParams) (*Session, error) {
+			called = true
+			return &Session{ID: "s1", LoadedAt: 1000000.0}, nil
+		},
+	}
+	status, data := createSessionRequest(t, deps, `{"colony_id":"go_hive"}`)
+	if status != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want 500 (body %#v)", status, data)
+	}
+	if called {
+		t.Fatalf("create hook must not run for malformed colony metadata")
+	}
+	if message, _ := data["error"].(string); !strings.Contains(message, "metadata.json") {
+		t.Fatalf("error = %#v, want the metadata path", data["error"])
+	}
 }
 
 // Parity: framework/server/tests/test_api.py::TestSessionCRUD::test_create_session_with_colony_forwards_session_id

@@ -24,21 +24,26 @@ import (
 	"strings"
 
 	"github.com/shark2202/go_hive/go-hive/internal/agentloop"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
 	"github.com/shark2202/go_hive/go-hive/internal/llm"
 	"github.com/shark2202/go_hive/go-hive/internal/sentinel"
 )
 
-// ErrSentinelColdRestoreUnsupported is returned when a reply targets a session
-// that is no longer live. Rebuilding a chat session needs the loader (provider,
-// tool catalogue, colony host), which the server package cannot construct, so
-// the manager logs the failed resume instead of pretending it delivered.
+// ErrSentinelColdRestoreUnsupported is returned by the server's bare session
+// adapter when no host cold-restore factory is wired. The event loop owns the
+// loader (provider, tool catalogue, colony host), so the server package cannot
+// rebuild a chat session alone; NewSentinelSessionRestorer supplies the real
+// factory and the manager prefers it. Without it the failed resume is logged
+// instead of pretending the reply was delivered.
 var ErrSentinelColdRestoreUnsupported = errors.New("server: sentinel cannot cold-restore a session")
 
 // NewSentinelManager builds and installs the process-global Sentinel manager.
 // Callers own its lifecycle (Start/Stop); installing it is what makes the
 // chat runtimes register the escalation source and what the inbound listeners
-// deliver replies through.
-func NewSentinelManager(homeRoot string, sessions *SessionManager) *sentinel.Manager {
+// deliver replies through. An optional SessionRestorer is the host's
+// cold-restore factory; without one a reply to a session that is no longer live
+// cannot resume.
+func NewSentinelManager(homeRoot string, sessions *SessionManager, restorers ...sentinel.SessionRestorer) *sentinel.Manager {
 	// Opt-in debug sink: HIVE_SENTINEL_LOG diverts the sentinel namespace to
 	// $HIVE_HOME/logs/sentinel.log before the manager logs its first line.
 	sentinel.ConfigureLogging(homeRoot)
@@ -46,6 +51,9 @@ func NewSentinelManager(homeRoot string, sessions *SessionManager) *sentinel.Man
 		Store:    sentinel.NewStore(homeRoot),
 		Sessions: sentinelSessionManager{manager: sessions},
 	})
+	if len(restorers) > 0 {
+		manager.SetSessionRestorer(restorers[0])
+	}
 	sentinel.SetSentinelManager(manager)
 	return manager
 }
@@ -71,6 +79,48 @@ func (m sentinelSessionManager) CreateSession(_ context.Context, _, _ string) (s
 	return nil, ErrSentinelColdRestoreUnsupported
 }
 
+// NewSentinelSessionRestorer adapts the host's create-session hook to
+// Sentinel's cold-restore seam. A reply can outlive the live session table
+// (idle unload, restart); Python's manager recreates the session with
+// colony_id + queen_resume_from and injects the reply into the new queen. The
+// server package cannot build a chat runtime itself, the CLI host can, so it
+// wires this factory after building the same create hook its routes use.
+//
+// Parity: framework/sentinel/manager.py::SentinelManager._cold_restore
+func NewSentinelSessionRestorer(home hivehome.Home, create func(CreateSessionParams) (*Session, error)) sentinel.SessionRestorer {
+	if create == nil {
+		return nil
+	}
+	return func(ctx context.Context, colonyID, resumeFrom string) (sentinel.LiveSession, error) {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		params := CreateSessionParams{}
+		if trimmed := strings.TrimSpace(resumeFrom); trimmed != "" {
+			params.QueenResumeFrom = &trimmed
+		}
+		if trimmed := strings.TrimSpace(colonyID); trimmed != "" {
+			params.ColonyID = &trimmed
+			// A colony-bound resume must reopen the session under the queen
+			// that wrote it; the record carries no queen name, so resolve it
+			// from the colony metadata exactly as the create route does.
+			queen, err := resolveColonyQueenForCreate(home, &trimmed, nil, nil)
+			if err != nil {
+				return nil, err
+			}
+			params.QueenName = queen
+		}
+		record, err := create(params)
+		if err != nil {
+			return nil, err
+		}
+		if record == nil {
+			return nil, errors.New("server: sentinel cold-restore returned no session")
+		}
+		return sentinelLiveSession{session: record}, nil
+	}
+}
+
 // sentinelLiveSession is the read surface Sentinel uses to decide whether a
 // desktop client is attached and how to resume a parked queen.
 type sentinelLiveSession struct {
@@ -81,7 +131,7 @@ func (s sentinelLiveSession) SSEClientCount() int {
 	if s.session == nil {
 		return 0
 	}
-	return s.session.SSEClientCount
+	return int(s.session.SSEClientCount.Load())
 }
 
 func (s sentinelLiveSession) QueenNode() sentinel.QueenNode {
@@ -101,47 +151,38 @@ func (n sentinelQueenNode) InjectEvent(_ context.Context, content string, isClie
 	return n.chat.InjectEvent(content, isClientInput)
 }
 
-// configureSentinel arms Sentinel for this session: the autopilot gate the
-// idle-nudge source reads, and the escalation source itself. It must run before
-// the hub binds its agent context, because binding freezes the consulted
-// source list; a source registered later would never be asked.
+// armSentinelSource builds this session's Sentinel escalation source and
+// registers it on the loop's reminder hub, in upstream's slot: after the
+// idle-nudge source and before the stream-stall source. Upstream constructs
+// the source inside AgentLoop.__init__ and registers it on that same
+// `_reminder_hub`, so the hub owner (configureReminders) is the one place that
+// decides membership and order; arming it here keeps the delivery order the
+// Python session renders (sentinel_escalation ranks after idle_nudge and
+// before stream_stall in the hub's canonical order).
 //
-// Parity: framework/agent_loop/agent_loop.py (EscalationSource registration)
-func (r *ChatRuntime) configureSentinel() {
-	if r == nil {
-		return
-	}
-	manager := sentinel.GetSentinelManager()
-	if manager == nil {
+// The autopilot gate is set before the hub binds its agent context: binding
+// filters the consulted sources, and the idle nudge reads the gate through
+// that same agent context.
+//
+// Parity: framework/agent_loop/agent_loop.py::__init__ (EscalationSource
+// registration and the SentinelAutopilotProvider gate)
+func (r *ChatRuntime) armSentinelSource(hub *agentloop.ReminderHub) {
+	if r == nil || hub == nil {
 		return
 	}
 	if r.agentCtx != nil {
 		r.agentCtx.SentinelAutopilotProvider = r.sentinelAutopilotEnabled
 	}
-	hub := r.loopHub()
-	if hub == nil {
+	manager := sentinel.GetSentinelManager()
+	if manager == nil {
 		return
 	}
-	r.sentinelSource = newChatSentinelSource(r, manager)
-	if r.sentinelSource == nil {
+	source := newChatSentinelSource(r, manager)
+	if source == nil {
 		return
 	}
-	hub.Register(r.sentinelSource)
-}
-
-// loopHub returns the hub to register on: the live runtime's once configured,
-// otherwise the loop's hub (during construction).
-func (r *ChatRuntime) loopHub() *agentloop.ReminderHub {
-	if r == nil {
-		return nil
-	}
-	if r.hub != nil {
-		return r.hub
-	}
-	if r.loop != nil {
-		return r.loop.Hub
-	}
-	return nil
+	r.sentinelSource = source
+	hub.Register(source)
 }
 
 // sentinelAutopilotEnabled reports whether the bound colony opted into
@@ -318,13 +359,23 @@ func scanRecentToolErrors(messages []agentloop.Message) []string {
 	return out
 }
 
-// notifySentinelLocalResume closes any open escalation for this session: the
-// user just answered in-app, so a pending message would be stale.
+// notifySentinelLocalResume re-arms this session's escalation source and
+// closes any open escalation for it: the user just answered in-app (or in a
+// relayed overseer turn), so a pending message would be stale and the source's
+// per-park de-dup must lift. Upstream's inject_event resets the escalation
+// source before it notifies the manager — without the reset a queen that
+// escalated once stays "held" for the rest of the session and never nudges
+// again even after the human replies.
 //
+// Parity: framework/agent_loop/agent_loop.py::inject_event (is_client_input:
+// `self._escalation_source.reset()` then `_notify_sentinel_local_resume`)
 // Parity: framework/agent_loop/agent_loop.py::_notify_sentinel_local_resume
 func (r *ChatRuntime) notifySentinelLocalResume() {
 	if r == nil || r.sessionID == "" {
 		return
+	}
+	if r.sentinelSource != nil {
+		r.sentinelSource.Reset()
 	}
 	manager := sentinel.GetSentinelManager()
 	if manager == nil {

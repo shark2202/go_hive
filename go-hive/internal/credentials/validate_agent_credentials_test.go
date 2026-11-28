@@ -283,6 +283,9 @@ func TestComputeUnavailableTools(t *testing.T) {
 // Parity: core/framework/credentials/validation.py::validate_agent_credentials
 func TestValidateAgentCredentialsAdenNotConnected(t *testing.T) {
 	t.Setenv(AdenEnvVar, "aden-key")
+	// Empty fake Aden list keeps the pre-sync offline: google is simply not
+	// connected, which is the status this test asserts.
+	newFakeAden(t, "unused-token")
 	// google is the registry's only Aden-supported, direct-key-unsupported spec;
 	// gmail_reply_email is declared by it alone.
 	nodes := []AgentNode{{Tools: []string{"gmail_reply_email"}}}

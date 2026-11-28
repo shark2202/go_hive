@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phase Change 与 Judge Feedback：是什么、是否真实生效</title>
+<style>
+:root{--bg:#0b0f14;--panel:#121923;--panel2:#0f1620;--line:#233041;--text:#e6edf3;--muted:#8b9bb0;--accent:#f0b429;--accent2:#58a6ff;--ok:#3fb950;--warn:#d29922;--bad:#f85149;--code:#0a0e13}
+*{box-sizing:border-box} html{scroll-behavior:auto} body{margin:0;background:linear-gradient(180deg,#0b0f14,#0d131b 55%,#0b0f14);color:var(--text);font:14.5px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+a{color:var(--accent2);text-decoration:none} a:hover{text-decoration:underline}
+.wrap{max-width:1300px;margin:0 auto;padding:44px 26px 80px}
+header{border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:28px}
+.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+h1{font-size:33px;line-height:1.2;margin:10px 0 10px;letter-spacing:-.02em} h1 span{color:var(--accent);white-space:nowrap}
+.lede{color:var(--muted);max-width:1080px;font-size:15px} .meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:15px;color:var(--muted);font-size:12.5px} .meta b{color:var(--text)}
+section{margin:38px 0} h2{font-size:22px;margin:0 0 8px} h2 .num{color:var(--accent);font-size:14px;margin-right:8px} h3{font-size:15px;margin:24px 0 8px;color:#cfdae6}
+p{color:#c6d2df;margin:8px 0} .sub{color:var(--muted);font-size:13px}
+.grid{display:grid;gap:12px} .g3{grid-template-columns:repeat(3,minmax(0,1fr))} .g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media(max-width:900px){.g3,.g4{grid-template-columns:1fr 1fr}} @media(max-width:560px){.g3,.g4{grid-template-columns:1fr}.wrap{padding:30px 16px 60px}h1{font-size:25px}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:15px} .card .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700} .card .v{font-size:18px;font-weight:800;margin-top:5px;letter-spacing:-.01em} .card .d{color:var(--muted);font-size:12px;margin-top:5px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:14px 0;background:var(--panel2);max-width:100%}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed} th,td{border-bottom:1px solid var(--line);padding:9px 10px;vertical-align:top;text-align:left;overflow-wrap:anywhere;word-break:break-word} th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;background:#0d141d;position:sticky;top:0;z-index:1} tr:hover td{background:#121a25} tr:last-child td{border-bottom:0}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--code);border:1px solid #1e2937;border-radius:5px;padding:1px 4px;color:#d7e3f0;overflow-wrap:anywhere}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;font:12px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#cfe0f2}
+.pill{display:inline-flex;align-items:center;font-size:11px;border-radius:999px;padding:2px 8px;border:1px solid var(--line);color:var(--muted);white-space:normal} .pill.ok{color:var(--ok);border-color:#1d3b26;background:#0f1a13} .pill.warn{color:var(--warn);border-color:#3d3013;background:#1a150a} .pill.bad{color:var(--bad);border-color:#3d1a1a;background:#1a0f0f} .pill.info{color:var(--accent2);border-color:#17324d;background:#0d1622}
+.callout{border-left:3px solid var(--accent);background:#161207;padding:11px 14px;border-radius:0 9px 9px 0;margin:14px 0;color:#e8d9b4} .callout.bad{border-color:var(--bad);background:#1a0f0f;color:#f2c7c7} .callout.info{border-color:var(--accent2);background:#0d1622;color:#cfe3ff} .callout.ok{border-color:var(--ok);background:#0f1a13;color:#c8e8cf}
+.toc{display:flex;flex-wrap:wrap;gap:7px;margin-top:18px} .toc a{font-size:12px;border:1px solid var(--line);background:var(--panel);padding:5px 9px;border-radius:999px;color:var(--muted)} .toc a:hover{color:var(--text);text-decoration:none}
+ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin-top:44px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:12px}
+.small{font-size:11.5px;color:var(--muted);margin-top:3px}
+@media(max-width:560px){table{font-size:12px}th,td{padding:7px 6px}}
+@media(max-width:760px){table{min-width:900px}}
+@media(max-width:560px){.toc a{padding:8px 12px;font-size:13px;min-height:44px;display:inline-flex;align-items:center}}
+</style>
+</head><body>
+<div class="wrap">
+
+<header>
+<div class="eyebrow">Phase Change &amp; Judge · 2026-11-26</div>
+<h1>Phase Change 与 Judge Feedback<br><span>是什么 · 是否真实生效 · 对女王与 worker 的差异</span></h1>
+<p class="lede">这两个机制经常和 reminder 混在一起讨论，但它们不是 reminder。本文分别拆解：phase change 如何改变会话状态、prompt 与工具面；judge feedback 如何判定回合、在什么条件下注入 <code>[Judge feedback]</code>，以及为什么女王 DM 实际上没有它。</p>
+<div class="meta">
+<span>状态：<b>手写参考页 v2（2026-11-26 judge parity 对齐）</b></span>
+<span>范围：Python <code>core/framework</code> + Go <code>go_hive/go-hive</code></span>
+<span>姊妹页：<a href="reminder-sources.html">reminder-sources.html</a>（15 个 reminder 源） · <a href="queen-dm-message-pipeline.html">queen-dm-message-pipeline.html</a>（消息装配）</span>
+</div>
+<div class="toc">
+<a href="#s1">01 结论</a><a href="#s2">02 Phase change 是什么</a><a href="#s3">03 四条生效链路</a><a href="#s4">04 谁触发</a><a href="#s5">05 真实性与边界</a><a href="#s6">06 Judge feedback 是什么</a><a href="#s7">07 判定流水线</a><a href="#s8">08 RETRY 如何进入对话</a><a href="#s9">09 女王为什么没有</a><a href="#s10">10 四机制对照</a><a href="#s11">11 代码与验证</a><a href="#s12">12 历史脉络</a>
+</div>
+</header>
+
+<section id="s1">
+<h2><span class="num">01</span>结论</h2>
+<div class="grid g3">
+<div class="card"><div class="k">Phase change</div><div class="v">真实生效</div><div class="d">换 prompt、换工具、持久化、发 SSE；对女王有效。</div></div>
+<div class="card"><div class="k">Judge feedback</div><div class="v">真实存在，Python/Go 同口径</div><div class="d">女王 <code>skip_judge=True</code>；Go 已移除 colony goal criteria 继承。</div></div>
+<div class="card"><div class="k">两者都不是 reminder</div><div class="v">不同通道</div><div class="d">一个是状态迁移，一个是回合质量判定。</div></div>
+</div>
+<div class="callout info">
+<b>一句话：</b>phase change 是真实且对女王生效的状态迁移；judge feedback 在 <b>Python</b> 主路径上被短路（女王 <code>skip_judge</code>、worker 由 <code>report_to_parent</code> 先终止），<b>Go</b> 在 2026-11-26 已移除此前的 Go-only colony goal criteria 继承：女王 spec 固定 <code>skip_judge=True</code>，colony worker/overseer 不接 loop judge，自然停点与显式 report 都不注入 <code>[Judge feedback]</code>。两边都不是“worker 结果监督器”。
+</div>
+</section>
+
+<section id="s2">
+<h2><span class="num">02</span>Phase change 是什么</h2>
+<p>它不是一条消息，而是会话状态从 <code>independent</code>（DM）切到 <code>colony</code>（或反向）的迁移。女王只有一个 <code>phase_state.phase</code> 字段，整个运行时围绕它选择 prompt、工具和 loop 配置。</p>
+<div class="tablewrap"><table>
+<tr><th style="width:22%">字段 / 行为</th><th>说明</th></tr>
+<tr><td><code>phase</code></td><td><code>"independent"</code> 或 <code>"colony"</code>；持久化到 session 的 <code>meta.json</code></td></tr>
+<tr><td><code>prompt_independent</code> / <code>prompt_colony</code></td><td>创建时预先拼好的两套 phase base prompt</td></tr>
+<tr><td><code>independent_tools</code> / <code>colony_tools</code></td><td>两套工具面；<code>get_current_tools()</code> 按 phase 返回</td></tr>
+<tr><td>loop config</td><td>colony 用更宽的 tool-call envelope（budget 50 × hard_multiple 10）</td></tr>
+</table></div>
+<p>关键点：phase 不是“给模型的一句话”，而是**存储路径、工具暴露、SSE 过滤、prompt 选择**的共同判别字段。</p>
+</section>
+
+<section id="s3">
+<h2><span class="num">03</span>四条生效链路</h2>
+<div class="tablewrap"><table>
+<tr><th style="width:22%">链路</th><th>实现</th></tr>
+<tr><td>状态</td><td><code>switch_to_colony()</code> 把 <code>self.phase</code> 设为 <code>colony</code>，并 <code>persist_phase()</code> 写回 <code>meta.json</code>（<code>tools/queen_lifecycle_tools.py:212-235</code>）</td></tr>
+<tr><td>Prompt</td><td>下一迭代 <code>dynamic_prompt_provider=phase_state.get_static_prompt</code> 重新读取；<code>get_static_prompt</code> 按 phase 选 <code>prompt_colony</code>（<code>:422-425</code>）</td></tr>
+<tr><td>工具</td><td><code>dynamic_tools_provider=phase_state.get_current_tools</code> 回到 colony 工具集（<code>queen_orchestrator.py:1690-1706</code>）</td></tr>
+<tr><td>事件</td><td><code>_emit_phase_event()</code> 发 <code>QUEEN_PHASE_CHANGED</code>（<code>:477-490</code>）；前端 <code>queen-dm.tsx:2068-2074</code> 更新 phase badge</td></tr>
+</table></div>
+<div class="callout">
+<b>对话历史不变：</b>phase change 只影响后续请求的 system prompt 和 tools，不会重写已有 messages。system 前缀因此变化，prompt cache 会失效一次，这是预期代价。
+</div>
+</section>
+
+<section id="s4">
+<h2><span class="num">04</span>谁触发、何时不触发</h2>
+<h3>触发</h3>
+<ul>
+<li><code>run_worker</code> / <code>run_parallel_workers</code> 在 spawn 或 resume 成功后调用 <code>switch_to_colony()</code>（<code>queen_lifecycle_tools.py:1576</code>、<code>:1757</code>）。</li>
+<li>会话创建时可以直接以 <code>initial_phase=colony</code> 启动；恢复时从 <code>meta.json</code> 读回 phase。多数 colony 会话不走中途切换。</li>
+</ul>
+<h3>不触发 / 边界</h3>
+<div class="tablewrap"><table>
+<tr><th style="width:34%">情况</th><th>行为</th></tr>
+<tr><td>已经是 colony</td><td><code>switch_to_colony</code> 直接 return，不重复发事件</td></tr>
+<tr><td>工具触发（默认 <code>source="tool"</code>）</td><td>不注入 <code>[PHASE CHANGE]</code> 消息——工具结果本身已经告诉女王；只有 frontend/auto 触发才 <code>inject_notification</code></td></tr>
+<tr><td>反向切换</td><td><code>switch_to_independent()</code> 方法存在（<code>:525</code>），但当前树里没有生产调用方；只在 queen-only 工具清理名单里出现（<code>routes_execution.py:78</code>）</td></tr>
+<tr><td>worker 内部</td><td>worker 没有 phase 概念，不参与这个切换</td></tr>
+</table></div>
+</section>
+
+<section id="s5">
+<h2><span class="num">05</span>真实性与边界</h2>
+<p><b>是真实有效的：</b>状态、prompt、工具、持久化、前端事件五条链路都通，且已有测试覆盖（<code>test_queen_tools.py</code> 直接设置 <code>ps.phase = "colony"</code> 并断言工具面）。</p>
+<p><b>但要注意：</b></p>
+<ul>
+<li>它不产生一条 <code>&lt;system-reminder&gt;</code>；只有 frontend/auto 触发时额外注入一条 <code>[PHASE CHANGE]</code> 普通事件消息。</li>
+<li>它不改变已经发出的消息，只改变下一次请求的 prompt/tools。</li>
+<li>反向切换虽然实现了，但当前没有生产路径调用，实际运行形态是“创建时选 phase + 正向 switch”。</li>
+</ul>
+</section>
+
+<section id="s6">
+<h2><span class="num">06</span>Judge feedback 是什么</h2>
+<p>它也不是 reminder，而是**回合结束时的质量判定**。每次自然停点（没有真实工具结果的回合）会问 judge：这一轮是否完成、是否要重试、是否要升级。</p>
+<div class="tablewrap"><table>
+<tr><th style="width:18%">verdict</th><th>含义</th><th>loop 行为</th></tr>
+<tr><td><code>ACCEPT</code></td><td>接受当前回合</td><td>结束 / 进入下一个节点</td></tr>
+<tr><td><code>RETRY</code> + feedback</td><td>未完成，需要纠正</td><td>追加 <code>[Judge feedback]: …</code> 用户消息，继续下一轮</td></tr>
+<tr><td><code>RETRY</code> + feedback=None</td><td>没有真正评估（skip_judge / 有工具结果）</td><td>只继续，不注入任何消息</td></tr>
+<tr><td><code>ESCALATE</code></td><td>判定失败或无法继续</td><td>结束运行并报错</td></tr>
+</table></div>
+</section>
+
+<section id="s7">
+<h2><span class="num">07</span>判定流水线</h2>
+<p><code>judge_turn</code>（<code>agent_loop/internals/judge_pipeline.py:57-145</code>）按顺序短路：</p>
+<div class="tablewrap"><table>
+<tr><th style="width:14%">层</th><th>条件</th><th>结果</th></tr>
+<tr><td>0</td><td><code>mark_complete</code></td><td>ACCEPT</td></tr>
+<tr><td>0</td><td><code>ctx.agent_spec.skip_judge</code></td><td><b>RETRY，feedback=None</b>（不是真评估）</td></tr>
+<tr><td>1</td><td>自定义 <code>JudgeProtocol</code></td><td>完全交给它；RETRY 无 feedback 时补一句默认文案</td></tr>
+<tr><td>2</td><td>有真实工具结果</td><td>RETRY，feedback=None（让 agent 继续干活）</td></tr>
+<tr><td>2</td><td>缺少 <code>output_keys</code></td><td>RETRY + <code>Task incomplete. Required outputs not yet produced: […]</code></td></tr>
+<tr><td>2</td><td>全 nullable 且一个都没设</td><td>RETRY + 提示至少设一个</td></tr>
+<tr><td>2b</td><td>有 <code>success_criteria</code> 且 LLM 可用</td><td>跑 conversation-aware 质量判定；非 ACCEPT 则带反馈 RETRY</td></tr>
+</table></div>
+<p class="sub">触发频率：<code>should_judge = (iteration+1) % judge_every_n_turns == 0 or not real_tool_results</code>；默认 <code>judge_every_n_turns=1</code>，所以主要在每个自然停点判定（<code>agent_loop.py:3310-3314</code>）。</p>
+</section>
+
+<section id="s8">
+<h2><span class="num">08</span>RETRY 如何进入对话</h2>
+<pre>if verdict.action == "RETRY":
+    _retry_count += 1
+    if verdict.feedback is not None:
+        fb = verdict.feedback or "[Judge returned RETRY without feedback]"
+        await conversation.add_user_message(f"[Judge feedback]: {fb}")
+    continue</pre>
+<p class="sub"><code>agent_loop.py:3481-3502</code>。注意 <code>feedback=None</code> 时不追加消息——这正是 <code>skip_judge</code> 和有工具结果两种情况的路径。</p>
+<p>所以 judge feedback 真正进入模型视野的形态只有：</p>
+<pre>[Judge feedback]: Task incomplete. Required outputs not yet produced: ['report'].
+Follow your system prompt instructions to complete the work.</pre>
+<p>它是普通 <code>user</code> 消息，不是 <code>&lt;system-reminder&gt;</code>；下一轮 LLM 请求开头就会看到。</p>
+</section>
+
+<section id="s9">
+<h2><span class="num">09</span>女王 / worker 上是否生效：Python 与 Go 一致（Go 2026-11-26 对齐）</h2>
+<div class="callout bad">
+<b>Python：</b>女王 runtime 的 <code>AgentSpec</code> 明确设了 <code>skip_judge=True</code>，judge 永远返回 <code>RETRY(feedback=None)</code>，只当“继续”，不会追加 <code>[Judge feedback]</code>。colony worker 也没有 <code>output_keys</code>/<code>success_criteria</code>，正常由 <code>report_to_parent</code> 提前终止。
+</div>
+<div class="tablewrap"><table>
+<tr><th style="width:30%">位置</th><th>证据</th></tr>
+<tr><td>Python runtime spec</td><td><code>queen_orchestrator.py:1665</code> — <code>skip_judge=True</code></td></tr>
+<tr><td>Python 静态 node</td><td><code>agents/queen/nodes/__init__.py:772</code> — <code>skip_judge=True</code></td></tr>
+<tr><td>设计原因</td><td>女王是 forever-alive 的对话 agent；用“你没输出/没调工具”的压力反馈会打断正常对话</td></tr>
+</table></div>
+<h3>Python：colony worker 上实际不跑 judge feedback</h3>
+<ul>
+<li>colony worker 继承 colony 的 <code>AgentSpec</code>：没有 <code>output_keys</code>、没有 <code>success_criteria</code>、<code>skip_judge</code> 保持默认 False。</li>
+<li>worker 的正常终止路径是 <code>report_to_parent</code>：handler 设置 <code>_report_terminated</code>，下一迭代在 judge 之前提前退出（<code>agent_loop.py:1797-1805</code>）。</li>
+<li>即使 worker 没有 report 就自然停下，judge 看到的是 <code>tool_results</code> 为空、<code>missing=[]</code>、<code>success_criteria=None</code> → <code>ACCEPT</code>；不会注入反馈。</li>
+<li>judge feedback 真正生效的是经典编排节点：声明了 <code>output_keys</code> / <code>success_criteria</code>，或注入了自定义 <code>JudgeProtocol</code> 的 node。<code>SubagentJudge</code> 是扩展点，默认未接线。</li>
+</ul>
+<h3>Go：2026-11-26 已移除 Go-only 的 colony goal criteria 继承</h3>
+<ul>
+<li>2026-11-19 曾引入 Go-only seam：<code>colony/runtime_worker_lifecycle.go</code>（worker）与 <code>colony/runtime.go</code>（overseer）在 spec 没有 criteria 时，把 colony goal 的 <code>SuccessCriteria</code> 编译进 spec 并调用 <code>ConfigureJudge</code>；<code>server/chat_runtime_colony.go</code> 在绑定 colony 时对女王做同样的继承。</li>
+<li><b>2026-11-26（w195）已移除</b>：worker/overseer 不再 <code>GoalCriteriaText</code> 回落、不再调用 <code>ConfigureJudge</code>；colony bind 不再继承 criteria。<code>server/chat_runtime.go</code> 的女王 spec 固定 <code>SkipJudge=true</code>，与上游 <code>queen_orchestrator.py</code> / 静态 queen node 同口径。</li>
+<li>因此 Go 的 colony 路径在<b>自然停点</b>不再跑 criteria judge，不会追加 <code>[Judge feedback]</code>；通用 <code>Judge</code>/<code>ConfigureJudge</code> API 仍保留给 graph-era 与显式调用方。</li>
+<li><b>显式 <code>report_to_parent</code> 同样不经过 judge</b>：<code>finishToolBatchTurn</code> 的 <code>batchStopsTurn</code> 先返回，<code>runJudgeStep</code> 根本不会被调用；这一条在移除前后都成立。</li>
+<li>plain DM queen 的 implicit RETRY 事件只是 wire/parity 事件，不会注入 feedback（<code>server/chat_implicit_judge.go</code>）。</li>
+</ul>
+<h3>两边共同点：judge 不是 worker 结果的监督器</h3>
+<p>真正监督 worker 结果的是：</p>
+<ol>
+<li><a href="report-to-parent.html"><code>report_to_parent</code></a> 的 required 字段（<code>status</code> / <code>summary</code>）与可选 <code>report_schema</code>（用于特化工具参数，provider 引导生成；<code>handle_report_to_parent</code> 本身只做归一化，不做 schema 校验）；</li>
+<li>queen 收到 <code>[WORKER_REPORT]</code> 后的复核、重派、<code>stop_worker</code>；</li>
+<li>playbook 的 retry / dead-letter 与 tracker 行状态；</li>
+<li>worker loop 预算（<code>max_iterations</code>、grace、tool budget、text-only streak → 合成 failed report）。</li>
+</ol>
+</section>
+
+<section id="s10">
+<h2><span class="num">10</span>四机制对照</h2>
+<div class="tablewrap"><table>
+<tr><th style="width:14%">机制</th><th style="width:20%">本质</th><th style="width:22%">进入对话的形态</th><th style="width:22%">Python</th><th>Go</th></tr>
+<tr><td>reminder</td><td>框架 advisory context</td><td><code>&lt;system-reminder&gt;</code> user 消息 / tool tail</td><td>是（15 个源）</td><td>是（15 个源）</td></tr>
+<tr><td>trigger</td><td>timer / webhook 事件</td><td><code>[TRIGGER: …]</code> user 消息批次</td><td>仅 colony</td><td>仅 colony</td></tr>
+<tr><td>phase change</td><td>会话状态迁移</td><td>换 system prompt / tools；可选 <code>[PHASE CHANGE]</code> 消息</td><td>是</td><td>是</td></tr>
+<tr><td>judge feedback</td><td>回合质量 / criteria 判定</td><td><code>[Judge feedback]: …</code> user 消息</td><td>女王<b>否</b>；colony worker 也绕过（无 criteria + <code>report_to_parent</code> 先终止）</td><td>女王<b>否</b>（<code>SkipJudge=true</code>）；colony worker/overseer 不接 loop judge；显式 report 与自然停点都不注入（与 Python 一致）</td></tr>
+</table></div>
+<div class="callout info">
+<b>不要把“有代码”当成“在这条路径上生效”：</b>judge feedback 的代码完整、测试也有。Python 女王路径把它短路了，colony worker 又由 <code>report_to_parent</code> 先终止；Go 2026-11-26 移除了此前的 colony goal criteria 继承，现与 Python 同口径。phase change 的代码完整，但反向切换当前没有生产调用方。判断一个机制是否有效，要看<b>当前 agent 的 spec 与实际调用链</b>，而不是只看模块是否存在。
+</div>
+</section>
+
+<section id="s11">
+<h2><span class="num">11</span>代码地图与验证</h2>
+<div class="tablewrap"><table>
+<tr><th style="width:38%">事实</th><th>位置</th></tr>
+<tr><td><code>switch_to_colony</code> / <code>switch_to_independent</code></td><td><code>core/framework/tools/queen_lifecycle_tools.py:212-235</code>、<code>:525-540</code></td></tr>
+<tr><td>phase 事件</td><td><code>tools/queen_lifecycle_tools.py:477-490</code>、<code>host/event_bus.py:255</code></td></tr>
+<tr><td>前端消费</td><td><code>core/frontend/src/pages/queen-dm.tsx:2068-2074</code></td></tr>
+<tr><td>prompt / tools provider</td><td><code>server/queen_orchestrator.py:1690-1706</code></td></tr>
+<tr><td>phase 触发点</td><td><code>tools/queen_lifecycle_tools.py:1576</code>、<code>:1757</code></td></tr>
+<tr><td>judge 流水线</td><td><code>agent_loop/internals/judge_pipeline.py:57-145</code></td></tr>
+<tr><td>judge 调用与 verdict 处理</td><td><code>agent_loop/agent_loop.py:3310-3314</code>、<code>:3436-3502</code></td></tr>
+<tr><td>女王 skip_judge</td><td><code>server/queen_orchestrator.py:1665</code>、<code>agents/queen/nodes/__init__.py:772</code></td></tr>
+<tr><td>worker 隐式 judge</td><td><code>orchestrator/orchestrator.py:766</code>、<code>orchestrator/node_worker.py:594</code></td></tr>
+<tr><td>Go phase 事件</td><td><code>go_hive/go-hive/internal/server/**</code>（queen_phase_changed 对应实现）</td></tr>
+<tr><td>Go judge 核心</td><td><code>go_hive/go-hive/internal/agentloop/judge.go</code>（通用 judge 缝/API；queen/colony 生产路径不调用 <code>ConfigureJudge</code>）</td></tr>
+<tr><td>Go report 绕过 judge</td><td><code>agentloop/loop_turn_steps.go:204</code>（<code>batchStopsTurn</code> 先返回）、<code>agentloop/loop_judge.go</code></td></tr>
+<tr><td>Go 女王 skip_judge / colony 不接 judge</td><td><code>server/chat_runtime.go</code>（<code>SkipJudge: true</code>）、<code>colony/runtime_worker_lifecycle.go</code>、<code>colony/runtime.go</code>、<code>server/chat_runtime_colony.go</code>（无 <code>GoalCriteriaText</code>/<code>ConfigureJudge</code>）</td></tr>
+<tr><td>Go plain DM implicit verdict</td><td><code>server/chat_implicit_judge.go</code></td></tr>
+</table></div>
+<h3>验证 phase change</h3>
+<pre>uv run pytest core/framework/server/tests/test_queen_tools.py -q
+# 测试直接设置 ps.phase = "colony" / "independent" 并断言工具面</pre>
+<h3>验证 judge</h3>
+<pre>uv run pytest core/tests -q -k judge
+cd go_hive/go-hive && go test ./internal/agentloop -run 'Judge'
+cd go_hive/go-hive && go test ./internal/server ./internal/colony -run 'Judge|Criteria' -count=1</pre>
+</section>
+
+<section id="s12">
+<h2><span class="num">12</span>历史脉络：为什么它会留在主路径之外</h2>
+<p>judge 不是为 queen/colony 设计的，它比这套架构更早。从 git 历史可以直接看出顺序：</p>
+<div class="tablewrap"><table>
+<tr><th style="width:16%">日期</th><th>提交</th><th>含义</th></tr>
+<tr><td>2026-02-23</td><td><code>subagent ending judge and communication</code>、<code>Progressive feedback in SubagentJudge</code></td><td>judge 诞生于 graph / subagent 时代：子 agent 通过 output 契约结束，judge 用 <code>[Judge feedback]</code> 推动它补齐</td></tr>
+<tr><td>2026-03-03</td><td><code>queen agent building and running mode switching</code></td><td>queen 出现</td></tr>
+<tr><td>2026-03-05</td><td><code>allow judge to wait queen input</code>、<code>skip judge logic improvement</code></td><td>judge 开始适配 queen 场景</td></tr>
+<tr><td>2026-03-06</td><td><code>skip queen judge, turn off aggressive compaction</code></td><td>明确让女王跳过 judge——“you are her judge”</td></tr>
+<tr><td>2026-03-09</td><td><code>rename hive_coder to queen and extract queen orchestrator</code>、<code>judge evaluate</code></td><td>queen 架构成形；judge 作为通用 node 机制保留</td></tr>
+<tr><td>2026-04-07 ~ 04-10</td><td><code>simplify agent loading</code>、<code>worker spawn</code>、<code>colony creation with skill</code></td><td>colony worker 走 <code>report_to_parent</code> 终止，不再依赖 output 契约</td></tr>
+<tr><td>2026-11-19</td><td><code>feat(goals): execute weighted criteria …</code>、<code>fix(wiring): … judge criteria</code></td><td><b>Go-only（历史）</b>：colony goal 的 criteria 被编译进 spec 并接入 judge；colony-bound 女王/overseer/worker 在自然停点重新被 judge</td></tr>
+<tr><td>2026-11-26</td><td><code>w195 judge parity</code></td><td><b>移除 Go-only 激活</b>：女王 spec 固定 <code>SkipJudge=true</code>；worker/overseer 不再 <code>GoalCriteriaText</code> 继承、不调用 <code>ConfigureJudge</code>；colony 自然停点/显式 report 不再注入 <code>[Judge feedback]</code>，与 Hive 1.0.15 一致</td></tr>
+</table></div>
+<p>当前设计文档也把这条边界写死了：<code>docs/architecture/README.md:81</code> 原文是</p>
+<pre>Agents that declare success criteria are checked by a judge before a turn is
+accepted; a RETRY verdict comes back as a [Judge feedback] message ...
+The queen skips the judge (you are her judge); workers end when they report.</pre>
+<div class="callout">
+<b>准确结论：</b>judge feedback 是<b>历史遗留的通用机制</b>，不是为 colony worker 设计的结果监督器。Python 的 queen/colony 主路径上它休眠：女王显式 <code>skip_judge</code>，worker 由 <code>report_to_parent</code> 先终止。但它不是死代码——经典 graph 执行器仍会构造 <code>Orchestrator</code>（<code>host/execution_manager.py:713</code>），AgentLoader 仍会把 goal 的 <code>success_criteria</code> 映射进 NodeSpec；<b>Go 曾在 2026-11-19 通过 colony goal criteria 继承重新启用它，2026-11-26 已移除该 Go-only seam</b>，现与 Python 同口径：女王 <code>SkipJudge=true</code>，colony 自然停点/显式 report 都不注入反馈；通用 judge API 保留给 graph-era/显式调用方。
+</div>
+</section>
+
+<footer>
+手写参考页 v2 · 2026-11-26 · 事实源：<code>core/framework/{tools/queen_lifecycle_tools.py, server/queen_orchestrator.py, agent_loop/agent_loop.py, agent_loop/internals/judge_pipeline.py, agent_loop/internals/types.py}</code>、<code>core/frontend/src/pages/queen-dm.tsx</code>；Go <code>go_hive/go-hive/internal/{agentloop,server,colony}/**</code>。
+相关：<a href="report-to-parent.html">report-to-parent.html</a>（worker 终止汇报与 report_schema） · <a href="reminder-sources.html">reminder-sources.html</a>（15 个 reminder 源逐个剖析） · <a href="queen-dm-message-pipeline.html">queen-dm-message-pipeline.html</a>（消息装配与注入位置） · <a href="queen-dm-first-prompt.html">queen-dm-first-prompt.html</a>（首轮 system prompt） · <a href="queen-dm-session-lifecycle.html">queen-dm-session-lifecycle.html</a>（DM 生命周期）。
+</footer>
+
+</div>
+</body></html>

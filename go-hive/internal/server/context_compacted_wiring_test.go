@@ -25,6 +25,56 @@ func contextCompactedTestRuntime(t *testing.T, scheduler *memory.ReflectionSched
 	return runtime, bus
 }
 
+// Parity: framework/agent_loop/internals/compaction.py::compact
+func TestPublishContextCompactionStartedEventShape(t *testing.T) {
+	runtime, bus := contextCompactedTestRuntime(t, nil)
+	events := make(chan *eventbus.AgentEvent, 1)
+	bus.Subscribe([]eventbus.EventType{eventbus.EventContextCompactionStarted}, func(event *eventbus.AgentEvent) {
+		events <- event
+	})
+
+	runtime.publishContextCompactionStarted(agentloop.ContextCompactionStarted{
+		UsageBefore:          91,
+		MessageCount:         42,
+		LLMCompactionSkipped: true,
+	})
+	event := <-events
+	if event.StreamID != "queen" || event.NodeID == nil || *event.NodeID != "queen" {
+		t.Fatalf("stream/node = %q/%v, want queen/queen", event.StreamID, event.NodeID)
+	}
+	want := map[string]any{
+		"usage_before":           91,
+		"message_count":          42,
+		"llm_compaction_skipped": true,
+	}
+	if len(event.Data) != len(want) {
+		t.Fatalf("event data = %#v, want exactly %#v", event.Data, want)
+	}
+	for key, value := range want {
+		if event.Data[key] != value {
+			t.Fatalf("event data[%q] = %v, want %v", key, event.Data[key], value)
+		}
+	}
+}
+
+// Parity: framework/server/routes_events.py::DEFAULT_EVENT_TYPES
+//
+// TestConfigureContextCompactedWiresBothCallbacks pins the production bridge:
+// the loop owns no bus, so both compaction events must be installed here.
+func TestConfigureContextCompactedWiresBothCallbacks(t *testing.T) {
+	runtime := &ChatRuntime{bus: eventbus.NewEventBus(), loop: &agentloop.AgentLoop{}}
+	runtime.configureContextCompacted()
+	if runtime.loop.OnContextCompacted == nil {
+		t.Fatal("OnContextCompacted was not wired")
+	}
+	if runtime.loop.OnContextCompactionStarted == nil {
+		t.Fatal("OnContextCompactionStarted was not wired")
+	}
+	if runtime.contextCompactedUnsub != nil {
+		runtime.contextCompactedUnsub()
+	}
+}
+
 // Parity: framework/agent_loop/internals/compaction.py::log_compaction
 func TestPublishContextCompactedEventShape(t *testing.T) {
 	runtime, bus := contextCompactedTestRuntime(t, nil)

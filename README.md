@@ -167,7 +167,7 @@ P0 是**可运行切片**，不是 Python 全量对等。以下能力已在当�
 | `internal/agentloop` | 已完成 | 核心循环、压缩、停顿/恢复、提醒 hub、运行预算与超时 |
 | `internal/agents` | 已完成 | colony 发现分组、元数据与软删除、会话/运行计数、`last_active`、Python `str.title()`/`pathlib` suffix 语义、允许根路径校验 |
 | `internal/colony` | 进行中 | 运行时组件已落地，编排未闭环 |
-| `internal/orchestrator`、`internal/playbook` | 已完成 | 数据缓冲、输出校验、行提取 |
+| `internal/playbook` | 已完成 | 行提取 |
 | `internal/ratelimit`、`internal/triggers`、`internal/eventbus` | 已完成 | SQLite 限流、触发器、事件总线 |
 | `internal/tasks`、`internal/mcpregistry` | 已完成 | 任务/提醒、MCP 安装/解析/健康检查 |
 | `internal/tools` | 进行中 | 注册表/执行器/MCP 客户端与连接池；`internal/tools/builtin` 提供 P0 的 `read_file`/`write_file`/`terminal_exec`；集成工具（104 模块 / 865 action）本期交付框架与优先子集，其余登记缺口 |
@@ -193,8 +193,20 @@ P0 集成后（2026-11-18）整树 `make ci` 实测退出码 0：`fmt-check`、`
 | [13-cross-platform-and-purego.md](13-cross-platform-and-purego.md) | 无 cgo 设计、六平台矩阵、平台差异清单 |
 | [14-quality-assurance.md](14-quality-assurance.md) | parity 契约、离线构建、静态检查、CI、缺口 |
 | [15-test-parity-matrix.md](15-test-parity-matrix.md) | Go 测试文件 ↔ Python 测试的逐包矩阵 |
+| [DEPENDENCY_INVENTORY.md](DEPENDENCY_INVENTORY.md) | 依赖清单、许可证与编译闭包（自动生成，`make deps-check` 校验） |
+| [go-hive/docs/go-quality-gates.md](go-hive/docs/go-quality-gates.md) | 静态检查/死代码/安全扫描/依赖台账门禁与基线更新规则 |
 | [STATUS.md](STATUS.md) | 进度看板与并行团队说明 |
 | [docs/channels-host.html](docs/channels-host.html) | channels 插件宿主：Host/插件分界、stdio JSON-line 协议、entry-point 兼容、Go 现状与差异 |
+| [docs/channel-plugin-semantics.html](docs/channel-plugin-semantics.html) | channel 插件语义对照：Python `ChannelHost` / `hive.channels` vs Go `hive-channel/1`，含 6 张交互序列图 |
+| [docs/reminders-and-nudges.html](docs/reminders-and-nudges.html) | reminder / nudge 全清单：点-线-面、15 源、9 注入点、8 条链路、9 个维度、Go 12/3 对齐状态 |
+| [docs/budget-reminder-park-design.html](docs/budget-reminder-park-design.html) | Budget / Reminder / Park 为什么存在：控制平面分层、生命周期、8 条交互序列、配置面与已知缺口 |
+| [docs/doom-loop.html](docs/doom-loop.html) | Doom loop：工具死循环的指纹规则、两种检测形状、豁免表、按角色分流、Park 生命周期与 4 条交互序列 |
+| [docs/budgets.html](docs/budgets.html) | Budget 参考：迭代/工具/上下文/时间/成本五层预算，三档 profile、自适应 colony、优先级与生命周期 |
+| [docs/playbook-primitives.html](docs/playbook-primitives.html) | Playbook 原语：8 个运行时原语、worker/converge/lane 选项、工具与生命周期面、Go 原生 JSON 子集与语义边界 |
+| [docs/hive-architecture.html](docs/hive-architecture.html) | Hive 设计与实现总览：一个 AgentLoop 原语、Queen/Worker/Colony、四块共享基底、Memory/Soul/Skills、Python 参考与 Go 移植 |
+| [docs/cwd-root-inventory.html](docs/cwd-root-inventory.html) | 路径根（serve/session/queen/colony/worker cwd）与沙盒现状：使用点、Python/Go 差异、workspace 绑定约束 |
+| [docs/llm-wiki-spec.html](docs/llm-wiki-spec.html) | LLM-Wiki 研究/规范/移植设计：论文方法、实验结果、批判、Wiki 一等实体与 Binding、工具面、wiki-spec-v1、生命周期与 go_hive 落地 |
+| [docs/tracker-report-internals.html](docs/tracker-report-internals.html) | Tracker / Report 原语：`tracker_query`、`tracker_upsert`、`report_to_parent` 的角色边界、数据模型、执行路径、端到端流程、并发/失败/安全与多 Queen 差距 |
 
 上游分析（Python，仅作参考）：[01](01-project-overview.md)、[02](02-architecture.md)、[03](03-agent-loop.md)、[04](04-colony-runtime.md)、[05](05-tools-and-integrations.md)、[06](06-server-and-frontend.md)、[07](07-memory-and-skills.md)、[08](08-storage-and-data.md)、[09](09-engineering.md)、[10](10-assessment.md)，以及单页 [hive-features.html](hive-features.html)。
 

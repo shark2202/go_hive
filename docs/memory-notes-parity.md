@@ -181,6 +181,16 @@ covers both sides.
 - The index covers every session of the owner — the old 200-session scan window
   is gone for recall, matching the index's whole-store scope.
 
+### Recall scoring
+
+- BM25's document length is upstream's `len(user)*2 + len(reply)` **characters**
+  (`turn_index.py::_put_turn`), not a token total: the user text counts twice
+  and the reply once, in Unicode code points. `recall_counts.go` keeps that
+  same unit for the memoized turns (`recallDocumentLength`) and
+  `past_conversations.go::pastRecallChoose` divides by it, so both sides score
+  with the same denominator. Pinned by
+  `recall_counts_test.go::TestRecallDocumentLengthMatchesUpstreamCharacters`.
+
 ## Env/config contract
 
 `config-keys.json`: `memory_recall.mode` and `memory_recall.wait_seconds` are
@@ -239,10 +249,6 @@ Go reader for `HIVE_MEMORY_RECALL`). `freeze_env_config_contract.py --check` is 
 
 - Format: the index body is JSON, not SQLite (`turn_index.py` engine). Behavioural
   parity is asserted by `recall_index_test.go`; the layout and lifecycle match.
-- Pre-existing scoring divergence kept as-is: Python's BM25 `length` is
-  `len(user)*2 + len(reply)` characters while the Go scorer sums term counts
-  (`past_conversations.go`). This lane feeds both the indexed and scan paths the
-  same Go lengths, so no result moved; aligning the metric is a separate change.
 - `background` session-start seeding is ported (see "Session-start seed"); its
   two bounded differences are the seed query string and the absence of a seed on
   a resumed session that was created with an initial prompt. Delivery remains

@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"time"
 
 	"github.com/shark2202/go_hive/go-hive/internal/agentloop"
 	"github.com/shark2202/go_hive/go-hive/internal/colony"
@@ -17,6 +18,7 @@ import (
 	"github.com/shark2202/go_hive/go-hive/internal/llm"
 	"github.com/shark2202/go_hive/go-hive/internal/schemas"
 	"github.com/shark2202/go_hive/go-hive/internal/skills"
+	"github.com/shark2202/go_hive/go-hive/internal/tools"
 )
 
 const DefaultColonyID = "colony"
@@ -31,6 +33,12 @@ type Config struct {
 	LLM          llm.Completer
 	Tools        []llm.ToolDef
 	ToolExecutor func(agentloop.ToolCallRequest) (agentloop.ToolResult, error)
+	// ToolProber / ToolKiller are the executor's liveness handles for the
+	// shared MCP connection pool; the executor closure cannot carry them.
+	// They ride every worker/overseer loop so a timed-out tool call is probed
+	// and reclaimed rather than left unknown (see colony.RuntimeOptions).
+	ToolProber tools.LivenessProber
+	ToolKiller tools.ToolKiller
 	// DeclaredTools is the optional tool pool colony workers select from via
 	// their worker definition's "tools" list (integration/MCP tools). Nil
 	// leaves workers on the base tool surface.
@@ -57,8 +65,24 @@ type Config struct {
 	// own (colony_ui), with the colony overriding the queen on collisions.
 	// Empty omits the queen_ui scope.
 	QueenDir string
+	// QueenName is the id of the queen that owns this colony. The runtime
+	// records it in every worker's meta.json (queen_name) so worker lineage
+	// survives the runtime. Empty writes null, matching upstream's
+	// `self._queen_id is None`.
+	QueenName string
+	// ProtocolsPrompt is the operational-protocols block the colony's workers
+	// and overseer carry in their system prompt (worker.json's
+	// protocols_prompt). Empty drops the section.
+	ProtocolsPrompt string
 	// ToolProviderMap attributes tool names to providers for the tools route.
 	ToolProviderMap map[string]string
+	// BrowserClose closes a stopped worker's browser tab group (the runtime's
+	// reaper hook). Nil disables reaping; the host that owns a browser bridge
+	// injects its close_profile_context here.
+	BrowserClose colony.CloseProfileContext
+	// StopTimeout bounds ColonyRuntime.Stop's wait before workers are forced
+	// terminal. Zero uses the runtime's 10 s default.
+	StopTimeout time.Duration
 }
 
 // Host owns a single colony runtime and the runs spawned through it.
@@ -103,6 +127,8 @@ func New(cfg Config) (*Host, error) {
 		Tools:                cfg.Tools,
 		DeclaredTools:        cfg.DeclaredTools,
 		ToolExecutor:         cfg.ToolExecutor,
+		ToolProber:           cfg.ToolProber,
+		ToolKiller:           cfg.ToolKiller,
 		EventBus:             bus,
 		StreamID:             cfg.ColonyID,
 		MCPToolNames:         mcpToolNames,
@@ -112,7 +138,11 @@ func New(cfg Config) (*Host, error) {
 		WorkerLLM:            cfg.WorkerLLM,
 		SkillsProvider:       cfg.SkillsProvider,
 		QueenDir:             cfg.QueenDir,
+		QueenName:            cfg.QueenName,
+		ProtocolsPrompt:      cfg.ProtocolsPrompt,
 		ToolProviderMap:      cfg.ToolProviderMap,
+		BrowserClose:         cfg.BrowserClose,
+		StopTimeout:          cfg.StopTimeout,
 	})
 	if enabled, present := readColonyToolsAllowlist(cfg.StoragePath); present {
 		runtime.SetToolAllowlist(enabled, mcpToolNames)
@@ -151,10 +181,15 @@ func (h *Host) Start(ctx context.Context) error {
 	return nil
 }
 
-// StartOverseer starts the colony's client-facing overseer worker. The host
-// starts itself first so a caller never has to know the two-step order; this
-// is the production entry the serve assembly uses (upstream's
-// start_overseer requires an already-running ColonyRuntime).
+// StartOverseer starts the colony's client-facing overseer worker: the
+// runtime-side incarnation of the queen (see ColonyRuntime.StartOverseer).
+// The host starts itself first so a caller never has to know the two-step
+// order (upstream's start_overseer requires an already-running
+// ColonyRuntime).
+//
+// Legacy (2026-11-26): no production caller. The serve assembly deliberately
+// attaches no overseer; the colony-bound queen session is the executor
+// (internal/cli/loader_colony_host.go). Do not add new production callers.
 //
 // Parity: framework/host/colony_runtime.py::ColonyRuntime.start_overseer
 func (h *Host) StartOverseer(ctx context.Context, queenSpec agentloop.AgentSpec, seed []colony.SeedMessage) (*colony.Worker, error) {
@@ -165,6 +200,9 @@ func (h *Host) StartOverseer(ctx context.Context, queenSpec agentloop.AgentSpec,
 }
 
 // OverseerRunning reports whether the colony has a started overseer.
+//
+// Legacy (2026-11-26): only meaningful on the StartOverseer path; the
+// production serve assembly attaches no overseer.
 func (h *Host) OverseerRunning() bool {
 	return h.runtime.Overseer() != nil
 }

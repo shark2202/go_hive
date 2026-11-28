@@ -686,7 +686,9 @@ def scan_source_defaults(repo: Path) -> dict:
     equality check, because the contract compares observable values, not
     symbol names.
     """
-    go_files = sorted((repo / "go_hive" / "go-hive" / "internal" / "cli").glob("*.go"))
+    # Recurse: command specs live in the composition root and in the leaf
+    # command packages (browsercli, browsersupervisor) under internal/cli.
+    go_files = sorted((repo / "go_hive" / "go-hive" / "internal" / "cli").glob("**/*.go"))
     go_consts: dict[str, str] = {}
     for path in go_files:
         if path.name.endswith("_test.go"):

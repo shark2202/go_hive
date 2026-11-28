@@ -35,6 +35,17 @@ type ToolKiller interface {
 	KillForTool(toolName string) error
 }
 
+// Timeout liveness verdicts. Upstream's probe_for_tool returns one of these
+// strings; "unknown" is also the fallback for an executor that cannot probe.
+//
+// Parity: framework/agent_loop/internals/tool_result_handler.py (probe verdicts)
+const (
+	TimeoutVerdictAlive     = "alive"
+	TimeoutVerdictResetting = "resetting"
+	TimeoutVerdictDead      = "dead"
+	TimeoutVerdictUnknown   = "unknown"
+)
+
 var (
 	executionContextMu      sync.RWMutex
 	executionContextCurrent map[string]any
@@ -262,58 +273,90 @@ func readSkillResource(tc ToolCallEvent, skillDirs []string) (ToolResult, bool, 
 	}, true, nil
 }
 
-func timeoutResult(executor ContextualExecutor, tc ToolCallEvent, timeout time.Duration) ToolResult {
-	secs := int(timeout / time.Second)
-	verdict := "unknown"
-	if prober, ok := executor.(LivenessProber); ok {
-		verdict = prober.ProbeForTool(tc.ToolName)
+// TimeoutRecovery applies upstream's tool-timeout recovery policy to the
+// shared connection behind toolName: probe liveness first, keep an "alive"
+// server (the call was merely slow) and a "resetting" one (recovery already in
+// flight), and force-disconnect only a server that failed its probe ("dead",
+// or "unknown" for an executor that cannot probe). The probe/kill handles are
+// both optional; a nil prober reads as unknown, a nil killer leaves the
+// transport up.
+//
+// It returns the verdict so the caller can render its own result type (the
+// agent loop publishes agentloop.ToolResult; ExecuteTool publishes the tools
+// one).
+//
+// Parity: framework/agent_loop/internals/tool_result_handler.py (timeout
+// handler: probe_for_tool / kill_for_tool).
+func TimeoutRecovery(prober LivenessProber, killer ToolKiller, toolName string) string {
+	verdict := TimeoutVerdictUnknown
+	if prober != nil {
+		verdict = prober.ProbeForTool(toolName)
 	}
 	switch verdict {
-	case "alive":
-		return ToolResult{
-			ToolUseID: tc.ToolUseID,
-			Content: fmt.Sprintf(
-				"Tool '%s' timed out after %ds and the request "+
-					"was abandoned. TRANSPORT STATUS: the tool server is RESPONSIVE "+
-					"(liveness check passed) — it is still processing a slow operation, or "+
-					"another agent's long call is queued ahead of yours on the shared "+
-					"connection. This is a client-side timeout, NOT an application or "+
-					"browser crash. DO NOT kill, restart, or inspect any processes, and DO "+
-					"NOT use terminal commands to 'fix' anything — other agents share this "+
-					"connection and manual intervention will break their work. Recommended: "+
-					"wait ~30s, retry once with a smaller/simpler request; if it times out "+
-					"again, report the timeout and move on to other work.",
-				tc.ToolName, secs),
-			IsError: true,
-		}
-	case "resetting":
-		return ToolResult{
-			ToolUseID: tc.ToolUseID,
-			Content: fmt.Sprintf(
-				"Tool '%s' timed out after %ds. The shared "+
-					"connection to its tool server is being reset AUTOMATICALLY by the "+
-					"runtime. DO NOT kill or restart any processes and DO NOT attempt "+
-					"manual cleanup — recovery is already in progress. Recommended: wait "+
-					"30-60s, then retry the tool once; if it still fails, report the "+
-					"transport problem and stop using these tools until it recovers.",
-				tc.ToolName, secs),
-			IsError: true,
-		}
+	case TimeoutVerdictAlive, TimeoutVerdictResetting:
+		return verdict
 	}
+	if killer != nil {
+		_ = killer.KillForTool(toolName)
+	}
+	return verdict
+}
 
-	if killer, ok := executor.(ToolKiller); ok {
-		_ = killer.KillForTool(tc.ToolName)
+// TimeoutVerdictContent renders the model-facing message for one timeout
+// verdict. The texts are the upstream ones verbatim: an "alive" server must
+// steer the agent away from killing processes (2026-06-11 incident), and a
+// failed probe must say the runtime is already reconnecting.
+//
+// Parity: framework/agent_loop/internals/tool_result_handler.py (timeout texts)
+func TimeoutVerdictContent(toolName string, timeout time.Duration, verdict string) string {
+	secs := int(timeout / time.Second)
+	switch verdict {
+	case TimeoutVerdictAlive:
+		return fmt.Sprintf(
+			"Tool '%s' timed out after %ds and the request "+
+				"was abandoned. TRANSPORT STATUS: the tool server is RESPONSIVE "+
+				"(liveness check passed) — it is still processing a slow operation, or "+
+				"another agent's long call is queued ahead of yours on the shared "+
+				"connection. This is a client-side timeout, NOT an application or "+
+				"browser crash. DO NOT kill, restart, or inspect any processes, and DO "+
+				"NOT use terminal commands to 'fix' anything — other agents share this "+
+				"connection and manual intervention will break their work. Recommended: "+
+				"wait ~30s, retry once with a smaller/simpler request; if it times out "+
+				"again, report the timeout and move on to other work.",
+			toolName, secs)
+	case TimeoutVerdictResetting:
+		return fmt.Sprintf(
+			"Tool '%s' timed out after %ds. The shared "+
+				"connection to its tool server is being reset AUTOMATICALLY by the "+
+				"runtime. DO NOT kill or restart any processes and DO NOT attempt "+
+				"manual cleanup — recovery is already in progress. Recommended: wait "+
+				"30-60s, then retry the tool once; if it still fails, report the "+
+				"transport problem and stop using these tools until it recovers.",
+			toolName, secs)
 	}
+	return fmt.Sprintf(
+		"Tool '%s' timed out after %ds and its tool server "+
+			"failed a liveness check. The runtime is resetting that connection "+
+			"AUTOMATICALLY. DO NOT kill, restart, or launch any processes and DO NOT "+
+			"attempt manual cleanup — recovery is already in progress. Recommended: "+
+			"wait 30-60s, retry the tool once; if it fails again, report the tool "+
+			"server outage and move on to work that does not need this tool.",
+		toolName, secs)
+}
+
+func timeoutResult(executor ContextualExecutor, tc ToolCallEvent, timeout time.Duration) ToolResult {
+	var prober LivenessProber
+	if candidate, ok := executor.(LivenessProber); ok {
+		prober = candidate
+	}
+	var killer ToolKiller
+	if candidate, ok := executor.(ToolKiller); ok {
+		killer = candidate
+	}
+	verdict := TimeoutRecovery(prober, killer, tc.ToolName)
 	return ToolResult{
 		ToolUseID: tc.ToolUseID,
-		Content: fmt.Sprintf(
-			"Tool '%s' timed out after %ds and its tool server "+
-				"failed a liveness check. The runtime is resetting that connection "+
-				"AUTOMATICALLY. DO NOT kill, restart, or launch any processes and DO NOT "+
-				"attempt manual cleanup — recovery is already in progress. Recommended: "+
-				"wait 30-60s, retry the tool once; if it fails again, report the tool "+
-				"server outage and move on to work that does not need this tool.",
-			tc.ToolName, secs),
-		IsError: true,
+		Content:   TimeoutVerdictContent(tc.ToolName, timeout, verdict),
+		IsError:   true,
 	}
 }

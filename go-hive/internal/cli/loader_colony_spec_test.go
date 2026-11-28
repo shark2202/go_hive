@@ -2,11 +2,13 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/shark2202/go_hive/go-hive/internal/agentloop"
 	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
 	colonyhost "github.com/shark2202/go_hive/go-hive/internal/host"
 )
@@ -67,6 +69,54 @@ func TestBuildColonyHostUsesWorkerSpecOnDisk(t *testing.T) {
 	}
 	if goal.ID != "honeycomb-goal" || goal.Description != "trade honeycomb" {
 		t.Fatalf("goal = %#v", goal)
+	}
+}
+
+// Reference production ownership (Hive 1.0.15): `serve --colony` builds and
+// starts the colony runtime but attaches no live overseer, so the session's
+// chat Queen is the executor. The live overseer implementation remains
+// reachable only through an explicit StartOverseer call in tests; no
+// production flag or environment variable starts it.
+//
+// Parity: framework/server/session_manager.py::SessionManager._build_colony_runtime
+// (runtime started, "no overseer is attached")
+func TestBuildColonyHostKeepsOverseerDormantUntilExplicitStart(t *testing.T) {
+	root := testTempDir(t)
+	home, err := hivehome.ResolveAt(filepath.Join(root, "hive"))
+	if err != nil {
+		t.Fatalf("resolve home: %v", err)
+	}
+	colonyPath := writeColonySpecFixture(t, home, "honeycomb",
+		`{"name":"worker","description":"trader","system_prompt":"be a careful trader",`+
+			`"tools":["read_file"],"goal":{"description":"trade honeycomb"}}`)
+
+	var stdout bytes.Buffer
+	runner := &Runner{Stdout: &stdout, Stderr: &stdout}
+	built := runner.buildColonyHost(colonyPath, "honeycomb", home, "")
+	if built == nil {
+		t.Fatalf("host is nil; output: %s", stdout.String())
+	}
+	host, ok := built.(*colonyhost.Host)
+	if !ok {
+		t.Fatalf("host type = %T", built)
+	}
+	t.Cleanup(host.Stop)
+
+	if host.OverseerRunning() || host.Runtime().OverseerID() != "" {
+		t.Fatalf("serve --colony started a live overseer (id %q); production keeps the chat Queen as the executor",
+			host.Runtime().OverseerID())
+	}
+
+	// The dormant implementation stays reachable for an explicit test-only start.
+	if _, err := host.StartOverseer(context.Background(), agentloop.AgentSpec{
+		ID:        "queen",
+		Name:      "queen_alpha",
+		AgentType: "event_loop",
+	}, nil); err != nil {
+		t.Fatalf("explicit StartOverseer: %v", err)
+	}
+	if !host.OverseerRunning() || host.Runtime().OverseerID() == "" {
+		t.Fatal("explicit StartOverseer did not start a live overseer")
 	}
 }
 

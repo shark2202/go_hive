@@ -14,6 +14,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/shark2202/go_hive/go-hive/internal/globaldb"
 )
 
 type Binding struct {
@@ -120,7 +122,11 @@ func asString(v any) (string, bool) {
 	return s, ok
 }
 
-func scopeOf(inputs map[string]any) string {
+// ScopeOf returns the normalized tracker scope for one tool call. Python's
+// _scope_of treats a missing/blank scope as "colony" and lowercases the rest;
+// callers outside this package (the CLI session tool table) use it to decide
+// whether a colony binding is required before dispatch.
+func ScopeOf(inputs map[string]any) string {
 	s, _ := asString(inputs["scope"])
 	s = strings.ToLower(strings.TrimSpace(s))
 	if s == "" {
@@ -758,7 +764,9 @@ func scopeParam() map[string]any {
 		"enum": []any{"colony", "global"},
 		"description": "Which tracker to target. 'colony' (default) is THIS colony's private " +
 			"tracker.db (local — your work queue). 'global' targets the team's shared " +
-			"cloud database.",
+			"cloud database (requires a signed-in cloud session; other colonies read/" +
+			"write it too, so scope queries to your own rows and expand the schema only " +
+			"additively).",
 	}
 }
 
@@ -831,13 +839,12 @@ const queryDescription = "Read rows from the colony's tracker.db. SELECT-only �
 	"Allowed: SELECT, WITH, EXPLAIN. Forbidden: ATTACH, DETACH, PRAGMA, " +
 	"VACUUM, REINDEX, load_extension(), and ALL writes/DDL."
 
-const globalScopeUnavailable = "scope='global' requires a signed-in cloud session; the offline host has no global DB."
-
 const workerGlobalScopeError = "scope='global' is queen-only — workers write only the " +
 	"colony tracker. Record your result here (scope='colony') " +
 	"and report it to the queen; she owns the shared global DB."
 
 func globalRegisterInfo() map[string]any {
+	globaldb.NoteGlobalUsed()
 	return successWith(map[string]any{
 		"message": "The global DB uses free DDL within your team's schema — no " +
 			"registration is needed. Workers may tracker_upsert(scope='global') " +
@@ -847,10 +854,19 @@ func globalRegisterInfo() map[string]any {
 }
 
 func BuildTrackerTools(resolve Resolver) []Tool {
+	return BuildTrackerToolsWithGlobalDB(resolve, EnvGlobalDB)
+}
+
+// BuildTrackerToolsWithGlobalDB is BuildTrackerTools with an injectable cloud
+// client provider, so tests can point scope='global' at an httptest backend.
+func BuildTrackerToolsWithGlobalDB(resolve Resolver, globalDB GlobalDBProvider) []Tool {
 	if resolve == nil {
 		resolve = func() (*Binding, error) { return nil, nil }
 	}
-	bound := func(core func(*Binding, map[string]any) map[string]any) func(map[string]any) map[string]any {
+	if globalDB == nil {
+		globalDB = EnvGlobalDB
+	}
+	colonyBound := func(core func(*Binding, map[string]any) map[string]any) func(map[string]any) map[string]any {
 		return func(inputs map[string]any) map[string]any {
 			b, err := resolve()
 			if err != nil {
@@ -859,47 +875,77 @@ func BuildTrackerTools(resolve Resolver) []Tool {
 			return core(b, inputs)
 		}
 	}
-
-	trackerSQL := bound(func(b *Binding, inputs map[string]any) map[string]any {
-		if scopeOf(inputs) == "global" {
-			return failure(globalScopeUnavailable)
+	// dispatch mirrors Python's executor order: the scope check comes before
+	// _require_binding, so a signed-in queen outside a colony still reaches the
+	// global DB. A colony binding is only ambient context for source_colony on
+	// upserts — its absence (or a resolver failure) must not fail a global call.
+	dispatch := func(
+		global func(map[string]any) map[string]any,
+		colony func(*Binding, map[string]any) map[string]any,
+	) func(map[string]any) map[string]any {
+		colonyCall := colonyBound(colony)
+		return func(inputs map[string]any) map[string]any {
+			if ScopeOf(inputs) == "global" {
+				return global(inputs)
+			}
+			return colonyCall(inputs)
 		}
-		sqlText, _ := asString(inputs["sql"])
-		return TrackerSQL(b, sqlText, rowCapOf(inputs))
-	})
+	}
 
-	register := bound(func(b *Binding, inputs map[string]any) map[string]any {
-		if scopeOf(inputs) == "global" {
+	trackerSQL := dispatch(
+		func(inputs map[string]any) map[string]any {
+			return globalSQLTool(globalDB, inputs, false)
+		},
+		func(b *Binding, inputs map[string]any) map[string]any {
+			sqlText, _ := asString(inputs["sql"])
+			return TrackerSQL(b, sqlText, rowCapOf(inputs))
+		},
+	)
+
+	register := dispatch(
+		func(map[string]any) map[string]any {
 			return globalRegisterInfo()
-		}
-		table, _ := asString(inputs["table"])
-		writeColumns, ok := stringListInput(inputs["write_columns"])
-		if !ok {
-			return failure("write_columns must be a non-empty list of strings")
-		}
-		keyColumns, ok := stringListInput(inputs["key_columns"])
-		if !ok {
-			return failure("key_columns must be a list of strings")
-		}
-		return RegisterWritable(b, table, writeColumns, keyColumns)
-	})
+		},
+		func(b *Binding, inputs map[string]any) map[string]any {
+			table, _ := asString(inputs["table"])
+			writeColumns, ok := stringListInput(inputs["write_columns"])
+			if !ok {
+				return failure("write_columns must be a non-empty list of strings")
+			}
+			keyColumns, ok := stringListInput(inputs["key_columns"])
+			if !ok {
+				return failure("key_columns must be a list of strings")
+			}
+			return RegisterWritable(b, table, writeColumns, keyColumns)
+		},
+	)
 
-	upsert := bound(func(b *Binding, inputs map[string]any) map[string]any {
-		if scopeOf(inputs) == "global" {
-			return failure(globalScopeUnavailable)
-		}
-		table, _ := asString(inputs["table"])
-		row, _ := inputs["row"].(map[string]any)
-		return Upsert(b, table, row)
-	})
+	upsert := dispatch(
+		func(inputs map[string]any) map[string]any {
+			// Python's _ambient_colony_name() reads whatever binding the
+			// execution context carries; no binding just means no source colony.
+			b, err := resolve()
+			if err != nil {
+				b = nil
+			}
+			return globalUpsertTool(globalDB, b, inputs)
+		},
+		func(b *Binding, inputs map[string]any) map[string]any {
+			table, _ := asString(inputs["table"])
+			row, _ := inputs["row"].(map[string]any)
+			return Upsert(b, table, row)
+		},
+	)
 
-	query := bound(func(b *Binding, inputs map[string]any) map[string]any {
-		if scopeOf(inputs) == "global" {
-			return failure(globalScopeUnavailable)
-		}
-		sqlText, _ := asString(inputs["sql"])
-		return Query(b, sqlText, rowCapOf(inputs))
-	})
+	query := dispatch(
+		func(inputs map[string]any) map[string]any {
+			return globalSQLTool(globalDB, inputs, true)
+		},
+		func(b *Binding, inputs map[string]any) map[string]any {
+			sqlText, _ := asString(inputs["sql"])
+			return Query(b, sqlText, rowCapOf(inputs))
+		},
+	)
 
 	return []Tool{
 		{
@@ -1039,6 +1085,23 @@ func RegisterTrackerTools(reg *Registry, role string) error {
 	return nil
 }
 
+// restrictTrackerScopeToColony removes 'global' from a worker-facing tool's
+// scope enum. Workers execute colony-only (scope='global' is rejected at the
+// executor), so leaving the value in the schema advertises a target they can
+// never reach — the P0-2 "usable but always fails" trap. The queen keeps both
+// scopes now that scope='global' is wired to the cloud client.
+func restrictTrackerScopeToColony(tool *Tool) {
+	properties, ok := tool.Parameters["properties"].(map[string]any)
+	if !ok {
+		return
+	}
+	scope, ok := properties["scope"].(map[string]any)
+	if !ok {
+		return
+	}
+	scope["enum"] = []any{"colony"}
+}
+
 // registerTrackerTools fills reg according to its role. It is the shared body
 // of RegisterTrackerTools and Registry.WithResolver so a rebind cannot drift
 // from the original role filter.
@@ -1048,9 +1111,10 @@ func registerTrackerTools(reg *Registry) {
 			if QueenOnlyTrackerTools[tool.Name] {
 				continue
 			}
+			restrictTrackerScopeToColony(&tool)
 			original := tool.Execute
 			tool.Execute = func(inputs map[string]any) map[string]any {
-				if scopeOf(inputs) == "global" {
+				if ScopeOf(inputs) == "global" {
 					return failure(workerGlobalScopeError)
 				}
 				return original(inputs)

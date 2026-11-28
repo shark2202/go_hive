@@ -3,6 +3,7 @@ package server
 import (
 	"errors"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"sync"
@@ -81,29 +82,32 @@ func writeColonyMetadata(t *testing.T, home hivehome.Home, colonyID string) {
 	}
 }
 
-// Parity-exempt: Go 边界覆盖；上游 handle_load_colony 无独立测试。
+// Parity: framework/server/routes_sessions.py::handle_load_colony
+// (bare `body = await request.json()`: malformed JSON and a non-object body
+// reach the error middleware as 500; validation failures stay 400).
 func TestLoadColonyRejectsBadBodies(t *testing.T) {
 	home := colonyTestHome(t)
 	mux := sessionRoutesMux(SessionRouteDeps{Home: home, Colony: &fakeColonyLifecycle{}})
 	target := "/api/sessions/s1/colony"
 
 	cases := []struct {
-		name string
-		body string
-		want string
+		name   string
+		body   string
+		status int
+		want   string
 	}{
-		{"invalid json", `{`, "Invalid JSON body"},
-		{"not an object", `[]`, "Invalid JSON body"},
-		{"missing colony_id", `{}`, "colony_id is required"},
-		{"empty colony_id", `{"colony_id": ""}`, "colony_id is required"},
-		{"non-string colony_id", `{"colony_id": 7}`, "colony_id is required"},
-		{"traversal colony_id", `{"colony_id": "../etc"}`, "Invalid colony_id"},
-		{"backslash colony_id", `{"colony_id": "a\\b"}`, "Invalid colony_id"},
+		{"invalid json", `{`, http.StatusInternalServerError, internalServerError},
+		{"not an object", `[]`, http.StatusInternalServerError, internalServerError},
+		{"missing colony_id", `{}`, http.StatusBadRequest, "colony_id is required"},
+		{"empty colony_id", `{"colony_id": ""}`, http.StatusBadRequest, "colony_id is required"},
+		{"non-string colony_id", `{"colony_id": 7}`, http.StatusBadRequest, "colony_id is required"},
+		{"traversal colony_id", `{"colony_id": "../etc"}`, http.StatusBadRequest, "Invalid colony_id"},
+		{"backslash colony_id", `{"colony_id": "a\\b"}`, http.StatusBadRequest, "Invalid colony_id"},
 	}
 	for _, tc := range cases {
 		recorder, body := doSessionJSON(t, mux, http.MethodPost, target, tc.body)
-		if recorder.Code != http.StatusBadRequest || body["error"] != tc.want {
-			t.Errorf("%s: status/error = %d/%#v, want 400/%q", tc.name, recorder.Code, body["error"], tc.want)
+		if recorder.Code != tc.status || body["error"] != tc.want {
+			t.Errorf("%s: status/error = %d/%#v, want %d/%q", tc.name, recorder.Code, body["error"], tc.status, tc.want)
 		}
 	}
 }
@@ -248,6 +252,73 @@ func TestLoadColonyNilSessionReturns500(t *testing.T) {
 	recorder, body := doSessionJSON(t, mux, http.MethodPost, "/api/sessions/s1/colony", `{"colony_id": "acme"}`)
 	if recorder.Code != http.StatusInternalServerError || body["error"] != internalServerError {
 		t.Fatalf("status/error = %d/%#v, want 500", recorder.Code, body["error"])
+	}
+}
+
+// Parity: core/framework/server/routes_sessions.py::handle_unload_colony
+//
+// DELETE is an explicitly registered route upstream (routes_sessions.py:3214),
+// not fallout of a generic delete handler. The matched pattern is asserted
+// alongside the side effect so a future regression that lets the
+// {first}/{second} alias swallow the path fails here.
+func TestDeleteSessionColonyUsesUnloadRoute(t *testing.T) {
+	lifecycle := &fakeColonyLifecycle{unloadOK: true}
+	mux := sessionRoutesMux(SessionRouteDeps{Colony: lifecycle})
+
+	request := httptest.NewRequest(http.MethodDelete, "/api/sessions/s1/colony", nil)
+	if _, pattern := mux.Handler(request); pattern != "DELETE /api/sessions/{session_id}/colony" {
+		t.Fatalf("matched pattern = %q, want the explicit colony route (generic alias won)", pattern)
+	}
+
+	recorder, body := doSessionJSON(t, mux, http.MethodDelete, "/api/sessions/s1/colony", "")
+	if recorder.Code != http.StatusOK || body["colony_unloaded"] != true || body["session_id"] != "s1" {
+		t.Fatalf("status/body = %d/%#v, want 200 with colony_unloaded", recorder.Code, body)
+	}
+	if len(lifecycle.unloadIDs) != 1 || lifecycle.unloadIDs[0] != "s1" {
+		t.Fatalf("unload_ids = %#v, want [s1]", lifecycle.unloadIDs)
+	}
+}
+
+// Parity: core/framework/server/routes_sessions.py::handle_delete_history_session
+//
+// Upstream registers the history route (routes_sessions.py:3207) before the
+// colony route (routes_sessions.py:3214), so aiohttp's first-match-wins sends
+// "/api/sessions/history/colony" to history deletion, never to unload. ServeMux
+// ranks the colony pattern higher, so the colony handler has to yield for that
+// one overlap.
+func TestDeleteSessionColonyPatternYieldsHistoryOverlap(t *testing.T) {
+	home := colonyTestHome(t)
+	lifecycle := &fakeColonyLifecycle{unloadOK: true}
+	mux := sessionRoutesMux(SessionRouteDeps{Home: home, Colony: lifecycle})
+
+	recorder, body := doSessionJSON(t, mux, http.MethodDelete, "/api/sessions/history/colony", "")
+	if recorder.Code != http.StatusOK || body["deleted"] != "colony" {
+		t.Fatalf("status/body = %d/%#v, want history deletion of colony", recorder.Code, body)
+	}
+	if len(lifecycle.unloadIDs) != 0 {
+		t.Fatalf("unload_ids = %#v, want none (history wins, as upstream)", lifecycle.unloadIDs)
+	}
+}
+
+// Parity-exempt: Go ServeMux 特异性；上游没有可对应的路由形状差异
+// （aiohttp 按注册顺序匹配，ServeMux 按特异性，两者对同一组路径的选择必须一致）。
+func TestDeleteSessionTwoSegmentAliasStaysHistoryOnly(t *testing.T) {
+	home := colonyTestHome(t)
+	lifecycle := &fakeColonyLifecycle{unloadOK: true}
+	mux := sessionRoutesMux(SessionRouteDeps{Home: home, Colony: lifecycle})
+
+	// The colony segment is no longer reachable through the alias.
+	request := httptest.NewRequest(http.MethodDelete, "/api/sessions/s1/colony", nil)
+	if _, pattern := mux.Handler(request); pattern == "DELETE /api/sessions/{first}/{second}" {
+		t.Fatalf("matched pattern = %q, the alias must not claim the colony path", pattern)
+	}
+
+	recorder, _ := doSessionJSON(t, mux, http.MethodDelete, "/api/sessions/s1/bogus", "")
+	if recorder.Code != http.StatusNotFound {
+		t.Fatalf("status for unhandled two-segment delete = %d, want 404", recorder.Code)
+	}
+	if len(lifecycle.unloadIDs) != 0 {
+		t.Fatalf("unload_ids = %#v, want none", lifecycle.unloadIDs)
 	}
 }
 

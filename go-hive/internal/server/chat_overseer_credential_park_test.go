@@ -1,5 +1,11 @@
 package server
 
+// Parity-exempt (Go-only opt-in): these tests manually start the dormant live
+// overseer; Hive 1.0.15 production never attaches one (the chat Queen is the
+// executor), so the credential-park handoff they pin is a Go-side extension.
+// The "Parity:" markers below cite upstream behavior, not a production Go
+// caller.
+//
 // Parity: framework/agent_loop/internals/credential_tool.py::validate_collect_input
 // Parity: framework/server/routes_credentials.py::handle_credential_form
 // Parity: framework/host/colony_runtime.py::ColonyRuntime.start_overseer

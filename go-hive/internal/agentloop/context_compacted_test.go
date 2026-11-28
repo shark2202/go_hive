@@ -94,8 +94,8 @@ func TestBuildContextCompactedFieldsMatchUpstream(t *testing.T) {
 // microcompaction). Upstream's proactive microcompaction inside add_tool_result
 // publishes no event; only a compact() pass that reaches log_compaction does.
 // The Go port keeps the same split: compaction.go's proactive path never calls
-// OnContextCompacted, and compactConversationIfNeeded only fires after a
-// completed LLM summary.
+// OnContextCompacted, and compactConversationIfNeeded fires once per pass it
+// actually runs (any stage).
 func TestProactiveMicrocompactionDoesNotPublishContextCompacted(t *testing.T) {
 	conv := NewNodeConversation("system")
 	for i := 0; i < MicrocompactKeepRecent; i++ {
@@ -132,6 +132,10 @@ func TestProactiveMicrocompactionDoesNotPublishContextCompacted(t *testing.T) {
 	loop.OnContextCompacted = func(payload ContextCompacted) {
 		payloads = append(payloads, payload)
 	}
+	var started []ContextCompactionStarted
+	loop.OnContextCompactionStarted = func(payload ContextCompactionStarted) {
+		started = append(started, payload)
+	}
 
 	if _, err := loop.ExecuteTurn(context.Background(), midturnAgentContext(completer, "terminal_exec"), conv, nil); err != nil {
 		t.Fatalf("ExecuteTurn: %v", err)
@@ -149,6 +153,9 @@ func TestProactiveMicrocompactionDoesNotPublishContextCompacted(t *testing.T) {
 	}
 	if len(payloads) != 0 {
 		t.Fatalf("OnContextCompacted calls = %d, want 0 on the proactive-only path", len(payloads))
+	}
+	if len(started) != 0 {
+		t.Fatalf("OnContextCompactionStarted calls = %d, want 0 on the proactive-only path", len(started))
 	}
 }
 
@@ -233,8 +240,9 @@ func TestCompactionOmitsInventoryBelowFullWindow(t *testing.T) {
 	}
 }
 
-// Parity: framework/agent_loop/internals/compaction.py::compact (completion path only)
-func TestCompactionFailureDoesNotPublishContextCompacted(t *testing.T) {
+// Parity: framework/agent_loop/internals/compaction.py::compact (log_compaction
+// runs on every exit path, including a failed/unavailable summarizer)
+func TestCompactionFailureStillPublishesContextCompacted(t *testing.T) {
 	completer := &scriptedCompleter{scenarios: []scriptedResponse{{err: errors.New("provider down")}}}
 	loop := NewAgentLoop(LoopConfig{MaxIterations: 2, MaxContextTokens: 200}, nil)
 	conv := NewNodeConversationWithOptions(ConversationOptions{
@@ -246,11 +254,18 @@ func TestCompactionFailureDoesNotPublishContextCompacted(t *testing.T) {
 		t.Fatalf("add message: %v", err)
 	}
 
-	calls := 0
-	loop.OnContextCompacted = func(ContextCompacted) { calls++ }
+	compactedCalls := 0
+	loop.OnContextCompacted = func(ContextCompacted) { compactedCalls++ }
+	startedCalls := 0
+	loop.OnContextCompactionStarted = func(ContextCompactionStarted) { startedCalls++ }
 	loop.compactConversationIfNeeded(context.Background(), midturnAgentContext(completer), conv, nil)
 
-	if calls != 0 {
-		t.Fatalf("OnContextCompacted calls = %d, want 0 when the summary failed", calls)
+	if startedCalls != 1 {
+		t.Fatalf("OnContextCompactionStarted calls = %d, want 1", startedCalls)
+	}
+	// The pass finished even though no summary landed: upstream logs the
+	// attempt and leaves the conversation intact rather than hiding the pass.
+	if compactedCalls != 1 {
+		t.Fatalf("OnContextCompacted calls = %d, want 1 when the summary failed", compactedCalls)
 	}
 }

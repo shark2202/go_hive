@@ -1,0 +1,7 @@
+# generated 2026-11-23T12:42:32Z
+# workdir: go_hive/go-hive
+# evidence dir: /Users/mac/hive/.wt/w87-worker-network-e2e/go_hive/docs/e2e-assets/worker-stream-network
+HIVE_WORKER_STREAM_E2E_OUT=/Users/mac/hive/.wt/w87-worker-network-e2e/go_hive/docs/e2e-assets/worker-stream-network env CGO_ENABLED=0 GOPROXY=off GOSUMDB=off GOFLAGS=-mod=mod go test ./internal/colony ./internal/agentloop -run 'Stream|Stall' -count=1
+exit_code: 0
+HIVE_WORKER_STREAM_E2E_OUT=/Users/mac/hive/.wt/w87-worker-network-e2e/go_hive/docs/e2e-assets/worker-stream-network env CGO_ENABLED=0 GOPROXY=off GOSUMDB=off GOFLAGS=-mod=mod go test ./internal/colony -run TestWorkerOverseerStreamStallRealNetwork -count=1 -v
+exit_code: 0

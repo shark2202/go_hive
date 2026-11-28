@@ -5,13 +5,14 @@ package resources
 // The host-resource monitor: a background loop samples the runtime's process
 // tree plus system memory, keeps a bounded rolling history, classifies a
 // health verdict and logs an early warning the moment the verdict degrades.
-// Served at GET /api/health/resources (server/routes_app_extra.go).
+// Served at GET /api/health/resources (server/routesapp/routes_app_extra.go).
 //
 // Sampling is done from `ps` output instead of Python's psutil, so the port
-// keeps the same observable numbers (RSS, renderer headcount) with no cgo and
-// no new dependency. CPU percentages are not reported by the Go sampler: `ps`
-// only exposes a lifetime average, which would be a different number under the
-// same key — the payload keeps the key at 0 rather than lie.
+// keeps the same observable numbers (RSS, renderer headcount, CPU%) with no
+// cgo and no new dependency. CPU percentages are the delta of each process's
+// cumulative CPU time (`ps` time=) over the wall time between two samples —
+// the same non-blocking computation upstream performs with psutil.cpu_times:
+// a process seen for the first time reads 0%, and dead PIDs are evicted.
 //
 // Env tunables (upstream names/defaults, parsed with the upstream helper's
 // fall-back-on-garbage rule):
@@ -27,6 +28,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -103,8 +105,19 @@ type process struct {
 	PID  int
 	PPID int
 	RSS  float64 // MiB
-	Name string
-	Cmd  string // lower-cased joined command line
+	// CPUSeconds is the process's cumulative user+system CPU time, the psutil
+	// cpu_times().user + .system equivalent the CPU% delta is taken from.
+	CPUSeconds float64
+	Name       string
+	Cmd        string // lower-cased joined command line
+}
+
+// cpuTracker keeps the previous sample's per-PID CPU seconds and wall clock,
+// mirroring ResourceMonitor._prev_cpu/_prev_wall. Only processes that matched
+// a bucket are retained, exactly like upstream's cur_cpu map.
+type cpuTracker struct {
+	prevCPU  map[int]float64
+	prevWall *time.Time
 }
 
 // component is one bucket of the sampled tree.
@@ -157,9 +170,11 @@ type Monitor struct {
 	lastVerdict *string
 
 	// sampler is the seam tests replace; production uses sampleHost.
-	sampler func() *sample
+	sampler func(*cpuTracker) *sample
 	// processRows lets tests inject a synthetic process table.
 	processRows func() []process
+	// cpu carries the previous sample's CPU-time deltas.
+	cpu cpuTracker
 }
 
 // NewMonitor builds the monitor with the env-resolved history depth.
@@ -174,7 +189,7 @@ func NewMonitor() *Monitor {
 // Sample takes one snapshot, appends its compact form to history, and logs a
 // verdict transition. It never panics: a failed probe degrades that field.
 func (m *Monitor) Sample() map[string]any {
-	raw := m.sampler()
+	raw := m.sampler(&m.cpu)
 	compact := compactSample(raw)
 	m.mu.Lock()
 	if m.historyMax <= 0 {
@@ -327,22 +342,40 @@ func thresholdsPayload(t Thresholds, last *sample) map[string]any {
 }
 
 // sampleHost takes one production sample.
-func sampleHost() *sample {
+func sampleHost(tracker *cpuTracker) *sample {
 	now := time.Now()
-	self := os.Getpid()
-	rows := readProcessTable()
+	return buildSample(readProcessTable(), os.Getpid(), now, systemMemorySample(), tracker, ThresholdsFromEnv())
+}
+
+// buildSample folds one process table into the component buckets, computes the
+// per-bucket CPU% from the previous sample, and classifies the result.
+func buildSample(rows []process, self int, now time.Time, system systemMemory, tracker *cpuTracker, thresholds Thresholds) *sample {
 	components := map[string]*component{}
 	for _, name := range buckets {
 		components[name] = &component{}
 	}
 	descendants := descendantPIDs(rows, self)
 	chrome := chromeSample{}
+	// curCPU holds only the PIDs that matched a bucket, as upstream's cur_cpu
+	// does; a PID missing from it reads 0% on the next sample.
+	curCPU := map[int]float64{}
+	wallDelta := 0.0
+	if tracker != nil && tracker.prevWall != nil {
+		wallDelta = now.Sub(*tracker.prevWall).Seconds()
+	}
 
 	for _, proc := range rows {
 		bucket := bucketFor(proc, self, descendants)
 		isChrome := bucket == "" && isChromeRenderer(proc)
 		if bucket == "" && !isChrome {
 			continue
+		}
+		curCPU[proc.PID] = proc.CPUSeconds
+		cpuPct := 0.0
+		if wallDelta > 0 && tracker != nil {
+			if previous, ok := tracker.prevCPU[proc.PID]; ok {
+				cpuPct = math.Max(0.0, (proc.CPUSeconds-previous)/wallDelta*100.0)
+			}
 		}
 		if isChrome {
 			chrome.Renderers++
@@ -354,21 +387,28 @@ func sampleHost() *sample {
 			continue
 		}
 		entry.RSSMB += proc.RSS
+		entry.CPUPct += cpuPct
 		entry.Procs++
 	}
 	for _, entry := range components {
 		entry.RSSMB = roundTo(entry.RSSMB, 1)
+		entry.CPUPct = roundTo(entry.CPUPct, 1)
 	}
 	chrome.RSSMB = roundTo(chrome.RSSMB, 1)
 
+	if tracker != nil {
+		tracker.prevCPU = curCPU
+		tracker.prevWall = &now
+	}
+
 	sample := &sample{
 		TS:         float64(now.UnixNano()) / 1e9,
-		System:     systemMemorySample(),
+		System:     system,
 		Components: components,
 		Chrome:     chrome,
 		Context:    map[string]any{},
 	}
-	sample.Verdict, sample.Reasons = classify(sample, ThresholdsFromEnv())
+	sample.Verdict, sample.Reasons = classify(sample, thresholds)
 	return sample
 }
 
@@ -481,11 +521,11 @@ func descendantPIDs(rows []process, self int) map[int]struct{} {
 	return out
 }
 
-// readProcessTable runs `ps` once and parses pid/ppid/rss/comm/args. Any
-// failure degrades to an empty table: the sample still carries system memory
-// and the loop never dies.
+// readProcessTable runs `ps` once and parses pid/ppid/rss/cputime/comm/args.
+// Any failure degrades to an empty table: the sample still carries system
+// memory and the loop never dies.
 func readProcessTable() []process {
-	out, err := exec.Command("ps", "-axo", "pid=,ppid=,rss=,comm=,args=").Output()
+	out, err := exec.Command("ps", "-axo", "pid=,ppid=,rss=,time=,comm=,args=").Output()
 	if err != nil {
 		return nil
 	}
@@ -510,19 +550,82 @@ func parseProcessTable(text string) []process {
 		}
 		name := ""
 		cmd := ""
+		cpuSeconds := 0.0
 		if len(fields) > 3 {
-			name = fields[3]
-			cmd = strings.ToLower(strings.Join(fields[3:], " "))
+			// A malformed time column degrades that row to 0% rather than
+			// dropping the process (RSS/headcount still matter).
+			if parsed, ok := parseCPUTime(fields[3]); ok {
+				cpuSeconds = parsed
+			}
+			name = fields[4]
+			cmd = strings.ToLower(strings.Join(fields[4:], " "))
 		}
 		rows = append(rows, process{
-			PID:  pid,
-			PPID: ppid,
-			RSS:  float64(rssKB) / 1024.0,
-			Name: filepath.Base(name),
-			Cmd:  cmd,
+			PID:        pid,
+			PPID:       ppid,
+			RSS:        float64(rssKB) / 1024.0,
+			CPUSeconds: cpuSeconds,
+			Name:       filepath.Base(name),
+			Cmd:        cmd,
 		})
 	}
 	return rows
+}
+
+// parseCPUTime parses ps's TIME column: [[dd-]hh:]mm:ss[.cc]. Both the
+// macOS (`35:13.92`) and Linux (`00:00:05`) spellings are accepted.
+func parseCPUTime(raw string) (float64, bool) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return 0, false
+	}
+	days := 0
+	if index := strings.Index(raw, "-"); index >= 0 {
+		parsed, err := strconv.Atoi(raw[:index])
+		if err != nil || parsed < 0 {
+			return 0, false
+		}
+		days = parsed
+		raw = raw[index+1:]
+	}
+	fraction := 0.0
+	if index := strings.LastIndex(raw, "."); index >= 0 {
+		digits := raw[index+1:]
+		if digits == "" {
+			return 0, false
+		}
+		parsed, err := strconv.ParseFloat("0."+digits, 64)
+		if err != nil {
+			return 0, false
+		}
+		fraction = parsed
+		raw = raw[:index]
+	}
+	parts := strings.Split(raw, ":")
+	if len(parts) < 1 || len(parts) > 3 {
+		return 0, false
+	}
+	values := make([]int, len(parts))
+	for i, part := range parts {
+		parsed, err := strconv.Atoi(part)
+		if err != nil || parsed < 0 {
+			return 0, false
+		}
+		values[i] = parsed
+	}
+	hours, minutes, seconds := 0, 0, 0
+	switch len(values) {
+	case 1:
+		seconds = values[0]
+	case 2:
+		minutes, seconds = values[0], values[1]
+	case 3:
+		hours, minutes, seconds = values[0], values[1], values[2]
+	}
+	if minutes > 59 || seconds > 59 {
+		return 0, false
+	}
+	return float64(days*24*3600+hours*3600+minutes*60+seconds) + fraction, true
 }
 
 func hiveRSS(raw *sample) float64 {
@@ -545,7 +648,9 @@ func roundTo(value float64, digits int) float64 {
 	for i := 0; i < digits; i++ {
 		scale *= 10
 	}
-	return float64(int64(value*scale+0.5)) / scale
+	// Python's round() is half-to-even; math.Round would round 2.25 to 2.3
+	// where upstream's round(2.25, 1) is 2.2.
+	return math.RoundToEven(value*scale) / scale
 }
 
 // DefaultSnapshotLength is the route's default history window (?history=).

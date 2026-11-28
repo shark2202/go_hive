@@ -211,3 +211,8 @@ OpenAI 兼容网关（`e2e/soulgw`，按提示词回 tool_call），其余全是
 3. 触发时机只有「启动补跑 + 10 分钟 tick」；未接「每会话结束检查」，与上游 scheduler 的粒度一致。
 4. 上游 `scheduler(first_after_s=120)` 是启动后延迟 2 分钟首跑；Go 版 boot 后立即跑一次（要求
    「启动时补跑」），之后每 10 分钟。
+
+> **2026-11-25 更新**：第 1 项已不成立——`loader_soul_model.go::soulDailyCompleter` 在 `model: worker`
+   时优先 `worker_llm`（`workerChatProvider`，`loader_model_slots.go:65`），与上游 `llm_for` 同序。
+   第 4 项已不成立——`loader_soul_daily.go:18-19` 的 `soulDailyFirstDelay` 为 2 分钟，启动补跑在
+   首个 tick 执行，不再立即跑。第 2、3 项仍按原样保留。

@@ -15,13 +15,14 @@ import (
 // last non-parking call. Extracted from ExecuteTurn so the turn body stays
 // within the repo's function-size budget.
 //
-// It also publishes, in call order, the completion and context readouts
-// upstream emits while its tool loop drains: for every executed call
+// It also publishes, in call order, the completion and per-call context
+// readouts upstream emits while its tool loop drains: for every executed call
 // tool_call_completed immediately followed by context_usage_updated
-// (trigger=post_tool_call), then one context_usage_updated
-// (trigger=post_tool_results) after the whole batch. Only calls that started
-// (started[i]) are announced: a deferred or grace-skipped call never left a
-// started frame to complete.
+// (trigger=post_tool_call). Only calls that started (started[i]) are announced:
+// a deferred or grace-skipped call never left a started frame to complete. The
+// batch-end readout (trigger=post_tool_results) is NOT published here: the
+// caller runs the post-batch context maintenance first, so the readout reports
+// the reclaimed size exactly as upstream's publish_context_usage does.
 //
 // coercedInputs, when present at index i, is the schema-healed input the call
 // was dispatched with; upstream stores tc.tool_input, which its pre-dispatch
@@ -90,9 +91,6 @@ func (l *AgentLoop) storeToolBatch(ctx context.Context, agentCtx *AgentContext, 
 				observer.ToolResultStored()
 			}
 		}
-	}
-	if observer, ok := agentCtx.Observer.(ToolBatchContextObserver); ok {
-		observer.ToolBatchStored()
 	}
 	return records, nil
 }

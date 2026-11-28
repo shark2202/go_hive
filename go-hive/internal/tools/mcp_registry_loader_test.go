@@ -1,6 +1,8 @@
 package tools
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -125,5 +127,31 @@ func TestRegistryMaxToolsCap(t *testing.T) {
 	}
 	if results[1].SkippedReason == nil || !strings.Contains(*results[1].SkippedReason, "max_tools=2") {
 		t.Fatalf("s2 skipped_reason = %v", results[1].SkippedReason)
+	}
+}
+
+// Parity: core/framework/loader/tool_registry.py::ToolRegistry.load_mcp_config
+// -- the dict form becomes [{"name": name, **cfg} for name, cfg in
+// config.items()], so file order decides cross-server first-wins.
+func TestLoadMCPConfigDictFormPreservesFileOrder(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "mcp_servers.json")
+	raw := `{"zeta":{"transport":"stdio","command":"fake"},` +
+		`"alpha":{"transport":"stdio","command":"fake"}}`
+	if err := os.WriteFile(path, []byte(raw), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	registry := NewToolRegistry()
+	registry.newMCPClient = fakeFactory(loaderClients(map[string][]string{
+		"zeta":  {"tool_common", "tool_zeta"},
+		"alpha": {"tool_common", "tool_alpha"},
+	}))
+	registry.LoadMCPConfig(path)
+
+	hasNames(t, registry.GetServerToolNames("zeta"), "tool_common", "tool_zeta")
+	hasNames(t, registry.GetServerToolNames("alpha"), "tool_alpha")
+	if _, ok := registry.GetServerToolNames("alpha")["tool_common"]; ok {
+		t.Fatalf("alpha owns tool_common; zeta must win because it appears first: %v", serverToolNames(registry, "alpha"))
 	}
 }

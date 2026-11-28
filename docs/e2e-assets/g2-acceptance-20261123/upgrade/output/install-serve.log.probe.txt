@@ -1,0 +1,6 @@
+install-serve health=200
+install-serve root=200
+{"sessions":[]}
+
+install-serve marker=present {"pid":45704,"port":null,"started_at":1795445486.744652}
+install-serve marker-after=absent

@@ -6,10 +6,11 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
-	"sort"
+	"log"
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
@@ -19,6 +20,12 @@ import (
 // LettersKept is how many return addresses are remembered (a reply goes back
 // where the letter it answers came from).
 const LettersKept = 2000
+
+// DrainGrace bounds one drain of the queue: a queen that never comes back (or
+// a deliverer that ignores its context) must not hold the process open. The
+// durable queue is what makes a short bound safe — letters that still fail are
+// retried by the next start (SetBaseURL kicks that drain).
+const DrainGrace = 2 * time.Second
 
 // HiveDeliverer is the port the server adapter fills: it hands a letter to a
 // queen run by Hive, in her session with the writer.
@@ -55,6 +62,19 @@ type Mail struct {
 	letterOrder []string
 	routes      map[string]string
 	causes      map[string]*Cause
+	// inFlight holds the letters a caller is delivering right now. A
+	// concurrent drain skips them: the sender acks its own letter, and handing
+	// it over twice would put the same text in the target's conversation twice.
+	inFlight map[string]bool
+
+	// flushMu makes one drain of the queue run at a time. Two passes would
+	// read the same queued letters and hand each of them to its target twice;
+	// the per-thread locks in the server adapter serialize one thread, not the
+	// queue file.
+	flushMu sync.Mutex
+	// draining marks the background drain KickDrain started, so a second kick
+	// is a no-op rather than a second goroutine over the same queue.
+	draining atomic.Bool
 
 	now   func() time.Time
 	newID func() string
@@ -92,6 +112,7 @@ func New(home hivehome.Home, config Config, deliverer HiveDeliverer) *Mail {
 		letters:   map[string]string{},
 		routes:    map[string]string{},
 		causes:    map[string]*Cause{},
+		inFlight:  map[string]bool{},
 		now:       time.Now,
 		newID:     NewHopID,
 	}
@@ -129,6 +150,10 @@ func (m *Mail) SetBaseURL(url string) {
 	if runner != nil {
 		runner.NotifyAll()
 	}
+	// The server can serve turns now: this is the moment letters left in the
+	// durable queue by the previous run (or by a queen that was away) can
+	// land. Non-blocking, so a listen never waits on delivery.
+	m.KickDrain()
 }
 
 // BaseURL is where a Claude Code queen's runs reach this server, or "" while
@@ -155,15 +180,25 @@ func (m *Mail) ClaudeRunner() ClaudeRunner {
 	return m.claudeRunner
 }
 
-// Close stops the Claude Code queen runner: no more turns start, and the
-// process trees of the running ones are killed. Safe on a nil Mail.
-func (m *Mail) Close() {
+// Close makes one last bounded attempt to land the letters still queued, then
+// stops the Claude Code queen runner. The drain runs first so a letter that
+// just landed can still start its `claude -p` turn. The returned error is the
+// drain's first failure: letters that still fail stay in the durable queue and
+// the next start retries them. Safe on a nil Mail.
+func (m *Mail) Close() error {
 	if m == nil {
-		return
+		return nil
+	}
+	var drainErr error
+	if m.config.Enabled && m.queue != nil && m.queue.Len() > 0 {
+		ctx, cancel := context.WithTimeout(context.Background(), DrainGrace)
+		_, drainErr = m.Flush(ctx)
+		cancel()
 	}
 	if runner := m.ClaudeRunner(); runner != nil {
 		runner.Close()
 	}
+	return drainErr
 }
 
 // notifyClaude tells the runner a letter for queenID has landed.
@@ -214,17 +249,14 @@ func (m *Mail) Correspondents(queenID string) []map[string]any {
 		title, _ := entry["title"].(string)
 		out = append(out, map[string]any{"id": id, "name": name, "title": title})
 	}
-	// Claude Code queens take part whatever `queens` says; keep their order
-	// deterministic for the route's JSON.
-	claudeIDs := make([]string, 0, len(m.config.ClaudeCode))
-	for id := range m.config.ClaudeCode {
-		if id != queenID {
-			claudeIDs = append(claudeIDs, id)
+	// Claude Code queens take part whatever `queens` says. Upstream renders
+	// config.claude_code.values(), i.e. the order the configuration lists
+	// them; Config preserves that order (ConfigFromHive falls back to sorted
+	// ids when it only has the decoded map).
+	for _, entry := range m.config.ClaudeQueens() {
+		if entry.ID == queenID {
+			continue
 		}
-	}
-	sort.Strings(claudeIDs)
-	for _, id := range claudeIDs {
-		entry := m.config.ClaudeCode[id]
 		out = append(out, map[string]any{"id": entry.ID, "name": entry.Name, "title": entry.Title})
 	}
 	return out
@@ -323,12 +355,17 @@ func (m *Mail) Send(writer, fromRef, toQueen, text string, cause *Cause) (map[st
 		FromName:    name,
 		State:       StatePending,
 	}
+	// The letter is in the queue before delivery (a crash mid-delivery still
+	// leaves it to retry), so mark it as being handed over: a drain another
+	// caller kicked must not deliver the same letter while this Send does.
+	m.markInFlight(hop)
+	defer m.clearInFlight(hop)
 	if err := m.queue.Enqueue(letter); err != nil {
 		m.release(writer)
 		return nil, err
 	}
 
-	toRef, err := m.deliver(letter)
+	toRef, err := m.deliver(context.Background(), letter)
 	if err != nil {
 		m.release(writer)
 		return nil, err
@@ -341,12 +378,17 @@ func (m *Mail) Send(writer, fromRef, toQueen, text string, cause *Cause) (map[st
 		return nil, err
 	}
 	m.rememberCause(toRef, hop, depth)
+	// The route works right now: retry what earlier failures left waiting,
+	// off this call's path so a slow target never delays the letter that
+	// just landed.
+	m.KickDrain()
 	return map[string]any{"sent": hop, "to": toQueen, "depth": depth}, nil
 }
 
 // deliver routes one letter: a configured Claude Code queen gets it in her
-// conversation (and inbox), a Hive queen through the deliverer.
-func (m *Mail) deliver(letter Letter) (string, error) {
+// conversation (and inbox), a Hive queen through the deliverer. ctx bounds the
+// Hive delivery, so a drain can give up on a target that never answers.
+func (m *Mail) deliver(ctx context.Context, letter Letter) (string, error) {
 	if _, ok := m.config.Claude(letter.To); ok {
 		if m.claude == nil {
 			return "", &Error{Message: letter.To + " can't take letters now"}
@@ -362,7 +404,7 @@ func (m *Mail) deliver(letter Letter) (string, error) {
 	if m.deliverer == nil {
 		return "", &Error{Message: letter.To + " can't take letters now"}
 	}
-	toRef, err := m.deliverer.Deliver(context.Background(), letter.To, letter.From, letter.FromSession, letter)
+	toRef, err := m.deliverer.Deliver(ctx, letter.To, letter.From, letter.FromSession, letter)
 	if err != nil {
 		return "", err
 	}
@@ -427,11 +469,32 @@ func (m *Mail) DeliverReply(replyTo, queenID, writer, fromRef, text string, caus
 
 // Flush retries the letters still waiting for delivery. A letter stays queued
 // when its queen is still unavailable or today's limit has no room; the
-// returned count is what landed now.
+// returned count is what landed now, and the error is the first failure, so a
+// shutdown or a caller can report that mail is still waiting.
+//
+// One pass runs at a time (flushMu): a second caller waits for the running pass
+// and then makes its own, so two drains never hand the same queued letter to
+// its target twice. ctx is checked before each letter and bounds the Hive
+// delivery, so a drain gives up instead of hanging on a queen that never
+// answers.
 func (m *Mail) Flush(ctx context.Context) (int, error) {
+	if m == nil {
+		return 0, nil
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	m.flushMu.Lock()
+	defer m.flushMu.Unlock()
 	delivered := 0
 	var firstErr error
 	for _, letter := range m.queue.Letters() {
+		if err := ctx.Err(); err != nil {
+			if firstErr == nil {
+				firstErr = err
+			}
+			break
+		}
 		if letter.Kind != KindMessage {
 			continue
 		}
@@ -441,6 +504,11 @@ func (m *Mail) Flush(ctx context.Context) (int, error) {
 			_ = m.queue.Ack(letter.ID)
 			continue
 		}
+		// A Send is handing this letter over right now; its own ack follows, so
+		// delivering here would put the text in the target twice.
+		if m.inFlightLetter(letter.ID) {
+			continue
+		}
 		if !m.reserve(letter.From) {
 			if firstErr == nil {
 				firstErr = &Error{Message: "You've sent " + strconv.Itoa(m.config.DailyLimit) +
@@ -448,7 +516,7 @@ func (m *Mail) Flush(ctx context.Context) (int, error) {
 			}
 			continue
 		}
-		toRef, err := m.deliver(letter)
+		toRef, err := m.deliver(ctx, letter)
 		if err != nil {
 			m.release(letter.From)
 			if firstErr == nil {
@@ -470,6 +538,30 @@ func (m *Mail) Flush(ctx context.Context) (int, error) {
 		delivered++
 	}
 	return delivered, firstErr
+}
+
+// KickDrain retries the queue in the background, once: a kick while a drain
+// runs is a no-op, because that pass covers what was queued when it started
+// and a letter sent since then was just attempted inline. Send and SetBaseURL
+// call it — a route that just worked, or a server that just started listening,
+// is the moment letters queued while their queen was away can land. It never
+// blocks the caller, so no HTTP request or `hive serve` startup waits on a
+// delivery; a failure is logged and the letter stays in the durable queue.
+func (m *Mail) KickDrain() {
+	if m == nil || m.queue == nil || !m.config.Enabled || m.queue.Len() == 0 {
+		return
+	}
+	if !m.draining.CompareAndSwap(false, true) {
+		return
+	}
+	go func() {
+		defer m.draining.Store(false)
+		ctx, cancel := context.WithTimeout(context.Background(), DrainGrace)
+		defer cancel()
+		if delivered, err := m.Flush(ctx); err != nil {
+			log.Printf("queen mail: %d letters still waiting (%d landed): %v", m.queue.Len(), delivered, err)
+		}
+	}()
 }
 
 // takingPart is the set of queens who may write and be written to.
@@ -504,6 +596,27 @@ func (m *Mail) release(queenID string) {
 	if m.sent[queenID] > 0 {
 		m.sent[queenID]--
 	}
+}
+
+// markInFlight records that hop is being handed to its target by a caller.
+func (m *Mail) markInFlight(hop string) {
+	m.mu.Lock()
+	m.inFlight[hop] = true
+	m.mu.Unlock()
+}
+
+// clearInFlight forgets hop, delivered or not.
+func (m *Mail) clearInFlight(hop string) {
+	m.mu.Lock()
+	delete(m.inFlight, hop)
+	m.mu.Unlock()
+}
+
+// inFlightLetter reports whether a caller is delivering hop right now.
+func (m *Mail) inFlightLetter(hop string) bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.inFlight[hop]
 }
 
 func (m *Mail) rememberRoute(queenID, writer, fromRef string) {

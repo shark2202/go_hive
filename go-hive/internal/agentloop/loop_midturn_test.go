@@ -14,6 +14,10 @@ type scriptedResponse struct {
 	content   string
 	toolCalls []llm.ToolCall
 	costUSD   float64
+	// inputTokens/outputTokens feed the loop's token accumulator; tests that
+	// assert AgentResult-style token telemetry set them.
+	inputTokens  int
+	outputTokens int
 	// err, when set, is returned instead of a completion — the scripted way to
 	// exercise the loop's error paths (e.g. a stream-stall recovery retry).
 	err error
@@ -47,7 +51,14 @@ func (s *scriptedCompleter) AComplete(_ context.Context, req llm.CompletionReque
 	if scenario.err != nil {
 		return llm.Completion{}, scenario.err
 	}
-	return llm.Completion{Content: scenario.content, ToolCalls: scenario.toolCalls, Model: "mock", CostUSD: scenario.costUSD}, nil
+	return llm.Completion{
+		Content:      scenario.content,
+		ToolCalls:    scenario.toolCalls,
+		Model:        "mock",
+		CostUSD:      scenario.costUSD,
+		InputTokens:  scenario.inputTokens,
+		OutputTokens: scenario.outputTokens,
+	}, nil
 }
 
 func (s *scriptedCompleter) ModelName() string { return "mock" }

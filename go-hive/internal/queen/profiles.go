@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/shark2202/go_hive/go-hive/internal/atomicfs"
 	"gopkg.in/yaml.v3"
 )
 
@@ -360,10 +361,9 @@ func materializeDefaultQueen(queensDir, queenID string) (string, bool) {
 	if err != nil {
 		return "", false
 	}
-	if err := os.MkdirAll(filepath.Dir(profilePath), 0o755); err != nil {
-		return "", false
-	}
-	if err := os.WriteFile(profilePath, data, 0o644); err != nil {
+	// Atomic write: a concurrent reader must never observe a half-written
+	// profile.yaml, since "still default" is decided by content equality.
+	if err := atomicfs.WriteFile(profilePath, data, 0o644); err != nil {
 		return "", false
 	}
 	return profilePath, true

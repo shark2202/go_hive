@@ -1209,6 +1209,10 @@
      "scope": {
       "type": "string",
       "description": "Memory scope: 'global' or 'queen'. Defaults to 'global'."
+     },
+     "reason": {
+      "type": "string",
+      "description": "Why it goes, e.g. 'merged into user-diet.md' or 'the user said it no longer holds'."
      }
     },
     "required": [
@@ -1227,7 +1231,8 @@
     "message": "DeleteMemoryFileInput",
     "params": {
      "filename": "string",
-     "scope": "optional string"
+     "scope": "optional string",
+     "reason": "optional string"
     },
     "required": [
      "filename"
@@ -1250,6 +1255,10 @@
       "scope": {
        "description": "Memory scope: 'global' or 'queen'. Defaults to 'global'.",
        "type": "string"
+      },
+      "reason": {
+       "type": "string",
+       "description": "Why it goes, e.g. 'merged into user-diet.md' or 'the user said it no longer holds'."
       }
      },
      "required": [

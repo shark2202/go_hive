@@ -185,6 +185,70 @@ func TestSoulReflectAutoAppliesTheProposal(t *testing.T) {
 	}
 }
 
+// soulUseWorkerSlot configures a worker_llm section and switches the test
+// queen's soul to model "worker", so a soul-side call must resolve to the
+// worker's endpoint rather than the main chat slot.
+func soulUseWorkerSlot(t *testing.T, home hivehome.Home, workerURL string) {
+	t.Helper()
+	path := filepath.Join(home.Root, "configuration.json")
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read configuration.json: %v", err)
+	}
+	var configuration map[string]any
+	if err := json.Unmarshal(raw, &configuration); err != nil {
+		t.Fatalf("decode configuration.json: %v", err)
+	}
+	configuration["worker_llm"] = map[string]any{
+		"provider": "custom",
+		"model":    "ollama/worker-e2e",
+		"api_base": workerURL + "/v1",
+	}
+	soul, _ := configuration["soul"].(map[string]any)
+	queens, _ := soul["queens"].(map[string]any)
+	queen, _ := queens[soulReflectTestQueen].(map[string]any)
+	queen["model"] = "worker"
+	data, err := json.Marshal(configuration)
+	if err != nil {
+		t.Fatalf("encode configuration.json: %v", err)
+	}
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		t.Fatalf("write configuration.json: %v", err)
+	}
+}
+
+// Parity: framework/agents/queen/soul_reflection.py::llm_for
+//
+// A dashboard "reflect now" runs on the same model the daily reflection would
+// use, not on the main chat slot. With worker_llm configured and the soul set
+// to worker, the worker endpoint must answer the reflection.
+func TestSoulReflectUsesTheWorkerSlotWhenConfigured(t *testing.T) {
+	mainGateway := soulgw.New(soulgw.Options{Model: "main-e2e-model"})
+	mainServer := httptest.NewServer(mainGateway.Handler())
+	defer mainServer.Close()
+	workerGateway := soulgw.New(soulgw.Options{Model: "worker-e2e-model"})
+	workerServer := httptest.NewServer(workerGateway.Handler())
+	defer workerServer.Close()
+
+	home := soulReflectTestHome(t, mainServer.URL, "review")
+	soulUseWorkerSlot(t, home, workerServer.URL)
+	soulReflectTestSession(t, home, "s1", "Painting at night",
+		"I stayed up painting again and it felt good.", "I'm glad you made time for it.")
+
+	if err := newSoulReflectFor(home, "")(soulReflectTestQueen, soulReflectTestConfig(t, home), false); err != nil {
+		t.Fatalf("reflect: %v", err)
+	}
+	if pending := soulstore.PendingProposal(home.QueensDir(), soulReflectTestQueen); pending == nil {
+		t.Fatal("worker-slot reflection left no pending proposal")
+	}
+	if requests := workerGateway.ReflectionRequests(); len(requests) != 2 {
+		t.Fatalf("worker reflection requests = %d, want the two-turn tool loop", len(requests))
+	}
+	if requests := mainGateway.Requests(); len(requests) != 0 {
+		t.Fatalf("the main chat slot answered %d requests, want the worker slot only", len(requests))
+	}
+}
+
 // Parity-exempt: no upstream test covers the manual adapter's guard; a missing config or a queen
 // with no readable sessions must be an explicit error, not a recorded run.
 func TestSoulReflectReportsMissingInputsAsErrors(t *testing.T) {

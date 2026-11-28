@@ -84,6 +84,32 @@ func (f *colonyCreateFixture) serve(t *testing.T, method, target, body string) (
 	return recorder, decoded
 }
 
+// Parity: framework/server/session_manager.py::SessionManager.create_session
+// (_loading is checked before a second colony load starts)
+func TestCreateChatSessionRejectsConcurrentColonyLoad(t *testing.T) {
+	fixture := newColonyCreateFixture(t)
+	const sessionID = "session_concurrent_load"
+	if !fixture.manager.MarkLoading(sessionID) {
+		t.Fatal("MarkLoading reported the fresh session as already loading")
+	}
+
+	recorder, body := fixture.serve(t, http.MethodPost, "/api/sessions",
+		`{"colony_id":"night_shift","session_id":"`+sessionID+`"}`)
+	if recorder.Code != http.StatusConflict {
+		t.Fatalf("status = %d, want 409 (body=%s)", recorder.Code, recorder.Body.String())
+	}
+	if body["loading"] != true {
+		t.Fatalf("loading = %#v, want true", body["loading"])
+	}
+	if message, _ := body["error"].(string); !strings.Contains(message, "currently loading a colony") {
+		t.Fatalf("error = %#v, want the upstream loading message", body["error"])
+	}
+	if _, statErr := os.Stat(fixture.home.ColonyDir("night_shift")); !os.IsNotExist(statErr) {
+		t.Fatalf("concurrent create bootstrapped the colony anyway (stat err = %v)", statErr)
+	}
+	fixture.manager.ClearLoading(sessionID)
+}
+
 func readJSONMapFile(t *testing.T, path string) map[string]any {
 	t.Helper()
 	data, err := os.ReadFile(path)

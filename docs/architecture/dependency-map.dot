@@ -1,5 +1,5 @@
 // go_hive 分层依赖图（生成物，勿手改）
-// 源：architecture/model.yaml + go list -json ./... · commit 5154313071a3
+// 源：architecture/model.yaml + go list -json ./... · commit d90acd8b4e9d
 // 箭头 A -> B 读作 A imports B。
 digraph go_hive {
   graph [rankdir=LR, fontname="Helvetica", nodesep=0.28, ranksep=0.9, splines=true];
@@ -12,6 +12,7 @@ digraph go_hive {
     "cmd/hive-browser" [fillcolor="white", color="#4338ca"];
     "cmd/hive-cred" [fillcolor="white", color="#4338ca"];
     "cmd/hive-longmemeval" [fillcolor="white", color="#4338ca"];
+    "hive" [fillcolor="white", color="#4338ca"];
   }
   subgraph cluster_harness {
     label="测试与评测装置（harness）";
@@ -33,12 +34,21 @@ digraph go_hive {
     label="装配层（assembly）";
     style="rounded,filled"; fillcolor="#e0f2fe"; color="#0369a1"; fontsize=11;
     "internal/cli" [fillcolor="white", color="#0369a1"];
+    "internal/cli/browsercli" [fillcolor="white", color="#0369a1"];
+    "internal/cli/browsersupervisor" [fillcolor="white", color="#0369a1"];
+    "internal/cli/cliargs" [fillcolor="white", color="#0369a1"];
+    "internal/cli/cliguard" [fillcolor="white", color="#0369a1"];
+    "internal/cli/toolcatalog" [fillcolor="white", color="#0369a1"];
   }
   subgraph cluster_transport {
     label="传输层（transport）";
     style="rounded,filled"; fillcolor="#dcfce7"; color="#15803d"; fontsize=11;
     "internal/runtimehealth" [fillcolor="white", color="#15803d"];
     "internal/server" [fillcolor="white", color="#15803d"];
+    "internal/server/routesagents" [fillcolor="white", color="#15803d"];
+    "internal/server/routesapp" [fillcolor="white", color="#15803d"];
+    "internal/server/routesbrowser" [fillcolor="white", color="#15803d"];
+    "internal/server/routeutil" [fillcolor="white", color="#15803d"];
     "internal/server/uiembed" [fillcolor="white", color="#15803d"];
   }
   subgraph cluster_orchestration {
@@ -64,11 +74,11 @@ digraph go_hive {
     style="rounded,filled"; fillcolor="#fee2e2"; color="#b91c1c"; fontsize=11;
     "internal/agentloop" [fillcolor="white", color="#b91c1c"];
     "internal/llmjudge" [fillcolor="white", color="#b91c1c"];
-    "internal/orchestrator" [fillcolor="white", color="#b91c1c"];
   }
   subgraph cluster_capability {
     label="能力层（capability）";
     style="rounded,filled"; fillcolor="#f3e8ff"; color="#7e22ce"; fontsize=11;
+    "internal/astanalyze" [fillcolor="white", color="#7e22ce"];
     "internal/attachments" [fillcolor="white", color="#7e22ce"];
     "internal/charts" [fillcolor="white", color="#7e22ce"];
     "internal/credentials" [fillcolor="white", color="#7e22ce"];
@@ -79,6 +89,7 @@ digraph go_hive {
     "internal/mcpregistry" [fillcolor="white", color="#7e22ce"];
     "internal/mcpregistry/nativecli" [fillcolor="white", color="#7e22ce"];
     "internal/memory" [fillcolor="white", color="#7e22ce"];
+    "internal/nativehttp" [fillcolor="white", color="#7e22ce"];
     "internal/pipeline" [fillcolor="white", color="#7e22ce"];
     "internal/senders" [fillcolor="white", color="#7e22ce"];
     "internal/skills" [fillcolor="white", color="#7e22ce"];
@@ -97,9 +108,11 @@ digraph go_hive {
     "internal/tools/integrations/enrichment" [fillcolor="white", color="#7e22ce"];
     "internal/tools/integrations/excel" [fillcolor="white", color="#7e22ce"];
     "internal/tools/integrations/gworkspace" [fillcolor="white", color="#7e22ce"];
+    "internal/tools/integrations/image" [fillcolor="white", color="#7e22ce"];
     "internal/tools/integrations/infra" [fillcolor="white", color="#7e22ce"];
     "internal/tools/integrations/pdf" [fillcolor="white", color="#7e22ce"];
     "internal/tools/integrations/schedchat" [fillcolor="white", color="#7e22ce"];
+    "internal/tools/integrations/scrape" [fillcolor="white", color="#7e22ce"];
     "internal/tools/integrations/social" [fillcolor="white", color="#7e22ce"];
     "internal/tools/integrations/webintel" [fillcolor="white", color="#7e22ce"];
     "internal/visionfallback" [fillcolor="white", color="#7e22ce"];
@@ -114,6 +127,7 @@ digraph go_hive {
     "internal/hiveclock" [fillcolor="white", color="#475569"];
     "internal/hivehome" [fillcolor="white", color="#475569"];
     "internal/logging" [fillcolor="white", color="#475569"];
+    "internal/netguard" [fillcolor="white", color="#475569"];
     "internal/platform" [fillcolor="white", color="#475569"];
     "internal/pyenv" [fillcolor="white", color="#475569"];
     "internal/quality" [fillcolor="white", color="#475569"];
@@ -127,7 +141,11 @@ digraph go_hive {
   subgraph cluster_unmapped {
     label="未映射层（unmapped）";
     style="rounded,filled"; fillcolor="#ffe4e6"; color="#be123c"; fontsize=11;
+    "internal/astgrep" [fillcolor="white", color="#be123c"];
     "internal/channels" [fillcolor="white", color="#be123c"];
+    "internal/lsp" [fillcolor="white", color="#be123c"];
+    "internal/streamtoken" [fillcolor="white", color="#be123c"];
+    "internal/testframework" [fillcolor="white", color="#be123c"];
   }
   "cmd/hive" -> "internal/cli";
   "cmd/hive-browser" -> "internal/cli";
@@ -152,6 +170,24 @@ digraph go_hive {
   "e2e/cmd/storagecompat" -> "internal/tasks";
   "e2e/cmd/storagecompat" -> "internal/tracker";
   "e2e/cmd/storagecompat" -> "internal/triggers";
+  "hive" -> "internal/agentloop";
+  "hive" -> "internal/colony";
+  "hive" -> "internal/eventbus";
+  "hive" -> "internal/hiveconf";
+  "hive" -> "internal/hivehome";
+  "hive" -> "internal/host";
+  "hive" -> "internal/llm";
+  "hive" -> "internal/memory";
+  "hive" -> "internal/playbook";
+  "hive" -> "internal/queen";
+  "hive" -> "internal/schemas";
+  "hive" -> "internal/server";
+  "hive" -> "internal/session";
+  "hive" -> "internal/skills";
+  "hive" -> "internal/soul";
+  "hive" -> "internal/tools";
+  "hive" -> "internal/tracker";
+  "hive" -> "internal/version";
   "internal/agentloop" -> "internal/hiveclock";
   "internal/agentloop" -> "internal/hivehome";
   "internal/agentloop" -> "internal/llm";
@@ -165,6 +201,7 @@ digraph go_hive {
   "internal/agentloop" -> "internal/visionfallback";
   "internal/agents" -> "internal/agentloop";
   "internal/agents" -> "internal/schemas";
+  "internal/astanalyze" -> "internal/astgrep";
   "internal/charts" -> "internal/hivehome";
   "internal/charts" -> "internal/llm";
   "internal/claudecode" -> "internal/hivehome";
@@ -172,13 +209,18 @@ digraph go_hive {
   "internal/claudecode" -> "internal/queenmail";
   "internal/cli" -> "internal/agentloop";
   "internal/cli" -> "internal/agents";
-  "internal/cli" -> "internal/arghelp";
   "internal/cli" -> "internal/atomicfs";
   "internal/cli" -> "internal/channels";
   "internal/cli" -> "internal/charts";
+  "internal/cli" -> "internal/cli/browsercli";
+  "internal/cli" -> "internal/cli/browsersupervisor";
+  "internal/cli" -> "internal/cli/cliargs";
+  "internal/cli" -> "internal/cli/cliguard";
+  "internal/cli" -> "internal/cli/toolcatalog";
   "internal/cli" -> "internal/colony";
   "internal/cli" -> "internal/credentials";
   "internal/cli" -> "internal/eventbus";
+  "internal/cli" -> "internal/globaldb";
   "internal/cli" -> "internal/hivehome";
   "internal/cli" -> "internal/host";
   "internal/cli" -> "internal/llm";
@@ -188,6 +230,8 @@ digraph go_hive {
   "internal/cli" -> "internal/maintenance";
   "internal/cli" -> "internal/mcpregistry";
   "internal/cli" -> "internal/memory";
+  "internal/cli" -> "internal/pipeline";
+  "internal/cli" -> "internal/pyenv";
   "internal/cli" -> "internal/queen";
   "internal/cli" -> "internal/queenmail";
   "internal/cli" -> "internal/resources";
@@ -197,14 +241,33 @@ digraph go_hive {
   "internal/cli" -> "internal/skills";
   "internal/cli" -> "internal/soul";
   "internal/cli" -> "internal/tasks";
+  "internal/cli" -> "internal/testframework";
   "internal/cli" -> "internal/tools";
   "internal/cli" -> "internal/tools/builtin";
   "internal/cli" -> "internal/tools/integrations";
   "internal/cli" -> "internal/tracker";
   "internal/cli" -> "internal/version";
   "internal/cli" -> "internal/visionfallback";
+  "internal/cli/browsercli" -> "internal/cli/browsersupervisor";
+  "internal/cli/browsercli" -> "internal/cli/cliargs";
+  "internal/cli/browsercli" -> "internal/hivehome";
+  "internal/cli/browsersupervisor" -> "internal/hivehome";
+  "internal/cli/browsersupervisor" -> "internal/server";
+  "internal/cli/cliargs" -> "internal/arghelp";
+  "internal/cli/cliguard" -> "internal/tracker";
+  "internal/cli/toolcatalog" -> "internal/colony";
+  "internal/cli/toolcatalog" -> "internal/hivehome";
+  "internal/cli/toolcatalog" -> "internal/llm";
+  "internal/cli/toolcatalog" -> "internal/memory";
+  "internal/cli/toolcatalog" -> "internal/server";
+  "internal/cli/toolcatalog" -> "internal/skills";
+  "internal/cli/toolcatalog" -> "internal/tasks";
+  "internal/cli/toolcatalog" -> "internal/tools";
+  "internal/cli/toolcatalog" -> "internal/tools/builtin";
+  "internal/cli/toolcatalog" -> "internal/tools/integrations";
   "internal/colony" -> "internal/agentloop";
   "internal/colony" -> "internal/atomicfs";
+  "internal/colony" -> "internal/credentials";
   "internal/colony" -> "internal/eventbus";
   "internal/colony" -> "internal/hiveconf";
   "internal/colony" -> "internal/hivehome";
@@ -239,6 +302,7 @@ digraph go_hive {
   "internal/longmemeval" -> "internal/session";
   "internal/maintenance" -> "internal/atomicfs";
   "internal/maintenance" -> "internal/hivehome";
+  "internal/maintenance" -> "internal/pyenv";
   "internal/mcpregistry" -> "internal/arghelp";
   "internal/mcpregistry" -> "internal/atomicfs";
   "internal/mcpregistry" -> "internal/hivehome";
@@ -251,6 +315,7 @@ digraph go_hive {
   "internal/memory" -> "internal/hiveconf";
   "internal/memory" -> "internal/hivehome";
   "internal/memory" -> "internal/llm";
+  "internal/nativehttp" -> "internal/netguard";
   "internal/pipeline" -> "internal/credentials";
   "internal/pipeline" -> "internal/hiveconf";
   "internal/pipeline" -> "internal/hivehome";
@@ -258,7 +323,9 @@ digraph go_hive {
   "internal/pipeline" -> "internal/mcpregistry";
   "internal/pipeline" -> "internal/skills";
   "internal/pipeline" -> "internal/tools";
+  "internal/playbook" -> "internal/atomicfs";
   "internal/playbook" -> "internal/pyenv";
+  "internal/queen" -> "internal/atomicfs";
   "internal/queenmail" -> "internal/hivehome";
   "internal/queenmail" -> "internal/queen";
   "internal/queenmail" -> "internal/version";
@@ -295,22 +362,32 @@ digraph go_hive {
   "internal/server" -> "internal/queen";
   "internal/server" -> "internal/queenmail";
   "internal/server" -> "internal/ratelimit";
-  "internal/server" -> "internal/resources";
   "internal/server" -> "internal/runtimehealth";
   "internal/server" -> "internal/runtimelogs";
   "internal/server" -> "internal/senders";
   "internal/server" -> "internal/sentinel";
+  "internal/server" -> "internal/server/routesagents";
+  "internal/server" -> "internal/server/routesapp";
+  "internal/server" -> "internal/server/routesbrowser";
+  "internal/server" -> "internal/server/routeutil";
   "internal/server" -> "internal/server/uiembed";
   "internal/server" -> "internal/session";
   "internal/server" -> "internal/sessionreport";
   "internal/server" -> "internal/skills";
   "internal/server" -> "internal/soul";
   "internal/server" -> "internal/storage";
+  "internal/server" -> "internal/streamtoken";
   "internal/server" -> "internal/tasks";
   "internal/server" -> "internal/tools";
   "internal/server" -> "internal/tools/integrations/pdf";
   "internal/server" -> "internal/tracker";
   "internal/server" -> "internal/triggers";
+  "internal/server/routesagents" -> "internal/agents";
+  "internal/server/routesagents" -> "internal/hivehome";
+  "internal/server/routesagents" -> "internal/server/routeutil";
+  "internal/server/routesapp" -> "internal/resources";
+  "internal/server/routesapp" -> "internal/server/routeutil";
+  "internal/server/routesbrowser" -> "internal/server/routeutil";
   "internal/session" -> "internal/atomicfs";
   "internal/session" -> "internal/memory";
   "internal/session" -> "internal/storage";
@@ -321,13 +398,21 @@ digraph go_hive {
   "internal/storage" -> "internal/atomicfs";
   "internal/storage" -> "internal/hivehome";
   "internal/storage" -> "internal/schemas";
+  "internal/streamtoken" -> "internal/credentials";
   "internal/tasks" -> "internal/agentloop";
   "internal/tasks" -> "internal/atomicfs";
   "internal/tasks" -> "internal/eventbus";
+  "internal/tasks" -> "internal/pyenv";
+  "internal/testframework" -> "internal/atomicfs";
+  "internal/tools" -> "internal/credentials";
   "internal/tools" -> "internal/hivehome";
   "internal/tools" -> "internal/llm";
+  "internal/tools/builtin" -> "internal/astanalyze";
+  "internal/tools/builtin" -> "internal/astgrep";
   "internal/tools/builtin" -> "internal/atomicfs";
   "internal/tools/builtin" -> "internal/llm";
+  "internal/tools/builtin" -> "internal/lsp";
+  "internal/tools/builtin" -> "internal/nativehttp";
   "internal/tools/builtin" -> "internal/tools";
   "internal/tools/integrationkit" -> "internal/tools";
   "internal/tools/integrations" -> "internal/attachments";
@@ -344,9 +429,11 @@ digraph go_hive {
   "internal/tools/integrations" -> "internal/tools/integrations/enrichment";
   "internal/tools/integrations" -> "internal/tools/integrations/excel";
   "internal/tools/integrations" -> "internal/tools/integrations/gworkspace";
+  "internal/tools/integrations" -> "internal/tools/integrations/image";
   "internal/tools/integrations" -> "internal/tools/integrations/infra";
   "internal/tools/integrations" -> "internal/tools/integrations/pdf";
   "internal/tools/integrations" -> "internal/tools/integrations/schedchat";
+  "internal/tools/integrations" -> "internal/tools/integrations/scrape";
   "internal/tools/integrations" -> "internal/tools/integrations/social";
   "internal/tools/integrations" -> "internal/tools/integrations/webintel";
   "internal/tools/integrations/ai" -> "internal/tools/integrationkit";
@@ -359,11 +446,16 @@ digraph go_hive {
   "internal/tools/integrations/enrichment" -> "internal/tools/integrationkit";
   "internal/tools/integrations/excel" -> "internal/tools/integrationkit";
   "internal/tools/integrations/gworkspace" -> "internal/tools/integrationkit";
+  "internal/tools/integrations/image" -> "internal/tools/integrationkit";
   "internal/tools/integrations/infra" -> "internal/tools/integrationkit";
   "internal/tools/integrations/pdf" -> "internal/tools/integrationkit";
   "internal/tools/integrations/schedchat" -> "internal/tools/integrationkit";
+  "internal/tools/integrations/scrape" -> "internal/tools/integrationkit";
   "internal/tools/integrations/social" -> "internal/tools/integrationkit";
   "internal/tools/integrations/webintel" -> "internal/tools/integrationkit";
+  "internal/tracker" -> "internal/globaldb";
+  "internal/tracker" -> "internal/schemas";
+  "internal/tracker" -> "internal/storage";
   "internal/triggers" -> "internal/atomicfs";
   "internal/visionfallback" -> "internal/llm";
 }

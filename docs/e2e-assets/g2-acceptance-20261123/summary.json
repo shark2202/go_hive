@@ -1,0 +1,386 @@
+{
+  "acceptance": "G2-lossless-replacement",
+  "date": "2026-11-23",
+  "accepted": true,
+  "blockers": [],
+  "head": "42f2b93215edddcd3f7f9ef5ca246162753e6d7b",
+  "branch": "w91/g2-acceptance",
+  "worktree": "/Users/mac/hive/.wt/w91-g2-acceptance",
+  "baseline": "42f2b932 (current main)",
+  "host": "darwin/arm64",
+  "frozen_state": {
+    "head": "42f2b93215edddcd3f7f9ef5ca246162753e6d7b",
+    "branch": "w91/g2-acceptance",
+    "worktree_clean_before_run": true,
+    "evidence": "head-freeze.txt"
+  },
+  "versions": {
+    "go_binary_version": "1.0.27-go.1",
+    "python_reference": "1.0.15 (core/, venv Python 3.11.16)",
+    "old_binary_for_upgrade_drill": "1.0.25-go.1",
+    "drill_release_label": "1.0.26-go.1",
+    "note": "g2_rollback_drill.sh hardcodes release VERSION=1.0.26-go.1; the archive built from HEAD 42f2b932 reports hive 1.0.27-go.1. Upgrade direction (1.0.25 old home -> HEAD build) is still exercised."
+  },
+  "cases": [
+    {
+      "id": "G2-E2E-V1",
+      "status": "PASS",
+      "description": "Non-empty v1 legacy home double run (v2->v3 full chain), Python vs Go migration",
+      "files_py": 50,
+      "files_go": 50,
+      "identical_files": 47,
+      "changed_files": 0,
+      "opaque_sqlite_files": 3,
+      "evidence": [
+        "docs/e2e-assets/g2-home-e2e/v1-rich-tree-diff.json"
+      ]
+    },
+    {
+      "id": "G2-E2E-V2",
+      "status": "PASS",
+      "description": "Non-empty v2 legacy home double run (v3 + colony_sessions), Python vs Go migration",
+      "files_py": 99,
+      "files_go": 99,
+      "identical_files": 95,
+      "changed_files": 1,
+      "changed_format_only": 1,
+      "changed_semantic": 0,
+      "opaque_sqlite_files": 3,
+      "evidence": [
+        "docs/e2e-assets/g2-home-e2e/v2-rich-tree-diff.json"
+      ]
+    },
+    {
+      "id": "G2-FIELDS",
+      "status": "PASS",
+      "json_field_diffs": 0,
+      "evidence": [
+        "docs/e2e-assets/g2-home-e2e/v1-rich-field-diff.json",
+        "docs/e2e-assets/g2-home-e2e/v2-rich-field-diff.json"
+      ]
+    },
+    {
+      "id": "G2-SQLITE",
+      "status": "PASS",
+      "sqlite_mismatches": 0,
+      "sqlite_files": {
+        "v1-rich": 5,
+        "v2-rich": 4
+      },
+      "evidence": [
+        "docs/e2e-assets/g2-home-e2e/v1-rich-sqlite-diff.json",
+        "docs/e2e-assets/g2-home-e2e/v2-rich-sqlite-diff.json"
+      ],
+      "raw_row_timestamp_only": true,
+      "note": "v1 tracker DB _tracker_meta.updated_at differs by ~1s between py/go runs; normalized rows equal; no schema/row mismatch."
+    },
+    {
+      "id": "G2-READ",
+      "status": "PASS",
+      "read_probe_mismatches": 0,
+      "evidence": [
+        "docs/e2e-assets/g2-home-e2e/v1-rich-read-diff.json",
+        "docs/e2e-assets/g2-home-e2e/v2-rich-read-diff.json"
+      ]
+    },
+    {
+      "id": "G2-API",
+      "status": "PASS",
+      "api_probe_mismatches": 0,
+      "api_startup_tree_equal": true,
+      "evidence": [
+        "docs/e2e-assets/g2-home-e2e/v1-rich-api-diff.json",
+        "docs/e2e-assets/g2-home-e2e/v2-rich-api-diff.json",
+        "docs/e2e-assets/g2-home-e2e/v1-rich-api-tree.json",
+        "docs/e2e-assets/g2-home-e2e/v2-rich-api-tree.json"
+      ]
+    },
+    {
+      "id": "G2-CREDENTIALS",
+      "status": "PASS",
+      "credentials_verify_equal": true,
+      "credential_ids": [
+        "demo_api_key",
+        "demo_oauth"
+      ],
+      "cross_read": {
+        "go_reads_python": true,
+        "python_reads_go": true
+      },
+      "mock": false,
+      "fixture_values": "fake",
+      "evidence": [
+        "docs/e2e-assets/g2-home-e2e/v1-rich-credentials-verify.json",
+        "docs/e2e-assets/g2-home-e2e/v2-rich-credentials-verify.json",
+        "docs/e2e-assets/g2-home-e2e/v1-rich-go-reads-py-credentials.json",
+        "docs/e2e-assets/g2-home-e2e/v2-rich-go-reads-py-credentials.json",
+        "docs/e2e-assets/g2-home-e2e/v1-rich-py-reads-go-credentials.json",
+        "docs/e2e-assets/g2-home-e2e/v2-rich-py-reads-go-credentials.json"
+      ]
+    },
+    {
+      "id": "G2-CROSS-CONSUME",
+      "status": "PASS",
+      "cross_consume_clean": true,
+      "cross_read_mismatches": 0,
+      "cross_read_reverse_mismatches": 0,
+      "evidence": [
+        "docs/e2e-assets/g2-home-e2e/v1-rich-cross-consume.json",
+        "docs/e2e-assets/g2-home-e2e/v2-rich-cross-consume.json"
+      ]
+    },
+    {
+      "id": "G2-P0-EVIDENCE",
+      "status": "PASS",
+      "description": "P0-G2-1 reproduced: Python serve with CWD=core writes .migrated-v2 but does not migrate home exports/; Go anchors to $HIVE_HOME/exports",
+      "exports_migrated": false,
+      "markers": [
+        ".migrated-v2"
+      ],
+      "data_colonies_migrated": [],
+      "evidence": [
+        "docs/e2e-assets/g2-home-e2e/v1-rich-serve-cwd.json"
+      ]
+    },
+    {
+      "id": "G2-ROLLBACK",
+      "status": "PASS",
+      "description": "Go serve migration + Go write probes -> Python CLI/API/serve read-back -> Go CLI -> Go serve #2",
+      "python_cold_sessions": [
+        {
+          "session_id": "session_20260201_000001_bbbbbbbb",
+          "message_count": 2
+        },
+        {
+          "session_id": "session_compat_probe_go",
+          "message_count": 1
+        }
+      ],
+      "go_cold_list_matches_python": true,
+      "credentials_read": [
+        "demo_api_key",
+        "demo_oauth"
+      ],
+      "tracker_schema_version": {
+        "alpha": 3,
+        "beta": 3,
+        "probe_colony": 3
+      },
+      "destructive_writes": 0,
+      "diffs": {
+        "D0-go1-migration": {
+          "added": 59,
+          "removed": 40,
+          "modified": 0,
+          "sqlite_changed": 6
+        },
+        "D1a-py-cli": {
+          "added": 2,
+          "removed": 0,
+          "modified": 0,
+          "sqlite_changed": 0
+        },
+        "D1b-py-read": {
+          "added": 4,
+          "removed": 0,
+          "modified": 0,
+          "sqlite_changed": 0
+        },
+        "D2-py-serve": {
+          "added": 0,
+          "removed": 0,
+          "modified": 1,
+          "sqlite_changed": 0
+        },
+        "D3-go-cli": {
+          "added": 0,
+          "removed": 0,
+          "modified": 0,
+          "sqlite_changed": 0
+        },
+        "D4-go2": {
+          "added": 0,
+          "removed": 0,
+          "modified": 1,
+          "sqlite_changed": 0
+        }
+      },
+      "serve_marker": {
+        "go_serve_1": "present->absent",
+        "py_serve": "present->absent",
+        "go_serve_2": "present->absent"
+      },
+      "evidence": [
+        "go_hive/docs/e2e-assets/g2-acceptance-20261123/run.txt",
+        "go_hive/docs/e2e-assets/g2-acceptance-20261123/rollback/snap/",
+        "go_hive/docs/e2e-assets/g2-acceptance-20261123/rollback/output/"
+      ]
+    },
+    {
+      "id": "G2-UPGRADE",
+      "status": "PASS",
+      "description": "v1.0.25 old user on v2 home -> HEAD binary startup migration -> old binary reads migrated home",
+      "old_home_cold_sessions_before": 0,
+      "new_session_readable_after": {
+        "session_id": "session_20260201_000001_bbbbbbbb",
+        "message_count": 2
+      },
+      "old_binary_reads_migrated_home": true,
+      "old_binary_writes": 0,
+      "upgrade_diff": {
+        "added": 45,
+        "removed": 40,
+        "modified": 0,
+        "sqlite_changed": 5
+      },
+      "evidence": [
+        "go_hive/docs/e2e-assets/g2-acceptance-20261123/run.txt",
+        "go_hive/docs/e2e-assets/g2-acceptance-20261123/upgrade/snap/",
+        "go_hive/docs/e2e-assets/g2-acceptance-20261123/upgrade/output/"
+      ]
+    },
+    {
+      "id": "G2-INSTALL",
+      "status": "PASS",
+      "description": "install.sh in-place upgrade; four binaries; SHA256; serve health and embedded dashboard",
+      "archive": "hive-1.0.26-go.1-darwin-arm64.tar.gz",
+      "archive_bytes": 36059855,
+      "archive_sha256_verified": true,
+      "binaries": [
+        "hive",
+        "hive-cred",
+        "hive-browser",
+        "browserbridge"
+      ],
+      "installed_binary_version": "hive 1.0.27-go.1",
+      "install_serve_health": 200,
+      "install_serve_root": 200,
+      "verify_release_archive": {
+        "pass": 13,
+        "fail": 0
+      },
+      "evidence": [
+        "go_hive/docs/e2e-assets/g2-acceptance-20261123/upgrade/output/install-sh.log",
+        "go_hive/docs/e2e-assets/g2-acceptance-20261123/upgrade/output/release-artifact.txt",
+        "go_hive/docs/e2e-assets/g2-acceptance-20261123/upgrade/output/verify-release-archive.txt"
+      ]
+    },
+    {
+      "id": "P0-G2-1-DOCS",
+      "status": "PASS",
+      "description": "D2 decision A recorded in G2 docs; no product exports behavior change",
+      "decision": "A",
+      "decision_docs": [
+        "go_hive/docs/pending-decisions.md#D2",
+        "go_hive/docs/exports-baseline-decision.md"
+      ],
+      "synced_docs": [
+        "go_hive/docs/g2-lossless-replacement.html",
+        "docs/g2-lossless-migration.md",
+        "go_hive/docs/support-matrix.md",
+        "go_hive/docs/releases/v1.0.27-go.1.md",
+        "go_hive/docs/CHANGELOG.md"
+      ],
+      "product_behavior_changed": false,
+      "evidence": [
+        "go_hive/docs/g2-lossless-replacement.html",
+        "docs/g2-lossless-migration.md",
+        "go_hive/docs/support-matrix.md",
+        "go_hive/docs/releases/v1.0.27-go.1.md",
+        "go_hive/docs/CHANGELOG.md"
+      ]
+    }
+  ],
+  "p0_g2_1": {
+    "decision": "A",
+    "status": "closed",
+    "rule": "Keep Go $HIVE_HOME/exports; register the Python CWD difference; do not change product exports behavior; release notes tell v1 users to place exports/ under $HIVE_HOME/exports first.",
+    "evidence": "docs/e2e-assets/g2-home-e2e/v1-rich-serve-cwd.json; go_hive/docs/exports-baseline-decision.md"
+  },
+  "ci": {
+    "full_ci_rerun": false,
+    "recorded_full_ci": {
+      "wave": 84,
+      "head": "88f05ff7",
+      "ci": 0,
+      "qc": 0,
+      "publish": 0,
+      "at": "2026-11-23 12:38",
+      "source": "go_hive/docs/reports/ci-latest.json"
+    },
+    "slot_parity": {
+      "head": "cea04d9e",
+      "tests": 5979,
+      "status": "check_parity OK - all 5979 tests carry parity annotations or exemptions",
+      "source": "go_hive/docs/reports/slot-20261123-22.md"
+    },
+    "note": "No full make ci was run in this lane per dispatch. The recorded full CI is wave-84 @ 88f05ff7; slot 20261123-22 (generated at cea04d9e) records 5,979 parity-annotated tests but no later full CI. G2 evidence was re-run directly at HEAD 42f2b932; targeted go tests for server/storage/tracker passed."
+  },
+  "residuals": [
+    {
+      "id": "R-G2-1",
+      "status": "accepted",
+      "summary": "worker.json input_data.binding key order only; parsed fields/values equal; cross-consume does not rewrite"
+    },
+    {
+      "id": "R-G2-2",
+      "status": "accepted",
+      "summary": "rebuilt SQLite DB bytes differ by page layout; schema/rows/triggers/user_version equal"
+    },
+    {
+      "id": "R-G2-3",
+      "status": "accepted",
+      "summary": "/api/health.resources runtime metrics excluded; status compared"
+    },
+    {
+      "id": "R-G2-4",
+      "status": "accepted",
+      "summary": "read probe normalises timestamps/epoch display values"
+    },
+    {
+      "id": "R-G2-5",
+      "status": "accepted",
+      "summary": "provider_id null vs empty string; storage round-trip preserved"
+    },
+    {
+      "id": "F4",
+      "status": "registered",
+      "summary": "colonies/.migrations listed as a colony by both implementations; aligned, no fix; joint change only if product decides to filter dot dirs"
+    },
+    {
+      "id": "F5",
+      "status": "documented",
+      "summary": "pre-migration old binaries cannot see v2-layout sessions until a new build migrates; old binary reads migrated home with zero writes"
+    },
+    {
+      "id": "F6",
+      "status": "deferred",
+      "summary": "CLI JSON number formatting differs; values equal"
+    },
+    {
+      "id": "DRILL-LABEL",
+      "status": "observation",
+      "summary": "g2_rollback_drill.sh hardcodes release version 1.0.26-go.1; HEAD binary reports 1.0.27-go.1. Functionally exercised; not a G2 data blocker"
+    }
+  ],
+  "unverified": [
+    "Windows/Linux real hosts (only darwin/arm64 tested)",
+    "real user data tails: huge parts, corrupt JSON, permission errors",
+    "real third-party OAuth refresh/provider tokens (G2 credentials are fake fixture values; no mocks are presented as real credentials)",
+    "sessions/history HTTP endpoints (storage read probes cover the same data)",
+    "frontend interaction beyond GET / 200",
+    "full make ci at HEAD (not run by dispatch)"
+  ],
+  "evidence": [
+    "go_hive/docs/e2e-assets/g2-acceptance-20261123/head-freeze.txt",
+    "docs/e2e-assets/g2-home-e2e/summary.json",
+    "docs/e2e-assets/g2-home-e2e/summary.md",
+    "docs/e2e-assets/g2-home-e2e/commands.md",
+    "go_hive/docs/e2e-assets/g2-acceptance-20261123/run.txt",
+    "go_hive/docs/e2e-assets/g2-acceptance-20261123/rollback/snap/",
+    "go_hive/docs/e2e-assets/g2-acceptance-20261123/rollback/output/",
+    "go_hive/docs/e2e-assets/g2-acceptance-20261123/upgrade/snap/",
+    "go_hive/docs/e2e-assets/g2-acceptance-20261123/upgrade/output/",
+    "go_hive/docs/g2-acceptance-20261123.md"
+  ]
+}

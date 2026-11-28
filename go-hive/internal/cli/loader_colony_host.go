@@ -10,13 +10,10 @@ package cli
 import (
 	"context"
 	"fmt"
-	"strings"
 
-	"github.com/shark2202/go_hive/go-hive/internal/agentloop"
 	"github.com/shark2202/go_hive/go-hive/internal/agents"
 	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
 	colonyhost "github.com/shark2202/go_hive/go-hive/internal/host"
-	"github.com/shark2202/go_hive/go-hive/internal/queen"
 	hiveserver "github.com/shark2202/go_hive/go-hive/internal/server"
 	"github.com/shark2202/go_hive/go-hive/internal/tools/builtin"
 )
@@ -67,9 +64,9 @@ func (r *Runner) newColonyHost(colonyPath, colonyID string, home hivehome.Home, 
 	}
 	fields := spec.HostFields()
 	toolbox := builtin.New(colonyPath)
-	baseTools, declaredTools, executeTool := colonyWorkerToolSurface(colonyPath, toolbox, home)
-	baseTools = withMCPWorkerTools(baseTools, declaredTools)
-	return colonyhost.New(colonyhost.Config{
+	surface := newColonyWorkerSurface(colonyPath, toolbox, home)
+	baseTools := withMCPWorkerTools(surface.baseTools, surface.declaredTools)
+	built, err := colonyhost.New(colonyhost.Config{
 		ColonyID:    colonyID,
 		AgentSpec:   fields.AgentSpec,
 		Goal:        fields.Goal,
@@ -84,8 +81,16 @@ func (r *Runner) newColonyHost(colonyPath, colonyID string, home hivehome.Home, 
 		Tools:         baseTools,
 		// worker.json's "tools" list selects from this pool at worker start,
 		// so a colony that declares an integration tool actually gets it.
-		DeclaredTools: declaredTools,
-		ToolExecutor:  executeTool,
+		DeclaredTools: surface.declaredTools,
+		ToolExecutor:  surface.execute,
+		// A worker tool that times out probes and, when provably dead,
+		// force-disconnects its shared MCP transport: the closure above
+		// cannot carry methods, so the registry executor rides alongside.
+		//
+		// Parity: framework/loader/tool_registry.py (executor.probe_for_tool /
+		// executor.kill_for_tool)
+		ToolProber: surface.liveness,
+		ToolKiller: surface.liveness,
 		// The colony's workers see the owning queen's skill scope ahead of
 		// the colony's own (colony overrides queen on collisions) — upstream
 		// wires queen_ui into the colony runtime from the session's queen
@@ -93,45 +98,39 @@ func (r *Runner) newColonyHost(colonyPath, colonyID string, home hivehome.Home, 
 		// recorded queen inherits the shared "default" queen, the same scope
 		// its session tree uses.
 		QueenDir: home.QueenDir(chatSessionQueenScope(queenID)),
+		// Worker lineage: meta.json records the owning queen's id so a worker
+		// directory found on disk can be attributed to her without a live
+		// runtime (upstream writes ColonyRuntime._queen_id). A colony with no
+		// recorded queen leaves it empty → meta.json queen_name = null.
+		QueenName: queenID,
+		// worker.json carries the source queen's operational protocols; the
+		// worker context hands them to the generic prompt builder so they
+		// reach the system prompt instead of staying an unread field.
+		ProtocolsPrompt: fields.ProtocolsPrompt,
 	})
+	if err != nil {
+		return nil, err
+	}
+	// Every worker's own tool calls run with its storage directory
+	// (<colony>/workers/<id>) as the execution root: the builtin file sandbox
+	// and the terminal default cwd resolve there, matching Python's Worker
+	// (session_cwd = storage_path). The overseer keeps the colony root.
+	//
+	// Parity: framework/host/worker.py::Worker.run
+	if runtime := built.Runtime(); runtime != nil {
+		runtime.SetWorkerToolExecutorFactory(surface.executorForRoot)
+	}
+	return built, nil
 }
 
-// startColonyHost arms a colony host and starts its client-facing overseer.
-// Every failure is returned to the caller: the colony lifecycle turns a nil
-// return into an HTTP 500/503 instead of leaving a session that looks loaded
-// but can never answer.
-func startColonyHost(ctx context.Context, built *colonyhost.Host, home hivehome.Home, queenName, colonyID string) error {
+// startColonyHost starts the colony runtime a session holds. Hive 1.0.15
+// starts the runtime but attaches no overseer: the colony-bound queen chat is
+// the session executor. Every failure is returned to the caller: the colony
+// lifecycle turns a nil return into an HTTP 500/503 instead of leaving a
+// session that looks loaded but can never answer.
+func startColonyHost(ctx context.Context, built *colonyhost.Host, colonyID string) error {
 	if err := built.Start(ctx); err != nil {
 		return fmt.Errorf("start colony runtime for %s: %w", colonyID, err)
 	}
-	if _, err := built.StartOverseer(ctx, queenOverseerSpec(home, queenName), nil); err != nil {
-		built.Stop()
-		return fmt.Errorf("start colony overseer for %s: %w", colonyID, err)
-	}
 	return nil
-}
-
-// queenOverseerSpec is the identity the colony's persistent overseer runs
-// under: the bound queen's persona when a profile is readable, otherwise a
-// plain queen prompt so a colony without a materialised profile still has a
-// client-facing overseer.
-func queenOverseerSpec(home hivehome.Home, queenName string) agentloop.AgentSpec {
-	prompt := "You are the queen of this colony. Coordinate its workers and report progress to the user."
-	name := "Queen"
-	if queenID := strings.TrimSpace(queenName); queenID != "" {
-		name = queenID
-		if profile, err := queen.LoadQueenProfile(home.QueensDir(), queenID); err == nil {
-			if identity := strings.TrimSpace(queen.FormatQueenIdentityPrompt(profile, nil)); identity != "" {
-				prompt = identity
-			}
-		}
-	}
-	return agentloop.AgentSpec{
-		ID:               "queen",
-		Name:             name,
-		AgentType:        "event_loop",
-		ToolAccessPolicy: "explicit",
-		MaxRetries:       3,
-		SystemPrompt:     &prompt,
-	}
 }

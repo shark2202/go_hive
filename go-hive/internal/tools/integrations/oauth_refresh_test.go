@@ -532,9 +532,9 @@ func TestSlackPaginationStopsAtMaxPages(t *testing.T) {
 	)
 
 	result := batch4Execute(t, registry, "slack", map[string]any{"action": "slack_list_users"})
-	members, ok := result["members"].([]any)
+	members, ok := result["users"].([]any)
 	if !ok || len(members) != DefaultMaxPages {
-		t.Fatalf("merged members = %v", result["members"])
+		t.Fatalf("merged members = %v", result["users"])
 	}
 	if recorder.count() != DefaultMaxPages {
 		t.Fatalf("slack requests = %d, want %d", recorder.count(), DefaultMaxPages)

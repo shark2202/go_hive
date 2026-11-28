@@ -291,7 +291,7 @@ core/tests/test_soul_reflection.py    # soul 反思 14 例（见 go_hive 移植�
 
 <section id="gohive"><h2><span class="num">11</span>go_hive 对位（本页只给指路）</h2>
 <div class="tablewrap"><table><thead><tr><th style="width:26%">机制</th><th>go_hive 文档</th><th>状态一句话</th></tr></thead><tbody>
-<tr><td>Reminder</td><td><code>docs/reminders-coverage.md</code></td><td>15 个 source 的注册矩阵（queen/worker/overseer 三张）；STREAM_STALLED 已真实触发；3 条实现形态差异登记</td></tr>
+<tr><td>Reminder</td><td><code>docs/reminders-coverage.md</code></td><td>15 个 source 的注册矩阵（queen/worker/overseer 三张）；STREAM_STALLED 已真实触发；行为面 12 个完全对齐 / 3 个有条件差异（past_conversations 已在 dfbf65b2 进 hub），残余逐条见 <code>docs/reminders-coverage.md</code> §7</td></tr>
 <tr><td>Memory / Soul</td><td><a href="memory-and-soul.html">memory-and-soul.html</a>（机制参考：memory / recall / timeline / soul）· <code>docs/soul-daily-reflection.md</code>、<code>docs/memory-e2e.md</code></td><td>反思链路有 14 例 parity 测试 + 本地网关 E2E；真实模型联调未做；4 条未对齐项</td></tr>
 <tr><td>Judge / Stall</td><td><code>docs/stall-check.html</code></td><td>已实现+测试、默认关；本机 judge 指向 StartLux 本地服务已真实判定</td></tr>
 <tr><td>Queen</td><td><code>docs/queen-lifecycle-tools.md</code>、<code>docs/queen-mail.md</code></td><td>12 生命周期工具全在 queen 会话可达；queen mail 有真实双 queen E2E</td></tr>

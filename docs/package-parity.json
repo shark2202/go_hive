@@ -1,0 +1,2371 @@
+{
+ "c12": {
+  "baseline": "00eeecc8",
+  "by_package": {
+   "(root)": {
+    "out_of_scope": 0,
+    "partial": 2,
+    "ported": 4,
+    "unported": 0
+   },
+   "agent_loop": {
+    "out_of_scope": 0,
+    "partial": 3,
+    "ported": 26,
+    "unported": 0
+   },
+   "agents": {
+    "out_of_scope": 0,
+    "partial": 4,
+    "ported": 15,
+    "unported": 0
+   },
+   "credentials": {
+    "out_of_scope": 0,
+    "partial": 3,
+    "ported": 19,
+    "unported": 0
+   },
+   "debugger": {
+    "out_of_scope": 0,
+    "partial": 0,
+    "ported": 1,
+    "unported": 0
+   },
+   "global_db": {
+    "out_of_scope": 0,
+    "partial": 0,
+    "ported": 4,
+    "unported": 0
+   },
+   "host": {
+    "out_of_scope": 2,
+    "partial": 3,
+    "ported": 18,
+    "unported": 0
+   },
+   "llm": {
+    "out_of_scope": 0,
+    "partial": 1,
+    "ported": 11,
+    "unported": 0
+   },
+   "loader": {
+    "out_of_scope": 1,
+    "partial": 0,
+    "ported": 9,
+    "unported": 0
+   },
+   "maintenance": {
+    "out_of_scope": 0,
+    "partial": 0,
+    "ported": 4,
+    "unported": 0
+   },
+   "observability": {
+    "out_of_scope": 0,
+    "partial": 0,
+    "ported": 1,
+    "unported": 0
+   },
+   "orchestrator": {
+    "out_of_scope": 7,
+    "partial": 4,
+    "ported": 2,
+    "unported": 0
+   },
+   "pipeline": {
+    "out_of_scope": 0,
+    "partial": 0,
+    "ported": 10,
+    "unported": 0
+   },
+   "schemas": {
+    "out_of_scope": 0,
+    "partial": 1,
+    "ported": 5,
+    "unported": 0
+   },
+   "sentinel": {
+    "out_of_scope": 0,
+    "partial": 0,
+    "ported": 8,
+    "unported": 0
+   },
+   "server": {
+    "out_of_scope": 0,
+    "partial": 0,
+    "ported": 41,
+    "unported": 0
+   },
+   "skills": {
+    "out_of_scope": 0,
+    "partial": 0,
+    "ported": 18,
+    "unported": 0
+   },
+   "storage": {
+    "out_of_scope": 0,
+    "partial": 0,
+    "ported": 8,
+    "unported": 0
+   },
+   "tasks": {
+    "out_of_scope": 0,
+    "partial": 1,
+    "ported": 10,
+    "unported": 0
+   },
+   "testing": {
+    "out_of_scope": 0,
+    "partial": 0,
+    "ported": 8,
+    "unported": 0
+   },
+   "tools": {
+    "out_of_scope": 0,
+    "partial": 1,
+    "ported": 8,
+    "unported": 0
+   },
+   "tracker": {
+    "out_of_scope": 0,
+    "partial": 0,
+    "ported": 5,
+    "unported": 0
+   },
+   "trackerdb": {
+    "out_of_scope": 0,
+    "partial": 0,
+    "ported": 1,
+    "unported": 0
+   },
+   "utils": {
+    "out_of_scope": 0,
+    "partial": 1,
+    "ported": 3,
+    "unported": 0
+   }
+  },
+  "totals": {
+   "out_of_scope": 10,
+   "partial": 24,
+   "ported": 239,
+   "unported": 0
+  },
+  "unported": []
+ },
+ "dimensions": {
+  "api-routes": "measured_aligned",
+  "browser-bridge": "partial",
+  "builtin-skills": "measured_aligned",
+  "cli": "partial",
+  "config-json": "partial",
+  "desktop": "out_of_scope",
+  "disk-contract": "partial",
+  "env-vars": "partial",
+  "errors": "measured_aligned",
+  "formats": "measured_aligned",
+  "frontend": "partial",
+  "judge": "partial",
+  "limits": "measured_aligned",
+  "mcp": "partial",
+  "memory-soul": "partial",
+  "migration": "partial",
+  "observability": "partial",
+  "orchestration": "partial",
+  "prompt-turn-context": "partial",
+  "release": "partial",
+  "scheduling": "partial",
+  "sse": "measured_aligned",
+  "tools": "partial",
+  "wire-proto": "partial"
+ },
+ "gaps": [
+  {
+   "go_anchor": "go_hive/go-hive/internal/agentloop/synthetic_tools.go:535",
+   "id": "gap:suggest_colony_dispatch",
+   "notes": "Dispatch intercept, park reason, event payload and phase tool surface landed. The DM accept path still does not compact the source into a colony queen seed (separate open gap).",
+   "owner": "agentloop",
+   "package": "agentloop",
+   "status": "fixed",
+   "title": "suggest_colony has no Go dispatch/intercept",
+   "upstream_anchor": "core/framework/agent_loop/agent_loop.py:5076"
+  },
+  {
+   "go_anchor": "go_hive/go-hive/internal/cli/session_tools_task_pivot.go:101",
+   "id": "gap:task_create_new_colony_pivot",
+   "notes": "The colony phase now exposes new_colony and the agentloop intercept/pending-pivot/event path landed. The lean-handoff accept endpoint landed in colony_pivot_lean.go (gap:colony_pivot_lean_handoff is fixed).",
+   "owner": "tasks",
+   "package": "tasks",
+   "status": "fixed",
+   "title": "task_create(new_colony=true) pivot has no production Go handler",
+   "upstream_anchor": "core/framework/server/queen_orchestrator.py:929"
+  },
+  {
+   "go_anchor": "go_hive/go-hive/internal/cli/colony_pivot_lean.go:49",
+   "id": "gap:colony_pivot_lean_handoff",
+   "notes": "Accepting a colony-phase pivot creates a sibling colony from goal/handoff/tasks: fresh queen session seeded with the handoff brief only, plan seeded before the session opens, no transcript copy, no compaction, source colony stays live and unlocked. The HTTP test asserts 201, handoff-only transcript, seeded plan, COLONY_CREATED skipped/colony and pivot cleared.",
+   "owner": "server",
+   "package": "server",
+   "status": "fixed",
+   "title": "colony pivot accept (lean-handoff sibling colony) implemented",
+   "upstream_anchor": "core/framework/server/routes_sessions.py:494"
+  },
+  {
+   "go_anchor": "go_hive/go-hive/internal/cli/colony_fork_seed.go:76",
+   "id": "gap:dm_fork_seed_compaction",
+   "notes": "The DM fork copytree-merges the queen session into a fresh colony session dir, rewrites meta.json, schedules a bounded background compaction into the colony's seed conversation and awaits the marker before opening the session; every stage is fail-soft to the raw copied transcript. Memories are not copied on either side (queen-scope memories stay shared).",
+   "owner": "server",
+   "package": "server",
+   "status": "fixed",
+   "title": "DM fork into a colony copies and compacts the source session",
+   "upstream_anchor": "core/framework/server/routes_execution.py:2105"
+  },
+  {
+   "go_anchor": "go_hive/go-hive/internal/cli/colony_worker_definition.go:38",
+   "id": "gap:dm_fork_worker_surface",
+   "notes": "fork_session_into_colony now refuses a source without a queen executor or registered queen node with a 503 before the colony directory is created. writeColonyFromSession snapshots the live queen surface into worker.json: tool snapshot, rendered skills catalog filtered for her phase, protocols prompt, allowlisted skill dirs, loop config, queen phase/id, tracker binding in input_data, and the handoff goal. The fork also persists source provenance (agent_path/agent_name, spawn lock, colony binding on the source record) and metadata.json source_session_id/worker spawned_at.",
+   "owner": "server",
+   "package": "server",
+   "status": "fixed",
+   "title": "DM fork worker.json inherits the live queen surface",
+   "upstream_anchor": "core/framework/agents/queen/worker_definition.py:292"
+  },
+  {
+   "go_anchor": "go_hive/go-hive/internal/colony/skills_surface.go:135",
+   "id": "gap:worker_skills_scope",
+   "notes": "Worker surface now discovers framework/preset/user plus queen and colony scopes, with colony overriding same-name lower scopes.",
+   "owner": "skills",
+   "package": "skills",
+   "status": "fixed",
+   "title": "colony worker skill catalog missed framework/user scopes",
+   "upstream_anchor": "core/framework/skills/manager.py:187"
+  },
+  {
+   "go_anchor": "go_hive/go-hive/internal/queen/profiles.go:143",
+   "id": "gap:queen_preset_defaults",
+   "notes": "Role-default preset skills are applied when building the worker catalog.",
+   "owner": "skills",
+   "package": "skills",
+   "status": "fixed",
+   "title": "queen profile default_preset_skills not wired into worker catalog",
+   "upstream_anchor": "core/framework/agents/queen/queen_profiles.py:165"
+  },
+  {
+   "go_anchor": "go_hive/go-hive/internal/server/chat_context_compacted.go:27",
+   "id": "gap:compaction_long_reflection",
+   "notes": "The loop now computes the upstream payload and the session bus subscription runs one long reflection; proactive microcompaction emits nothing.",
+   "owner": "memory",
+   "package": "memory",
+   "status": "fixed",
+   "title": "compaction did not publish context_compacted / run long reflection",
+   "upstream_anchor": "core/framework/agents/queen/reflection_agent.py:1017"
+  },
+  {
+   "go_anchor": "go_hive/go-hive/internal/credentials/aden_client.go:361",
+   "id": "gap:credentials_aden_client",
+   "notes": "AdenCredentialClient ports the Aden platform endpoints over Bearer auth: list integrations, get credential (auto-refresh), request refresh and validate token, plus health/close. It keeps upstream's config/env resolution, retry/backoff on connection and 5xx failures, and typed auth/not-found/refresh/rate-limit errors. Production call sites are unchanged: agent_validation.go still records the Aden token pre-sync as a no-op, so this gap covers the client port only.",
+   "owner": "credentials",
+   "package": "credentials",
+   "status": "fixed",
+   "title": "Aden credential HTTP client is ported",
+   "upstream_anchor": "core/framework/credentials/aden/client.py:235"
+  },
+  {
+   "go_anchor": "go_hive/go-hive/internal/server/routes_memories_extra.go:20",
+   "id": "gap:memory_cloud_sync_schedule_push",
+   "notes": "Reference baseline 6703b434 contains only core/framework/cloud_sync_hooks.py: core/framework/cloud_sync.py is absent (git cat-file -e exits 128) and no reachable commit ever added it. schedule_push imports framework.cloud_sync inside its try block, so the missing module raises ModuleNotFoundError and is swallowed by `except Exception`, returning before _safe_push is ever scheduled. The hook is therefore an observable no-op in the frozen baseline, and Go's nil MemoryRouteDeps.SchedulePush in internal/server/app.go is behaviorally equivalent. No cloud-sync scheduler/uploader was implemented; the hook could only do work if a deployed Python package supplied framework.cloud_sync outside this repo.",
+   "owner": "memory",
+   "package": "memory",
+   "status": "fixed",
+   "title": "memory cloud-sync schedule_push is a no-op in the reference baseline",
+   "upstream_anchor": "core/framework/server/routes_memories.py:42"
+  },
+  {
+   "go_anchor": "go_hive/contracts/config-support-ledger.json:605",
+   "id": "gap:env_ledger_anchor",
+   "notes": "The hand-maintained config-support-ledger anchor now points at writeCompactionReport(agentCtx, ratioBefore, ratioAfter, preInventory).",
+   "owner": "governance",
+   "package": null,
+   "status": "fixed",
+   "title": "HIVE_COMPACTION_DEBUG ledger anchor went stale after loop split",
+   "upstream_anchor": "core/framework/agent_loop/internals/compaction.py:1007"
+  }
+ ],
+ "go_only": [
+  {
+   "files": 5,
+   "importers": 1,
+   "loc": 1934,
+   "name": "astanalyze",
+   "note": "只读仓库 AST 分析核心（ast_analyze）；Python 侧无对应包，属 post-1.0 Go extension",
+   "package": "internal/astanalyze",
+   "parity_refs": 0,
+   "test_files": 3,
+   "test_funcs": 8
+  },
+  {
+   "files": 12,
+   "importers": 2,
+   "loc": 2081,
+   "name": "astgrep",
+   "note": "Go 结构化代码搜索（AST pattern / 语言注册 / 结果渲染）；Python 侧无对应包",
+   "package": "internal/astgrep",
+   "parity_refs": 5,
+   "test_files": 5,
+   "test_funcs": 51
+  },
+  {
+   "files": 9,
+   "importers": 2,
+   "loc": 2799,
+   "name": "longmemeval",
+   "note": "LongMemEval 基准运行器（数据集/播种/判分/汇总）；内部评测工具，Python 侧无对应包",
+   "package": "internal/longmemeval",
+   "parity_refs": 2,
+   "test_files": 9,
+   "test_funcs": 41
+  },
+  {
+   "files": 18,
+   "importers": 1,
+   "loc": 5626,
+   "name": "lsp",
+   "note": "Go LSP 客户端、诊断与 server 目录；Python 侧无对应包",
+   "package": "internal/lsp",
+   "parity_refs": 0,
+   "test_files": 9,
+   "test_funcs": 64
+  },
+  {
+   "files": 10,
+   "importers": 1,
+   "loc": 2341,
+   "name": "nativehttp",
+   "note": "Go net/http 原生 HTTP 客户端（http_request/download/upload）；Python 侧无对应包，属 post-1.0 Go extension",
+   "package": "internal/nativehttp",
+   "parity_refs": 0,
+   "test_files": 3,
+   "test_funcs": 16
+  },
+  {
+   "files": 1,
+   "importers": 1,
+   "loc": 263,
+   "name": "netguard",
+   "note": "Go 出站 URL/IP 安全策略（SSRF、私网/回环/元数据地址）；Python 侧无对应包，属 post-1.0 Go extension",
+   "package": "internal/netguard",
+   "parity_refs": 0,
+   "test_files": 1,
+   "test_funcs": 5
+  },
+  {
+   "files": 1,
+   "importers": 0,
+   "loc": 29,
+   "name": "quality",
+   "note": "仓库静态质量门（分层 import / 文件大小），以 go test 运行；不是 Python 的 testing 包",
+   "package": "internal/quality",
+   "parity_refs": 0,
+   "test_files": 5,
+   "test_funcs": 12
+  },
+  {
+   "files": 0,
+   "importers": 0,
+   "loc": 0,
+   "name": "release",
+   "note": "发布脚本（release_slot 等）的回归测试；Go 测试装置",
+   "package": "internal/release",
+   "parity_refs": 0,
+   "test_files": 1,
+   "test_funcs": 2
+  },
+  {
+   "files": 2,
+   "importers": 0,
+   "loc": 318,
+   "name": "toolgolden",
+   "note": "工具结果文本规范化，供两侧对照；Go 测试装置，Python 侧无对应包",
+   "package": "internal/toolgolden",
+   "parity_refs": 0,
+   "test_files": 1,
+   "test_funcs": 4
+  },
+  {
+   "files": 1,
+   "importers": 4,
+   "loc": 5,
+   "name": "version",
+   "note": "Go 构建版本字符串（1.0.27-go.1）；Python 版本来自包元数据，没有同名包",
+   "package": "internal/version",
+   "parity_refs": 0,
+   "test_files": 0,
+   "test_funcs": 0
+  }
+ ],
+ "inputs": {
+  "c12_module_inventory": "20094d01fc61fee0",
+  "coverage_registry": "4ec9a4b7dd94618a",
+  "dimension_statuses": "f167a650572660d8",
+  "integration_scope": "c53f3c4022bd23cb",
+  "python_package_graph": "cc325e8d96e3e704"
+ },
+ "integration_scope": {
+  "counts": {
+   "aden_tools_mcp_tools": 866,
+   "aden_tools_python_files": 324,
+   "aden_tools_python_loc": 71393,
+   "aden_tools_python_non_test_files": 316,
+   "aden_tools_tool_dirs": 105,
+   "core_frontend_source_files": 233,
+   "go_frontend_files": 2132,
+   "go_frontend_src_files": 255,
+   "go_integrations_evidence_actions": 864,
+   "go_integrations_evidence_modules": 104,
+   "go_integrations_prod_files": 275,
+   "go_integrations_prod_loc": 65671,
+   "go_integrations_test_files": 109,
+   "tools_src_python_files": 400
+  },
+  "covered_paths": [
+   "core/framework"
+  ],
+  "evidence_grades": {
+   "A": 12,
+   "B": 91,
+   "D": 1
+  },
+  "excluded_paths": [
+   "tools/src/aden_tools",
+   "core/frontend"
+  ],
+  "ledger_scope": "core/framework 的包 + (root) ↔ go_hive/go-hive/internal 的包；C12 模块账本覆盖同一范围",
+  "machine_check": {
+   "covered_paths": [
+    "core/framework"
+   ],
+   "excluded_paths": [
+    "tools/src/aden_tools",
+    "core/frontend"
+   ],
+   "integration_parity": "not_computed",
+   "kind": "scope_marker",
+   "scope_id": "core-framework-only"
+  },
+  "matrix": [
+   {
+    "area": "tools/src/aden_tools",
+    "coverage": "not_computed",
+    "evidence_actions": 864,
+    "evidence_modules": 104,
+    "go_counterpart": "go_hive/go-hive/internal/tools/integrations",
+    "go_prod_files": 275,
+    "go_prod_loc": 65671,
+    "go_test_files": 109,
+    "mcp_tools": 866,
+    "note": "两侧规模可计数，但逐 provider 的 Python↔Go 行为等价未建立；本账本不对这些 MCP tool 给出 ported/unported。",
+    "python_files": 324,
+    "python_loc": 71393,
+    "python_non_test_files": 316,
+    "role": "Python 工具实现与 MCP server（集成、扫描器、文件/媒体工具）",
+    "tool_dirs": 105,
+    "tools_src_python_files": 400
+   },
+   {
+    "area": "core/frontend",
+    "coverage": "not_computed",
+    "go_counterpart": "go_hive/go-hive/frontend",
+    "go_files": 2132,
+    "go_src_files": 255,
+    "note": "前端不在包级账本内，未做逐组件对齐。",
+    "role": "React 前端；由 server 同端口提供静态文件",
+    "source_files": 233
+   },
+   {
+    "area": "core/hive",
+    "coverage": "not_applicable",
+    "note": "只再导出 core/framework 的名字，无独立实现，不构成待移植包。",
+    "python_files": 1,
+    "role": "公共再导出面（derivative projects 的导入面）"
+   }
+  ],
+  "scope_id": "core-framework-only",
+  "separate_modules": [
+   {
+    "go_files": 66,
+    "note": "独立 Go 模块，另有专项矩阵，不在本页包集合内",
+    "path": "go_hive/browserbridge"
+   },
+   {
+    "go_files": 40,
+    "note": "独立 Go 模块，另有专项矩阵，不在本页包集合内",
+    "path": "go_hive/go-hive-cloud"
+   }
+  ],
+  "status": "not_computed",
+  "unported_zero_scope": "C12 账本的 unported: 0 只覆盖 core/framework 的 273 个模块；不含 tools/src/aden_tools 与 core/frontend。",
+  "warning": "本页是 core/framework 的包级对照，不是全仓 parity 证明：tools/src/aden_tools 的 866 个 MCP tool 与 core/frontend 未计入任何 ported/unported 统计；集成面逐 provider 覆盖为 not_computed。"
+ },
+ "method": "静态包扫描 + 行为登记册锚点归属 + 外观维度状态；包级判定不等于逐行等价",
+ "module_notes": [
+  {
+   "evidence": "core/framework/tracker/*.py；C12 账本 tracker 5 模块：5 ported / 0 unported；internal/runtimelogs/runtime_log_store.go",
+   "modules": "decision_tracker.py → internal/tracker/decision_tracker.go（C12 ported）；stream_runtime.py → internal/tracker/stream_runtime.go；runtime_log_schemas/store/logger.py、llm_debug_logger.py → internal/runtimelogs + internal/agentloop/runtime_log.go",
+   "py": "tracker",
+   "verdict": "拆分：决策/流运行时已 ported；运行日志 ported"
+  },
+  {
+   "evidence": "contracts/module-inventory.json（testing 8 模块）；internal/testframework 的六组测试 + internal/cli/test_approval_test.go；上游用例 core/tests/test_testing_framework.py",
+   "modules": "llm_judge.py → internal/llmjudge（产品路径 skills/cli.py）；approval_cli/types、categorizer、debug_tool、test_case、test_result、test_storage → internal/testframework（隐藏 dev 命令 hive test-approval 调用）",
+   "py": "testing",
+   "verdict": "开发工具：8 ported / 0 unported"
+  },
+  {
+   "evidence": "core/framework/tools/*.py；对应 Go 文件见左列",
+   "modules": "queen_lifecycle_tools.py → internal/server/queen_lifecycle_tools.go；tracker_tools.py → internal/tracker/tools.go + colony/tasks tracker tools；worker_monitoring_tools.py → internal/server/queen_lifecycle_worker_status*.go；browser_tools.py → internal/tools/integrations/browser_tools.go",
+   "py": "tools",
+   "verdict": "拆分到 server/colony/tasks/tools"
+  },
+  {
+   "evidence": "host/agent_host.py:23 与 host/execution_manager.py:24 import framework.orchestrator；C12 账本 host 23 模块：18 ported / 3 partial / 2 范围外 / 0 unported",
+   "modules": "stream_runtime.py → internal/tracker/stream_runtime.go（C12 ported）；agent_host.py / shared_state.py → out_of_scope（图执行引擎）；colony_*→colony；event_bus/event_log→eventbus；playbook→playbook；triggers→triggers；shared_state→session；tracker_db→tracker",
+   "py": "host",
+   "verdict": "运行时主路径已迁 colony；stream_runtime 已移植，graph-era 宿主 out_of_scope"
+  },
+  {
+   "evidence": "core/framework/utils/*.py；C12 账本 utils 4 模块：1 ported / 1 partial / 2 unported",
+   "modules": "text.py humanize_slug → internal/server humanizeSlug / internal/cli humanizeColonyName（partial/call_chain）；io.py → internal/atomicfs；python_env.py、task_registry.py → C12 unported（P3）",
+   "py": "utils",
+   "verdict": "部分：io ported；text partial；2 unported"
+  },
+  {
+   "evidence": "core/framework/agents/queen/*.py；对应 Go 文件见左列",
+   "modules": "worker_definition.py → colony.BuildSystemPrompt；queen_tools_defaults.py → internal/queen；tools_ga_migration.py → internal/server|cli/tools_ga_migration.go",
+   "py": "agents",
+   "verdict": "拆分到 colony/queen/server/cli"
+  },
+  {
+   "evidence": "C12 账本 loader 10 模块：9 ported / 1 范围外；internal/agents/agent_spec.go:151 的 preload probe 只覆盖 worker spec 发现",
+   "modules": "agent_loader.py → internal/agents/agent_spec.go；preload_validation.py → C12 out_of_scope（图执行引擎）；mcp_* → internal/mcpregistry；tool_registry.py → internal/tools",
+   "py": "loader",
+   "verdict": "拆分；preload validation 范围外"
+  },
+  {
+   "evidence": "C12 账本 global_db 4 模块：3 ported / 1 unported；internal/globaldb",
+   "modules": "cli.py → C12 unported（P3，无 hive-global-db 命令）；client/count_cache/grid_query → internal/globaldb",
+   "py": "global_db",
+   "verdict": "部分：1 个 CLI 模块 unported"
+  },
+  {
+   "evidence": "C12 账本 server 41 模块：41 ported / 0 范围外；internal/streamtoken",
+   "modules": "streamtoken_refresh.py → internal/streamtoken（C12 ported）；routes/session/channels 等 40 模块 ported",
+   "py": "server",
+   "verdict": "部分：streamtoken 已补齐，其余登记差异仍在"
+  },
+  {
+   "evidence": "C12 账本 credentials 22 模块：19 ported / 3 partial / 0 unported；internal/credentials/oauth2_*.go、aden_sync.go、aden_presync.go、agent_validation.go",
+   "modules": "catalog/key_storage/store/validation/models → internal/credentials（19 ported）；oauth2 provider family（base/hubspot/zoho/lifecycle）与 AdenSyncProvider/AdenCachedStorage/ValidateAccount 已落地；真实 Aden OAuth 未跑（无凭据）",
+   "py": "credentials",
+   "verdict": "结构对应；C12 19 ported / 3 partial / 0 unported"
+  }
+ ],
+ "pairs": [
+  {
+   "basis": "config.py→hiveconf/pyenv/envcontract；cli.py→cli；rate_limiter.py→ratelimit；__init__ 的 ColonyRuntime/AgentLoop 只是再导出",
+   "c12": {
+    "out_of_scope": 0,
+    "partial": 2,
+    "ported": 4,
+    "unported": 0
+   },
+   "dims": [
+    {
+     "id": "config-json",
+     "status": "partial"
+    },
+    {
+     "id": "env-vars",
+     "status": "partial"
+    },
+    {
+     "id": "cli",
+     "status": "partial"
+    }
+   ],
+   "go": [
+    {
+     "files": 82,
+     "importers": 4,
+     "loc": 18847,
+     "name": "cli",
+     "package": "internal/cli",
+     "parity_refs": 290,
+     "test_files": 97,
+     "test_funcs": 432
+    },
+    {
+     "files": 3,
+     "importers": 9,
+     "loc": 958,
+     "name": "hiveconf",
+     "package": "internal/hiveconf",
+     "parity_refs": 14,
+     "test_files": 2,
+     "test_funcs": 14
+    },
+    {
+     "files": 1,
+     "importers": 11,
+     "loc": 225,
+     "name": "pyenv",
+     "package": "internal/pyenv",
+     "parity_refs": 2,
+     "test_files": 1,
+     "test_funcs": 5
+    },
+    {
+     "files": 1,
+     "importers": 0,
+     "loc": 9,
+     "name": "envcontract",
+     "package": "internal/envcontract",
+     "parity_refs": 0,
+     "test_files": 2,
+     "test_funcs": 3
+    },
+    {
+     "files": 2,
+     "importers": 4,
+     "loc": 992,
+     "name": "ratelimit",
+     "package": "internal/ratelimit",
+     "parity_refs": 22,
+     "test_files": 2,
+     "test_funcs": 32
+    }
+   ],
+   "go_totals": {
+    "files": 89,
+    "loc": 21031,
+    "parity_refs": 328,
+    "test_funcs": 486
+   },
+   "importers_min": 4,
+   "loc_ratio": 9.97,
+   "note": "根模块按文件拆分映射，不是一个 Go 包",
+   "open_gaps": [],
+   "py": "(root)",
+   "py_files": 6,
+   "py_loc": 2110,
+   "py_test_files": 0,
+   "registry": {
+    "bad_ids": [],
+    "bad_rows": 0,
+    "builder": 0,
+    "missing": 0,
+    "partial": 0,
+    "ported": 2,
+    "rows": 4,
+    "ungated": 2
+   },
+   "unwired": [],
+   "unwired_exempt": [
+    "envcontract"
+   ],
+   "verdict": "partial_phase"
+  },
+  {
+   "basis": "AgentLoop → agentloop；附件合成工具 → attachments/tools",
+   "c12": {
+    "out_of_scope": 0,
+    "partial": 3,
+    "ported": 26,
+    "unported": 0
+   },
+   "dims": [
+    {
+     "id": "orchestration",
+     "status": "partial"
+    }
+   ],
+   "go": [
+    {
+     "files": 69,
+     "importers": 64,
+     "loc": 17116,
+     "name": "agentloop",
+     "package": "internal/agentloop",
+     "parity_refs": 534,
+     "test_files": 78,
+     "test_funcs": 601
+    },
+    {
+     "files": 1,
+     "importers": 3,
+     "loc": 159,
+     "name": "attachments",
+     "package": "internal/attachments",
+     "parity_refs": 0,
+     "test_files": 1,
+     "test_funcs": 5
+    }
+   ],
+   "go_totals": {
+    "files": 70,
+    "loc": 17275,
+    "parity_refs": 534,
+    "test_funcs": 606
+   },
+   "importers_min": 3,
+   "loc_ratio": 0.98,
+   "note": "synthetic dispatch 的 1 missing(credentials) / 2 builder-only 全部锚定本包",
+   "open_gaps": [],
+   "py": "agent_loop",
+   "py_files": 30,
+   "py_loc": 17616,
+   "py_test_files": 2,
+   "registry": {
+    "bad_ids": [
+     "synthetic:collect_result",
+     "synthetic:credentials",
+     "synthetic:set_output"
+    ],
+    "bad_rows": 3,
+    "builder": 2,
+    "missing": 1,
+    "partial": 0,
+    "ported": 6,
+    "rows": 12,
+    "ungated": 3
+   },
+   "unwired": [],
+   "unwired_exempt": [],
+   "verdict": "partial_registry"
+  },
+  {
+   "basis": "agents/discovery→agents；agents/queen/*→queen + soul + memory",
+   "c12": {
+    "out_of_scope": 0,
+    "partial": 4,
+    "ported": 15,
+    "unported": 0
+   },
+   "dims": [
+    {
+     "id": "orchestration",
+     "status": "partial"
+    },
+    {
+     "id": "memory-soul",
+     "status": "partial"
+    }
+   ],
+   "go": [
+    {
+     "files": 7,
+     "importers": 5,
+     "loc": 1420,
+     "name": "agents",
+     "package": "internal/agents",
+     "parity_refs": 29,
+     "test_files": 7,
+     "test_funcs": 60
+    },
+    {
+     "files": 4,
+     "importers": 18,
+     "loc": 984,
+     "name": "queen",
+     "package": "internal/queen",
+     "parity_refs": 20,
+     "test_files": 3,
+     "test_funcs": 22
+    },
+    {
+     "files": 7,
+     "importers": 11,
+     "loc": 3123,
+     "name": "soul",
+     "package": "internal/soul",
+     "parity_refs": 18,
+     "test_files": 5,
+     "test_funcs": 38
+    },
+    {
+     "files": 12,
+     "importers": 18,
+     "loc": 5617,
+     "name": "memory",
+     "package": "internal/memory",
+     "parity_refs": 128,
+     "test_files": 16,
+     "test_funcs": 146
+    }
+   ],
+   "go_totals": {
+    "files": 30,
+    "loc": 11144,
+    "parity_refs": 195,
+    "test_funcs": 266
+   },
+   "importers_min": 5,
+   "loc_ratio": 1.59,
+   "note": "Queen 档案、soul、记忆是 4 个 Go 包，不存在同名 1:1 包",
+   "open_gaps": [],
+   "py": "agents",
+   "py_files": 19,
+   "py_loc": 6993,
+   "py_test_files": 4,
+   "registry": {
+    "bad_ids": [],
+    "bad_rows": 0,
+    "builder": 0,
+    "missing": 0,
+    "partial": 0,
+    "ported": 2,
+    "rows": 2,
+    "ungated": 0
+   },
+   "unwired": [],
+   "unwired_exempt": [],
+   "verdict": "partial_dim"
+  },
+  {
+   "basis": "catalog/key_storage/store/validation→credentials；oauth2/*→oauth_refresh；aden/client.py→internal/credentials/aden_client.go（pre-sync 已接入 ValidateAgentCredentials）",
+   "c12": {
+    "out_of_scope": 0,
+    "partial": 3,
+    "ported": 19,
+    "unported": 0
+   },
+   "dims": [],
+   "go": [
+    {
+     "files": 34,
+     "importers": 23,
+     "loc": 12620,
+     "name": "credentials",
+     "package": "internal/credentials",
+     "parity_refs": 147,
+     "test_files": 32,
+     "test_funcs": 193
+    }
+   ],
+   "go_totals": {
+    "files": 34,
+    "loc": 12620,
+    "parity_refs": 147,
+    "test_funcs": 193
+   },
+   "importers_min": 23,
+   "loc_ratio": 1.59,
+   "note": "C12 19 ported / 3 partial / 0 unported：OAuth2 provider family、AdenSyncProvider/AdenCachedStorage、ValidateAccount 已实现；真实 Aden OAuth 未跑（无凭据）",
+   "open_gaps": [],
+   "py": "credentials",
+   "py_files": 25,
+   "py_loc": 7922,
+   "py_test_files": 4,
+   "registry": {
+    "bad_ids": [],
+    "bad_rows": 0,
+    "builder": 0,
+    "missing": 0,
+    "partial": 0,
+    "ported": 0,
+    "rows": 0,
+    "ungated": 0
+   },
+   "unwired": [],
+   "unwired_exempt": [],
+   "verdict": "struct_only"
+  },
+  {
+   "basis": "debugger/cli.py → internal/cli/debugger.go",
+   "c12": {
+    "out_of_scope": 0,
+    "partial": 0,
+    "ported": 1,
+    "unported": 0
+   },
+   "dims": [
+    {
+     "id": "cli",
+     "status": "partial"
+    }
+   ],
+   "go": [
+    {
+     "files": 82,
+     "importers": 4,
+     "loc": 18847,
+     "name": "cli",
+     "package": "internal/cli",
+     "parity_refs": 290,
+     "test_files": 97,
+     "test_funcs": 432
+    }
+   ],
+   "go_totals": {
+    "files": 82,
+    "loc": 18847,
+    "parity_refs": 290,
+    "test_funcs": 432
+   },
+   "importers_min": 4,
+   "loc_ratio": 192.32,
+   "note": "Go 不单独建包，落在 cli 内",
+   "open_gaps": [],
+   "py": "debugger",
+   "py_files": 2,
+   "py_loc": 98,
+   "py_test_files": 0,
+   "registry": {
+    "bad_ids": [],
+    "bad_rows": 0,
+    "builder": 0,
+    "missing": 0,
+    "partial": 0,
+    "ported": 0,
+    "rows": 0,
+    "ungated": 0
+   },
+   "unwired": [],
+   "unwired_exempt": [],
+   "verdict": "partial_dim"
+  },
+  {
+   "basis": "1:1（5 vs 3 文件；LOC 713 vs 772）",
+   "c12": {
+    "out_of_scope": 0,
+    "partial": 0,
+    "ported": 4,
+    "unported": 0
+   },
+   "dims": [],
+   "go": [
+    {
+     "files": 3,
+     "importers": 6,
+     "loc": 772,
+     "name": "globaldb",
+     "package": "internal/globaldb",
+     "parity_refs": 23,
+     "test_files": 1,
+     "test_funcs": 23
+    }
+   ],
+   "go_totals": {
+    "files": 3,
+    "loc": 772,
+    "parity_refs": 23,
+    "test_funcs": 23
+   },
+   "importers_min": 6,
+   "loc_ratio": 1.08,
+   "note": "云端 global DB 客户端；无外观维度覆盖",
+   "open_gaps": [],
+   "py": "global_db",
+   "py_files": 5,
+   "py_loc": 713,
+   "py_test_files": 2,
+   "registry": {
+    "bad_ids": [],
+    "bad_rows": 0,
+    "builder": 0,
+    "missing": 0,
+    "partial": 0,
+    "ported": 0,
+    "rows": 0,
+    "ungated": 0
+   },
+   "unwired": [],
+   "unwired_exempt": [],
+   "verdict": "struct_only"
+  },
+  {
+   "basis": "event_bus→eventbus；colony_*/worker→colony；playbook→playbook；triggers→triggers；tracker_db→tracker；stream_runtime→tracker；runtime_health→runtimehealth；runtime_resources→resources；webhook_server→server；shared_state→session",
+   "c12": {
+    "out_of_scope": 2,
+    "partial": 3,
+    "ported": 18,
+    "unported": 0
+   },
+   "dims": [
+    {
+     "id": "scheduling",
+     "status": "partial"
+    },
+    {
+     "id": "disk-contract",
+     "status": "partial"
+    },
+    {
+     "id": "orchestration",
+     "status": "partial"
+    }
+   ],
+   "go": [
+    {
+     "files": 3,
+     "importers": 4,
+     "loc": 567,
+     "name": "host",
+     "package": "internal/host",
+     "parity_refs": 3,
+     "test_files": 5,
+     "test_funcs": 11
+    },
+    {
+     "files": 52,
+     "importers": 25,
+     "loc": 12273,
+     "name": "colony",
+     "package": "internal/colony",
+     "parity_refs": 235,
+     "test_files": 61,
+     "test_funcs": 280
+    },
+    {
+     "files": 9,
+     "importers": 54,
+     "loc": 2302,
+     "name": "eventbus",
+     "package": "internal/eventbus",
+     "parity_refs": 119,
+     "test_files": 7,
+     "test_funcs": 117
+    },
+    {
+     "files": 7,
+     "importers": 3,
+     "loc": 2538,
+     "name": "playbook",
+     "package": "internal/playbook",
+     "parity_refs": 47,
+     "test_files": 6,
+     "test_funcs": 62
+    },
+    {
+     "files": 3,
+     "importers": 7,
+     "loc": 1309,
+     "name": "triggers",
+     "package": "internal/triggers",
+     "parity_refs": 37,
+     "test_files": 3,
+     "test_funcs": 38
+    },
+    {
+     "files": 3,
+     "importers": 15,
+     "loc": 1055,
+     "name": "session",
+     "package": "internal/session",
+     "parity_refs": 11,
+     "test_files": 4,
+     "test_funcs": 23
+    },
+    {
+     "files": 7,
+     "importers": 19,
+     "loc": 3166,
+     "name": "tracker",
+     "package": "internal/tracker",
+     "parity_refs": 66,
+     "test_files": 6,
+     "test_funcs": 73
+    },
+    {
+     "files": 1,
+     "importers": 2,
+     "loc": 124,
+     "name": "runtimehealth",
+     "package": "internal/runtimehealth",
+     "parity_refs": 0,
+     "test_files": 1,
+     "test_funcs": 3
+    },
+    {
+     "files": 4,
+     "importers": 2,
+     "loc": 830,
+     "name": "resources",
+     "package": "internal/resources",
+     "parity_refs": 12,
+     "test_files": 2,
+     "test_funcs": 15
+    },
+    {
+     "files": 147,
+     "importers": 35,
+     "loc": 47764,
+     "name": "server",
+     "package": "internal/server",
+     "parity_refs": 823,
+     "test_files": 186,
+     "test_funcs": 1190
+    }
+   ],
+   "go_totals": {
+    "files": 236,
+    "loc": 71928,
+    "parity_refs": 1353,
+    "test_funcs": 1812
+   },
+   "importers_min": 2,
+   "loc_ratio": 5.42,
+   "note": "1:N 拆分最重的一行（10 个 Go 包）",
+   "open_gaps": [],
+   "py": "host",
+   "py_files": 24,
+   "py_loc": 13272,
+   "py_test_files": 0,
+   "registry": {
+    "bad_ids": [
+     "event:context_compaction_started",
+     "event:credential_provider_connected",
+     "event:credential_provider_disconnected",
+     "event:credentials_required",
+     "event:crm_changed",
+     "event:execution_resurrected",
+     "event:goal_achieved",
+     "event:missed_triggers",
+     "event:payment_required",
+     "event:session_snapshot",
+     "event:skill_install_requested",
+     "event:state_conflict",
+     "event:stream_started",
+     "event:stream_stopped",
+     "event:task_list_reattach_mismatch",
+     "event:task_list_reset",
+     "event:tool_call_replay_detected",
+     "event:tool_catalog_refreshed",
+     "event:tools_config_changed",
+     "event:trigger_available",
+     "event:trigger_removed",
+     "event:worker_colony_loaded"
+    ],
+    "bad_rows": 22,
+    "builder": 0,
+    "missing": 0,
+    "partial": 22,
+    "ported": 56,
+    "rows": 83,
+    "ungated": 5
+   },
+   "unwired": [],
+   "unwired_exempt": [],
+   "verdict": "partial_registry"
+  },
+  {
+   "basis": "llm/*→llm；图像 caption 回退→visionfallback",
+   "c12": {
+    "out_of_scope": 0,
+    "partial": 1,
+    "ported": 11,
+    "unported": 0
+   },
+   "dims": [
+    {
+     "id": "sse",
+     "status": "measured_aligned"
+    },
+    {
+     "id": "limits",
+     "status": "measured_aligned"
+    }
+   ],
+   "go": [
+    {
+     "files": 27,
+     "importers": 128,
+     "loc": 9917,
+     "name": "llm",
+     "package": "internal/llm",
+     "parity_refs": 252,
+     "test_files": 28,
+     "test_funcs": 326
+    },
+    {
+     "files": 1,
+     "importers": 2,
+     "loc": 526,
+     "name": "visionfallback",
+     "package": "internal/visionfallback",
+     "parity_refs": 7,
+     "test_files": 2,
+     "test_funcs": 10
+    }
+   ],
+   "go_totals": {
+    "files": 28,
+    "loc": 10443,
+    "parity_refs": 259,
+    "test_funcs": 336
+   },
+   "importers_min": 2,
+   "loc_ratio": 1.7,
+   "note": "只在 SSE 帧与限速两维有实测；main/worker/judge 模型槽位不在本页证据范围",
+   "open_gaps": [],
+   "py": "llm",
+   "py_files": 12,
+   "py_loc": 6146,
+   "py_test_files": 0,
+   "registry": {
+    "bad_ids": [],
+    "bad_rows": 0,
+    "builder": 0,
+    "missing": 0,
+    "partial": 0,
+    "ported": 0,
+    "rows": 0,
+    "ungated": 0
+   },
+   "unwired": [],
+   "unwired_exempt": [],
+   "verdict": "aligned"
+  },
+  {
+   "basis": "mcp_*→mcpregistry；tool_registry→tools/registry；agent_loader→agents/agent_spec；preload_validation 属 graph-era",
+   "c12": {
+    "out_of_scope": 1,
+    "partial": 0,
+    "ported": 9,
+    "unported": 0
+   },
+   "dims": [
+    {
+     "id": "mcp",
+     "status": "partial"
+    }
+   ],
+   "go": [
+    {
+     "files": 22,
+     "importers": 6,
+     "loc": 8630,
+     "name": "mcpregistry",
+     "package": "internal/mcpregistry",
+     "parity_refs": 167,
+     "test_files": 20,
+     "test_funcs": 226
+    },
+    {
+     "files": 344,
+     "importers": 44,
+     "loc": 86658,
+     "name": "tools",
+     "package": "internal/tools",
+     "parity_refs": 1275,
+     "test_files": 152,
+     "test_funcs": 1738
+    },
+    {
+     "files": 7,
+     "importers": 5,
+     "loc": 1420,
+     "name": "agents",
+     "package": "internal/agents",
+     "parity_refs": 29,
+     "test_files": 7,
+     "test_funcs": 60
+    }
+   ],
+   "go_totals": {
+    "files": 373,
+    "loc": 96708,
+    "parity_refs": 1471,
+    "test_funcs": 2024
+   },
+   "importers_min": 5,
+   "loc_ratio": 10.89,
+   "note": "Go 没有 loader 包，按职责拆到 3 个包；preload_validation.py 是图编排预检，Go 无等价实现（与 orchestrator 未接线同源）",
+   "open_gaps": [],
+   "py": "loader",
+   "py_files": 11,
+   "py_loc": 8878,
+   "py_test_files": 0,
+   "registry": {
+    "bad_ids": [],
+    "bad_rows": 0,
+    "builder": 0,
+    "missing": 0,
+    "partial": 0,
+    "ported": 0,
+    "rows": 0,
+    "ungated": 0
+   },
+   "unwired": [],
+   "unwired_exempt": [],
+   "verdict": "partial_dim"
+  },
+  {
+   "basis": "1:1（5 vs 8 文件；LOC 1,834 vs 2,432）",
+   "c12": {
+    "out_of_scope": 0,
+    "partial": 0,
+    "ported": 4,
+    "unported": 0
+   },
+   "dims": [],
+   "go": [
+    {
+     "files": 8,
+     "importers": 3,
+     "loc": 2434,
+     "name": "maintenance",
+     "package": "internal/maintenance",
+     "parity_refs": 47,
+     "test_files": 7,
+     "test_funcs": 45
+    }
+   ],
+   "go_totals": {
+    "files": 8,
+    "loc": 2434,
+    "parity_refs": 47,
+    "test_funcs": 45
+   },
+   "importers_min": 3,
+   "loc_ratio": 1.33,
+   "note": "Janitor；无外观维度覆盖",
+   "open_gaps": [],
+   "py": "maintenance",
+   "py_files": 5,
+   "py_loc": 1834,
+   "py_test_files": 0,
+   "registry": {
+    "bad_ids": [],
+    "bad_rows": 0,
+    "builder": 0,
+    "missing": 0,
+    "partial": 0,
+    "ported": 0,
+    "rows": 0,
+    "ungated": 0
+   },
+   "unwired": [],
+   "unwired_exempt": [],
+   "verdict": "struct_only"
+  },
+  {
+   "basis": "logging.py→logging+runtimelogs；health 快照→runtimehealth",
+   "c12": {
+    "out_of_scope": 0,
+    "partial": 0,
+    "ported": 1,
+    "unported": 0
+   },
+   "dims": [
+    {
+     "id": "observability",
+     "status": "partial"
+    }
+   ],
+   "go": [
+    {
+     "files": 1,
+     "importers": 2,
+     "loc": 187,
+     "name": "logging",
+     "package": "internal/logging",
+     "parity_refs": 4,
+     "test_files": 1,
+     "test_funcs": 5
+    },
+    {
+     "files": 3,
+     "importers": 7,
+     "loc": 962,
+     "name": "runtimelogs",
+     "package": "internal/runtimelogs",
+     "parity_refs": 37,
+     "test_files": 3,
+     "test_funcs": 39
+    },
+    {
+     "files": 1,
+     "importers": 2,
+     "loc": 124,
+     "name": "runtimehealth",
+     "package": "internal/runtimehealth",
+     "parity_refs": 0,
+     "test_files": 1,
+     "test_funcs": 3
+    }
+   ],
+   "go_totals": {
+    "files": 5,
+    "loc": 1273,
+    "parity_refs": 41,
+    "test_funcs": 47
+   },
+   "importers_min": 2,
+   "loc_ratio": 2.95,
+   "note": "结构化 logger 层仍是 observability 维度的 partial 项",
+   "open_gaps": [],
+   "py": "observability",
+   "py_files": 2,
+   "py_loc": 432,
+   "py_test_files": 0,
+   "registry": {
+    "bad_ids": [],
+    "bad_rows": 0,
+    "builder": 0,
+    "missing": 0,
+    "partial": 0,
+    "ported": 0,
+    "rows": 0,
+    "ungated": 0
+   },
+   "unwired": [],
+   "unwired_exempt": [],
+   "verdict": "partial_dim"
+  },
+  {
+   "basis": "13 vs 0 文件；Python 图编排引擎在 Go 侧不实现（out_of_scope，w201 删除无生产导入方的死包）",
+   "c12": {
+    "out_of_scope": 7,
+    "partial": 4,
+    "ported": 2,
+    "unported": 0
+   },
+   "dims": [
+    {
+     "id": "orchestration",
+     "status": "partial"
+    }
+   ],
+   "go": [],
+   "go_totals": {
+    "files": 0,
+    "loc": 0,
+    "parity_refs": 0,
+    "test_funcs": 0
+   },
+   "importers_min": 0,
+   "loc_ratio": 0.0,
+   "note": "Go 无 graph 运行时；原 internal/orchestrator 孤岛已删除，不得再登记为已移植",
+   "open_gaps": [],
+   "py": "orchestrator",
+   "py_files": 13,
+   "py_loc": 5751,
+   "py_test_files": 0,
+   "registry": {
+    "bad_ids": [],
+    "bad_rows": 0,
+    "builder": 0,
+    "missing": 0,
+    "partial": 0,
+    "ported": 0,
+    "rows": 0,
+    "ungated": 0
+   },
+   "unwired": [],
+   "unwired_exempt": [],
+   "verdict": "missing"
+  },
+  {
+   "basis": "1:1（12 vs 12 文件；7 个内置 stage）",
+   "c12": {
+    "out_of_scope": 0,
+    "partial": 0,
+    "ported": 10,
+    "unported": 0
+   },
+   "dims": [],
+   "go": [
+    {
+     "files": 15,
+     "importers": 4,
+     "loc": 1768,
+     "name": "pipeline",
+     "package": "internal/pipeline",
+     "parity_refs": 19,
+     "test_files": 12,
+     "test_funcs": 72
+    }
+   ],
+   "go_totals": {
+    "files": 15,
+    "loc": 1768,
+    "parity_refs": 19,
+    "test_funcs": 72
+   },
+   "importers_min": 4,
+   "loc_ratio": 2.25,
+   "note": "无外观维度覆盖；靠包内测试与 parity 注解看守",
+   "open_gaps": [],
+   "py": "pipeline",
+   "py_files": 12,
+   "py_loc": 787,
+   "py_test_files": 0,
+   "registry": {
+    "bad_ids": [],
+    "bad_rows": 0,
+    "builder": 0,
+    "missing": 0,
+    "partial": 0,
+    "ported": 0,
+    "rows": 0,
+    "ungated": 0
+   },
+   "unwired": [],
+   "unwired_exempt": [],
+   "verdict": "struct_only"
+  },
+  {
+   "basis": "Python 包只有 1 个测试文件、0 个非测试文件",
+   "c12": {
+    "out_of_scope": 0,
+    "partial": 0,
+    "ported": 0,
+    "unported": 0
+   },
+   "dims": [],
+   "go": [],
+   "go_totals": {
+    "files": 0,
+    "loc": 0,
+    "parity_refs": 0,
+    "test_funcs": 0
+   },
+   "importers_min": 0,
+   "loc_ratio": null,
+   "note": "仅测试壳，不构成待移植包",
+   "open_gaps": [],
+   "py": "runtime",
+   "py_files": 0,
+   "py_loc": 0,
+   "py_test_files": 1,
+   "registry": {
+    "bad_ids": [],
+    "bad_rows": 0,
+    "builder": 0,
+    "missing": 0,
+    "partial": 0,
+    "ported": 0,
+    "rows": 0,
+    "ungated": 0
+   },
+   "unwired": [],
+   "unwired_exempt": [],
+   "verdict": "test_only"
+  },
+  {
+   "basis": "1:1（7 vs 8 文件；LOC 1,281 vs 2,745）",
+   "c12": {
+    "out_of_scope": 0,
+    "partial": 1,
+    "ported": 5,
+    "unported": 0
+   },
+   "dims": [
+    {
+     "id": "formats",
+     "status": "measured_aligned"
+    },
+    {
+     "id": "wire-proto",
+     "status": "partial"
+    }
+   ],
+   "go": [
+    {
+     "files": 8,
+     "importers": 12,
+     "loc": 2991,
+     "name": "schemas",
+     "package": "internal/schemas",
+     "parity_refs": 20,
+     "test_files": 3,
+     "test_funcs": 20
+    }
+   ],
+   "go_totals": {
+    "files": 8,
+    "loc": 2991,
+    "parity_refs": 20,
+    "test_funcs": 20
+   },
+   "importers_min": 12,
+   "loc_ratio": 2.33,
+   "note": "formats 已实测；wire-proto 仍 partial（60 端点未映射）",
+   "open_gaps": [],
+   "py": "schemas",
+   "py_files": 7,
+   "py_loc": 1281,
+   "py_test_files": 0,
+   "registry": {
+    "bad_ids": [],
+    "bad_rows": 0,
+    "builder": 0,
+    "missing": 0,
+    "partial": 0,
+    "ported": 0,
+    "rows": 0,
+    "ungated": 0
+   },
+   "unwired": [],
+   "unwired_exempt": [],
+   "verdict": "partial_dim"
+  },
+  {
+   "basis": "1:1（9 vs 12 文件；LOC 2,090 vs 4,490）",
+   "c12": {
+    "out_of_scope": 0,
+    "partial": 0,
+    "ported": 8,
+    "unported": 0
+   },
+   "dims": [
+    {
+     "id": "scheduling",
+     "status": "partial"
+    }
+   ],
+   "go": [
+    {
+     "files": 13,
+     "importers": 5,
+     "loc": 4847,
+     "name": "sentinel",
+     "package": "internal/sentinel",
+     "parity_refs": 104,
+     "test_files": 13,
+     "test_funcs": 135
+    }
+   ],
+   "go_totals": {
+    "files": 13,
+    "loc": 4847,
+    "parity_refs": 104,
+    "test_funcs": 135
+   },
+   "importers_min": 5,
+   "loc_ratio": 2.32,
+   "note": "nudge/escalate 主路径已移植，missed-fire 场景仍缺",
+   "open_gaps": [],
+   "py": "sentinel",
+   "py_files": 9,
+   "py_loc": 2090,
+   "py_test_files": 0,
+   "registry": {
+    "bad_ids": [],
+    "bad_rows": 0,
+    "builder": 0,
+    "missing": 0,
+    "partial": 0,
+    "ported": 1,
+    "rows": 1,
+    "ungated": 0
+   },
+   "unwired": [],
+   "unwired_exempt": [],
+   "verdict": "partial_dim"
+  },
+  {
+   "basis": "routes_*/app→server；session_manager→session；_session_report→sessionreport；channels→channels；claude_code_queens→claudecode；queen_mail→queenmail；streamtoken_refresh→streamtoken",
+   "c12": {
+    "out_of_scope": 0,
+    "partial": 0,
+    "ported": 41,
+    "unported": 0
+   },
+   "dims": [
+    {
+     "id": "api-routes",
+     "status": "measured_aligned"
+    },
+    {
+     "id": "sse",
+     "status": "measured_aligned"
+    },
+    {
+     "id": "errors",
+     "status": "measured_aligned"
+    },
+    {
+     "id": "frontend",
+     "status": "partial"
+    },
+    {
+     "id": "disk-contract",
+     "status": "partial"
+    },
+    {
+     "id": "migration",
+     "status": "partial"
+    }
+   ],
+   "go": [
+    {
+     "files": 147,
+     "importers": 35,
+     "loc": 47764,
+     "name": "server",
+     "package": "internal/server",
+     "parity_refs": 823,
+     "test_files": 186,
+     "test_funcs": 1190
+    },
+    {
+     "files": 3,
+     "importers": 15,
+     "loc": 1055,
+     "name": "session",
+     "package": "internal/session",
+     "parity_refs": 11,
+     "test_files": 4,
+     "test_funcs": 23
+    },
+    {
+     "files": 1,
+     "importers": 1,
+     "loc": 363,
+     "name": "sessionreport",
+     "package": "internal/sessionreport",
+     "parity_refs": 0,
+     "test_files": 1,
+     "test_funcs": 10
+    },
+    {
+     "files": 8,
+     "importers": 4,
+     "loc": 2234,
+     "name": "channels",
+     "package": "internal/channels",
+     "parity_refs": 18,
+     "test_files": 4,
+     "test_funcs": 24
+    },
+    {
+     "files": 8,
+     "importers": 2,
+     "loc": 1627,
+     "name": "claudecode",
+     "package": "internal/claudecode",
+     "parity_refs": 21,
+     "test_files": 7,
+     "test_funcs": 27
+    },
+    {
+     "files": 8,
+     "importers": 8,
+     "loc": 2116,
+     "name": "queenmail",
+     "package": "internal/queenmail",
+     "parity_refs": 14,
+     "test_files": 7,
+     "test_funcs": 38
+    },
+    {
+     "files": 3,
+     "importers": 1,
+     "loc": 540,
+     "name": "streamtoken",
+     "package": "internal/streamtoken",
+     "parity_refs": 23,
+     "test_files": 3,
+     "test_funcs": 25
+    }
+   ],
+   "go_totals": {
+    "files": 178,
+    "loc": 55699,
+    "parity_refs": 910,
+    "test_funcs": 1337
+   },
+   "importers_min": 1,
+   "loc_ratio": 2.06,
+   "note": "3 个 open gap 中 2 个锚定本行（colony pivot 501、DM fork 不压缩）",
+   "open_gaps": [],
+   "py": "server",
+   "py_files": 42,
+   "py_loc": 26985,
+   "py_test_files": 32,
+   "registry": {
+    "bad_ids": [],
+    "bad_rows": 0,
+    "builder": 0,
+    "missing": 0,
+    "partial": 0,
+    "ported": 0,
+    "rows": 6,
+    "ungated": 6
+   },
+   "unwired": [],
+   "unwired_exempt": [],
+   "verdict": "partial_phase"
+  },
+  {
+   "basis": "1:1（19 vs 20 文件；LOC 5,004 vs 4,814）",
+   "c12": {
+    "out_of_scope": 0,
+    "partial": 0,
+    "ported": 18,
+    "unported": 0
+   },
+   "dims": [
+    {
+     "id": "builtin-skills",
+     "status": "measured_aligned"
+    }
+   ],
+   "go": [
+    {
+     "files": 21,
+     "importers": 24,
+     "loc": 5273,
+     "name": "skills",
+     "package": "internal/skills",
+     "parity_refs": 202,
+     "test_files": 21,
+     "test_funcs": 257
+    }
+   ],
+   "go_totals": {
+    "files": 21,
+    "loc": 5273,
+    "parity_refs": 202,
+    "test_funcs": 257
+   },
+   "importers_min": 24,
+   "loc_ratio": 1.05,
+   "note": "builtin-skills 清单 195/195 已实测；安装事件仍在 server 侧",
+   "open_gaps": [],
+   "py": "skills",
+   "py_files": 19,
+   "py_loc": 5004,
+   "py_test_files": 0,
+   "registry": {
+    "bad_ids": [],
+    "bad_rows": 0,
+    "builder": 0,
+    "missing": 0,
+    "partial": 0,
+    "ported": 0,
+    "rows": 1,
+    "ungated": 1
+   },
+   "unwired": [],
+   "unwired_exempt": [],
+   "verdict": "partial_phase"
+  },
+  {
+   "basis": "storage/*→storage；HIVE_HOME 布局/ensure→hivehome",
+   "c12": {
+    "out_of_scope": 0,
+    "partial": 0,
+    "ported": 8,
+    "unported": 0
+   },
+   "dims": [
+    {
+     "id": "disk-contract",
+     "status": "partial"
+    }
+   ],
+   "go": [
+    {
+     "files": 8,
+     "importers": 6,
+     "loc": 2104,
+     "name": "storage",
+     "package": "internal/storage",
+     "parity_refs": 55,
+     "test_files": 6,
+     "test_funcs": 63
+    },
+    {
+     "files": 1,
+     "importers": 153,
+     "loc": 199,
+     "name": "hivehome",
+     "package": "internal/hivehome",
+     "parity_refs": 2,
+     "test_files": 1,
+     "test_funcs": 4
+    }
+   ],
+   "go_totals": {
+    "files": 9,
+    "loc": 2303,
+    "parity_refs": 57,
+    "test_funcs": 67
+   },
+   "importers_min": 6,
+   "loc_ratio": 1.01,
+   "note": "disk-contract 仍 partial（SC-02/03/04/06）",
+   "open_gaps": [],
+   "py": "storage",
+   "py_files": 9,
+   "py_loc": 2279,
+   "py_test_files": 0,
+   "registry": {
+    "bad_ids": [],
+    "bad_rows": 0,
+    "builder": 0,
+    "missing": 0,
+    "partial": 0,
+    "ported": 0,
+    "rows": 0,
+    "ungated": 0
+   },
+   "unwired": [],
+   "unwired_exempt": [],
+   "verdict": "partial_dim"
+  },
+  {
+   "basis": "1:1（13 vs 13 文件；LOC 3,102 vs 3,311）",
+   "c12": {
+    "out_of_scope": 0,
+    "partial": 1,
+    "ported": 10,
+    "unported": 0
+   },
+   "dims": [
+    {
+     "id": "scheduling",
+     "status": "partial"
+    }
+   ],
+   "go": [
+    {
+     "files": 14,
+     "importers": 16,
+     "loc": 3654,
+     "name": "tasks",
+     "package": "internal/tasks",
+     "parity_refs": 136,
+     "test_files": 10,
+     "test_funcs": 138
+    }
+   ],
+   "go_totals": {
+    "files": 14,
+    "loc": 3654,
+    "parity_refs": 136,
+    "test_funcs": 138
+   },
+   "importers_min": 16,
+   "loc_ratio": 1.18,
+   "note": "tasks 提醒源在 worker/overseer 的注册仍有残余",
+   "open_gaps": [],
+   "py": "tasks",
+   "py_files": 13,
+   "py_loc": 3102,
+   "py_test_files": 7,
+   "registry": {
+    "bad_ids": [],
+    "bad_rows": 0,
+    "builder": 0,
+    "missing": 0,
+    "partial": 0,
+    "ported": 0,
+    "rows": 3,
+    "ungated": 3
+   },
+   "unwired": [],
+   "unwired_exempt": [],
+   "verdict": "partial_phase"
+  },
+  {
+   "basis": "testing/llm_judge.py → llmjudge；approval_cli/approval_types/categorizer/debug_tool/test_case/test_result/test_storage → testframework（隐藏 dev 命令 hive test-approval 调用）",
+   "c12": {
+    "out_of_scope": 0,
+    "partial": 0,
+    "ported": 8,
+    "unported": 0
+   },
+   "dims": [
+    {
+     "id": "judge",
+     "status": "partial"
+    }
+   ],
+   "go": [
+    {
+     "files": 1,
+     "importers": 2,
+     "loc": 220,
+     "name": "llmjudge",
+     "package": "internal/llmjudge",
+     "parity_refs": 25,
+     "test_files": 2,
+     "test_funcs": 25
+    },
+    {
+     "files": 8,
+     "importers": 1,
+     "loc": 2197,
+     "name": "testframework",
+     "package": "internal/testframework",
+     "parity_refs": 30,
+     "test_files": 8,
+     "test_funcs": 62
+    }
+   ],
+   "go_totals": {
+    "files": 9,
+    "loc": 2417,
+    "parity_refs": 55,
+    "test_funcs": 87
+   },
+   "importers_min": 1,
+   "loc_ratio": 2.09,
+   "note": "8/8 ported：llm_judge 走产品路径 skills/cli.py；其余 7 个为开发工具，由隐藏 hive test-approval 接线，不注册模型工具、不改冻结 CLI 面",
+   "open_gaps": [],
+   "py": "testing",
+   "py_files": 6,
+   "py_loc": 1159,
+   "py_test_files": 3,
+   "registry": {
+    "bad_ids": [],
+    "bad_rows": 0,
+    "builder": 0,
+    "missing": 0,
+    "partial": 0,
+    "ported": 0,
+    "rows": 0,
+    "ungated": 0
+   },
+   "unwired": [],
+   "unwired_exempt": [],
+   "verdict": "dev_tool"
+  },
+  {
+   "basis": "tools 本体→tools；chart_render→charts；senders→senders；playbook_tools→playbook；queen_mail_tools→queenmail",
+   "c12": {
+    "out_of_scope": 0,
+    "partial": 1,
+    "ported": 8,
+    "unported": 0
+   },
+   "dims": [
+    {
+     "id": "tools",
+     "status": "partial"
+    }
+   ],
+   "go": [
+    {
+     "files": 344,
+     "importers": 44,
+     "loc": 86658,
+     "name": "tools",
+     "package": "internal/tools",
+     "parity_refs": 1275,
+     "test_files": 152,
+     "test_funcs": 1738
+    },
+    {
+     "files": 5,
+     "importers": 1,
+     "loc": 1296,
+     "name": "charts",
+     "package": "internal/charts",
+     "parity_refs": 17,
+     "test_files": 1,
+     "test_funcs": 28
+    },
+    {
+     "files": 14,
+     "importers": 2,
+     "loc": 3309,
+     "name": "senders",
+     "package": "internal/senders",
+     "parity_refs": 11,
+     "test_files": 8,
+     "test_funcs": 68
+    },
+    {
+     "files": 7,
+     "importers": 3,
+     "loc": 2538,
+     "name": "playbook",
+     "package": "internal/playbook",
+     "parity_refs": 47,
+     "test_files": 6,
+     "test_funcs": 62
+    },
+    {
+     "files": 8,
+     "importers": 8,
+     "loc": 2116,
+     "name": "queenmail",
+     "package": "internal/queenmail",
+     "parity_refs": 14,
+     "test_files": 7,
+     "test_funcs": 38
+    }
+   ],
+   "go_totals": {
+    "files": 378,
+    "loc": 95917,
+    "parity_refs": 1364,
+    "test_funcs": 1934
+   },
+   "importers_min": 1,
+   "loc_ratio": 13.3,
+   "note": "Python 工具实现主体在 tools/src/aden_tools（规模与覆盖见 §05）；Go 侧在 internal/tools/integrations；集成面 parity 未计算",
+   "open_gaps": [],
+   "py": "tools",
+   "py_files": 11,
+   "py_loc": 7213,
+   "py_test_files": 1,
+   "registry": {
+    "bad_ids": [],
+    "bad_rows": 0,
+    "builder": 0,
+    "missing": 0,
+    "partial": 0,
+    "ported": 2,
+    "rows": 2,
+    "ungated": 0
+   },
+   "unwired": [],
+   "unwired_exempt": [],
+   "verdict": "partial_dim"
+  },
+  {
+   "basis": "decision_tracker.py → internal/tracker/decision_tracker.go；stream_runtime.py → internal/tracker/stream_runtime.go；runtime_log_* / llm_debug_logger→runtimelogs（+ agentloop runtime_log）",
+   "c12": {
+    "out_of_scope": 0,
+    "partial": 0,
+    "ported": 5,
+    "unported": 0
+   },
+   "dims": [],
+   "go": [
+    {
+     "files": 7,
+     "importers": 19,
+     "loc": 3166,
+     "name": "tracker",
+     "package": "internal/tracker",
+     "parity_refs": 66,
+     "test_files": 6,
+     "test_funcs": 73
+    },
+    {
+     "files": 3,
+     "importers": 7,
+     "loc": 962,
+     "name": "runtimelogs",
+     "package": "internal/runtimelogs",
+     "parity_refs": 37,
+     "test_files": 3,
+     "test_funcs": 39
+    }
+   ],
+   "go_totals": {
+    "files": 10,
+    "loc": 4128,
+    "parity_refs": 103,
+    "test_funcs": 112
+   },
+   "importers_min": 7,
+   "loc_ratio": 3.02,
+   "note": "DecisionTracker/StreamDecisionTracker 已移植并由 colony buildContext 接线；Go agent loop 尚无 graph-node decide 生产者，不能按包名认为全绿",
+   "open_gaps": [],
+   "py": "tracker",
+   "py_files": 6,
+   "py_loc": 1368,
+   "py_test_files": 0,
+   "registry": {
+    "bad_ids": [],
+    "bad_rows": 0,
+    "builder": 0,
+    "missing": 0,
+    "partial": 0,
+    "ported": 0,
+    "rows": 4,
+    "ungated": 4
+   },
+   "unwired": [],
+   "unwired_exempt": [],
+   "verdict": "partial_phase"
+  },
+  {
+   "basis": "errors.py 等共享 plumbing 并入 tracker",
+   "c12": {
+    "out_of_scope": 0,
+    "partial": 0,
+    "ported": 1,
+    "unported": 0
+   },
+   "dims": [],
+   "go": [
+    {
+     "files": 7,
+     "importers": 19,
+     "loc": 3166,
+     "name": "tracker",
+     "package": "internal/tracker",
+     "parity_refs": 66,
+     "test_files": 6,
+     "test_funcs": 73
+    }
+   ],
+   "go_totals": {
+    "files": 7,
+    "loc": 3166,
+    "parity_refs": 66,
+    "test_funcs": 73
+   },
+   "importers_min": 19,
+   "loc_ratio": 20.97,
+   "note": "Python 只有 2 个文件 / 151 行，Go 不单独建包",
+   "open_gaps": [],
+   "py": "trackerdb",
+   "py_files": 2,
+   "py_loc": 151,
+   "py_test_files": 0,
+   "registry": {
+    "bad_ids": [],
+    "bad_rows": 0,
+    "builder": 0,
+    "missing": 0,
+    "partial": 0,
+    "ported": 0,
+    "rows": 0,
+    "ungated": 0
+   },
+   "unwired": [],
+   "unwired_exempt": [],
+   "verdict": "struct_only"
+  },
+  {
+   "basis": "io→atomicfs；text humanize_slug→server/cli；python_env/task_registry 为 C12 unported",
+   "c12": {
+    "out_of_scope": 0,
+    "partial": 1,
+    "ported": 3,
+    "unported": 0
+   },
+   "dims": [],
+   "go": [
+    {
+     "files": 1,
+     "importers": 46,
+     "loc": 116,
+     "name": "atomicfs",
+     "package": "internal/atomicfs",
+     "parity_refs": 4,
+     "test_files": 2,
+     "test_funcs": 7
+    },
+    {
+     "files": 1,
+     "importers": 2,
+     "loc": 24,
+     "name": "platform",
+     "package": "internal/platform",
+     "parity_refs": 0,
+     "test_files": 0,
+     "test_funcs": 0
+    },
+    {
+     "files": 1,
+     "importers": 4,
+     "loc": 34,
+     "name": "hiveclock",
+     "package": "internal/hiveclock",
+     "parity_refs": 0,
+     "test_files": 0,
+     "test_funcs": 0
+    },
+    {
+     "files": 1,
+     "importers": 11,
+     "loc": 225,
+     "name": "pyenv",
+     "package": "internal/pyenv",
+     "parity_refs": 2,
+     "test_files": 1,
+     "test_funcs": 5
+    },
+    {
+     "files": 3,
+     "importers": 2,
+     "loc": 516,
+     "name": "arghelp",
+     "package": "internal/arghelp",
+     "parity_refs": 0,
+     "test_files": 1,
+     "test_funcs": 4
+    }
+   ],
+   "go_totals": {
+    "files": 7,
+    "loc": 915,
+    "parity_refs": 6,
+    "test_funcs": 16
+   },
+   "importers_min": 2,
+   "loc_ratio": 5.11,
+   "note": "io/text 有对应实现；python_env.py（UV_INTERNAL 处理）与 task_registry.py 仍是 unported（P3，后者建议 wontfix）",
+   "open_gaps": [],
+   "py": "utils",
+   "py_files": 5,
+   "py_loc": 179,
+   "py_test_files": 0,
+   "registry": {
+    "bad_ids": [],
+    "bad_rows": 0,
+    "builder": 0,
+    "missing": 0,
+    "partial": 0,
+    "ported": 0,
+    "rows": 0,
+    "ungated": 0
+   },
+   "unwired": [],
+   "unwired_exempt": [],
+   "verdict": "struct_only"
+  }
+ ],
+ "schema_version": 1,
+ "summary": {
+  "c12_baseline": "00eeecc8",
+  "c12_totals": {
+   "out_of_scope": 10,
+   "partial": 24,
+   "ported": 239,
+   "unported": 0
+  },
+  "core_tests_files": 182,
+  "dims": 24,
+  "fixed_gaps": 11,
+  "go_files": 1069,
+  "go_loc": 294908,
+  "go_only": 10,
+  "go_packages": 60,
+  "go_test_funcs": 6985,
+  "integration_coverage": "not_computed",
+  "integration_mcp_tools": 866,
+  "open_gaps": 0,
+  "python_files": 351,
+  "python_non_test_loc": 123363,
+  "python_packages": 25,
+  "registry_rows_attributed": 119,
+  "registry_rows_total": 141,
+  "scope_id": "core-framework-only",
+  "ungated_total": 24,
+  "unwired_packages": [],
+  "verdicts": {
+   "aligned": 1,
+   "dev_tool": 1,
+   "missing": 1,
+   "partial_dim": 8,
+   "partial_gap": 0,
+   "partial_phase": 5,
+   "partial_registry": 2,
+   "struct_only": 6,
+   "test_only": 1
+  }
+ }
+}

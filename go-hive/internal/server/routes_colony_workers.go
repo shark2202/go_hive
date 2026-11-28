@@ -97,14 +97,16 @@ type colonyWorkerDict struct {
 }
 
 type colonyDiskWorkerDict struct {
-	WorkerID    string                `json:"worker_id"`
-	Task        any                   `json:"task"`
-	Goal        any                   `json:"goal"`
-	Status      string                `json:"status"`
-	StartedAt   any                   `json:"started_at"`
-	Result      any                   `json:"result"`
-	ProfileName any                   `json:"profile_name"`
-	Batch       colonyWorkerBatchDict `json:"batch"`
+	WorkerID       string                `json:"worker_id"`
+	Task           any                   `json:"task"`
+	Goal           any                   `json:"goal"`
+	Status         string                `json:"status"`
+	StartedAt      any                   `json:"started_at"`
+	Result         any                   `json:"result"`
+	ProfileName    any                   `json:"profile_name"`
+	QueenSessionID any                   `json:"queen_session_id"`
+	QueenName      any                   `json:"queen_name"`
+	Batch          colonyWorkerBatchDict `json:"batch"`
 }
 
 type colonyLegacyWorkerDict struct {
@@ -129,15 +131,17 @@ type colonyWorkerDetail struct {
 }
 
 type colonyHistoricalDetail struct {
-	WorkerID    string                `json:"worker_id"`
-	Task        any                   `json:"task"`
-	Goal        any                   `json:"goal"`
-	Status      string                `json:"status"`
-	StartedAt   any                   `json:"started_at"`
-	Result      any                   `json:"result"`
-	ProfileName any                   `json:"profile_name"`
-	Batch       colonyWorkerBatchDict `json:"batch"`
-	Tasks       []*tasks.TaskRecord   `json:"tasks"`
+	WorkerID       string                `json:"worker_id"`
+	Task           any                   `json:"task"`
+	Goal           any                   `json:"goal"`
+	Status         string                `json:"status"`
+	StartedAt      any                   `json:"started_at"`
+	Result         any                   `json:"result"`
+	ProfileName    any                   `json:"profile_name"`
+	QueenSessionID any                   `json:"queen_session_id"`
+	QueenName      any                   `json:"queen_name"`
+	Batch          colonyWorkerBatchDict `json:"batch"`
+	Tasks          []*tasks.TaskRecord   `json:"tasks"`
 }
 
 type colonySkillDict struct {
@@ -365,13 +369,15 @@ func walkColonyWorkers(workersDir, queenSessionID string, knownIDs map[string]st
 			profileName = ""
 		}
 		out = append(out, colonyDiskWorkerDict{
-			WorkerID:    workerID,
-			Task:        task,
-			Goal:        goal,
-			Status:      "historical",
-			StartedAt:   startedAt,
-			Result:      nil,
-			ProfileName: profileName,
+			WorkerID:       workerID,
+			Task:           task,
+			Goal:           goal,
+			Status:         "historical",
+			StartedAt:      startedAt,
+			Result:         nil,
+			ProfileName:    profileName,
+			QueenSessionID: orDefault(meta["queen_session_id"], nil),
+			QueenName:      orDefault(meta["queen_name"], nil),
 			Batch: colonyWorkerBatchDict{
 				BatchID:    orDefault(meta["batch_id"], ""),
 				BatchIndex: orDefault(meta["batch_index"], 0),
@@ -530,13 +536,15 @@ func historicalColonyWorkerDetail(workerID, workerDir string, store *tasks.TaskS
 		batch = map[string]any{}
 	}
 	return colonyHistoricalDetail{
-		WorkerID:    workerID,
-		Task:        disk["task"],
-		Goal:        disk["goal"],
-		Status:      "historical",
-		StartedAt:   disk["started_at"],
-		Result:      disk["result"],
-		ProfileName: disk["profile_name"],
+		WorkerID:       workerID,
+		Task:           disk["task"],
+		Goal:           disk["goal"],
+		Status:         "historical",
+		StartedAt:      disk["started_at"],
+		Result:         disk["result"],
+		ProfileName:    disk["profile_name"],
+		QueenSessionID: disk["queen_session_id"],
+		QueenName:      disk["queen_name"],
 		Batch: colonyWorkerBatchDict{
 			BatchID:    orDefault(batch["batch_id"], ""),
 			BatchIndex: orDefault(batch["batch_index"], 0),

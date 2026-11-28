@@ -178,13 +178,5 @@ func writeSSEData(w http.ResponseWriter, flusher http.Flusher, payload map[strin
 	flusher.Flush()
 }
 
-// writeNamedSSEEvent renders one SSE frame with an explicit event name, as
-// SSEResponse.send_event(event=...) does.
-func writeNamedSSEEvent(w http.ResponseWriter, flusher http.Flusher, eventType string, payload map[string]any) {
-	encoded, err := json.Marshal(payload)
-	if err != nil {
-		return
-	}
-	fmt.Fprintf(w, "event: %s\ndata: %s\n\n", eventType, encoded)
-	flusher.Flush()
-}
+// writeNamedSSEEvent moved to routeutil so routesapp can share it; the
+// package-level alias in routeutil_compat.go keeps this file's call sites.

@@ -13,7 +13,7 @@ import type { PortraitDescriptor } from "@/api/queens";
 import type { DiscoverEntry, LiveSession } from "@/api/types";
 import { agentsApi } from "@/api/agents";
 import { coloniesApi } from "@/api/colonies";
-import { sessionsApi } from "@/api/sessions";
+import { colonySessionsApi, sessionsApi } from "@/api/sessions";
 import { queensApi } from "@/api/queens";
 import { configApi } from "@/api/config";
 import { useMe } from "@/lib/me";
@@ -47,8 +47,11 @@ interface ColonyContextValue {
   markVisited: (colonyId: string) => void;
   /** Delete a colony (stops sessions, removes all files) */
   deleteColony: (colonyId: string, purge?: boolean) => Promise<void>;
-  /** Refresh colony data from the server */
-  refresh: () => void;
+  /** Refresh colony data from the server. Resolves once the refreshed list has
+   *  been committed, so callers that must act on "the colony is still absent"
+   *  (e.g. an unknown /colony/<id> route) can distinguish a settled lookup
+   *  from one still in flight. */
+  refresh: () => Promise<void>;
   /** Cache-busting version for user avatar — bump after upload */
   userAvatarVersion: number;
   bumpUserAvatar: () => void;
@@ -238,6 +241,33 @@ export function ColonyProvider({ children }: { children: ReactNode }) {
         }
       }
 
+      // Map colony slug → the queen directory that actually holds its newest
+      // saved chat. A cold colony has no live session to name its queen, and
+      // metadata's ``queen_name`` can lag behind a rename (and colony sessions
+      // are intentionally excluded from queen-DM history above). Without this
+      // the sidebar/header fall back to the generic QUEEN_REGISTRY persona
+      // ("Queen"/"Head of Growth") while the transcript belongs to a custom
+      // queen. Only cold colonies need the lookup; a live session already
+      // reports its queen.
+      const coldColonyQueenMap = new Map<string, string>();
+      await Promise.all(
+        allAgents.map(async (agent) => {
+          const slug = agentSlug(agent.path);
+          if (!slug || liveSessionMap.has(slug)) return;
+          try {
+            const { sessions } = await colonySessionsApi.list(slug);
+            // Newest-first; the first session with messages is the one the
+            // colony page will resume.
+            const newest = sessions.find((s) => s.has_messages && s.queen_id);
+            if (newest?.queen_id && newest.queen_id !== "default") {
+              coldColonyQueenMap.set(slug, newest.queen_id);
+            }
+          } catch {
+            // No colony history yet / runtime down — keep metadata fallback.
+          }
+        }),
+      );
+
       // queen_id → max last_active_at across that queen's history sessions.
       // Used to sort the sidebar Queen Bees list by most recent conversation.
       const queenLastActive = new Map<string, number>();
@@ -257,7 +287,11 @@ export function ColonyProvider({ children }: { children: ReactNode }) {
         const sessionId = liveInfo?.sessionId ?? null;
         const isRunning = sessionId !== null;
         const queenName = agent.workers?.[0]?.queen_name || "";
-        const queenProfileId = liveInfo?.queenId ?? historyQueenMap.get(slug) ?? (queenName || null);
+        const queenProfileId =
+          liveInfo?.queenId ??
+          coldColonyQueenMap.get(slug) ??
+          historyQueenMap.get(slug) ??
+          (queenName || null);
 
         return {
           id: colonyId,
@@ -392,9 +426,10 @@ export function ColonyProvider({ children }: { children: ReactNode }) {
     fetchColonies();
   }, [fetchColonies]);
 
-  const refresh = useCallback(() => {
-    fetchColonies();
-  }, [fetchColonies]);
+  // Returning fetchColonies' promise (rather than fire-and-forget) lets callers
+  // await the refreshed list. Existing call sites that ignore the value are
+  // unaffected.
+  const refresh = useCallback(() => fetchColonies(), [fetchColonies]);
 
   // Full fetch on mount
   useEffect(() => {

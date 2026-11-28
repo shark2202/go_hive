@@ -1,0 +1,6 @@
+go-serve-2 health=200
+go-serve-2 root=404
+{"sessions":[]}
+
+go-serve-2 marker=present {"pid":76698,"port":null,"started_at":1795445351.5864909}
+go-serve-2 marker-after=absent

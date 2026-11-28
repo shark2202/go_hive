@@ -79,14 +79,31 @@ func renderToolBudgetCheckpoint(count, hardLimit int) string {
 }
 
 // doomLoopPark is one batch's verdict from the deterministic guard: the call
-// and streak that crossed the park threshold, when they did.
+// and streak that crossed the park threshold, when they did. breaker marks the
+// replay breaker's variant (the offending call was refused BEFORE it executed,
+// so the park must not claim the call ran N times). prior/inBatch keep the
+// streak split for the park detail and diagnostics.
 type doomLoopPark struct {
-	tool   string
-	streak int
-	parked bool
+	tool    string
+	streak  int
+	parked  bool
+	breaker bool
+	prior   int
+	inBatch int
+	// window marks a turn-level fingerprint-window detection (A5) rather than
+	// the per-call streak. Its routing differs: a worker escalates and keeps
+	// working, the queen parks on the user, and any other stream only warns.
+	window      bool
+	description string
 }
 
 func (p doomLoopPark) detail() string {
+	if p.breaker {
+		return replayBreakerDetail(p.tool, p.streak, p.prior, p.inBatch)
+	}
+	if p.description != "" {
+		return p.description
+	}
 	return doomLoopDescription(p.tool, p.streak)
 }
 
@@ -103,11 +120,13 @@ func (l *AgentLoop) emitPark(reason ParkReason, detail string) {
 // configured sink (the colony runtime's node_tool_doom_loop publisher). The
 // latch is per turn-loop, not per streak: the event marks that this turn hit a
 // doom loop, and a worker that thrashes through several streaks must not
-// publish one event per streak. A nil sink keeps the loop silent.
+// publish one event per streak. description is the detection's own wording, so
+// a window detection publishes the batch description its park/escalation text
+// already uses. A nil sink keeps the loop silent.
 //
 // Parity: framework/agent_loop/agent_loop.py::_execute_impl (6f' tool doom
 // loop -> emit_tool_doom_loop)
-func (l *AgentLoop) reportDoomLoop(tool string, streak int) {
+func (l *AgentLoop) reportDoomLoop(tool string, streak int, description string) {
 	if l == nil || l.DoomLoopSink == nil {
 		return
 	}
@@ -119,7 +138,7 @@ func (l *AgentLoop) reportDoomLoop(tool string, streak int) {
 	l.doomLoopReported = true
 	l.mu.Unlock()
 	l.bumpBy("doom_loop_reported", 1)
-	l.DoomLoopSink(tool, streak)
+	l.DoomLoopSink(tool, streak, description)
 }
 
 // announceGrace opens the grace phase with one reminder: the budget (or the
@@ -145,9 +164,15 @@ func (l *AgentLoop) announceGrace(conv *NodeConversation, budgetExhausted bool) 
 // already stored, so the transcript explains the stop; the park is published
 // through ParkSink and returned to the caller as a typed error.
 //
+// A breaker trip (park.breaker) refused the call before it ran, so it also
+// appends the upstream [SYSTEM] explanation: the model must see on resume that
+// the call was not executed and that repeating it will not help.
+//
+// Parity: framework/agent_loop/agent_loop.py::_trip_tool_breaker (system
+// message + park) for the breaker branch.
 // Parity-exempt: upstream has no deterministic doom-loop park; its stall guard
 // is the judge-based stall check and needs a model call.
-func (l *AgentLoop) parkOnDoomLoop(result TurnResult, inner int, completion llm.Completion, park doomLoopPark) (TurnResult, error) {
+func (l *AgentLoop) parkOnDoomLoop(conv *NodeConversation, result TurnResult, inner int, completion llm.Completion, park doomLoopPark) (TurnResult, error) {
 	reason := ParkReasonDoomLoop
 	result.Success = false
 	result.FinalText = completion.Content
@@ -155,5 +180,59 @@ func (l *AgentLoop) parkOnDoomLoop(result TurnResult, inner int, completion llm.
 	result.ParkReason = &reason
 	l.bumpBy("doom_loop_parked", 1)
 	l.emitPark(reason, park.detail())
-	return result, &DoomLoopParkedError{Tool: park.tool, Streak: park.streak}
+	if park.breaker && conv != nil {
+		notice := fmt.Sprintf(
+			"[SYSTEM] %s. You are repeating the same tool calls with identical "+
+				"arguments. Try a different approach or different arguments.",
+			park.detail())
+		if _, err := conv.AddUserMessage(notice, UserMessageOptions{IsSystemReminder: true}); err != nil {
+			return result, err
+		}
+	}
+	return result, &DoomLoopParkedError{Tool: park.tool, Streak: park.streak, Breaker: park.breaker}
+}
+
+// settleDoomLoopWindow routes a turn-level fingerprint-window detection the way
+// upstream's 6f' branch does:
+//
+//   - a colony worker (an escalation channel is live) is told once, the queen
+//     is informed, and the worker keeps working — its terminal bound stays the
+//     per-call park at five;
+//   - a stream with direct user I/O (the queen) parks on the user; the warning
+//     user message is already in the conversation, so the resume shows why;
+//   - any other stream (event-triggered, judge, no escalation channel) only
+//     gets the warning and continues.
+//
+// The caller stored the tool results first, so the warning lands after the
+// batch instead of orphaning its tool_use blocks.
+//
+// Parity: framework/agent_loop/agent_loop.py::_execute_impl (6f' tool doom loop
+// branch order: escalate / await user / warn)
+func (l *AgentLoop) settleDoomLoopWindow(conv *NodeConversation, agentCtx *AgentContext, result TurnResult, inner int, completion llm.Completion, park doomLoopPark) (*TurnResult, error) {
+	warning := fmt.Sprintf(
+		"[SYSTEM] %s. You are repeating the same tool calls with identical "+
+			"arguments. Try a different approach or different arguments.",
+		park.detail())
+	if conv != nil {
+		if _, err := conv.AddUserMessage(warning, UserMessageOptions{}); err != nil {
+			result.Success = false
+			return &result, err
+		}
+	}
+	l.clearDoomWindow(conv)
+	if doomLoopEscalationEligible(agentCtx) {
+		notice := l.escalateDoomLoopDescription(agentCtx, park.tool, park.streak, park.detail())
+		if notice != "" && conv != nil {
+			if _, err := conv.AddUserMessage(notice, UserMessageOptions{}); err != nil {
+				result.Success = false
+				return &result, err
+			}
+		}
+		return nil, nil
+	}
+	if agentCtx != nil && agentCtx.SupportsDirectUserIO() {
+		parked, err := l.parkOnDoomLoop(conv, result, inner, completion, park)
+		return &parked, err
+	}
+	return nil, nil
 }

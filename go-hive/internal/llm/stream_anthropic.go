@@ -30,10 +30,18 @@ var errEmptyAnthropicStream = errors.New("llm: anthropic stream returned no cont
 func anthropicRequestHeaders(p *Provider, kwargs map[string]any, apiBase, apiKey string) map[string]string {
 	headers := extraHeadersFromKwargs(kwargs)
 	headers["anthropic-version"] = AnthropicVersion
+	if IsClaudeCodeOAuthKey(apiKey) {
+		// Claude Code subscriptions need the Claude Code User-Agent and the
+		// OAuth beta header alongside the bearer credential.
+		//
+		// Parity: core/framework/llm/litellm.py::LiteLLMProvider.__init__ and
+		// the litellm Anthropic OAuth header patch.
+		applyClaudeCodeHeaders(headers)
+	}
 	if apiKey == "" {
 		return headers
 	}
-	oauth := strings.HasPrefix(apiKey, anthropicOAuthPrefix)
+	oauth := IsClaudeCodeOAuthKey(apiKey)
 	bearer := oauth || p.HiveProxyAuth || apiBaseNeedsBearerAuth(apiBase)
 	if bearer {
 		if _, ok := headers["Authorization"]; !ok {
@@ -58,7 +66,7 @@ func (p *Provider) anthropicMessagesStream(
 	model, apiBase, apiKey string,
 	emit func(StreamEvent),
 ) (Completion, error) {
-	body, err := anthropicRequestBody(kwargs, model)
+	body, err := anthropicRequestBody(kwargs, model, apiKey)
 	if err != nil {
 		return Completion{}, err
 	}
@@ -73,6 +81,8 @@ func (p *Provider) anthropicMessagesStream(
 	headers := anthropicRequestHeaders(p, kwargs, apiBase, apiKey)
 
 	attempts := 0
+	transientAttempts := 0
+	tokenRefreshed := false
 	for {
 		if ctxErr := ctx.Err(); ctxErr != nil {
 			return Completion{}, ctxErr
@@ -82,6 +92,20 @@ func (p *Provider) anthropicMessagesStream(
 		}
 		response, err := p.doStreamRequest(ctx, anthropicStreamLabel, endpoint, headers, encoded)
 		if err != nil {
+			// Network blips and timeouts are retried a bounded number of
+			// times, exactly like upstream's transient-stream set and the
+			// OpenAI-compatible transport above.
+			//
+			// Parity: core/framework/llm/litellm.py::_is_stream_transient_error
+			if isStreamTransientError(err) && transientAttempts < StreamTransientMaxRetries {
+				if ctxErr := ctx.Err(); ctxErr != nil {
+					return Completion{}, ctxErr
+				}
+				p.sleepFor(ComputeRetryDelay(transientAttempts, err, RetryPolicy{Jitter: true}))
+				transientAttempts++
+				continue
+			}
+			p.emitStreamError(emit, err)
 			return Completion{}, err
 		}
 
@@ -97,13 +121,45 @@ func (p *Provider) anthropicMessagesStream(
 				attempts++
 				continue
 			}
+			// Gateway/server unavailability is transient: retry before
+			// surfacing a recoverable terminal error.
+			if isStreamTransientStatus(response.StatusCode) && transientAttempts < StreamTransientMaxRetries {
+				if ctxErr := ctx.Err(); ctxErr != nil {
+					return Completion{}, ctxErr
+				}
+				p.sleepFor(ComputeRetryDelay(transientAttempts, providerErr, RetryPolicy{Jitter: true}))
+				transientAttempts++
+				continue
+			}
+			// A rejected hive streamToken is refreshed once and the request
+			// replayed with the new credential — the defensive path for clock
+			// skew or revocation that beat the rotation loop.
+			//
+			// Parity: core/framework/llm/litellm.py (hive_stream_token_invalid
+			// -> try_refresh_now -> retry the same call once)
+			if refreshed, ok := retryAfterStreamTokenRefresh(ctx, providerErr, &tokenRefreshed); ok {
+				headers = anthropicRequestHeaders(p, kwargs, apiBase, refreshed)
+				continue
+			}
 			if streamingFallbackStatus(response.StatusCode) {
 				return p.streamingNonStreamFallback(ctx, original, emit, providerErr)
 			}
+			// Terminal non-2xx: classify before failing so the SSE consumer
+			// sees error_type/upstream_status (402 -> payment_required).
+			//
+			// Parity: core/framework/llm/litellm.py::LiteLLMProvider.stream
+			p.emitStreamError(emit, providerErr)
 			return Completion{}, providerErr
 		}
 
-		result, err := p.consumeAnthropicStreamResponse(ctx, response, model, emit)
+		// A mid-stream transient failure may only be retried when nothing was
+		// emitted, otherwise the consumer would see duplicated deltas.
+		emitted := 0
+		attemptEmit := func(event StreamEvent) {
+			emitted++
+			emit(event)
+		}
+		result, err := p.consumeAnthropicStreamResponse(ctx, response, model, attemptEmit)
 		if errors.Is(err, errEmptyAnthropicStream) {
 			if attempts >= EmptyResponseMaxRetries {
 				return result.completion, nil
@@ -115,7 +171,15 @@ func (p *Provider) anthropicMessagesStream(
 			continue
 		}
 		if err != nil {
-			emit(StreamErrorEvent{Error: err.Error()})
+			if emitted == 0 && isStreamTransientError(err) && transientAttempts < StreamTransientMaxRetries {
+				if ctxErr := ctx.Err(); ctxErr != nil {
+					return Completion{}, ctxErr
+				}
+				p.sleepFor(ComputeRetryDelay(transientAttempts, err, RetryPolicy{Jitter: true}))
+				transientAttempts++
+				continue
+			}
+			p.emitStreamError(emit, err)
 			return Completion{}, err
 		}
 		emitStreamTail(result, emit)
@@ -178,17 +242,21 @@ type anthropicStreamEvent struct {
 		Usage *anthropicUsagePayload `json:"usage"`
 	} `json:"message"`
 	ContentBlock *struct {
-		Type  string          `json:"type"`
-		Text  string          `json:"text"`
-		ID    string          `json:"id"`
-		Name  string          `json:"name"`
-		Input json.RawMessage `json:"input"`
+		Type      string          `json:"type"`
+		Text      string          `json:"text"`
+		ID        string          `json:"id"`
+		Name      string          `json:"name"`
+		Input     json.RawMessage `json:"input"`
+		Thinking  string          `json:"thinking"`
+		Signature string          `json:"signature"`
+		Data      string          `json:"data"`
 	} `json:"content_block"`
 	Delta *struct {
 		Type        string `json:"type"`
 		Text        string `json:"text"`
 		PartialJSON string `json:"partial_json"`
 		Thinking    string `json:"thinking"`
+		Signature   string `json:"signature"`
 		StopReason  string `json:"stop_reason"`
 	} `json:"delta"`
 	Usage *anthropicUsagePayload `json:"usage"`
@@ -205,6 +273,13 @@ type anthropicStreamBlock struct {
 	name      string
 	arguments strings.Builder
 	initial   string
+	// thinking/signature hold a reasoning block's text and opaque signature;
+	// data holds a redacted_thinking block's encrypted payload. Unsigned
+	// thinking blocks are dropped at finalisation because the API rejects
+	// them when echoed back.
+	thinking  strings.Builder
+	signature string
+	data      string
 }
 
 // anthropicStreamState is the accumulator a single SSE read fills.
@@ -216,6 +291,7 @@ type anthropicStreamState struct {
 	outputTokens  int
 	cacheRead     int
 	cacheCreation int
+	credits       *float64
 	blocks        map[int]*anthropicStreamBlock
 	hasToolUse    bool
 }
@@ -244,6 +320,9 @@ func (s *anthropicStreamState) apply(event *anthropicStreamEvent, emit func(Stre
 			if usage.OutputTokens > 0 {
 				s.outputTokens = usage.OutputTokens
 			}
+			if usage.Credits != nil {
+				s.credits = usage.Credits
+			}
 		}
 	case "content_block_start":
 		index := eventIndex(event.Index)
@@ -253,6 +332,7 @@ func (s *anthropicStreamState) apply(event *anthropicStreamEvent, emit func(Stre
 			block.id = event.ContentBlock.ID
 			block.name = event.ContentBlock.Name
 			block.initial = strings.TrimSpace(string(event.ContentBlock.Input))
+			block.data = event.ContentBlock.Data
 			if event.ContentBlock.Type == "tool_use" {
 				s.hasToolUse = true
 			}
@@ -260,13 +340,29 @@ func (s *anthropicStreamState) apply(event *anthropicStreamEvent, emit func(Stre
 				s.text.WriteString(event.ContentBlock.Text)
 				emit(TextDeltaEvent{Content: event.ContentBlock.Text, Snapshot: s.text.String()})
 			}
+			if event.ContentBlock.Type == "thinking" && event.ContentBlock.Thinking != "" {
+				block.thinking.WriteString(event.ContentBlock.Thinking)
+				emit(ReasoningDeltaEvent{Content: event.ContentBlock.Thinking})
+			}
+			if event.ContentBlock.Type == "thinking" && event.ContentBlock.Signature != "" {
+				block.signature = event.ContentBlock.Signature
+			}
 		}
 		s.blocks[index] = block
 	case "content_block_delta":
 		index := eventIndex(event.Index)
 		block := s.blocks[index]
 		if block == nil {
-			block = &anthropicStreamBlock{kind: "text"}
+			kind := "text"
+			if event.Delta != nil {
+				switch event.Delta.Type {
+				case "thinking_delta", "signature_delta":
+					kind = "thinking"
+				case "input_json_delta":
+					kind = "tool_use"
+				}
+			}
+			block = &anthropicStreamBlock{kind: kind}
 			s.blocks[index] = block
 		}
 		if event.Delta == nil {
@@ -280,9 +376,24 @@ func (s *anthropicStreamState) apply(event *anthropicStreamEvent, emit func(Stre
 			}
 		case "input_json_delta":
 			block.arguments.WriteString(event.Delta.PartialJSON)
-		case "thinking_delta", "signature_delta":
-			// Extended thinking is not part of the answer text; the
-			// non-streaming transport drops it too.
+		case "thinking_delta":
+			// Reasoning models (Anthropic extended thinking, DeepSeek/GLM via
+			// an Anthropic-compatible proxy) stream their reasoning as
+			// thinking blocks. The text is surfaced live and reassembled for
+			// the signed block that must be echoed back next request.
+			//
+			// Parity: core/framework/llm/litellm.py::LiteLLMProvider.stream
+			// (thinking_blocks deltas -> ReasoningDeltaEvent)
+			if event.Delta.Thinking != "" {
+				block.thinking.WriteString(event.Delta.Thinking)
+				emit(ReasoningDeltaEvent{Content: event.Delta.Thinking})
+			}
+		case "signature_delta":
+			// The signature closes the block; without it the block is
+			// unsigned and cannot be echoed back.
+			if event.Delta.Signature != "" {
+				block.signature = event.Delta.Signature
+			}
 		}
 	case "content_block_stop":
 		// Blocks are finalised after the stream ends; nothing to do.
@@ -292,6 +403,10 @@ func (s *anthropicStreamState) apply(event *anthropicStreamEvent, emit func(Stre
 		}
 		if event.Usage != nil {
 			s.outputTokens = event.Usage.OutputTokens
+			if event.Usage.Credits != nil {
+				// Cumulative per request; last event wins.
+				s.credits = event.Usage.Credits
+			}
 			// Some proxies only report prompt tokens here.
 			if event.Usage.InputTokens > 0 {
 				s.inputTokens = event.Usage.InputTokens
@@ -315,12 +430,48 @@ func (s *anthropicStreamState) apply(event *anthropicStreamEvent, emit func(Stre
 	return nil
 }
 
+// thinkingBlocks finalises the reasoning blocks in stream order. Unsigned
+// thinking blocks are dropped: Anthropic rejects them when echoed back, so
+// surfacing one would only poison the next request.
+//
+// Parity: core/framework/llm/litellm.py::LiteLLMProvider.stream
+// (`_thinking_current` finalised only when its signature arrives)
+func (s *anthropicStreamState) thinkingBlocks() []map[string]any {
+	indices := make([]int, 0, len(s.blocks))
+	for index := range s.blocks {
+		indices = append(indices, index)
+	}
+	sort.Ints(indices)
+	blocks := make([]map[string]any, 0, len(indices))
+	for _, index := range indices {
+		block := s.blocks[index]
+		switch block.kind {
+		case "thinking":
+			if block.signature == "" {
+				continue
+			}
+			blocks = append(blocks, map[string]any{
+				"type":      "thinking",
+				"thinking":  block.thinking.String(),
+				"signature": block.signature,
+			})
+		case "redacted_thinking":
+			blocks = append(blocks, map[string]any{
+				"type": "redacted_thinking",
+				"data": block.data,
+			})
+		}
+	}
+	return blocks
+}
+
 // completion assembles the final Completion from accumulated blocks.
 func (s *anthropicStreamState) completion() Completion {
 	completion := Completion{
-		Content:    s.text.String(),
-		Model:      s.model,
-		StopReason: s.stopReason,
+		Content:        s.text.String(),
+		Model:          s.model,
+		StopReason:     s.stopReason,
+		ThinkingBlocks: s.thinkingBlocks(),
 	}
 	usage := &Usage{
 		PromptTokens:             s.inputTokens + s.cacheRead + s.cacheCreation,
@@ -339,6 +490,7 @@ func (s *anthropicStreamState) completion() Completion {
 	completion.CachedTokens = s.cacheRead
 	completion.CacheCreationTokens = s.cacheCreation
 	completion.CostUSD = ExtractCost(usage, nil, s.model)
+	completion.Credits = s.credits
 	return completion
 }
 
@@ -429,6 +581,9 @@ func (p *Provider) parseAnthropicStream(ctx context.Context, reader io.Reader, r
 	}
 
 	result.completion = completion
+	// A stream that never reported a stop_reason was cut off; upstream emits
+	// no FinishEvent for it.
+	result.suppressFinish = state.stopReason == ""
 	if result.empty() {
 		return result, errEmptyAnthropicStream
 	}

@@ -168,7 +168,9 @@ func TestContractCoverage(t *testing.T) {
 
 // TestCloudSurfacePlannedRoutesUnregistered asserts that nothing marked
 // planned/inferred/unknown can leak into the router before its milestone. The
-// invariant is what keeps "not built yet" honest.
+// invariant is what keeps "not built yet" honest. A documented path may collide
+// with an implemented route for another method (GET /v1/inbox/messages vs
+// POST), so 405 is accepted there — but never a 2xx.
 func TestCloudSurfacePlannedRoutesUnregistered(t *testing.T) {
 	e := newEnv(t)
 	surface := loadSurface(t)
@@ -185,8 +187,14 @@ func TestCloudSurfacePlannedRoutesUnregistered(t *testing.T) {
 		req := httptest.NewRequest(ep.Method, concretePath(ep.Path), nil)
 		rec := httptest.NewRecorder()
 		e.handler.ServeHTTP(rec, req)
-		if rec.Code != http.StatusNotFound {
-			t.Errorf("%s (%s) is status=%s but the router answered %d, want 404", key, ep.Milestone, ep.Status, rec.Code)
+		switch rec.Code {
+		case http.StatusNotFound:
+			// The expected "not built yet" answer.
+		case http.StatusMethodNotAllowed:
+			// The path is registered for another method; this endpoint is
+			// still not served.
+		default:
+			t.Errorf("%s (%s) is status=%s but the router answered %d, want 404/405", key, ep.Milestone, ep.Status, rec.Code)
 		}
 		checked++
 	}

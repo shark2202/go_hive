@@ -81,6 +81,36 @@ func (l *AgentLoop) AddSessionCost(costUSD float64) {
 	l.stateMu.Unlock()
 }
 
+// AddSessionTokens records one completion's prompt and completion tokens
+// against the session total. Upstream's AgentResult.tokens_used is exactly
+// this sum (agent_loop.py: total_input_tokens + total_output_tokens), and the
+// worker report forwards it as `tokens_used`; negative values are ignored.
+//
+// Parity: framework/agent_loop/agent_loop.py::_execute_impl (AgentResult
+// .tokens_used = total_input_tokens + total_output_tokens)
+func (l *AgentLoop) AddSessionTokens(inputTokens, outputTokens int) {
+	if inputTokens < 0 {
+		inputTokens = 0
+	}
+	if outputTokens < 0 {
+		outputTokens = 0
+	}
+	if inputTokens == 0 && outputTokens == 0 {
+		return
+	}
+	l.stateMu.Lock()
+	l.sessionTokensUsed += inputTokens + outputTokens
+	l.stateMu.Unlock()
+}
+
+// TokensUsed reports the cumulative prompt+completion tokens this loop has
+// recorded, the port's counterpart of AgentResult.tokens_used.
+func (l *AgentLoop) TokensUsed() int {
+	l.stateMu.Lock()
+	defer l.stateMu.Unlock()
+	return l.sessionTokensUsed
+}
+
 // sessionCostLimitExceeded reports the recorded total and cap when the cap is
 // configured and already reached.
 func (l *AgentLoop) sessionCostLimitExceeded() (spent, limit float64, exceeded bool) {

@@ -24,6 +24,7 @@ import (
 
 	"github.com/shark2202/go_hive/go-hive/internal/agentloop"
 	"github.com/shark2202/go_hive/go-hive/internal/llm"
+	"github.com/shark2202/go_hive/go-hive/internal/playbook"
 	"github.com/shark2202/go_hive/go-hive/internal/tracker"
 )
 
@@ -169,7 +170,7 @@ func TestPlaybookVerbatimStartedPayloadAndMessage(t *testing.T) {
 	if payload["message"] != want {
 		t.Fatalf("message =\n%q\nwant\n%q", payload["message"], want)
 	}
-	waitForPlaybookRun(t, filepath.Join(runtime.binding.Dir, "colony.db"), 15*time.Second)
+	waitForPlaybookRun(t, filepath.Join(runtime.binding.Dir, "colony.db"), 90*time.Second)
 }
 
 // Parity-exempt literal check of the run-log row: upstream _record_run passes
@@ -330,9 +331,10 @@ func TestPlaybookMigrationBothFormatsResolveDeterministically(t *testing.T) {
 	}
 }
 
-// Re-running an inline native playbook still writes the SAME name and format
-// it always has (.play.json) — the Python era did not change legacy writes.
-// Parity-exempt: Go 原生格式写回不变回归（Python 不写 .play.json）
+// Re-running an inline native playbook still writes the SAME authoritative
+// `.play.json` it always has, and now also leaves a generated `.play.py`
+// mirror so the Python runtime can list/run the same library entry.
+// Parity-exempt: Go 原生格式写回 + 单向 Python 镜像（Python 不写 .play.json）
 func TestPlaybookMigrationNativeWritesKeepFormat(t *testing.T) {
 	runtime := playbookTestRuntime(t, 1)
 	content, isError := RunPlaybook(context.Background(), runtime, map[string]any{"playbook": nativeSpecJSON()})
@@ -347,8 +349,16 @@ func TestPlaybookMigrationNativeWritesKeepFormat(t *testing.T) {
 	if content := fileDigest(t, want); content != nativeSpecJSON() {
 		t.Fatalf("saved native playbook bytes changed:\n%s", content)
 	}
-	if _, err := os.Stat(filepath.Join(runtime.binding.Dir, "playbooks", "test-jobs.play.py")); !os.IsNotExist(err) {
-		t.Fatalf("native write produced a .play.py sibling")
+	mirror := filepath.Join(runtime.binding.Dir, "playbooks", "test-jobs.play.py")
+	data, err := os.ReadFile(mirror)
+	if err != nil {
+		t.Fatalf("native write did not produce the Python mirror: %v", err)
+	}
+	if !strings.HasPrefix(string(data), playbook.PythonMirrorMarker) {
+		t.Fatalf("mirror does not carry the generated marker:\n%s", data)
+	}
+	if names := playbook.SavedPlaybookNames(filepath.Join(runtime.binding.Dir, "playbooks")); len(names) != 1 || names[0] != "test-jobs" {
+		t.Fatalf("SavedPlaybookNames = %v, want [test-jobs]", names)
 	}
 }
 

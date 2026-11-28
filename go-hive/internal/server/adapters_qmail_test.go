@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -342,5 +343,189 @@ func TestQueenMailRepliesGoBackToTheWriterAndContinueTheChain(t *testing.T) {
 	}
 	if !strings.Contains(adapter.Mail().ReplyTarget("queen_ivy", "queen_ava", "session_thread_1"), "session_ava") {
 		t.Fatalf("reply target = %q", adapter.Mail().ReplyTarget("queen_ivy", "queen_ava", "session_thread_1"))
+	}
+}
+
+// Parity-exempt: upstream guards a thread with QueenMail._locks
+// (framework/server/queen_mail.py::_send_to_hive_queen); the Python suite has
+// no concurrency test for it, so this pins the Go equivalent.
+func TestConcurrentLettersToOneQueenOpenOneThreadSession(t *testing.T) {
+	home := queenMailRouteHome(t)
+	manager := NewSessionManager()
+	node := &queenMailRouteNode{}
+	var mu sync.Mutex
+	calls := 0
+	var params CreateSessionParams
+	release := make(chan struct{})
+	var once sync.Once
+	adapter := NewQueenMailAdapter(QueenMailAdapterOptions{
+		Home:    home,
+		Manager: manager,
+		CreateSession: func(create CreateSessionParams) (*Session, error) {
+			mu.Lock()
+			calls++
+			entered := calls
+			params = create
+			mu.Unlock()
+			if entered >= 2 {
+				once.Do(func() { close(release) })
+			}
+			// A second concurrent first letter would join here; the per-thread
+			// lock must keep it out until this session is on disk.
+			select {
+			case <-release:
+			case <-time.After(100 * time.Millisecond):
+			}
+			session := NewSession("session_thread_1", eventbus.NewEventBus())
+			session.QueenName = "queen_ivy"
+			session.QueenDir = filepath.Join(home.QueenSessionsDir("queen_ivy"), "session_thread_1")
+			session.QueenExecutor = &QueenExecutor{NodeRegistry: map[string]QueenNode{"queen": node}}
+			manager.AddSession(session)
+			return session, nil
+		},
+	})
+
+	start := make(chan struct{})
+	errs := make(chan error, 2)
+	for _, text := range []string{"First", "Second"} {
+		text := text
+		go func() {
+			<-start
+			sent, err := adapter.Mail().Send("queen_ava", "session_ava", "queen_ivy", text, nil)
+			if err == nil && sent["to"] != "queen_ivy" {
+				err = errors.New("letter went to " + strconv.Quote(queenStr(sent["to"])))
+			}
+			errs <- err
+		}()
+	}
+	close(start)
+	for index := 0; index < 2; index++ {
+		if err := <-errs; err != nil {
+			t.Fatalf("send = %v", err)
+		}
+	}
+
+	mu.Lock()
+	factoryCalls := calls
+	create := params
+	mu.Unlock()
+	if factoryCalls != 1 {
+		t.Fatalf("session factory calls = %d, want 1", factoryCalls)
+	}
+	if create.QueenName == nil || *create.QueenName != "queen_ivy" || create.QueenResumeFrom != nil {
+		t.Fatalf("create params = %#v", create)
+	}
+	if sessions := manager.ListSessions(); len(sessions) != 1 {
+		t.Fatalf("live sessions = %d, want 1", len(sessions))
+	}
+	injected := node.injected()
+	if len(injected) != 2 {
+		t.Fatalf("injected = %#v", injected)
+	}
+	for _, want := range []string{"First", "Second"} {
+		found := false
+		for _, text := range injected {
+			if strings.HasSuffix(text, want) {
+				found = true
+			}
+		}
+		if !found {
+			t.Fatalf("letter %q not injected: %#v", want, injected)
+		}
+	}
+}
+
+// Parity-exempt: upstream locks a session id in QueenMail._reachable
+// (framework/server/queen_mail.py) so two replies resume one stopped session;
+// the Python suite has no concurrency test for it.
+func TestConcurrentRepliesResumeAStoppedSessionOnce(t *testing.T) {
+	home := queenMailRouteHome(t)
+	manager := NewSessionManager()
+	node := &queenMailRouteNode{}
+	// The writer's session stopped: its directory is on disk, no live session.
+	if err := os.MkdirAll(filepath.Join(home.QueenSessionsDir("queen_ava"), "session_ava"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	var mu sync.Mutex
+	resumes := 0
+	var resumeFrom string
+	var queenName string
+	release := make(chan struct{})
+	var once sync.Once
+	adapter := NewQueenMailAdapter(QueenMailAdapterOptions{
+		Home:    home,
+		Manager: manager,
+		CreateSession: func(create CreateSessionParams) (*Session, error) {
+			mu.Lock()
+			resumes++
+			entered := resumes
+			if create.QueenName != nil {
+				queenName = *create.QueenName
+			}
+			if create.QueenResumeFrom != nil {
+				resumeFrom = *create.QueenResumeFrom
+			}
+			mu.Unlock()
+			if entered >= 2 {
+				once.Do(func() { close(release) })
+			}
+			// A second concurrent reply would resume here too; the session lock
+			// must keep it out until this one is live.
+			select {
+			case <-release:
+			case <-time.After(100 * time.Millisecond):
+			}
+			session := NewSession("session_ava", eventbus.NewEventBus())
+			session.QueenName = "queen_ava"
+			session.QueenExecutor = &QueenExecutor{NodeRegistry: map[string]QueenNode{"queen": node}}
+			manager.AddSession(session)
+			return session, nil
+		},
+	})
+
+	start := make(chan struct{})
+	errs := make(chan error, 2)
+	for _, text := range []string{"First", "Second"} {
+		text := text
+		go func() {
+			<-start
+			letter := queenmail.Letter{ID: "hop_" + text, Kind: queenmail.KindReply, From: "queen_ivy", To: "queen_ava", FromName: "Ivy", Text: text, Depth: 2}
+			sessionID, err := adapter.DeliverReply(context.Background(), "session_ava", "queen_ivy", "queen_ava", letter)
+			if err == nil && sessionID != "session_ava" {
+				err = errors.New("session = " + strconv.Quote(sessionID))
+			}
+			errs <- err
+		}()
+	}
+	close(start)
+	for index := 0; index < 2; index++ {
+		if err := <-errs; err != nil {
+			t.Fatalf("reply = %v", err)
+		}
+	}
+
+	mu.Lock()
+	resumeCalls, from, name := resumes, resumeFrom, queenName
+	mu.Unlock()
+	if resumeCalls != 1 {
+		t.Fatalf("session factory calls = %d, want 1", resumeCalls)
+	}
+	if from != "session_ava" || name != "queen_ava" {
+		t.Fatalf("resume from = %q, queen = %q", from, name)
+	}
+	injected := node.injected()
+	if len(injected) != 2 {
+		t.Fatalf("injected = %#v", injected)
+	}
+	for _, want := range []string{"First", "Second"} {
+		found := false
+		for _, text := range injected {
+			if strings.HasSuffix(text, want) {
+				found = true
+			}
+		}
+		if !found {
+			t.Fatalf("reply %q not injected: %#v", want, injected)
+		}
 	}
 }

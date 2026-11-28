@@ -26,7 +26,7 @@ func newMCPRunner(t *testing.T) (*Runner, *bytes.Buffer, *bytes.Buffer) {
 		mcpCLI := &mcpregistry.CLI{
 			Out: &stdout, Err: &stderr, In: strings.NewReader(""),
 			RootProg:  "hive",
-			RootUsage: func() string { return root.helpSpec().UsageText() },
+			RootUsage: func() string { return root.HelpSpec().UsageText() },
 		}
 		mcpCLI.RegistryFunc = func() (*mcpregistry.Registry, error) { return registry, nil }
 		return mcpCLI.Main(argv)

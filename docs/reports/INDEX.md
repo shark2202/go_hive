@@ -32,3 +32,112 @@
 - slot-20261123-10.md — 2026-11-23 10:02  · 1.0.27-go.1 · HEAD c5fc9557 · compat=ok
 - slot-20261123-12.md — 2026-11-23 12:02  · 1.0.27-go.1 · HEAD 32749fac · compat=ok
 - governance-20261123-1205.md — 2026-11-23 12:05  · 6h 治理汇报
+- slot-20261123-14.md — 2026-11-23 14:02  · 1.0.27-go.1 · HEAD 30779761 · compat=ok
+- slot-20261123-14.md — 2026-11-23 14:41  · 1.0.27-go.1 · HEAD 3107698c · compat=ok
+- slot-20261123-14.md — 2026-11-23 15:45  · 1.0.27-go.1 · HEAD 7320b570 · compat=ok
+- slot-20261123-16.md — 2026-11-23 16:02  · 1.0.27-go.1 · HEAD bbe90b4f · compat=ok
+- slot-20261123-16.md — 2026-11-23 16:38  · 1.0.27-go.1 · HEAD f9aba9c0 · compat=ok
+- slot-20261123-16.md — 2026-11-23 16:52  · 1.0.27-go.1 · HEAD 8cd8174d · compat=ok
+- slot-20261123-16.md — 2026-11-23 17:18  · 1.0.27-go.1 · HEAD d403b0a6 · compat=ok
+- slot-20261123-18.md — 2026-11-23 18:02  · 1.0.27-go.1 · HEAD 50a981b4 · compat=ok
+- governance-20261123-1805.md — 2026-11-23 18:05  · 6h 治理汇报
+- governance-20261123-1844.md — 2026-11-23 18:44  · 6h 治理汇报
+- slot-20261123-20.md — 2026-11-23 20:02  · 1.0.27-go.1 · HEAD bfdd3ee3 · compat=ok
+- slot-20261123-22.md — 2026-11-23 22:02  · 1.0.27-go.1 · HEAD cea04d9e · compat=ok
+- slot-20261124-00.md — 2026-11-24 00:02  · 1.0.27-go.1 · HEAD 30253140 · compat=ok
+- governance-20261124-0005.md — 2026-11-24 00:05  · 6h 治理汇报
+- slot-20261124-02.md — 2026-11-24 02:02  · 1.0.27-go.1 · HEAD 46dabdb5 · compat=ok
+- slot-20261124-04.md — 2026-11-24 04:02  · 1.0.27-go.1 · HEAD 6dfc35cd · compat=ok
+- slot-20261124-06.md — 2026-11-24 06:02  · 1.0.27-go.1 · HEAD a694ff89 · compat=ok
+- governance-20261124-0605.md — 2026-11-24 06:05  · 6h 治理汇报
+- governance-20261124-0722.md — 2026-11-24 07:22  · 五段式治理汇报（手工复核）
+- slot-20261124-08.md — 2026-11-24 09:49  · 1.0.27-go.1 · HEAD 173cdb8b · compat=ok
+- slot-20261124-10.md — 2026-11-24 10:02  · 1.0.27-go.1 · HEAD d6ab290d · compat=ok
+- slot-20261124-12.md — 2026-11-24 12:02  · 1.0.27-go.1 · HEAD beeac64a · compat=ok
+- governance-20261124-1205.md — 2026-11-24 12:05  · 6h 治理汇报
+- governance-20261124-1301.md — 2026-11-24 13:01  · 五段式治理汇报（手工复核）
+- slot-20261124-14.md — 2026-11-24 14:02  · 1.0.27-go.1 · HEAD 2aa9d53f · compat=compat_failed
+- slot-20261124-16.md — 2026-11-24 15:37  · 1.0.27-go.1 · HEAD 9e90e009 · compat=ok
+- slot-20261124-14.md — 2026-11-24 15:38  · 1.0.27-go.1 · HEAD 766c1af7 · compat=ok
+- slot-20261124-16.md — 2026-11-24 16:02  · 1.0.27-go.1 · HEAD ea4a08d2 · compat=ok
+- governance-20261124-1805.md — 2026-11-24 18:05  · 6h 治理汇报
+- slot-20261124-18.md — 2026-11-24 18:38  · 1.0.27-go.1 · HEAD e355d63ea · compat=ok
+- slot-20261124-18.md — 2026-11-24 18:41  · 1.0.27-go.1 · HEAD e355d63ea · compat=ok
+- slot-20261124-20.md — 2026-11-24 20:02  · 1.0.27-go.1 · HEAD 032422d8b · compat=ok
+- slot-20261124-20.md — 2026-11-24 20:05  · 1.0.27-go.1 · HEAD 032422d8b · compat=ok
+- slot-20261124-22.md — 2026-11-24 21:46  · 1.0.27-go.1 · HEAD 6a717606d · compat=ok
+- slot-20261124-20.md — 2026-11-24 21:47  · 1.0.27-go.1 · HEAD 2d5ccd73c · compat=ok
+- slot-20261124-22.md — 2026-11-24 22:02  · 1.0.27-go.1 · HEAD 321938e34 · compat=ok
+- slot-20261125-00.md — 2026-11-24 23:11  · 1.0.27-go.1 · HEAD 1f0ba7e94 · compat=ok
+- slot-20261124-22.md — 2026-11-24 23:12  · 1.0.27-go.1 · HEAD 203f29e3e · compat=ok
+- slot-20261124-22.md — 2026-11-24 23:43  · 1.0.27-go.1 · HEAD 8d15d275a · compat=ok
+- slot-20261125-00.md — 2026-11-25 00:02  · 1.0.27-go.1 · HEAD d42394646 · compat=ok
+- governance-20261125-0005.md — 2026-11-25 00:05  · 6h 治理汇报
+- slot-20261125-02.md — 2026-11-25 00:10  · 1.0.27-go.1 · HEAD 2a6f332c6 · compat=ok
+- slot-20261125-00.md — 2026-11-25 00:10  · 1.0.27-go.1 · HEAD cb50f5eeb · compat=ok
+- slot-20261125-02.md — 2026-11-25 00:19  · 1.0.27-go.1 · HEAD b8e6e30b0 · compat=ok
+- slot-20261125-00.md — 2026-11-25 00:20  · 1.0.27-go.1 · HEAD 438b6da99 · compat=ok
+- governance-20261125-0605.md — 2026-11-25 06:05  · 6h 治理汇报
+- slot-20261125-06.md — 2026-11-25 07:27  · 1.0.27-go.1 · HEAD 75efb7e2f · compat=ok
+- slot-20261125-08.md — 2026-11-25 07:42  · 1.0.27-go.1 · HEAD f0554614f · compat=ok
+- slot-20261125-06.md — 2026-11-25 07:43  · 1.0.27-go.1 · HEAD 25ed95234 · compat=ok
+- slot-20261125-08.md — 2026-11-25 08:02  · 1.0.27-go.1 · HEAD ec0a642ca · compat=ok
+- slot-20261125-10.md — 2026-11-25 10:02  · 1.0.27-go.1 · HEAD f293fa108 · compat=ok
+- skill-parity-audit-20261125.md — 2026-11-25 11:38 · 手工审计 · Skill 机制对齐（扫描/加载/应用/创建）；S1 colony override 已修
+- memory-soul-parity-audit-20261125.md — 2026-11-25 11:51 · 手工审计 · Memory/Soul 全生命周期；S1 sediment/review、S2 云同步、S3 关停时序
+- slot-20261125-12.md — 2026-11-25 12:03  · 1.0.27-go.1 · HEAD f1e1bf97a · compat=ok
+- governance-20261125-1205.md — 2026-11-25 12:05  · 6h 治理汇报
+- park-reminder-budget-audit-20261125.md — 2026-11-25 12:06 · 手工审计 · Budget/Reminder/Park/Stall；P0/P1 已闭环（w147/w150），P2/P3 开放
+- package-parity-20261125.md — 2026-11-25 08:49 · 手工审计 · 逐源码包一致性（Python core/tools ↔ Go internal/cmd/frontend）
+- storage-lifecycle-audit-20261125.md — 2026-11-25 09:17 · 手工审计 · 核心存储与 Skill 目录创建/使用/清理/迁移
+- senders-sentinel-parity-20261125.md — 2026-11-25 12:13 · 手工审计 · Senders / Sentinel 机制一致性
+- mcp-parity-20261125.md — 2026-11-25 14:38 · 手工审计 · MCP 装载/注册/传输；R5 已修（bb8cccb1a）
+- trigger-webhook-parity-20261125.md — 2026-11-25 14:39 · 手工审计 · Trigger/Webhook；unload/update 错误/AI 校验/405 已修
+- credentials-architecture.html — 2026-11-25 15:39 · 架构页 · Credentials 存储/Provider/一致性（§4.1/C1 已更正）
+- slot-20261125-14.md — 2026-11-25 15:40（补档；交付件 14:00 构建 @ f848b7d12，未重建） · 1.0.27-go.1 · HEAD f848b7d12 · compat=ok
+- slot-20261125-16.md — 2026-11-25 16:03  · 1.0.27-go.1 · HEAD 951c5f774 · compat=ok
+- slot-20261125-18.md — 2026-11-25 18:02  · 1.0.27-go.1 · HEAD c682e680f · compat=ok
+- governance-20261125-1805.md — 2026-11-25 18:05  · 6h 治理汇报
+- slot-20261125-20.md — 2026-11-25 20:21  · 1.0.27-go.1 · HEAD 526abb423 · compat=ok
+- slot-20261125-20.md — 2026-11-25 20:49  · 1.0.27-go.1 · HEAD 159804031 · compat=ok
+- slot-20261125-22.md — 2026-11-25 22:02  · 1.0.27-go.1 · HEAD fb613f42e · compat=ok
+- slot-20261125-22.md — 2026-11-25 23:16  · 1.0.27-go.1 · HEAD 60c170ca2 · compat=ok
+- slot-20261126-00.md — 2026-11-26 00:02  · 1.0.27-go.1 · HEAD ac03bb331 · compat=ok
+- governance-20261126-0005.md — 2026-11-26 00:05 · 6h 治理汇报
+- worker-meta-batch-parity-20261125.md — 2026-11-25（w179）· 手工对齐 · Worker meta.json 四字段 + batch 1-based/`rpw_`/`rsw_` 坐标；server 读面已修
+- slot-20261126-00.md — 2026-11-26 00:56  · 1.0.27-go.1 · HEAD ee9e6c486 · compat=ok
+- slot-20261126-02.md — 2026-11-26 02:02  · 1.0.27-go.1 · HEAD 7bf491d68 · compat=ok
+- slot-20261126-04.md — 2026-11-26 04:02  · 1.0.27-go.1 · HEAD 0ac829328 · compat=ok
+- slot-20261126-06.md — 2026-11-26 06:02  · 1.0.27-go.1 · HEAD 993512a42 · compat=ok
+- governance-20261126-0605.md — 2026-11-26 06:05  · 6h 治理汇报
+- slot-20261126-08.md — 2026-11-26 08:03  · 1.0.27-go.1 · HEAD 290f6b463 · compat=ok
+- slot-20261126-10.md — 2026-11-26 09:46  · 1.0.27-go.1 · HEAD f74a29bb6 · compat=ok
+- slot-20261126-08.md — 2026-11-26 09:47  · 1.0.27-go.1 · HEAD 20dea17bb · compat=ok
+- slot-20261126-10.md — 2026-11-26 10:02  · 1.0.27-go.1 · HEAD 5250398cb · compat=ok
+- slot-20261126-12.md — 2026-11-26 12:00  · 1.0.27-go.1 · HEAD 6f06fdef7 · compat=ok
+- governance-20261126-1205.md — 2026-11-26 12:05  · 6h 治理汇报
+- slot-20261126-14.md — 2026-11-26 13:19  · 1.0.27-go.1 · HEAD 653187a51 · compat=ok
+- slot-20261126-12.md — 2026-11-26 13:19  · 1.0.27-go.1 · HEAD 859f96ac5 · compat=ok
+- slot-20261126-14.md — 2026-11-26 14:02  · 1.0.27-go.1 · HEAD 448b0277b · compat=ok
+- slot-20261126-16.md — 2026-11-26 16:02  · 1.0.27-go.1 · HEAD 289c2c53f · compat=ok
+- slot-20261126-18.md — 2026-11-26 18:02  · 1.0.27-go.1 · HEAD cf1d863cf · compat=ok
+- governance-20261126-1805.md — 2026-11-26 18:05  · 6h 治理汇报
+- slot-20261126-20.md — 2026-11-26 20:02  · 1.0.27-go.1 · HEAD 3c9a8a5ba · compat=ok
+- slot-20261126-22.md — 2026-11-26 22:02  · 1.0.27-go.1 · HEAD 10fc121bf · compat=ok
+- slot-20261127-00.md — 2026-11-27 00:02  · 1.0.27-go.1 · HEAD 5058f1149 · compat=ok
+- governance-20261127-0005.md — 2026-11-27 00:05  · 6h 治理汇报
+- slot-20261127-02.md — 2026-11-27 02:02  · 1.0.27-go.1 · HEAD f195ebaf3 · compat=ok
+- slot-20261127-04.md — 2026-11-27 04:02  · 1.0.27-go.1 · HEAD cef6dd290 · compat=ok
+- slot-20261127-06.md — 2026-11-27 06:02  · 1.0.27-go.1 · HEAD b8cbe112d · compat=ok
+- governance-20261127-0605.md — 2026-11-27 06:05  · 6h 治理汇报
+- slot-20261127-08.md — 2026-11-27 08:02  · 1.0.27-go.1 · HEAD 87e089ffe · compat=ok
+- slot-20261127-10.md — 2026-11-27 10:02  · 1.0.27-go.1 · HEAD c5f2f7cf7 · compat=ok
+- slot-20261127-12.md — 2026-11-27 12:02  · 1.0.27-go.1 · HEAD 8ad4dbf23 · compat=ok
+- governance-20261127-1205.md — 2026-11-27 12:05  · 6h 治理汇报
+- slot-20261127-14.md — 2026-11-27 14:02  · 1.0.27-go.1 · HEAD 983438de9 · compat=ok
+- slot-20261127-16.md — 2026-11-27 16:02  · 1.0.27-go.1 · HEAD 360444d33 · compat=ok
+- slot-20261127-18.md — 2026-11-27 18:02  · 1.0.27-go.1 · HEAD 05fb3b410 · compat=ok
+- governance-20261127-1805.md — 2026-11-27 18:05  · 6h 治理汇报
+- slot-20261127-20.md — 2026-11-27 20:07  · 1.0.27-go.1 · HEAD d0b0d28ec · compat=ok
+- governance-20261128-0005.md — 2026-11-28 00:05  · 6h 治理汇报
+- governance-20261128-0605.md — 2026-11-28 06:05  · 6h 治理汇报

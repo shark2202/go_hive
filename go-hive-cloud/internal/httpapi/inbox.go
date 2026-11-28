@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -81,6 +82,9 @@ func (s *Server) handleInboxMessage(w http.ResponseWriter, r *http.Request) {
 		s.internalError(w, r, fmt.Errorf("team unavailable"))
 		return
 	}
+	if !s.allowInboxWrite(w, reqAuth) {
+		return
+	}
 	var body struct {
 		RuntimeID        string  `json:"runtime_id"`
 		SessionID        string  `json:"session_id"`
@@ -135,6 +139,9 @@ func (s *Server) handleInboxResolve(w http.ResponseWriter, r *http.Request) {
 	team, reqAuth, ok := s.teamFrom(r)
 	if !ok {
 		s.internalError(w, r, fmt.Errorf("team unavailable"))
+		return
+	}
+	if !s.allowInboxWrite(w, reqAuth) {
 		return
 	}
 	var body struct {
@@ -209,12 +216,20 @@ func (s *Server) handleInboxRuntimeStream(w http.ResponseWriter, r *http.Request
 		return
 	}
 	for _, reply := range pending {
-		payload := replyPayload{CorrelationToken: reply.CorrelationToken, Text: reply.Text, MessageID: reply.MessageID}
+		payload := replyPayload{
+			CorrelationToken: reply.CorrelationToken,
+			Text:             reply.Text,
+			ColonyID:         reply.ColonyID,
+			MessageID:        reply.MessageID,
+		}
 		if err := writeSSEEvent(w, "reply", payload); err != nil {
 			return
 		}
 		flusher.Flush()
-		if err := team.MarkReplyDelivered(r.Context(), reply.ID); err != nil {
+		// The client may close immediately after reading the frame. Mark the
+		// delivery with a context that survives that disconnect; otherwise a
+		// fast reconnect could replay the same queued reply.
+		if err := team.MarkReplyDelivered(context.WithoutCancel(r.Context()), reply.ID); err != nil {
 			s.logger.Printf("[cloud] mark delivered: %v", err)
 		}
 	}
@@ -270,6 +285,9 @@ func (s *Server) handleInternalInboxReply(w http.ResponseWriter, r *http.Request
 		s.internalError(w, r, fmt.Errorf("team unavailable"))
 		return
 	}
+	if !s.allowInboxWrite(w, reqAuth) {
+		return
+	}
 	var body struct {
 		CorrelationToken string `json:"correlation_token"`
 		Text             string `json:"text"`
@@ -309,8 +327,9 @@ func (s *Server) handleInternalInboxReply(w http.ResponseWriter, r *http.Request
 	})
 	if delivered > 0 {
 		// Live delivery is the delivery record for this reply; a reconnect
-		// must not replay it.
-		if err := team.MarkReplyDelivered(r.Context(), reply.ID); err != nil {
+		// must not replay it. Use a context that survives a client disconnect:
+		// the subscriber may close as soon as it reads the frame.
+		if err := team.MarkReplyDelivered(context.WithoutCancel(r.Context()), reply.ID); err != nil {
 			s.logger.Printf("[cloud] mark delivered: %v", err)
 		}
 	}

@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hive · Budget / Reminder / Park 设计</title>
+<style>
+:root{--bg:#0b0f14;--panel:#121923;--panel2:#0f1620;--line:#233041;--text:#e6edf3;--muted:#8b9bb0;--accent:#f0b429;--accent2:#58a6ff;--ok:#3fb950;--warn:#d29922;--bad:#f85149;--code:#0a0e13}
+*{box-sizing:border-box} body{margin:0;background:linear-gradient(180deg,#0b0f14,#0d131b 55%,#0b0f14);color:var(--text);font:14.5px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;overflow-wrap:anywhere}
+a{color:var(--accent2);text-decoration:none} a:hover{text-decoration:underline}
+.wrap{max-width:1280px;margin:0 auto;padding:44px 26px 80px}
+header{border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:28px}
+.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+h1{font-size:30px;line-height:1.25;margin:10px 0 10px;letter-spacing:-.02em} h1 span{color:var(--accent)}
+.lede{color:var(--muted);max-width:1080px;font-size:15px} .meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:15px;color:var(--muted);font-size:12.5px} .meta b{color:var(--text)}
+section{margin:38px 0} h2{font-size:22px;margin:0 0 8px} h2 .num{color:var(--accent);font-size:14px;margin-right:8px} h3{font-size:15.5px;margin:22px 0 8px;color:#cfdae6}
+p{color:#c6d2df;margin:8px 0} .sub{color:var(--muted);font-size:12.5px}
+.grid{display:grid;gap:12px} .g4{grid-template-columns:repeat(4,minmax(0,1fr))} .g2{grid-template-columns:repeat(2,minmax(0,1fr))} .grid>*{min-width:0}
+@media(max-width:900px){.g4{grid-template-columns:1fr 1fr}.g2{grid-template-columns:1fr}} @media(max-width:560px){.g4,.g2{grid-template-columns:1fr}.wrap{padding:30px 16px 60px}h1{font-size:24px}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:15px;min-width:0} .card .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700} .card .v{font-size:19px;font-weight:800;margin-top:5px;letter-spacing:-.01em} .card .d{color:var(--muted);font-size:12px;margin-top:5px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:14px 0;background:var(--panel2);max-width:100%}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed} th,td{border-bottom:1px solid var(--line);padding:9px 10px;vertical-align:top;text-align:left;overflow-wrap:anywhere;word-break:break-word} th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;background:#0d141d;position:sticky;top:0;z-index:1} tr:hover td{background:#121a25} tr:last-child td{border-bottom:0}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--code);border:1px solid #1e2937;border-radius:5px;padding:1px 4px;color:#d7e3f0;overflow-wrap:anywhere}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#cfe0f2;max-width:100%}
+.callout{border-left:3px solid var(--accent);background:#161207;padding:11px 14px;border-radius:0 9px 9px 0;margin:14px 0;color:#e8d9b4;overflow-wrap:anywhere} .callout.bad{border-color:var(--bad);background:#1a0f0f;color:#f2c7c7} .callout.info{border-color:var(--accent2);background:#0d1622;color:#cfe3ff} .callout.ok{border-color:var(--ok);background:#0f1c13;color:#c9efd0}
+.toc{display:flex;flex-wrap:wrap;gap:7px;margin-top:18px} .toc a{font-size:12px;border:1px solid var(--line);background:var(--panel);padding:5px 9px;border-radius:999px;color:var(--muted)} .toc a:hover{color:var(--text);text-decoration:none}
+ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin-top:44px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:12px}
+figure.diagram{background:var(--code);border:1px solid var(--line);border-radius:12px;padding:14px;overflow-x:auto;margin:16px 0;max-width:100%}
+figure.diagram figcaption{color:var(--muted);font-size:12px;margin-top:8px}
+.tag{display:inline-block;font-size:10.5px;padding:1px 6px;border-radius:999px;border:1px solid var(--line);color:var(--muted);margin-left:4px}
+.tag.ok{border-color:#2a5b34;background:#0f1c13;color:#7ee08c}
+@media(max-width:560px){table{font-size:12px}th,td{padding:7px 6px}.toc a{padding:8px 12px;font-size:13px;min-height:44px;display:inline-flex;align-items:center}}
+@media(max-width:760px){.tablewrap table{min-width:760px}}
+</style></head><body><div class="wrap">
+<header><div class="eyebrow">Hive · Control Plane</div><h1>Budget · Reminder · Park <span>为什么存在 · 架构 · 生命周期 · 交互序列</span></h1>
+<p class="lede">三种机制不是三个功能，而是同一条 AgentLoop 的控制平面：LLM 无状态、无时钟、无可靠自控，而 agent 要长时间自主运行、调用有副作用的工具、等待人和外部系统。把“记忆、约束、等待”从模型内部挪到确定性运行时。以 Python `core/framework` 与 Go `go_hive/go-hive` 的实现为准。</p>
+<div class="meta"><span>整理：<b>2026-11-25 12:19 CST</b></span><span>基线：<b>19282cfcf</b></span><span>复核：<b>2026-11-25 14:35 CST · 5486a5fab</b></span><span>口径：<b>以代码为准</b></span><span>范围：<b>Python 参考 + Go 移植</b></span></div>
+<div class="toc"><a href="#s00">设计动机</a><a href="#s01">机制分界</a><a href="#s02">分层架构</a><a href="#s03">生命周期</a><a href="#s04">交互序列</a><a href="#s05">不变量与权衡</a><a href="#s06">配置面</a><a href="#s07">代码索引</a><a href="#s08">已知缺口</a></div></header>
+
+<section id="s00"><h2><span class="num">00</span>设计动机：三个失败模式</h2>
+
+<div class="callout info"><b>一句话：</b>Reminder 解决“<b>失忆</b>”，Budget 解决“<b>失控</b>”，Park 解决“<b>失联</b>”；nudge / stall / sentinel 是停车后的<b>看门狗</b>。核心分工是 <b>reminder 是内容，budget 是策略，park 是状态，supervisor 是恢复</b>。</div>
+
+<div class="grid g4">
+<div class="card"><div class="k">失忆</div><div class="v">每轮重新定向</div><div class="d">模型调用之间没有状态；压缩会丢工具结果；注意力会漂移</div></div>
+<div class="card"><div class="k">失控</div><div class="v">确定性上限</div><div class="d">自主循环可能无限重试、狂调工具、烧上下文与成本</div></div>
+<div class="card"><div class="k">失联</div><div class="v">显式停车</div><div class="d">等用户/凭据/queen/worker 是合法状态，不是空转或失败</div></div>
+<div class="card"><div class="k">被遗忘</div><div class="v">看门狗</div><div class="d">停下后需要有限次唤醒、故障恢复与人工升级</div></div>
+</div>
+
+<div class="tablewrap"><table><thead><tr><th style="width:22%">问题</th><th style="width:34%">根因</th><th style="width:44%">机制 / 为什么不能靠提示词</th></tr></thead><tbody>
+<tr><td><b>计划/约束被遗忘</b></td><td>每次调用都是新 prompt；压缩丢结果；注意力漂移</td><td>tasks / turn_context / skills_catalog / searchable_tools / memory_* 在生命周期点重新注入。提示词是静态的，这些信息每轮变化。</td></tr>
+<tr><td><b>工具越调越多</b></td><td>模型没有可靠的“已花多少”计数与成本感</td><td>每 turn 软/硬工具预算、lifetime 预算、自适应 colony 预算。模型不能自证会停，必须由 loop 强制。</td></tr>
+<tr><td><b>迭代/上下文失控</b></td><td>自主循环可无限重试；窗口会被撑爆</td><td>max_iterations + grace、compaction buffer、工具结果 spillover。这些是运行时资源，不是语义。</td></tr>
+<tr><td><b>该等人却继续跑</b></td><td>ask_user、凭据、colony 建议、等待 queen/worker</td><td>ParkReason 显式建模；等待是控制流，不是一句“请停下”。</td></tr>
+<tr><td><b>正常结束被误判为故障</b></td><td>干净 turn 结束、等用户下一条消息是合法的</td><td>TURN_DONE / USER_STOPPED / COLD_INTERRUPTED 归为 <code>silent_park</code>，不自动唤醒。</td></tr>
+<tr><td><b>真故障被静默吞掉</b></td><td>LLM 报错、空回复、doom loop、流卡住</td><td>归为 <code>broken</code>；stream stall 取消后重跑同一 inner turn。</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="s01"><h2><span class="num">01</span>机制分界：内容 / 策略 / 状态 / 恢复</h2>
+
+<div class="tablewrap"><table><thead><tr><th style="width:14%">机制</th><th style="width:20%">回答的问题</th><th style="width:66%">是什么 / 不是什么</th></tr></thead><tbody>
+<tr><td><b>Reminder</b></td><td>这一轮它该知道什么</td><td>source 在生命周期点产出 body，合并成一个 <code>&lt;system-reminder&gt;</code>。不是系统提示（会变、不该进缓存前缀），不是用户消息（会可见、会触发 turn）。</td></tr>
+<tr><td><b>Nudge</b></td><td>该不该催它行动</td><td>reminder 中“带行动推力”的子集；不是独立类型。有 caps、cooldown、energize 语义。</td></tr>
+<tr><td><b>Budget</b></td><td>还能花多少</td><td>确定性策略：软检查点负责 steer，硬上限负责停止，grace 负责收尾。不是模型可自行放宽的建议。</td></tr>
+<tr><td><b>Park</b></td><td>为什么停下、等谁</td><td>持久状态（reason + activity + pending_input），不是一条消息。决定 supervisor 是否打扰、能否 resume。</td></tr>
+<tr><td><b>Supervisor</b></td><td>停下后谁来管</td><td>idle_nudge / sentinel / stream_stall / stall_check / worker_stall / doom loop；各自独立，互不替代。</td></tr>
+</tbody></table></div>
+
+<div class="callout"><b>先记住：</b>reminder 是机制；nudge 是其中“催行动”的子集；<code>worker_stall</code> / <code>stall_check</code> / doom loop 是独立守卫；Sentinel 是停车后的 supervisor。<b>stall 与 Sentinel 不能混为一谈。</b></div>
+</section>
+
+<section id="s02"><h2><span class="num">02</span>分层架构</h2>
+
+<figure class="diagram"><pre>               ┌─────────────────────────────────────────┐
+用户/渠道 ────►│ Runtime（chat / colony / worker）        │
+               │ event bus · 注入队列 · cursor 持久化      │
+               └──────────────────┬──────────────────────┘
+                                  │ 事件 / 输入 / 唤醒
+               ┌──────────────────▼──────────────────────┐
+               │ AgentLoop（turn loop）                   │
+               │ 状态：park_reason · activity · 预算计数   │
+               │ 点：START/PROMPT/TOOL/COMPACT/STOP/...   │
+               └───┬──────────────┬──────────────┬───────┘
+        collect    │              │ check        │ park
+   ┌───────────────▼───┐   ┌──────▼────────┐  ┌──▼────────────────┐
+   │ ReminderHub       │   │ Budget/Guards │  │ Park state        │
+   │ 15 sources        │   │ soft → hard   │  │ external_wait     │
+   │ applies_to/render │   │ iteration/    │  │ silent_park       │
+   │ 合并成 1 个块      │   │ tool/context  │  │ broken            │
+   └────────┬──────────┘   └──────┬────────┘  └──┬────────────────┘
+            │ 下一轮 prompt        │              │ signals
+            └──────────────────────┴──────────────┘
+                                  │
+                    ┌─────────────▼─────────────┐
+                    │ Supervisor（非 hub）       │
+                    │ idle_nudge · sentinel      │
+                    │ stream_stall · stall_check │
+                    │ worker_stall · doom loop   │
+                    └───────────────────────────┘</pre><figcaption>Hub 只产出内容；loop 持有状态与预算；supervisor 依据 park signals 决定是否唤醒或升级。</figcaption></figure>
+
+<h3>角色矩阵</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:18%">机制</th><th style="width:28%">queen</th><th style="width:24%">overseer</th><th style="width:30%">worker</th></tr></thead><tbody>
+<tr><td>预算</td><td>999999 迭代；30 软 / 150 硬</td><td>同 queen；50 软 / 500 硬</td><td>3 + 1 grace；30 / 90；lifetime 200</td></tr>
+<tr><td>Reminder sources</td><td>15 个中的 queen 子集</td><td>colony 相关 + tasks + stream_stall</td><td>tasks / worker_tracker / idle / stream_stall</td></tr>
+<tr><td>Park</td><td>ask_user / credential / colony / doom…</td><td>等待 queen / 用户</td><td><code>AWAITING_QUEEN</code></td></tr>
+<tr><td>Supervisor</td><td>idle nudge、stall_check、sentinel（colony opt-in）</td><td>idle 由 chat runtime relay</td><td>idle nudge、worker_stall</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="s03"><h2><span class="num">03</span>生命周期</h2>
+
+<h3>3.1 Turn 生命周期</h3>
+<figure class="diagram"><pre>SESSION_START
+  → USER_PROMPT_SUBMIT（reminder 在用户消息之前）
+  → model call
+  → tool batch
+  → POST_TOOL_USE（tasks / tracker / fleet / discovery）
+  → text-only? STOP（检查 open tasks）
+  → 超上下文阈值? PRE_COMPACT → compact → POST_COMPACT（重公告）
+  → 继续迭代，或 park(reason)</pre><figcaption>每个点只做一件事；所有 source 的 body 合并成一个块，不产生用户气泡。</figcaption></figure>
+
+<h3>3.2 Reminder source 生命周期</h3>
+<ol>
+<li><b>register</b>：注册顺序就是合并顺序；上游 15 个 source 在每个 AgentLoop 上都注册，再由 <code>applies_to</code> 按角色/provider 过滤。</li>
+<li><b>bind</b>：会话开始解析 active 子集；<code>applies_to</code> 抛错时 fail-open（保留 source）。</li>
+<li><b>observe_turn</b>：每 turn 一次，tasks 等据此计数。</li>
+<li><b>collect(point)</b>：source 在声明的 point 上 <code>render</code>；空 body 丢弃；异常隔离；ticker source 收集到 pending。</li>
+<li><b>drain</b>：loop 在迭代边界 <code>take_pending</code>，由 loop 单写者写入对话，避免竞争。</li>
+<li><b>reset</b>：用户消息到达时 idle_nudge / sentinel 的 caps 重挂，按“用户回复周期”而非整会话计。</li>
+</ol>
+
+<h3>3.3 Budget 生命周期</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:20%">预算</th><th style="width:28%">重置点</th><th style="width:52%">耗尽行为</th></tr></thead><tbody>
+<tr><td>每 turn 工具调用</td><td>每个 turn-loop 开始</td><td>每 N 次发 <code>TOOL_BUDGET_CHECKPOINT</code> 软提醒（可带 fleet/tracker 快照）；到 hard 停止派发剩余调用，退出本 turn</td></tr>
+<tr><td>lifetime</td><td>整个 execute / 恢复累计</td><td>进入 grace wind-down，限制终态工具，要求 <code>report_to_parent</code> 后结束</td></tr>
+<tr><td>迭代</td><td>每个 execute</td><td>超出后进入 grace；worker 默认 3 工作 + 1 收尾</td></tr>
+<tr><td>上下文</td><td>每次构建 prompt</td><td>到触发点压缩；POST_COMPACT 重新公告计划/记忆/工具/技能</td></tr>
+<tr><td>自适应 colony</td><td>单调不升</td><td>按成功 worker 的 median/p90/max 收紧 nominal，clamp 在跑 worker；floor / max-guard / dispersion guard</td></tr>
+<tr><td>流</td><td>每个 turn</td><td>TTFT / inter-event 超时 → 取消流 → 重试同一 inner turn，≤3/turn</td></tr>
+</tbody></table></div>
+
+<h3>3.4 Park 状态机</h3>
+<figure class="diagram"><pre>触发 park(reason)
+  → emit CLIENT_INPUT_REQUESTED / COLONY_SUGGESTION / CREDENTIAL_FORM
+  → 持久化 pending_input + park_reason + parked_at
+  → activity = AWAITING_USER（external_wait）
+             或 INTERRUPTED（broken / user_stopped）
+  → 阻塞等待（Python turn 内）或 turn 结束由 pending_input 承接（Go）
+  → IDLE_TICK：
+       external_wait → 不打扰
+       silent_park   → 不打扰
+       broken        → 短预算重试
+       unknown       → 只问一次
+  → 输入到达 / 唤醒 → 清 park、reset idle caps、回到 EXECUTING</pre><figcaption>ParkReason 是唯一分类器；supervisor 只读 signals，不猜状态。</figcaption></figure>
+
+<div class="tablewrap"><table><thead><tr><th style="width:18%">Park 分类</th><th style="width:32%">包含的 reason</th><th style="width:50%">Supervisor 行为</th></tr></thead><tbody>
+<tr><td><b>external_wait</b></td><td>ask_user / credential_form / colony_suggestion / awaiting_queen</td><td>合法等待，永不 nudge；等对方回应</td></tr>
+<tr><td><b>silent_park</b></td><td>turn_done / user_stopped / cold_interrupted</td><td>用户的自然停顿，不自动恢复；等真实用户消息</td></tr>
+<tr><td><b>broken</b></td><td>llm_error / empty_responses / doom_loop</td><td>短预算（30s 起）快速重试；仍失败则停</td></tr>
+<tr><td><b>unknown</b></td><td>无 reason 的 questionless park</td><td>按 awaiting 预算，只问一次</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="s04"><h2><span class="num">04</span>交互序列</h2>
+
+<h3>A. 正常一轮：reminder + 预算检查点</h3>
+<figure class="diagram"><pre>user ──► runtime ──► loop
+                      ├─ USER_PROMPT_SUBMIT: 收集 reminders，放在用户消息之前
+                      ├─ model call
+                      ├─ tool batch
+                      │    ├─ 每 N 次工具调用：TOOL_BUDGET_CHECKPOINT
+                      │    │    （软提醒 + colony fleet/tracker 快照）
+                      │    └─ 到 hard：停止派发剩余调用
+                      ├─ POST_TOOL_USE: tasks/tracker/fleet 提醒
+                      ├─ text-only 且 open tasks? STOP 提醒；否则 park(TURN_DONE)
+                      └─ 上下文超限? compact → POST_COMPACT 重公告</pre></figure>
+
+<h3>B. ask_user：合法等待</h3>
+<figure class="diagram"><pre>model 调 ask_user
+  → park(ASK_USER)，emit CLIENT_INPUT_REQUESTED(questions, park_reason=ask_user)
+  → 持久化 pending_input；activity=AWAITING_USER
+  → idle tick：external_wait → 不 nudge
+  → 用户回答：inject_event → 清 user_stopped、reset idle caps、唤醒
+  → 同一 turn 继续（Python）／从 pending_input 恢复（Go）</pre></figure>
+
+<h3>C. turn_done：静默停车 → 有限次 nudge</h3>
+<figure class="diagram"><pre>干净结束 → park(TURN_DONE)
+  → idle 120s：
+       between_turns / parked_open_tasks
+       cap = 3；若 TURN_DONE 且仍有 open tasks，只给 1 次
+  → 产出 nudge body → pending → loop 醒来跑新 inner turn
+  → 仍无进展：cap 用尽后安静等用户
+  → colony + opt-in：sentinel 分类 continue / needs_human / done</pre></figure>
+
+<h3>D. Stream stall：传输故障 ≠ 模型失败</h3>
+<figure class="diagram"><pre>流打开 → TTFT&gt;600s 或事件间&gt;120s
+  → watchdog 取消流 → StreamStalledError
+  → post(STREAM_STALLED) → 注入 continue-nudge
+  → 同一个 inner turn 重跑（不换 turn、不重跑任务）
+  → ≤3 次/turn；仍失败 → 流重试预算（5 次、2–60s 退避）→ 报错/park</pre></figure>
+
+<h3>E. 预算硬停：先给收尾机会</h3>
+<figure class="diagram"><pre>每 turn hard limit 到达
+  → 剩余工具调用 defer
+  → 注入 hard-stop advisory
+  → 本 turn 退出，等待下一 turn / 用户
+
+lifetime 到达
+  → 提前进入 grace wind-down：只允许 report/tracker/task 终态工具
+  → report_to_parent 带 partial result 后结束</pre></figure>
+
+<h3>F. Worker 纯文本停滞</h3>
+<figure class="diagram"><pre>turn 1 纯文本 → 容忍
+turn 2 纯文本 → 容忍
+turn 3 纯文本：
+   parallel worker → 合成 report_to_parent(status=failed,
+                        auto_fail_reason=stall_text_only) → 终止
+   legacy worker   → ESCALATION_REQUESTED → park(AWAITING_QUEEN)</pre></figure>
+
+<h3>G. 用户 Stop</h3>
+<figure class="diagram"><pre>Stop → mark_user_stopped（先于 cancel）
+     → cancel_current_turn
+     → park(USER_STOPPED)，activity=INTERRUPTED
+     → idle_nudge: gate=user_stopped → 永不打扰
+     → 下一条真实用户消息：inject_event 清 user_stopped + reset caps
+     → 冷启动：cursor 恢复 user_stopped（Python；Go 自 2026-11-25 起同样恢复）</pre><figcaption>架构意图；P0 接线已于 2026-11-25 修复（<code>3425aecf6</code> / merge <code>b5fc7ac23</code>），验证边界见 §08。</figcaption></figure>
+
+<h3>H. 压缩：丢内容之前先沉淀</h3>
+<figure class="diagram"><pre>context 到达触发点
+  → PRE_COMPACT（当前无 source）
+  → compact（LLM 摘要）
+  → POST_COMPACT：tasks / memory / tools / skills 重新公告
+  → CONTEXT_COMPACTED 事件 → 立即 long memory reflection
+     （在旧内容被丢弃前沉淀）</pre></figure>
+</section>
+
+<section id="s05"><h2><span class="num">05</span>设计不变量与权衡</h2>
+
+<div class="grid g2">
+<div class="card"><div class="k">不变量 1–4</div><div class="d">
+① Reminder 在用户消息之前，所有 body 合并成一个块；没有 source 时安静退化。<br>
+② Source 异常隔离：render/applies_to 抛错只跳过该 source。<br>
+③ 单写者：ticker/post 只进 pending，loop 在迭代边界 drain。<br>
+④ 每用户回复周期重置 caps；user_stopped 优先级最高；external_wait / silent_park 永不打扰。
+</div></div>
+<div class="card"><div class="k">不变量 5–8</div><div class="d">
+⑤ Park 是持久状态，不是内存 flag；pending_input 是冷启动的唯一真相。<br>
+⑥ 先软后硬：软 checkpoint 用于 steer，hard 才停；lifetime 给 grace 收尾。<br>
+⑦ 自适应预算只降不升，且有 floor / max-guard / dispersion guard。<br>
+⑧ 看门狗分层：stream stall 恢复传输；stall_check 抓“说了没做”；worker_stall 抓纯文本；doom loop 抓重复指纹；sentinel 负责升级。
+</div></div>
+</div>
+
+<div class="tablewrap"><table><thead><tr><th style="width:24%">为什么不是另一种做法</th><th style="width:76%">原因</th></tr></thead><tbody>
+<tr><td>塞进 system prompt</td><td>信息每轮变化；进缓存前缀会破坏缓存；压缩后仍需重发。</td></tr>
+<tr><td>作为普通用户消息</td><td>用户可见、会触发新 turn、污染对话历史；reminder 是非唤醒的上下文。</td></tr>
+<tr><td>Busy-wait / 轮询模型</td><td>烧 token；无法跨重启；park 用持久状态 + 事件唤醒。</td></tr>
+<tr><td>只设一个硬超时</td><td>合法等待可能很久；需要区分 external_wait / silent_park。</td></tr>
+<tr><td>让模型自己记预算</td><td>模型无法可靠自计数；soft steer + 确定性 hard cap 才可测。</td></tr>
+<tr><td>一个大 reminder source</td><td>触发条件、caps、文案不同；拆开才能独立测试/调参/关闭。</td></tr>
+</tbody></table></div>
+
+<div class="callout"><b>代价：</b>reminder 可能吵；预算可能误杀长任务；park 可能死等；ticker 可能双唤醒。缓解手段就是 caps、分类、grace、单 ticker、持久化与 golden/对位测试——这些机制必须显式建模，不能塞进一句提示词。</div>
+</section>
+
+<section id="s06"><h2><span class="num">06</span>配置面（两侧一致的键）</h2>
+
+<div class="tablewrap"><table><thead><tr><th style="width:26%">层</th><th style="width:30%">配置</th><th style="width:44%">默认 / 规则</th></tr></thead><tbody>
+<tr><td>queen profile</td><td>LoopConfig</td><td>999999 迭代；30 软 / 150 硬；上下文 180k</td></tr>
+<tr><td>colony queen</td><td>LoopConfig</td><td>50 软 / 500 硬</td></tr>
+<tr><td>worker</td><td><code>DEFAULT_LOOP_CONFIG</code></td><td>3 + 1 grace；30 / 90；lifetime 200</td></tr>
+<tr><td>per-worker override</td><td><code>loop_config_overrides</code></td><td>iterations 1–1000、grace 0–3、budget 0–200、lifetime 0–2000、context 1k–1M</td></tr>
+<tr><td>colony metadata</td><td><code>max_concurrent_workers</code>、<code>adaptive_tool_budget</code></td><td>并发默认 4；自适应默认开</td></tr>
+<tr><td>features</td><td><code>configuration.json</code></td><td><code>adaptive_tool_budget</code>、<code>stall_check</code>（默认关）、<code>judge</code> slot、<code>sentinel</code>（per-colony opt-in）</td></tr>
+<tr><td>env</td><td><code>HIVE_ADAPTIVE_TOOL_BUDGET</code>、<code>HIVE_ADAPTIVE_BUDGET_MIN_SAMPLES</code>、<code>HIVE_ADAPTIVE_BUDGET_FLOOR</code></td><td>自适应预算开关/样本/下限</td></tr>
+<tr><td>env</td><td><code>HIVE_STALL_CHECK</code></td><td>覆盖 <code>stall_check</code> 开关</td></tr>
+<tr><td>env</td><td><code>HIVE_TRACKER_WORKER_TOOL_CALLS</code>、<code>HIVE_TRACKER_QUEEN_COOLDOWN_WITH_TABLE</code></td><td>worker 20 次 / queen 20</td></tr>
+<tr><td>env</td><td><code>HIVE_SESSION_COST_LIMIT_USD</code></td><td>未设 = 关闭成本上限</td></tr>
+<tr><td>env</td><td><code>HIVE_MEMORY_RECALL</code>、<code>HIVE_TIMELINE_*</code></td><td>memory 召回模式 / timeline 批与冷却</td></tr>
+</tbody></table></div>
+
+<p class="sub">LoopConfig 默认还包含：上下文 180k、compaction buffer 8k+40%、warning 12k、工具结果 30k、流重试 5 次（2–60s）、TTFT 600s、inter-event 120s、idle nudge 120s/3 次（awaiting 120s、broken 30s）、continue-nudge ≤3/turn。</p>
+</section>
+
+<section id="s07"><h2><span class="num">07</span>代码索引</h2>
+
+<div class="grid g2">
+<div class="card"><div class="k">Python 参考</div><div class="d">
+<code>framework/agent_loop/reminders.py</code> — ReminderHub / points / ParkReason / LoopSignals<br>
+<code>framework/agent_loop/agent_loop.py</code> — turn loop、预算、park、stall 检测、inject_event<br>
+<code>framework/agent_loop/idle_nudge.py</code> — substate / caps / reset<br>
+<code>framework/agent_loop/stream_stall.py</code> — continue-nudge<br>
+<code>framework/server/stall_check.py</code> — judge 型 turn-end 检查<br>
+<code>framework/server/routes_execution.py</code> — cancel / presence<br>
+<code>framework/agents/queen/{agent.py,worker_definition.py}</code> — profile 预算
+</div></div>
+<div class="card"><div class="k">Go 移植</div><div class="d">
+<code>internal/agentloop/reminders.go</code>、<code>reminder_hub.go</code> — hub / wrap / points<br>
+<code>internal/agentloop/loop_config.go</code> — 三类 profile<br>
+<code>internal/agentloop/loop_guards.go</code> — 软检查点 / doom park<br>
+<code>internal/agentloop/park_reason.go</code>、<code>idle_nudge.go</code> — park 分类与 nudge<br>
+<code>internal/agentloop/{stall_detector,worker_stall,stream_stall}.go</code> — 三个守卫<br>
+<code>internal/colony/adaptive_budget.go</code> — 自适应预算<br>
+<code>internal/server/{chat_park,stall_check,routes_execution}.go</code> — 持久化 park / judge / cancel<br>
+<code>internal/cli/loader_session_runtime.go</code> — queen node 注册
+</div></div>
+</div>
+</section>
+
+<section id="s08"><h2><span class="num">08</span>已知实现缺口（架构之外）</h2>
+
+<div class="callout ok"><b>P0 · 已关闭（2026-11-25）。</b><code>*ChatRuntime</code> 已实现 <code>MarkUserStopped</code> / <code>CancelCurrentTurn</code>，并用编译期断言钉住路由的两个接口；Stop 先持久化 <code>user_stopped</code> 与 loop 计数，再只取消在飞 turn，排队 turn 与 runtime context 不受影响。<code>TestCancelQueenStopsRealChatRuntimeTurn</code> 走真实 <code>*ChatRuntime</code> + <code>/cancel-queen</code> 路由。证据：<code>3425aecf6</code>（2026-11-25 13:17 +0800），merge <code>b5fc7ac23</code>（13:20 +0800）；全量 <code>make ci</code> RC=0 @ <code>5486a5fab</code>。边界：route/runtime 级测试，<b>未做真实 serve 进程的 Stop HTTP E2E</b>。</div>
+
+<div class="callout ok"><b>P1 · 已关闭（2026-11-25）。</b>Go cursor 现持久化 <code>tool_calls_used</code> / <code>recent_tool_fingerprints</code>（<code>agentloop/cursor_resume.go</code>）与 <code>user_stopped</code>（<code>server/chat_turn_cancel.go</code>），冷恢复时还原；resume 后 lifetime budget 不再重置、doom 窗口保留、Stop 闸门跨重启保持。证据：<code>53fd28042</code>（2026-11-25 13:42 +0800），merge <code>049738d80</code>（13:43 +0800）；测试 <code>TestCursorStateSurvivesColdRestart</code>、<code>TestColdResumeRestoresUserStoppedAndLoopState</code>、<code>TestUserStoppedPersistsAcrossRuntimeRestart</code>。边界：<b>未做真实 serve 进程重启 E2E</b>。</div>
+
+<p class="sub">P2 仍为已登记设计差异：queen doom-loop park 用 server 的有限 turn park/resume，不是 Python turn 内的阻塞等待；语义等价但恢复路径不同。完整证据与优先级：<a href="reports/park-reminder-budget-audit-20261125.md">park-reminder-budget-audit-20261125.md</a>。reminder source 的逐项覆盖与残余项：<a href="reminders-coverage.md">reminders-coverage.md</a>；可视化总览：<a href="reminders-and-nudges.html">reminders-and-nudges.html</a>。</p>
+
+<div class="callout info"><b>验证边界（P3，2026-11-25 14:35 CST，<code>5486a5fab</code>）：</b>worker/overseer 的 stream stall 只在 fake streaming provider 上验证，真实网络 serve E2E 未做；Sentinel 真实 Telegram/Slack 投递未验证；Go 通用 <code>DefaultLoopConfig</code> 的 30/50 与 Python 裸 <code>LoopConfig</code> 的 0 是潜在结构差异（当前生产全走 profile）。</div>
+
+<p class="sub">设计页说明：本页描述设计意图与当前实现；P0/P1 状态以 2026-11-25 14:35 CST（基线 <code>5486a5fab</code>）的代码与审计复核为准，代码和审计报告优先于本页。</p>
+</section>
+
+<footer>Hive control-plane reference · 2026-11-25 · 以代码为准 · 相关：<a href="reminders-and-nudges.html">Reminder 与 Nudge</a> · <a href="reminders-coverage.md">Reminders 覆盖</a> · <a href="reports/park-reminder-budget-audit-20261125.md">Budget/Reminder/Park 审计</a> · <a href="doom-loop.html">Doom Loop 专题</a> · <a href="budgets.html">Budget 参考</a> · <a href="memory-and-soul.html">Memory &amp; Soul</a> · <a href="skill-directories.html">Skill 目录</a></footer>
+</div></body></html>

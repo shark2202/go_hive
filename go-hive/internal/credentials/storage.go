@@ -84,6 +84,9 @@ func NewEncryptedFileStorageWithOptions(basePath, encryptionKey, keyEnvVar strin
 	if err := s.ensureDirs(); err != nil {
 		return nil, err
 	}
+	if err := s.tightenDirs(); err != nil {
+		return nil, err
+	}
 
 	key := encryptionKey
 	if key == "" {
@@ -107,24 +110,73 @@ func NewEncryptedFileStorageWithOptions(basePath, encryptionKey, keyEnvVar strin
 	if err := s.maybeRebuildIndex(); err != nil {
 		return nil, fmt.Errorf("prepare credentials index: %w", err)
 	}
+	// The constructor's directory tightening covers the common case; this also
+	// lowers the modes of files the Python reference left at 0644.
+	s.tightenFileModes()
 	return s, nil
 }
 
 func (s *EncryptedFileStorage) BasePath() string { return s.basePath }
 
+func (s *EncryptedFileStorage) dirs() []string {
+	return []string{
+		s.basePath,
+		filepath.Join(s.basePath, "credentials"),
+		filepath.Join(s.basePath, "metadata"),
+	}
+}
+
+// ensureDirs creates the store layout with the private 0700 mode. Existing
+// directories are left alone: the write path must not turn a deliberately
+// read-only directory back into a writable one (TestCredentialsSaveReports-
+// IndexWriteFailure relies on that), and the constructor's tightenDirs owns the
+// security-posture upgrade of a Python-written 0755 tree.
+//
+// Parity note: Python's EncryptedFileStorage._ensure_dirs relies on the process
+// umask (normally 0755 directories / 0644 files). The Go port keeps the store
+// private (0700/0600): storage-compat SC-04 records this as a deliberate
+// security-posture difference. Every write path re-applies creation because
+// atomicfs would otherwise recreate a removed directory with its generic 0755
+// default.
 func (s *EncryptedFileStorage) ensureDirs() error {
-	for _, sub := range []string{"credentials", "metadata"} {
-		dir := filepath.Join(s.basePath, sub)
+	for _, dir := range s.dirs() {
 		if err := os.MkdirAll(dir, 0o700); err != nil {
 			return fmt.Errorf("mkdir %s: %w", dir, err)
 		}
-		// MkdirAll leaves an existing directory's mode alone; the store holds
-		// encrypted credentials and their metadata, so tighten it explicitly.
+	}
+	return nil
+}
+
+// tightenDirs lowers an existing store tree to 0700, including directories the
+// Python reference created under the default umask. Called once on open; the
+// write paths use ensureDirs so a read-only directory stays read-only.
+func (s *EncryptedFileStorage) tightenDirs() error {
+	for _, dir := range s.dirs() {
 		if err := os.Chmod(dir, 0o700); err != nil {
 			return fmt.Errorf("chmod %s: %w", dir, err)
 		}
 	}
 	return nil
+}
+
+// tightenFileModes brings artifacts written by the Python reference (0644
+// under the default umask) down to the Go store's 0600 posture. Best-effort:
+// a file we cannot chmod stays as it was, exactly like Python's own stores, and
+// the store still opens. Symlinks are skipped so a planted link cannot redirect
+// the chmod outside the credential directory.
+func (s *EncryptedFileStorage) tightenFileModes() {
+	credDir := filepath.Join(s.basePath, "credentials")
+	if entries, err := os.ReadDir(credDir); err == nil {
+		for _, entry := range entries {
+			if entry.IsDir() || entry.Type()&os.ModeSymlink != 0 || !strings.HasSuffix(entry.Name(), ".enc") {
+				continue
+			}
+			_ = os.Chmod(filepath.Join(credDir, entry.Name()), 0o600)
+		}
+	}
+	if info, err := os.Lstat(s.indexPath()); err == nil && !info.IsDir() && info.Mode()&os.ModeSymlink == 0 {
+		_ = os.Chmod(s.indexPath(), 0o600)
+	}
 }
 
 func safeCredentialID(id string) string {
@@ -141,6 +193,12 @@ func (s *EncryptedFileStorage) indexPath() string {
 }
 
 func (s *EncryptedFileStorage) Save(credential *CredentialObject) error {
+	// Re-apply the private directory modes before the atomic write: atomicfs
+	// creates a missing parent with 0755, so a credentials directory removed
+	// after construction would otherwise come back world-listable.
+	if err := s.ensureDirs(); err != nil {
+		return fmt.Errorf("prepare credential directory for %q: %w", credential.ID, err)
+	}
 	data, err := json.Marshal(credential)
 	if err != nil {
 		return fmt.Errorf("marshal credential %q: %w", credential.ID, err)
@@ -294,6 +352,14 @@ func (s *EncryptedFileStorage) readIndex() (IndexEnvelope, error) {
 // written) index is a derived-artifact failure: rebuild it from the encrypted
 // credential files instead of reporting "no credentials" and letting the next
 // save overwrite every other entry.
+//
+// Parity note (A15): Python's _read_index returns an empty skeleton on a
+// malformed file here, which is why its next _index_upsert can forget every
+// other entry; both implementations document the .enc files as authoritative
+// and Python's own _maybe_rebuild_index repairs the same shape on open. The Go
+// port performs that repair on every read and surfaces index write failures
+// (TestCredentialsSaveReportsIndexWriteFailure) instead of swallowing them, a
+// deliberate reliability difference recorded with the A15 audit item.
 func (s *EncryptedFileStorage) readIndexLocked() (IndexEnvelope, error) {
 	var index IndexEnvelope
 	if err := atomicfs.ReadJSON(s.indexPath(), &index); err != nil {
@@ -357,6 +423,11 @@ func indexEntryFor(credential *CredentialObject) IndexEntry {
 }
 
 func (s *EncryptedFileStorage) writeIndex(index IndexEnvelope) error {
+	// Keep the metadata directory private even when it was removed between
+	// saves: atomicfs.WriteJSON would create it with 0755 on its own.
+	if err := s.ensureDirs(); err != nil {
+		return fmt.Errorf("prepare credentials index directory: %w", err)
+	}
 	index.Version = IndexVersion
 	index.StorePath = s.basePath
 	index.GeneratedAt = time.Now().UTC().Format(time.RFC3339Nano)
@@ -544,6 +615,17 @@ func (s *EnvVarStorage) Load(credentialID string) (*CredentialObject, error) {
 	return cred, nil
 }
 
+// LoadAllForProvider lets a composite storage treat an env-only credential as
+// the provider's single account, the same way ListAccounts falls back to
+// GetCredential for a backend without a provider index.
+func (s *EnvVarStorage) LoadAllForProvider(providerName string) ([]*CredentialObject, error) {
+	credential, err := s.Load(providerName)
+	if err != nil || credential == nil {
+		return nil, err
+	}
+	return []*CredentialObject{credential}, nil
+}
+
 func (s *EnvVarStorage) Delete(string) (bool, error) { return false, ErrEnvStorageReadOnlyDelete }
 
 func (s *EnvVarStorage) ListAll() ([]string, error) {
@@ -635,6 +717,60 @@ func NewCompositeStorage(primary CredentialStorage, fallbacks ...CredentialStora
 
 func (s *CompositeStorage) Save(credential *CredentialObject) error {
 	return s.primary.Save(credential)
+}
+
+// storages returns the primary followed by the fallbacks, the read order every
+// lookup method shares.
+func (s *CompositeStorage) storages() []CredentialStorage {
+	out := make([]CredentialStorage, 0, 1+len(s.fallbacks))
+	out = append(out, s.primary)
+	out = append(out, s.fallbacks...)
+	return out
+}
+
+// LoadByAlias forwards the provider/alias lookup to the first backend that
+// supports it. Without this the store's AliasStorage type assertion falls
+// through on a composite and encrypted OAuth multi-accounts stop resolving by
+// alias — the reason the session adapter wraps the encrypted store at all.
+func (s *CompositeStorage) LoadByAlias(providerName, alias string) (*CredentialObject, error) {
+	for _, storage := range s.storages() {
+		aliased, ok := storage.(AliasStorage)
+		if !ok {
+			continue
+		}
+		credential, err := aliased.LoadByAlias(providerName, alias)
+		if err != nil {
+			return nil, err
+		}
+		if credential != nil {
+			return credential, nil
+		}
+	}
+	return nil, nil
+}
+
+// LoadAllForProvider returns the first backend's provider-scoped accounts.
+// Primary-wins matches Load: an encrypted account hides the env fallback, while
+// an env-only credential is returned by EnvVarStorage's single-account form.
+func (s *CompositeStorage) LoadAllForProvider(providerName string) ([]*CredentialObject, error) {
+	for _, storage := range s.storages() {
+		byProvider, ok := storage.(ProviderAccountStorage)
+		if !ok {
+			continue
+		}
+		credentials, err := byProvider.LoadAllForProvider(providerName)
+		if err != nil {
+			return nil, err
+		}
+		if len(credentials) > 0 {
+			return credentials, nil
+		}
+	}
+	credential, err := s.Load(providerName)
+	if err != nil || credential == nil {
+		return nil, err
+	}
+	return []*CredentialObject{credential}, nil
 }
 
 func (s *CompositeStorage) Load(credentialID string) (*CredentialObject, error) {

@@ -58,18 +58,20 @@ func TestToolBudgetSoftCheckpointFiresBeforeHardStop(t *testing.T) {
 	}
 }
 
-// Parity-exempt: upstream derives the hard stop only from
-// tool_call_hard_multiple; the audit pins the port's queen at 30 soft / 50 hard,
-// which needs the explicit cap this test locks.
-func TestQueenLoopBudgetIsThirtySoftFiftyHard(t *testing.T) {
+// Parity-exempt: upstream derives the generic hard stop only from
+// tool_call_hard_multiple; the audit pins the port's base DefaultLoopConfig at
+// 30 soft / 50 hard, which needs the explicit cap this test locks. The queen
+// and colony profiles (30/150, 50/500) are covered in
+// loop_config_profiles_test.go.
+func TestDefaultLoopBudgetIsThirtySoftFiftyHard(t *testing.T) {
 	cfg := DefaultLoopConfig()
 	if cfg.ToolCallBudget != 30 || cfg.ToolCallHardLimit != 50 {
-		t.Fatalf("queen defaults = budget %d hard %d, want 30/50",
+		t.Fatalf("default loop budget = %d hard %d, want 30/50",
 			cfg.ToolCallBudget, cfg.ToolCallHardLimit)
 	}
-	queen := NewAgentLoop(cfg, nil)
-	if soft, hard := queen.toolBudgetLimits(); soft != 30 || hard != 50 {
-		t.Fatalf("queen limits = %d/%d, want 30/50", soft, hard)
+	base := NewAgentLoop(cfg, nil)
+	if soft, hard := base.toolBudgetLimits(); soft != 30 || hard != 50 {
+		t.Fatalf("default loop limits = %d/%d, want 30/50", soft, hard)
 	}
 	// The worker profile clears the explicit cap so its multiple rule wins
 	// (30*3=90) — the two roles must not collapse into one budget.
@@ -87,10 +89,11 @@ func TestQueenLoopBudgetIsThirtySoftFiftyHard(t *testing.T) {
 	}
 }
 
-// Parity-exempt: the end-to-end half of the queen profile — the soft checkpoint
-// must actually fire at 30 and the hard stop must defer past 50, which is what
-// the audit called "永不触发" before the budget was set.
-func TestQueenBudgetCheckpointsAtThirtyAndStopsAtFifty(t *testing.T) {
+// Parity-exempt: the end-to-end half of the generic DefaultLoopConfig — the
+// soft checkpoint must actually fire at 30 and the hard stop must defer past
+// 50, which is what the audit called "永不触发" before the budget was set. The
+// queen/colony profiles are covered in loop_config_profiles_test.go.
+func TestDefaultLoopBudgetCheckpointsAtThirtyAndStopsAtFifty(t *testing.T) {
 	calls := make([]llm.ToolCall, 0, 51)
 	for i := 0; i < 51; i++ {
 		calls = append(calls, llm.ToolCall{

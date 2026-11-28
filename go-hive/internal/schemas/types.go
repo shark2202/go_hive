@@ -20,7 +20,25 @@ func (t Timestamp) MarshalJSON() ([]byte, error) {
 	if t.Time.IsZero() {
 		return []byte("null"), nil
 	}
-	return json.Marshal(t.UTC().Format(time.RFC3339Nano))
+	return json.Marshal(PythonISOString(t.Time))
+}
+
+// PythonISOString renders a datetime the way Python's datetime.isoformat()
+// does: microsecond precision (six digits, trailing zeros kept) and the UTC
+// offset only when the value is timezone-aware. A naive value — what
+// datetime.now() produces and what the schemas write — has no suffix.
+func PythonISOString(t time.Time) string {
+	base := t.Format("2006-01-02T15:04:05")
+	if micro := t.Nanosecond() / 1000; micro != 0 {
+		base = fmt.Sprintf("%s.%06d", base, micro)
+	}
+	// time.Local stands for the naive datetime Python writes; any other
+	// location carries an explicit offset (Z parsed as UTC prints +00:00,
+	// as fromisoformat(...).isoformat() does).
+	if t.Location() == time.Local {
+		return base
+	}
+	return base + t.Format("-07:00")
 }
 
 func (t *Timestamp) UnmarshalJSON(b []byte) error {
@@ -47,17 +65,30 @@ func ParseISOTime(s string) (time.Time, error) {
 	if s == "" {
 		return time.Time{}, errors.New("empty timestamp")
 	}
-	layouts := []string{
+	// Values with an offset keep their instant; naive values are local time,
+	// matching Python's datetime.fromisoformat (and the naive datetimes the
+	// reference schemas write).
+	zoned := []string{
 		time.RFC3339Nano,
+		"2006-01-02T15:04:05.999999999Z0700",
+		"2006-01-02 15:04:05.999999999Z07:00",
+		"2006-01-02 15:04:05Z07:00",
+	}
+	for _, layout := range zoned {
+		if t, err := time.Parse(layout, s); err == nil {
+			return t, nil
+		}
+	}
+	naive := []string{
 		"2006-01-02T15:04:05.999999999",
 		"2006-01-02T15:04:05",
-		"2006-01-02T15:04:05.999999999Z0700",
 		"2006-01-02 15:04:05.999999999",
 		"2006-01-02 15:04:05",
+		"2006-01-02T15:04",
 		"2006-01-02",
 	}
-	for _, layout := range layouts {
-		if t, err := time.Parse(layout, s); err == nil {
+	for _, layout := range naive {
+		if t, err := time.ParseInLocation(layout, s, time.Local); err == nil {
 			return t, nil
 		}
 	}
@@ -65,10 +96,7 @@ func ParseISOTime(s string) (time.Time, error) {
 }
 
 func ISOTimeString(t time.Time) string {
-	if t.Nanosecond()/1000 != 0 {
-		return t.Format("2006-01-02T15:04:05.000000")
-	}
-	return t.Format("2006-01-02T15:04:05")
+	return PythonISOString(t)
 }
 
 func ToDict(v any) (map[string]any, error) {
@@ -154,4 +182,31 @@ func OrEmptyMapInt(m map[string]int) map[string]int {
 		return map[string]int{}
 	}
 	return m
+}
+
+// requireFields enforces Pydantic's required-field rule on a decoded object:
+// the key must be present and must not be JSON null. Empty strings stay valid
+// (Pydantic accepts "" for a `str` field).
+func requireFields(raw map[string]json.RawMessage, kind string, fields ...string) error {
+	for _, field := range fields {
+		value, ok := raw[field]
+		if !ok {
+			return fmt.Errorf("%s: missing required field %q", kind, field)
+		}
+		if bytes.Equal(bytes.TrimSpace(value), []byte("null")) {
+			return fmt.Errorf("%s: required field %q must not be null", kind, field)
+		}
+	}
+	return nil
+}
+
+// requirePresent is requireFields for a `target: Any` style field, where JSON
+// null is a legitimate value.
+func requirePresent(raw map[string]json.RawMessage, kind string, fields ...string) error {
+	for _, field := range fields {
+		if _, ok := raw[field]; !ok {
+			return fmt.Errorf("%s: missing required field %q", kind, field)
+		}
+	}
+	return nil
 }

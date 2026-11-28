@@ -726,6 +726,7 @@ def _read_versions(root: Path) -> tuple[str, str, str]:
 # The published audit (go_hive/docs/env-surface-audit.json @ 622cc236) is the
 # inventory baseline. AUDIT_BASELINE freezes its counts so the delta against the
 # current tree stays visible, and AUDIT_EXPECTED pins the expected post-lane
+# (2026-11-27: ast_analyze adds HIVE_AST_ANALYZE, go 126→127 / go_only 42→43)
 # state. History:
 #   * config-env-align lane: HIVE_MAX_ITER, HIVE_SPLIT_WORKER_EVENTS and
 #     HIVE_PYTHON gained Go readers; HIVE_CRM_PRINCIPAL entered the Go tree
@@ -747,9 +748,10 @@ def _read_versions(root: Path) -> tuple[str, str, str]:
 #   * longmemeval e2e runner + installer-verify (same day): the runner's
 #     HIVE_LME_* knobs and the verification scripts' switches are Go-only
 #     reads (Go 119→125, go_only 35→41); runner/test-harness surface only.
+#   * native HTTP tool family (2026-11-27): internal/nativehttp reads
+#     HIVE_HTTP_TOOLS (Go 125→126, go_only 41→42).
 AUDIT_BASELINE = {"python": 89, "go": 96, "common": 66, "python_only": 23, "go_only": 30}
-AUDIT_EXPECTED = {"python": 90, "go": 125, "common": 84, "python_only": 6, "go_only": 41}
-AUDIT_EXPECTED = {"python": 90, "go": 125, "common": 84, "python_only": 6, "go_only": 41}
+AUDIT_EXPECTED = {"python": 90, "go": 127, "common": 84, "python_only": 6, "go_only": 43}
 # Names the config-env-align lane gave Go readers to (relative to the baseline).
 LANE_ENV_PORTED = ("HIVE_MAX_ITER", "HIVE_SPLIT_WORKER_EVENTS", "HIVE_PYTHON")
 # Names the env-verbatim-port lane gave Go readers to (relative to the baseline).

@@ -7,6 +7,13 @@ package soul
 // finished memory reflection's conclusions here so either pass keeps her soul
 // current. Storage stays upstream-shaped: soul.json, history/v<n>.json and
 // log.jsonl are all written through Save, so the soul routes keep reading it.
+//
+// The sediment obeys the soul's own approval rules, exactly like the daily
+// reflection it runs beside: in "auto" mode it saves a new version itself; in
+// "review" mode (GetSoulConfig's default) it only writes a pending proposal,
+// and it does nothing at all while an earlier proposal still waits for its
+// decision — the owner decides with the ordinary soul decide route, and the
+// applied items are logged as the owner's.
 
 import (
 	"errors"
@@ -91,6 +98,14 @@ type SedimentOptions struct {
 type SedimentResult struct {
 	// Written is false when nothing new was added: no file was touched.
 	Written bool
+	// Proposed is true when the soul is in "review" mode and the conclusions
+	// were written as a pending proposal instead of a version. Nothing in the
+	// soul changed; ProposalID names what the owner has to decide.
+	Proposed   bool
+	ProposalID string
+	// Blocked is true when an earlier proposal is still waiting for its
+	// decision: the conclusions were not applied and not proposed.
+	Blocked bool
 	Version int
 	Section string
 	Added   []Item
@@ -276,6 +291,11 @@ func withinRoot(root, candidate string) bool {
 // When the target section is full, the oldest items this sediment wrote earlier
 // are dropped first; if the section is still full the conclusion is skipped
 // rather than touching an item the sediment did not write.
+//
+// In "review" mode the conclusions become a pending proposal instead (see the
+// file comment): the soul is not touched, nothing is evicted, and a proposal
+// already waiting blocks this pass the same way it blocks the daily
+// reflection.
 func Sediment(opts SedimentOptions) (SedimentResult, error) {
 	result := SedimentResult{}
 	if opts.Config == nil || len(opts.Conclusions) == 0 {
@@ -349,6 +369,10 @@ func Sediment(opts SedimentOptions) (SedimentResult, error) {
 	}
 	if len(additions) == 0 {
 		return result, nil
+	}
+
+	if opts.Config.Mode == "review" {
+		return sedimentReview(opts, result, current, additions, section, limit, now)
 	}
 
 	state := LoadSedimentState(opts.QueensDir, opts.QueenID)
@@ -433,6 +457,102 @@ func Sediment(opts SedimentOptions) (SedimentResult, error) {
 		return result, err
 	}
 	return result, nil
+}
+
+// sedimentReview is the "review" half of Sediment: it turns the conclusions
+// into one pending proposal and leaves the soul alone. A proposal already
+// waiting blocks it — the same rule the daily reflection follows (ReflectionDue)
+// — so the owner is never asked to decide between two automatic rewrites of the
+// same soul.
+//
+// Nothing is evicted here: an item this sediment wrote earlier is a person's
+// approved note once its proposal was decided, so review mode only appends what
+// still fits and drops the rest. No sediment.json is written either: this pass
+// touched no soul item, so it has nothing of its own to evict later.
+func sedimentReview(opts SedimentOptions, result SedimentResult, current *Soul, additions []Item, section string, limit int, now time.Time) (SedimentResult, error) {
+	if PendingProposal(opts.QueensDir, opts.QueenID) != nil {
+		result.Blocked = true
+		return result, nil
+	}
+	used := SectionChars(current.Items(section))
+	fitting := make([]Item, 0, len(additions))
+	for _, addition := range additions {
+		needed := len([]rune(addition.Text))
+		if used+needed > limit {
+			result.Dropped++
+			continue
+		}
+		used += needed
+		fitting = append(fitting, addition)
+	}
+	if len(fitting) == 0 {
+		return result, nil
+	}
+	edits := make([]Edit, 0, len(fitting))
+	for _, item := range fitting {
+		edits = append(edits, Edit{
+			Op:       "add",
+			Section:  section,
+			Text:     item.Text,
+			Date:     item.Date,
+			Evidence: []map[string]any{},
+			Reason:   "memory reflection conclusion",
+		})
+	}
+	proposal := &Proposal{
+		ID:          sedimentProposalID(opts.QueensDir, opts.QueenID, now),
+		CreatedAt:   now.Format("2006-01-02T15:04:05-07:00"),
+		BaseVersion: current.Version,
+		Edits:       edits,
+		Summary:     fmt.Sprintf("%d from memory reflection", len(edits)),
+		Status:      "pending",
+		Sources:     sedimentSources(opts.Conclusions),
+	}
+	if err := SaveProposal(opts.QueensDir, opts.QueenID, proposal); err != nil {
+		return result, err
+	}
+	result.Proposed = true
+	result.ProposalID = proposal.ID
+	result.Section = section
+	result.Added = fitting
+	return result, nil
+}
+
+// sedimentProposalID names a review-mode proposal the way the daily reflection
+// names its own (day + time), with a "memory" marker so the log and the
+// proposal list tell an automatic memory pass apart.
+func sedimentProposalID(queensDir, queenID string, now time.Time) string {
+	base := now.Format("2006-01-02") + "-memory-" + now.Format("150405")
+	id := base
+	for suffix := 2; ; suffix++ {
+		if _, err := os.Stat(filepath.Join(SoulDir(queensDir, queenID), "proposals", id+".json")); err != nil {
+			return id
+		}
+		id = fmt.Sprintf("%s-%d", base, suffix)
+	}
+}
+
+// sedimentSources names the memory files a proposal rests on. A proposal always
+// carries a source list (the same shape the daily reflection writes), so the
+// fallback keeps it non-empty.
+func sedimentSources(conclusions []SedimentConclusion) []string {
+	seen := map[string]struct{}{}
+	out := make([]string, 0, len(conclusions))
+	for _, conclusion := range conclusions {
+		source := strings.TrimSpace(conclusion.Source)
+		if source == "" {
+			continue
+		}
+		if _, exists := seen[source]; exists {
+			continue
+		}
+		seen[source] = struct{}{}
+		out = append(out, "memory "+source)
+	}
+	if len(out) == 0 {
+		out = append(out, "memory reflection")
+	}
+	return out
 }
 
 // resolvePath follows symlinks when the path exists; otherwise it is made

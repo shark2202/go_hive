@@ -53,8 +53,13 @@ SERVICES = [
         "role": "Anthropic Messages proxy + image generation",
         "families": ["messages", "images"],
         "base_env": ["HIVE_LLM_BASE_URL", "HIVE_CLOUD_BASE"],
-        "auth": "Bearer streamToken/JWT on /v1/messages; HIVE_API_KEY on /v1/images/generations",
-        "notes": "Rust service at llm.open-hive.com; internal routing/billing is opaque.",
+        "auth": "Bearer streamToken/JWT on /v1/messages; HIVE_API_KEY (also Bearer) on /v1/images/generations",
+        "notes": (
+            "Rust service at llm.open-hive.com; internal routing/billing is opaque. M5 proxies both observed "
+            "client endpoints to explicitly configured upstreams (Messages: Anthropic-compatible base + "
+            "x-api-key/bearer credential; images: OpenAI-compatible JSON endpoint + Bearer credential). Model "
+            "routing, billing and rate limits are not implemented."
+        ),
     },
     {
         "id": "aden-credentials",
@@ -183,12 +188,17 @@ CURATED: list[dict[str, Any]] = [
     ),
     endpoint(
         "hb-refresh-stream-token-from-stream", "hive-backend", "POST",
-        "/user/refresh-stream-token-from-stream", "bearer-stream-token", "implemented", "M1",
+        "/user/refresh-stream-token-from-stream", "bearer-stream-token", "implemented", "M1/M3",
         request={"fields": {"streamToken": "string"}},
         response={
             "status": 200,
             "golden": "internal/httpapi/testdata/stream-token-refresh.json",
             "shape": {"streamToken": "string"},
+            "tests": [
+                "internal/httpapi/m3_contract_test.go:TestStreamTokenRotationWindow",
+                "internal/httpapi/m3_contract_test.go:TestStreamTokenRejectedAfterRotationWindow",
+                "harness/streamtoken-smoke",
+            ],
         },
         errors=[
             INVALID_JSON,
@@ -202,7 +212,10 @@ CURATED: list[dict[str, Any]] = [
         anchors=["internal/httpapi/server.go:152", "core/framework/server/streamtoken_refresh.py:154-190"],
         notes=(
             "Route-level auth is none: the old streamToken in the body is the credential. New token is "
-            "signed with StreamSecrets[0], TTL 24h. Expired/wrong-signature/non-stream tokens → 401."
+            "signed with StreamSecrets[0], TTL 24h. Expired/wrong-signature/non-stream tokens → 401. M3 adds "
+            "the dual-key rotation window: a token signed with the configured previous secret still refreshes "
+            "while that secret is present; removing it rejects the old token. Rotation itself does not revoke "
+            "an unexpired token — there is no observed revocation ledger (sid blacklist UNKNOWN)."
         ),
     ),
     endpoint(
@@ -358,7 +371,7 @@ CURATED: list[dict[str, Any]] = [
     ),
     # ---- inbox (implemented) ---------------------------------------------
     endpoint(
-        "hb-inbox-messages", "hive-backend", "POST", "/v1/inbox/messages", "bearer-jwt", "implemented", "M1",
+        "hb-inbox-messages", "hive-backend", "POST", "/v1/inbox/messages", "bearer-jwt", "implemented", "M1/M2",
         request={
             "fields": {
                 "runtime_id": "string", "session_id": "string", "colony_id": "string",
@@ -366,34 +379,76 @@ CURATED: list[dict[str, Any]] = [
                 "correlation_token": "string", "deep_link": "string|null",
             }
         },
-        response={"status": 200, "golden": "internal/httpapi/testdata/inbox-message.json", "shape": {"id": "string"}},
+        response={
+            "status": 200,
+            "golden": "internal/httpapi/testdata/inbox-message.json",
+            "shape": {"id": "string"},
+            "tests": [
+                "internal/httpapi/inbox_contract_test.go:TestInboxMessageStoredContract",
+                "internal/httpapi/inbox_contract_test.go:TestInboxObservedAuthSemantics",
+                "harness/inbox-smoke",
+            ],
+        },
         errors=[
             INVALID_JSON,
             {"status": 400, "body": {"error": "invalid kind (want blocker|heartbeat|progress|done)"}},
             {"status": 400, "body": {"error": "session_id is required"}},
+            {
+                "status": 429,
+                "body": {"error": "inbox rate limit exceeded"},
+                "note": "private-deploy extension only; default disabled (--inbox-rate-limit)",
+            },
             SIGNED_OUT,
         ],
-        anchors=["internal/httpapi/inbox.go:78-142", "go_hive/go-hive/internal/sentinel/notifier.go:287-331"],
-        notes="kind defaults to blocker, matching notifier.go.",
+        anchors=["internal/httpapi/inbox.go:78-145", "go_hive/go-hive/internal/sentinel/notifier.go:287-331"],
+        notes=(
+            "kind defaults to blocker, matching notifier.go. M1 delivered the route/wire shape; M2 adds the "
+            "real-sentinel L2b closed loop, stored-field contract tests, audit proof and an opt-in per-team limiter."
+        ),
     ),
     endpoint(
-        "hb-inbox-resolve", "hive-backend", "POST", "/v1/inbox/resolve", "bearer-jwt", "implemented", "M1",
+        "hb-inbox-resolve", "hive-backend", "POST", "/v1/inbox/resolve", "bearer-jwt", "implemented", "M1/M2",
         request={"fields": {"session_id": "string", "resolved_by": "string"}},
-        response={"status": 200, "golden": "internal/httpapi/testdata/inbox-resolve.json", "shape": {"resolved": "int"}},
-        errors=[INVALID_JSON, {"status": 400, "body": {"error": "session_id is required"}}, SIGNED_OUT],
-        anchors=["internal/httpapi/inbox.go:145-162", "go_hive/go-hive/internal/sentinel/notifier.go:341-360"],
-        notes="Client only checks <300; the resolved counter is our additive field.",
+        response={
+            "status": 200,
+            "golden": "internal/httpapi/testdata/inbox-resolve.json",
+            "shape": {"resolved": "int"},
+            "tests": [
+                "internal/httpapi/inbox_contract_test.go:TestInboxResolveContract",
+                "harness/inbox-smoke",
+            ],
+        },
+        errors=[
+            INVALID_JSON,
+            {"status": 400, "body": {"error": "session_id is required"}},
+            {
+                "status": 429,
+                "body": {"error": "inbox rate limit exceeded"},
+                "note": "private-deploy extension only; default disabled (--inbox-rate-limit)",
+            },
+            SIGNED_OUT,
+        ],
+        anchors=["internal/httpapi/inbox.go:148-165", "go_hive/go-hive/internal/sentinel/notifier.go:341-360"],
+        notes=(
+            "Client only checks <300; the resolved counter is our additive field. M2 verifies the close-once "
+            "transition and the real notifier ResolveHiveSession call in harness/inbox-smoke."
+        ),
     ),
     endpoint(
         "hb-inbox-runtime-stream", "hive-backend", "GET", "/v1/inbox/runtime/stream", "bearer-jwt",
-        "implemented", "M1",
+        "implemented", "M1/M2",
         request={"fields": {"runtime_id": "string (query, required)", "kind": "string (query, connection bookkeeping only)"}},
         response={
             "status": 200,
             "media_type": "text/event-stream",
             "golden": "internal/httpapi/testdata/sse-reply-frame.txt",
             "shape": {"correlation_token": "string", "text": "string", "colony_id": "string?", "message_id": "string?"},
-            "tests": ["internal/httpapi/inbox_test.go:TestInboxSSELiveReply", "TestInboxSSEQueuedReply"],
+            "tests": [
+                "internal/httpapi/inbox_contract_test.go:TestInboxStreamWireContract",
+                "internal/httpapi/inbox_contract_test.go:TestInboxStreamFanoutAndIsolation",
+                "internal/httpapi/inbox_contract_test.go:TestInboxStreamQueuedReplay",
+                "harness/inbox-smoke",
+            ],
         },
         errors=[
             {"status": 400, "body": {"error": "runtime_id is required"}},
@@ -401,86 +456,284 @@ CURATED: list[dict[str, Any]] = [
         ],
         sse_events=["reply"],
         anchors=[
-            "internal/httpapi/inbox.go:164-249 handleInboxRuntimeStream",
-            "internal/httpapi/inbox.go:251-260 writeSSEEvent",
+            "internal/httpapi/inbox.go:167-252 handleInboxRuntimeStream",
+            "internal/httpapi/inbox.go:254-263 writeSSEEvent",
             "go_hive/go-hive/internal/sentinel/listeners.go:436-560",
         ],
         notes=(
             "SSE. First frame is ': connected', keepalive comment every 15s. Pending replies are replayed on "
-            "connect; 'kind' does not filter replies (real cloud filter semantics UNKNOWN)."
+            "connect; 'kind' does not filter replies (real cloud filter semantics UNKNOWN). M2 pins headers, "
+            "comment frames, fan-out, isolation and replay-once behaviour plus the real listener closed loop."
         ),
     ),
-    # ---- CRM grid (planned, M4) ------------------------------------------
+    # ---- CRM grid (M4 subset) -------------------------------------------
+    # The ten routes are recovered from the desktop proxies; the backend CRM
+    # service is closed. Only the generic row/grid operations whose request and
+    # response shapes are anchored in the open clients are implemented.
+    # Schema, claim and release remain planned (docs/m4-notes.md).
     endpoint(
         "hb-crm-grid-schema", "hive-backend", "GET", "/v1/crm/grid/schema", "bearer-jwt", "planned", "M4",
         request={"fields": {}},
-        response={"status": None, "shape": None, "note": "unknown until M4 reverse-engineering"},
-        anchors=["go_hive/go-hive/internal/server/routes_colony_workers_global.go:752", "contracts/observed-contract.json"],
-        notes="Grid schema for every CRM entity.",
+        response={"status": None, "shape": None, "note": "response shape UNKNOWN"},
+        anchors=[
+            "go_hive/go-hive/internal/server/routes_colony_workers_global.go:752",
+            "core/framework/server/routes_colony_workers.py:1720-1721",
+            "contracts/observed-contract.json",
+        ],
+        notes=(
+            "Projected/display-ready CRM entity schema. The desktop proxy is a pure pass-through and the "
+            "backend is closed; no schema response was ever captured (the api-contract probe only reached "
+            "the signed-out 401). Stays UNKNOWN and unregistered rather than inventing entity/column/stage keys."
+        ),
     ),
     endpoint(
-        "hb-crm-grid-query", "hive-backend", "POST", "/v1/crm/grid/{entity}/query", "bearer-jwt", "planned", "M4",
-        request={"fields": {"entity": "path"}},
-        response={"status": None, "shape": None},
-        anchors=["go_hive/go-hive/internal/server/routes_colony_workers_global.go:755", "contracts/observed-contract.json"],
-        notes="grid_query-generated Postgres SQL (filters/sort/pagination); payload fields not recovered.",
+        "hb-crm-grid-query", "hive-backend", "POST", "/v1/crm/grid/{entity}/query", "bearer-jwt",
+        "implemented", "M4",
+        request={"fields": {
+            "entity": "path: people|companies|opportunities",
+            "filter": "[{column, op, value}]? (eq|ne|gt|gte|lt|lte|contains|starts_with|ends_with|is_empty|is_not_empty)",
+            "search": "string?",
+            "order_by": "string?",
+            "order_dir": "asc|desc?",
+            "limit": "int? (1..500, default 100)",
+            "offset": "int? (>=0)",
+        }},
+        response={
+            "status": 200,
+            "shape": {
+                "table": "string", "columns": "[column]", "primary_key": "[string]",
+                "rows": "[row]", "total": "int", "limit": "int", "offset": "int",
+            },
+            "tests": [
+                "internal/httpapi/m4_contract_test.go:TestCRMGridContractWorkflow",
+                "internal/store/gridquery_test.go",
+            ],
+            "note": "generic grid row-page shape (contracts.md §http.global-data); CRM projection/custom-field flattening UNKNOWN",
+        },
+        errors=[
+            INVALID_JSON,
+            {"status": 400, "body": {"error": "filter must be a list"}},
+            {"status": 400, "body": {"error": "each filter must be an object"}},
+            {"status": 400, "body": {"error": "invalid identifier: '...'" }},
+            {"status": 400, "body": {"error": "unknown column: ..."}},
+            {"status": 400, "body": {"error": "unsupported filter op: '...'"}},
+            {"status": 400, "body": {"error": "invalid limit/offset"}},
+            {"status": 404, "body": {"error": "unknown entity: ..."}},
+            SIGNED_OUT,
+        ],
+        anchors=[
+            "go_hive/go-hive/internal/server/routes_colony_workers_global.go:755",
+            "core/framework/server/routes_colony_workers.py:1724-1727",
+            "core/framework/server/routes_colony_workers.py:1430-1490 (grid_query filter/search body)",
+            "go_hive/docs/architecture/contracts.md:175-176",
+            "internal/store/gridquery.go",
+        ],
+        notes=(
+            "Filter/search/sort/pagination body mirrors grid_query.py and is validated against the entity's "
+            "real columns. SQL is built with bound parameters; identifiers are allow-listed. Entity registry "
+            "is the three CLI nouns (hive-crm people/companies/opportunities); the desktop view slugs "
+            "(People/Orgs/Deals/Activity) are not recovered."
+        ),
     ),
     endpoint(
-        "hb-crm-grid-group-counts", "hive-backend", "POST", "/v1/crm/grid/{entity}/group-counts", "bearer-jwt",
-        "planned", "M4",
-        request={"fields": {"entity": "path"}},
-        response={"status": None, "shape": None},
-        anchors=["go_hive/go-hive/internal/server/routes_colony_workers_global.go:759", "contracts/observed-contract.json"],
-        notes="Grouped counts for grid facets; payload fields not recovered.",
+        "hb-crm-grid-group-counts", "hive-backend", "POST", "/v1/crm/grid/{entity}/group-counts",
+        "bearer-jwt", "implemented", "M4",
+        request={"fields": {
+            "entity": "path",
+            "group_by": "string (required)",
+            "filter": "[{column, op, value}]?",
+            "search": "string?",
+        }},
+        response={
+            "status": 200,
+            "shape": {"table": "string", "group_by": "string", "groups": "[{value, count}]"},
+            "tests": ["internal/httpapi/m4_contract_test.go:TestCRMGridContractWorkflow"],
+            "note": "matches the generic grid group-counts shape; capped at 200 groups",
+        },
+        errors=[
+            INVALID_JSON,
+            {"status": 400, "body": {"error": "group_by is required"}},
+            {"status": 400, "body": {"error": "filter must be a list"}},
+            {"status": 400, "body": {"error": "unknown column: ..."}},
+            {"status": 404, "body": {"error": "unknown entity: ..."}},
+            SIGNED_OUT,
+        ],
+        anchors=[
+            "go_hive/go-hive/internal/server/routes_colony_workers_global.go:759",
+            "core/framework/server/routes_colony_workers.py:1730-1733",
+            "core/framework/server/routes_colony_workers.py:1508-1560",
+            "go_hive/go-hive/frontend/src/api/globalData.ts:128-140",
+        ],
+        notes="Same filter/search semantics as the query endpoint; one row per distinct group_by value, highest count first.",
     ),
     endpoint(
-        "hb-crm-grid-get", "hive-backend", "GET", "/v1/crm/grid/{entity}/{id}", "bearer-jwt", "planned", "M4",
+        "hb-crm-grid-get", "hive-backend", "GET", "/v1/crm/grid/{entity}/{id}", "bearer-jwt",
+        "implemented", "M4",
         request={"fields": {"entity": "path", "id": "path"}},
-        response={"status": None, "shape": None},
-        anchors=["go_hive/go-hive/internal/server/routes_colony_workers_global.go:763", "contracts/observed-contract.json"],
-        notes="Single-record read.",
+        response={
+            "status": 200,
+            "shape": {"table": "string", "columns": "[column]", "primary_key": "[string]", "rows": "[row; exactly 1]", "total": 1, "limit": 1, "offset": 0},
+            "tests": ["internal/httpapi/m4_contract_test.go:TestCRMGridContractWorkflow"],
+            "note": "one-row generic page; the closed backend's single-record envelope is UNKNOWN",
+        },
+        errors=[
+            {"status": 404, "body": {"error": "row not found"}},
+            {"status": 404, "body": {"error": "unknown entity: ..."}},
+            SIGNED_OUT,
+        ],
+        anchors=[
+            "go_hive/go-hive/internal/server/routes_colony_workers_global.go:763",
+            "core/framework/server/routes_colony_workers.py:1736-1740",
+            "go_hive/docs/architecture/contracts.md:175",
+        ],
+        notes="Archived (soft-deleted) records read as 404.",
     ),
     endpoint(
-        "hb-crm-grid-create", "hive-backend", "POST", "/v1/crm/grid/{entity}", "bearer-jwt", "planned", "M4",
-        request={"fields": {"entity": "path"}},
-        response={"status": None, "shape": None},
-        anchors=["go_hive/go-hive/internal/server/routes_colony_workers_global.go:768", "contracts/observed-contract.json"],
-        notes="Record create; payload fields not recovered.",
+        "hb-crm-grid-create", "hive-backend", "POST", "/v1/crm/grid/{entity}", "bearer-jwt",
+        "implemented", "M4",
+        request={"fields": {
+            "entity": "path",
+            "fields": "object (required; non-empty)",
+            "identities": "object|array? — only empty values accepted; shape/dedupe semantics UNKNOWN",
+            "because": "string? (audit reason)",
+        }},
+        response={
+            "status": 200,
+            "shape": {"table": "string", "columns": "[column]", "primary_key": "[string]", "rows": "[row; the created record]", "total": 1, "limit": 1, "offset": 0},
+            "tests": ["internal/httpapi/m4_contract_test.go:TestCRMGridContractWorkflow"],
+            "note": "id/timestamps are server-assigned; response envelope from the generic row contract",
+        },
+        errors=[
+            INVALID_JSON,
+            {"status": 400, "body": {"error": "fields must be a non-empty object"}},
+            {"status": 400, "body": {"error": "identities is not supported by this private deployment (shape UNKNOWN)"}},
+            {"status": 400, "body": {"error": "because must be a string"}},
+            {"status": 404, "body": {"error": "unknown entity: ..."}},
+            SIGNED_OUT,
+        ],
+        anchors=[
+            "go_hive/go-hive/internal/server/routes_colony_workers_global.go:768",
+            "core/framework/server/routes_colony_workers.py:1744-1746",
+            "go_hive/docs/architecture/contracts.md:175-176",
+        ],
+        notes=(
+            "Write body keys are recovered ({fields, identities?, because?}); the identity/dedupe shape and "
+            "the backend's projected response are UNKNOWN, so non-empty identities is rejected rather than guessed."
+        ),
     ),
     endpoint(
-        "hb-crm-grid-patch", "hive-backend", "PATCH", "/v1/crm/grid/{entity}/{id}", "bearer-jwt", "planned", "M4",
-        request={"fields": {"entity": "path", "id": "path"}},
-        response={"status": None, "shape": None},
-        anchors=["go_hive/go-hive/internal/server/routes_colony_workers_global.go:772", "contracts/observed-contract.json"],
-        notes="Record update.",
+        "hb-crm-grid-patch", "hive-backend", "PATCH", "/v1/crm/grid/{entity}/{id}", "bearer-jwt",
+        "implemented", "M4",
+        request={"fields": {
+            "entity": "path", "id": "path",
+            "fields": "object? (must name existing columns)",
+            "identities": "object|array? — only empty values accepted; shape UNKNOWN",
+            "because": "string? (audit reason)",
+        }},
+        response={
+            "status": 200,
+            "shape": {"table": "string", "columns": "[column]", "primary_key": "[string]", "rows": "[row; the updated record]", "total": 1, "limit": 1, "offset": 0},
+            "tests": ["internal/httpapi/m4_contract_test.go:TestCRMGridContractWorkflow"],
+        },
+        errors=[
+            INVALID_JSON,
+            {"status": 400, "body": {"error": "unknown column: ..."}},
+            {"status": 400, "body": {"error": "identities is not supported by this private deployment (shape UNKNOWN)"}},
+            {"status": 404, "body": {"error": "row not found"}},
+            {"status": 404, "body": {"error": "unknown entity: ..."}},
+            SIGNED_OUT,
+        ],
+        anchors=[
+            "go_hive/go-hive/internal/server/routes_colony_workers_global.go:772",
+            "core/framework/server/routes_colony_workers.py:1750-1753",
+            "go_hive/docs/architecture/contracts.md:175-176",
+        ],
+        notes="fields is optional in the recovered body; an empty patch returns the current record and records the audit reason.",
     ),
     endpoint(
-        "hb-crm-grid-delete", "hive-backend", "DELETE", "/v1/crm/grid/{entity}/{id}", "bearer-jwt", "planned", "M4",
-        request={"fields": {"entity": "path", "id": "path"}},
-        response={"status": None, "shape": None},
-        anchors=["go_hive/go-hive/internal/server/routes_colony_workers_global.go:777", "contracts/observed-contract.json"],
-        notes="Record delete.",
+        "hb-crm-grid-delete", "hive-backend", "DELETE", "/v1/crm/grid/{entity}/{id}", "bearer-jwt",
+        "implemented", "M4",
+        request={"fields": {"entity": "path", "id": "path", "because": "string? (optional body)"}},
+        response={
+            "status": 200,
+            "shape": {"deleted": "int"},
+            "tests": ["internal/httpapi/m4_contract_test.go:TestCRMGridContractWorkflow"],
+            "note": "soft delete (archive); archived rows disappear from query/get",
+        },
+        errors=[
+            {"status": 400, "body": {"error": "because must be a string"}},
+            {"status": 404, "body": {"error": "unknown entity: ..."}},
+            SIGNED_OUT,
+        ],
+        anchors=[
+            "go_hive/go-hive/internal/server/routes_colony_workers_global.go:777",
+            "core/framework/server/routes_colony_workers.py:1757-1760",
+            "go_hive/docs/architecture/contracts.md:175-176",
+        ],
+        notes=(
+            "The proxy tolerates an absent/unparseable DELETE body and forwards null; this handler mirrors that. "
+            "The archive representation is internal; the real cloud's archived-row visibility rules are UNKNOWN."
+        ),
     ),
     endpoint(
-        "hb-crm-grid-stage", "hive-backend", "POST", "/v1/crm/grid/{entity}/{id}/stage", "bearer-jwt", "planned", "M4",
-        request={"fields": {"entity": "path", "id": "path"}},
-        response={"status": None, "shape": None},
-        anchors=["go_hive/go-hive/internal/server/routes_colony_workers_global.go:782", "contracts/observed-contract.json"],
-        notes="Stage transition; stage rules UNKNOWN.",
+        "hb-crm-grid-stage", "hive-backend", "POST", "/v1/crm/grid/{entity}/{id}/stage", "bearer-jwt",
+        "implemented", "M4",
+        request={"fields": {
+            "entity": "path", "id": "path",
+            "value": "string (required, non-empty)",
+            "because": "string?",
+        }},
+        response={
+            "status": 200,
+            "shape": {"table": "string", "columns": "[column]", "primary_key": "[string]", "rows": "[row; the updated record]", "total": 1, "limit": 1, "offset": 0},
+            "tests": ["internal/httpapi/m4_contract_test.go:TestCRMGridContractWorkflow"],
+            "note": "stage values are team-defined; no transition graph is enforced",
+        },
+        errors=[
+            INVALID_JSON,
+            {"status": 400, "body": {"error": "value is required"}},
+            {"status": 404, "body": {"error": "row not found"}},
+            {"status": 404, "body": {"error": "unknown entity: ..."}},
+            SIGNED_OUT,
+        ],
+        anchors=[
+            "go_hive/go-hive/internal/server/routes_colony_workers_global.go:782",
+            "core/framework/server/routes_colony_workers.py:1764-1771",
+            "go_hive/go-hive/frontend/src/components/data-grid/gridUtils.stageLabel.test.ts:1-38",
+        ],
+        notes=(
+            "The write body is recovered. The backend's entity/stage validation and 'stage_changed' interaction "
+            "are UNKNOWN; this deployment accepts any non-empty team-defined value and does not enforce transitions."
+        ),
     ),
     endpoint(
         "hb-crm-claim", "hive-backend", "POST", "/v1/crm/claim", "bearer-jwt", "planned", "M4",
-        request={"fields": {}},
-        response={"status": None, "shape": None},
-        anchors=["go_hive/go-hive/internal/server/routes_colony_workers_global.go:787", "contracts/observed-contract.json"],
-        notes="Claim semantics (ownership/lease) UNKNOWN.",
+        request={"fields": {"ids": "[string]", "because": "string?"}},
+        response={"status": None, "shape": None, "note": "response keys/claim lease semantics UNKNOWN"},
+        anchors=[
+            "go_hive/go-hive/internal/server/routes_colony_workers_global.go:787",
+            "core/framework/server/routes_colony_workers.py:1775-1776",
+            "go_hive/go-hive/internal/skills/_default_skills/worker-delegation/SKILL.md:76",
+        ],
+        notes=(
+            "Request body recovered ({ids, because?}) and the CLI contract says claim atomically wins only "
+            "unclaimed people and returns the rest under `skipped`. The response's winner key, the lease owner "
+            "identity and the lease lifetime are UNKNOWN, so the endpoint stays unregistered."
+        ),
     ),
     endpoint(
         "hb-crm-release", "hive-backend", "POST", "/v1/crm/release", "bearer-jwt", "planned", "M4",
-        request={"fields": {}},
-        response={"status": None, "shape": None},
-        anchors=["go_hive/go-hive/internal/server/routes_colony_workers_global.go:790", "contracts/observed-contract.json"],
-        notes="Release semantics UNKNOWN.",
+        request={"fields": {"ids": "[string]", "because": "string?"}},
+        response={"status": None, "shape": None, "note": "response keys/release semantics UNKNOWN"},
+        anchors=[
+            "go_hive/go-hive/internal/server/routes_colony_workers_global.go:790",
+            "core/framework/server/routes_colony_workers.py:1780-1781",
+            "go_hive/go-hive/internal/skills/_default_skills/worker-delegation/SKILL.md:77",
+        ],
+        notes=(
+            "Request body recovered ({ids, because?}); release frees a claim so another colony can win it. "
+            "The response shape and the ownership model (same-user colonies, lease expiry) are UNKNOWN."
+        ),
     ),
     # ---- unknown backend surfaces ----------------------------------------
     endpoint(
@@ -491,6 +744,67 @@ CURATED: list[dict[str, Any]] = [
         notes=(
             "Desktop SSE endpoint named in docs/hive-inbox.html; event names and payloads are not recoverable "
             "from the OSS repo. Registered as a placeholder only — do not implement from guesswork."
+        ),
+    ),
+    # Inbox desktop UI endpoints. docs/internal/hive-inbox-design.md §8 names the
+    # paths, but the UI is closed-source, observed-contract.json has no entry and
+    # no request/response shape is recoverable. They stay unknown and
+    # unregistered; the contract test asserts 404 (or 405 on the one path that
+    # collides with an implemented method).
+    endpoint(
+        "hb-inbox-list-messages", "hive-backend", "GET", "/v1/inbox/messages", "bearer-jwt", "unknown", "M2",
+        request={"fields": {"unread": "bool? (documented filter)"}},
+        response={"status": None, "shape": None},
+        anchors=["docs/internal/hive-inbox-design.md §8", "go_hive/docs/hive-inbox.html §02"],
+        notes=(
+            "Desktop/web list (own + team-visible, unread filter). Response shape, pagination and unread "
+            "accounting UNKNOWN; not implemented. GET on this path answers 405 because POST is registered."
+        ),
+    ),
+    endpoint(
+        "hb-inbox-message-reply", "hive-backend", "POST", "/v1/inbox/messages/{id}/reply", "bearer-jwt",
+        "unknown", "M2",
+        request={"fields": {"id": "path", "text": "string? (shape unknown)"}},
+        response={"status": None, "shape": None},
+        anchors=["docs/internal/hive-inbox-design.md §8", "go_hive/docs/hive-inbox.html §02"],
+        notes=(
+            "User answer from the Inbox UI (closed source). Request/response shape and reply delivery "
+            "semantics UNKNOWN; this module uses the self-hosted POST /internal/inbox/reply extension instead."
+        ),
+    ),
+    endpoint(
+        "hb-inbox-message-read", "hive-backend", "POST", "/v1/inbox/messages/{id}/read", "bearer-jwt",
+        "unknown", "M2",
+        request={"fields": {"id": "path"}},
+        response={"status": None, "shape": None},
+        anchors=["docs/internal/hive-inbox-design.md §8", "go_hive/docs/hive-inbox.html §02"],
+        notes="Per-user read marker (inbox_message_reads). Response shape UNKNOWN; not implemented.",
+    ),
+    endpoint(
+        "hb-inbox-mark-all-read", "hive-backend", "POST", "/v1/inbox/messages/mark-all-read", "bearer-jwt",
+        "unknown", "M2",
+        request={"fields": {}},
+        response={"status": None, "shape": None},
+        anchors=["docs/internal/hive-inbox-design.md §8", "go_hive/docs/hive-inbox.html §02"],
+        notes="Mark-all-read. Response shape UNKNOWN; not implemented.",
+    ),
+    endpoint(
+        "hb-inbox-unread-count", "hive-backend", "GET", "/v1/inbox/messages/unread-count", "bearer-jwt",
+        "unknown", "M2",
+        request={"fields": {}},
+        response={"status": None, "shape": {"unread": "int? (guess, not observed)"}},
+        anchors=["docs/internal/hive-inbox-design.md §8", "go_hive/docs/hive-inbox.html §02"],
+        notes="Badge count endpoint. Response key UNKNOWN (the int is not observed); not implemented.",
+    ),
+    endpoint(
+        "hb-inbox-runtime-heartbeat", "hive-backend", "POST", "/v1/inbox/runtime/heartbeat", "bearer-jwt",
+        "unknown", "M2",
+        request={"fields": {"runtime_id": "string? (shape unknown)"}},
+        response={"status": None, "shape": None},
+        anchors=["docs/internal/hive-inbox-design.md §8", "go_hive/docs/hive-inbox.html §02, §07"],
+        notes=(
+            "Presence keepalive: the page says the endpoint exists upstream but the runtime never calls it. "
+            "Request/response shape UNKNOWN; not implemented."
         ),
     ),
     endpoint(
@@ -596,20 +910,124 @@ CURATED: list[dict[str, Any]] = [
         notes="Client method list_provider_verified_senders(provider, secret) — HTTP method/path UNKNOWN.",
         client_method="list_provider_verified_senders",
     ),
-    # ---- llm-proxy (planned, M5) -----------------------------------------
+    # ---- llm-proxy (M5 pass-through) --------------------------------------
     endpoint(
-        "llm-messages", "llm-proxy", "POST", "/v1/messages", "bearer-stream-token", "planned", "M5",
+        "llm-messages", "llm-proxy", "POST", "/v1/messages", "bearer-stream-token", "implemented", "M5",
         request={"fields": {"anthropic_messages_body": "object", "stream": "bool?"}},
-        response={"status": None, "shape": "anthropic-messages response", "note": "streaming event subset not enumerated"},
-        anchors=["go_hive/go-hive/internal/llm/keycheck.go:564-569", "contracts/observed-contract.json"],
-        notes="Anthropic Messages pass-through; internal routing/billing/rate limits UNKNOWN.",
+        response={
+            "status": 200,
+            "shape": {"anthropic_messages_response": "object", "sse": "upstream-defined when Content-Type is text/event-stream"},
+            "note": (
+                "Upstream status/body is forwarded verbatim (JSON or SSE); the proxy does not rewrite "
+                "success responses or enumerate event names."
+            ),
+            "tests": [
+                "internal/httpapi/m5_contract_test.go:TestLLMMessagesNonStreamPassThrough",
+                "internal/httpapi/m5_contract_test.go:TestLLMMessagesSSEPassThrough",
+                "internal/httpapi/m5_contract_test.go:TestLLMMessagesUpstreamErrorsForwarded",
+                "internal/httpapi/m5_contract_test.go:TestLLMMessagesClientCancellation",
+                "harness/llm-proxy-smoke",
+            ],
+        },
+        errors=[
+            {
+                "status": 401,
+                "body": {"error": {"type": "hive_stream_token_invalid"}},
+                "golden": "internal/httpapi/testdata/llm-token-invalid.json",
+            },
+            {
+                "status": 400,
+                "body": {"type": "error", "error": {"type": "llm_upstream_not_configured", "message": "string"}},
+                "note": "Valid credential, no --llm-upstream-url. 400 keeps the go_hive keycheck (200/400/429) valid without a fake completion.",
+            },
+            {
+                "status": 502,
+                "body": {"type": "error", "error": {"type": "llm_upstream_unavailable", "message": "string"}},
+                "note": "Transport/dial failure after credential validation.",
+            },
+            {
+                "status": 504,
+                "body": {"type": "error", "error": {"type": "llm_upstream_timeout", "message": "string"}},
+                "note": "--llm-request-timeout elapsed.",
+            },
+        ],
+        anchors=[
+            "go_hive/go-hive/internal/llm/keycheck.go:564-569",
+            "core/framework/llm/litellm.py:1345-1380 (_is_hive_stream_token_invalid)",
+            "internal/httpapi/llm.go:handleLLMMessages",
+            "internal/httpapi/llm_relay.go:forwardMessagesHeaders",
+            "contracts/observed-contract.json",
+        ],
+        notes=(
+            "M5 proxies Anthropic Messages to an explicitly configured upstream (--llm-upstream-url) with "
+            "an explicitly configured credential (--llm-upstream-key) and auth header style (x-api-key or bearer). "
+            "The M3 Bearer boundary is preserved: invalid/expired/wrong-signature → 401 "
+            "{error:{type:hive_stream_token_invalid}}. With a valid credential the body is streamed verbatim "
+            "(unknown fields preserved); anthropic-version/anthropic-beta are forwarded; the client's Authorization "
+            "and x-api-key are stripped and replaced with the upstream credential. Upstream 4xx/5xx (including 429) "
+            "are relayed verbatim. text/event-stream responses are relayed line-by-line with a flush per line, so "
+            "every upstream event reaches the client immediately. No upstream configured → 400 "
+            "llm_upstream_not_configured (never 200). Model routing, billing and rate limits remain UNKNOWN and are "
+            "not implemented; the model field is passed through unchanged."
+        ),
     ),
     endpoint(
-        "llm-images-generations", "llm-proxy", "POST", "/v1/images/generations", "api-key", "planned", "M5",
-        request={"fields": {"prompt": "string", "model": "string?", "size": "string?"}},
-        response={"status": None, "shape": None},
-        anchors=["go_hive/go-hive/tools/integrations/image.go:36-37,280", "contracts/observed-contract.json"],
-        notes="Image proxy; token is HIVE_API_KEY. Backend model/format UNKNOWN.",
+        "llm-images-generations", "llm-proxy", "POST", "/v1/images/generations", "bearer-stream-token", "implemented", "M5",
+        request={
+            "fields": {
+                "prompt": "string",
+                "model": "string?",
+                "size": "string?",
+                "quality": "string?",
+                "n": "int?",
+                "output_format": "string?",
+                "image": "string[]? (base64 reference images; sent as JSON, never multipart)",
+            }
+        },
+        response={
+            "status": 200,
+            "shape": {"data": [{"b64_json": "string"}], "usage": "object?"},
+            "note": "Upstream status/body is forwarded verbatim; the backend model/format is UNKNOWN.",
+            "tests": [
+                "internal/httpapi/m5_contract_test.go:TestLLMImagesPassThrough",
+                "internal/httpapi/m5_contract_test.go:TestLLMImagesUpstreamErrorsForwarded",
+                "harness/llm-proxy-smoke",
+            ],
+        },
+        errors=[
+            {
+                "status": 401,
+                "body": {"error": {"type": "hive_stream_token_invalid"}},
+                "golden": "internal/httpapi/testdata/llm-token-invalid.json",
+            },
+            {
+                "status": 503,
+                "body": {"type": "error", "error": {"type": "llm_upstream_not_configured", "message": "string"}},
+                "note": "Valid credential, no --images-upstream-url.",
+            },
+            {
+                "status": 502,
+                "body": {"type": "error", "error": {"type": "llm_upstream_unavailable", "message": "string"}},
+            },
+            {
+                "status": 504,
+                "body": {"type": "error", "error": {"type": "llm_upstream_timeout", "message": "string"}},
+            },
+        ],
+        anchors=[
+            "go_hive/go-hive/internal/tools/integrations/image.go:36-37,280-300,330-380,420-470",
+            "tools/src/aden_tools/tools/image_gen_tool/image_gen_tool.py:1-30,300-420",
+            "internal/httpapi/llm.go:handleLLMImages",
+            "contracts/observed-contract.json",
+        ],
+        notes=(
+            "Client contract: Authorization: Bearer <HIVE_API_KEY> (the same per-user proxy credential as "
+            "/v1/messages), JSON body with prompt/model/size/quality/n/output_format and optional base64 `image` "
+            "reference array, response {data:[{b64_json}], usage}. M5 forwards the JSON body verbatim to an "
+            "explicitly configured OpenAI-compatible images upstream (--images-upstream-url) with "
+            "Authorization: Bearer <--images-upstream-key>, because the proxy is documented as JSON-only. "
+            "No images upstream → 503 llm_upstream_not_configured. Image model routing/backend remains UNKNOWN."
+        ),
     ),
     # ---- aden credentials (planned, M6) ----------------------------------
     endpoint(
@@ -732,10 +1150,42 @@ UNKNOWNS = [
     "Real cloud 401 body: observed-contract says {error:signed_out}; the client copy is the verbatim sentence (implemented).",
     "JWT issuer, signing algorithm, claims and login/device flow.",
     "GET /v1/inbox/stream (desktop SSE): event names and payloads.",
+    (
+        "Inbox desktop/web UI endpoints (GET /v1/inbox/messages, POST /v1/inbox/messages/{id}/reply, "
+        "POST .../{id}/read, POST .../mark-all-read, GET .../unread-count): paths named in "
+        "docs/internal/hive-inbox-design.md §8 and go_hive/docs/hive-inbox.html §02, but request/response "
+        "shapes are not in observed-contract.json — registered unknown, deliberately not implemented."
+    ),
+    "POST /v1/inbox/runtime/heartbeat: documented upstream but the runtime never calls it; request/response UNKNOWN.",
+    "Inbox runtime stream `kind` filter semantics: upstream filtering is UNKNOWN; this module records kind as connection bookkeeping only.",
+    "Inbox read-state/unread-count model (inbox_message_reads) and list pagination: UNKNOWN; no endpoint implemented.",
     "POST /user/refresh-stream-token (desktop legacy): request/response.",
+    (
+        "streamToken revocation: no sid blacklist or revocation ledger is observable. This module has none; "
+        "an unexpired token stays valid after rotation, and the only revocation lever is removing a signing "
+        "secret (master-secret rotation, dual-key window)."
+    ),
+    (
+        "streamToken/direct JWT claims beyond user_id, team_id, typ, iss, iat, exp: the real cloud signer, "
+        "issuer and login/device flow are UNKNOWN."
+    ),
+    (
+        "LLM proxy internal semantics: model routing, billing, rate limits, provider-key selection and the "
+        "exact upstream 401 message are UNKNOWN. M5 forwards the request body/model and the upstream status/body "
+        "verbatim to an explicitly configured upstream; it has no routing table and does not mint provider keys."
+    ),
+    (
+        "Anthropic SSE event subset of the real cloud: UNKNOWN. M5 relays whatever `text/event-stream` bytes the "
+        "configured upstream produces (line-by-line, flushed per line) instead of enumerating event names."
+    ),
+    (
+        "Image generation backend/model/format: UNKNOWN. M5 forwards the observed JSON client contract "
+        "(prompt/model/size/quality/n/output_format/image[]) to an explicitly configured OpenAI-compatible "
+        "images endpoint; it does not implement OpenAI multipart edits itself."
+    ),
+    "LLM proxy refresh TTL/rotation policy on the real cloud: 24h is the client-observed TTL; server internals UNKNOWN.",
     "CRM entity schema, stage rules and claim/release semantics.",
     "Senders send-log/setup HTTP paths: 8 client methods, no server code in the OSS repo.",
-    "LLM proxy routing, billing, rate limits; Anthropic streaming event subset.",
     "Aden credential refresh/validate payload details.",
     "Gateway availability host attribution: hive-backend vs api.adenhq.com.",
     "cloud_sync reconcile protocol (not in go-hive-cloud scope).",
@@ -933,6 +1383,8 @@ def build_surface() -> tuple[dict[str, Any], list[str]]:
             "tools/src/aden_tools/senders/{registry,sendlog,setup}.py",
             "go_hive/go-hive/internal/globaldb/client.go",
             "go_hive/go-hive/internal/sentinel/{notifier,listeners}.go",
+            "go_hive/go-hive/internal/llm/keycheck.go",
+            "core/framework/llm/litellm.py",
             "core/framework/credentials/aden/client.py",
             "core/framework/server/streamtoken_refresh.py",
         ],

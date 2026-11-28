@@ -1,0 +1,136 @@
+{
+ "condition": 7,
+ "head": "42f2b93215edddcd3f7f9ef5ca246162753e6d7b",
+ "faces": {
+  "api_rest": {
+   "machine": {
+    "endpoints": 107,
+    "value_paths": 8716,
+    "declared_differences": 46,
+    "endpoint_level_exceptions": 0,
+    "undeclared_differences": 0,
+    "exception_rules": 10
+   },
+   "doc": "go_hive/docs/api-ws-golden.md §5/§6.3/§6.6",
+   "assertions": {
+    "46 declared in doc": true,
+    "10 rules in doc": true,
+    "9 SSE exceptions in doc": true,
+    "0 endpoint-level in doc": true
+   }
+  },
+  "sse": {
+   "machine": {
+    "frames": [
+     113,
+     148
+    ],
+    "exceptions": 9,
+    "verdict": "PASS"
+   },
+   "doc": "go_hive/docs/sse-payload-parity.md §4",
+   "assertions": {
+    "9 exceptions in doc": true
+   }
+  },
+  "tool_output": {
+   "machine": {
+    "scenarios": 69,
+    "aligned": 50,
+    "shape_aligned": 1,
+    "exceptions": 18,
+    "different": 0
+   },
+   "doc": "go_hive/docs/tool-output-contract.md §5",
+   "assertions": {
+    "18 exceptions in doc": true,
+    "top summary 69/50/1/18": true
+   }
+  },
+  "tool_definitions": {
+   "machine": {
+    "same_name_desc": "48/48 (TestToolContractFreeze, live)",
+    "schema_normalized": "48/48",
+    "schema_raw": "40/48 (8 pure-representation differences)"
+   },
+   "doc": "go_hive/docs/tool-contract-diff.md §18.6 (current) / §18.8 (residuals); §13.6 is the historical round-4/5 list",
+   "assertions": {
+    "§18.6 48/48 desc": true,
+    "§18.8 residual list present": true
+   }
+  },
+  "prompt": {
+   "machine": {
+    "structural_exceptions": [
+     "P-06 overseer catalog relay",
+     "P-07 credentials block refresh timing (Go snapshots at session build/resume)",
+     "P-08 colony-phase base prompt has no live capture"
+    ],
+    "ids": [
+     "P-06",
+     "P-07",
+     "P-08"
+    ]
+   },
+   "doc": "go_hive/docs/prompt-parity.md §6 (P-01..P-08)",
+   "assertions": {
+    "P-06/P-07/P-08 registered": true,
+    "machine list equals remaining IDs": true
+   }
+  },
+  "browser": {
+   "machine": {
+    "audit_html": "go_hive/docs/browser-bridge-surface-audit.html",
+    "R_ids": [
+     "R01",
+     "R02",
+     "R03",
+     "R04",
+     "R05",
+     "R06",
+     "R07",
+     "R08",
+     "R09",
+     "R10",
+     "R11",
+     "R12",
+     "R13",
+     "R14",
+     "R15",
+     "R16",
+     "R17",
+     "R18",
+     "R19",
+     "R20"
+    ]
+   },
+   "doc": "same page + browser-bridge.html",
+   "assertions": {
+    "R01..R20 present": true
+   }
+  },
+  "integrations": {
+   "machine": {
+    "grades": {
+     "A": 12,
+     "B": 91,
+     "C": 0,
+     "D": 1,
+     "E": 0
+    },
+    "totals": {
+     "rows": 104,
+     "actions": 864,
+     "impl_actions": 716,
+     "spec_actions": 150
+    }
+   },
+   "doc": "go_hive/docs/integrations-evidence-audit.md",
+   "assertions": {
+    "A12/B91/C0/D1/E0 in doc": true
+   }
+  }
+ },
+ "verdict": "PASS",
+ "note": "Machine lists and per-face docs agree. API summary lines corrected from the stale '105 + 2 endpoint-level' to the current '107/107, 46 value-level declared, 0 endpoint-level' (machine totals.endpoint_exceptions=0). Tool-contract §13.6 is a historical round section; the current numbers and residual list are §18.6/§18.8."
+}

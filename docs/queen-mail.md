@@ -1,5 +1,7 @@
 # Queen 邮件（queen_mail）与会话工具
 
+> 2026-11-24：补充 ref 类型/解析顺序与 LAN 联邦边界；当前实现仍是单进程 queen mail。
+
 上游事实源：`core/framework/tools/queen_mail_tools.py`、`core/framework/server/queen_mail.py`、`core/framework/server/channels.py`。
 上游测试：`core/framework/server/tests/test_queen_mail.py`、`core/framework/server/tests/test_claude_code_queens.py`。
 
@@ -9,6 +11,7 @@ Go 实现分布：
 | 层 | 文件 |
 | --- | --- |
 | 引擎（信件、队列、日限、深度、审计） | `internal/queenmail/` |
+| Ref 解析（Claude Code conversation 前缀） | `internal/queenmail/ref.go` |
 | 服务器适配（投递、线程会话、回复唤醒） | `internal/server/adapters_qmail.go` |
 | HTTP 路由（Claude Code queen 的 `list_queens` / 写信入口） | `internal/server/routes_queens_mail.go` |
 | 会话工具（`list_queens` / `message_queen`） | `internal/cli/session_tools_queen_mail.go` |
@@ -43,7 +46,7 @@ Go 在**启动 `hive serve` 时**读取该段并构造 `qmail.Mail`；修改配�
 
 - 会话的 queen 在 `queens` 列表内（或 `queens` 缺省，或会话尚未选 queen）→ 注册；
 - `enabled=false`、或会话 queen 不在列表内 → 两个工具都不可见；
-- colony worker 的工具池（`colonyWorkerToolSurface`）与 overseer 不注册，与上游 `_QUEEN_INDEPENDENT_TOOLS` / `_QUEEN_COLONY_TOOLS` 的 queen-only 语义一致。
+- colony worker 的工具池（`colonyWorkerToolSurface`）不注册；默认的 colony-bound chat queen 是执行者，因此 queen mail 工具在 colony 会话里可见。上游 `_QUEEN_COLONY_TOOLS` 同样包含这两个工具。Go 的 live overseer 没有生产启动路径，保持 dormant。
 
 ### `list_queens`
 
@@ -78,6 +81,19 @@ Go 在**启动 `hive serve` 时**读取该段并构造 `qmail.Mail`；修改配�
 
 工具描述在注册时附上当前可写信的 queen 名单（上游 `_roster`），格式为 `Queens you can write to: Ivy (queen_ivy, Cartographer).`。
 
+### 2.1 Ref 类型与解析顺序
+
+同一套 queen mail 里有四种 ref，解析顺序固定：
+
+| Ref | 归属 | 处理 |
+| --- | --- | --- |
+| `claude_code:<queen>:<session>` | Claude Code queen 的 conversation | `ConversationPrefix` / `IsConversationRef`；`Mail.DeliverReply` 先检查这个前缀，保持 Claude Code 分支 |
+| `queen_id` | 本地同进程 Hive queen | `list_queens` 返回的 id；回信目标是该会话的 `reply_to` |
+| `session_...` | 本地会话 / 回信目标 | `SessionManager` + thread `meta.json` 的 `reply_to` |
+| `queen_name@peer_node_id@group_id` | 远端 Hive queen（LAN 联邦设计） | 当前**未实现**；见 `docs/lan-pipes-design.html`，HEAD 上会按本地 roster 拒绝 |
+
+`ConversationPrefix` 只用于 Claude Code conversation，不是 queen mail 的全局前缀。普通同进程 Hive queen 之间没有前缀，直接用 queen id + 会话 id。
+
 ## 3. 投递与线程会话
 
 一个进程只有一个 `qmail.Mail`，挂在 `SessionManager.QueenMail()` 上：
@@ -93,6 +109,28 @@ Go 在**启动 `hive serve` 时**读取该段并构造 `qmail.Mail`；修改配�
 3. 写 `meta.json` 的 `channel/peer/reply_to/queen_id/title`；
 4. 通过 `Chat.InjectQueenMail`（有 chat runtime）或 queen node 的 `InjectEvent` 把信件作为一条客户端消息送入会话；
 5. 投递失败（无法启动会话、会话被 colony 锁住、没有 live 会话且没有 create hook）返回明确错误，`message_queen` 原样转成 `{"error": ...}`，不会假装成功。
+
+如果收信方是配置在 `queen_mail.claude_code` 的 queen，`Mail.deliver` 走 `claude.DeliverLetter`，不创建 Hive 线程会话；回信由 `Mail.DeliverReply` 的 `IsConversationRef` 分支送回 runner。
+
+### 3.1 同进程交互时序
+
+```text
+queen A (session_A)
+  message_queen("queen_B", text)
+    -> Mail.Send(from_session=session_A)
+    -> Adapter.Deliver
+       找到/创建 B 的 queens 线程（channel="queens", peer=A）
+       先订阅回复事件，再注入信件
+  <- {"sent": "...", "to": "queen_B", "depth": 1}   // 不是 B 的答复
+
+B 的线程会话跑一个回合
+  client_output_delta / tool_call_started / llm_turn_complete ...
+    -> adapter 收集她说的文本
+    -> Mail.DeliverReply(reply_to=session_A)
+    -> A 的会话收到一条来自 B 的新信件
+```
+
+`message_queen` 返回只代表投递成功；回信是稍后注入 A 会话的一条新消息。`from_session` 是 A 的会话 id，决定回信落到哪里。
 
 信件文本形如：
 
@@ -166,6 +204,15 @@ Parity 注解指向 `core/framework/server/tests/test_queen_mail.py` 与 `test_c
 - **Claude Code queen 运行器**：已实现（`internal/claudecode/claude_runner*.go` + `hive queen-mail-mcp`），配置、回合、超时、回复回写、MCP 注入与测试见 `docs/claude-code-queen-runner.md`；只读 dashboard 路由（`GET /api/claude-code-queens` 与 transcript）读真实配置、会话记录与 Claude Code 会话文件，见 `docs/claude-code-dashboard.md`。
 - **配置生效时机**：Go 在 `hive serve` 启动时构造服务；开关变化需要重启。上游在每次注册/发送时重读配置。
 - **fork / superseded 会话**：上游 `_newest_successor` 会跟随 `superseded_by` 把回复送到新会话；Go 适配器按会话 id 恢复，未跟随 fork 后的新 id。
+
+### 6.3 LAN 联邦 queen mail（设计，不在本页实现）
+
+- 当前 `list_queens` / `message_queen` 只处理本进程的 queen；`queen_b@hive-office-b@office-lan` 这类三级地址是 `docs/lan-pipes-design.html` 的设计，HEAD 未实现。
+- 设计中的 roster 仍保持 `{id, name, title}`，不增加 skills、description 或 remote 字段；本地和远端同形。
+- 设计中的解析顺序是 `claude_code:` → 三级远端地址 → 本地 queen id / session；`ConversationPrefix` 和现有 Claude Code 分支不变。
+- `max_hops=4` 允许 queen 主动把信写到第三个 peer（有界链），但没有自动转发；每一跳都需要 queen 调用 `message_queen` 或回复。
+- 不要在 HEAD 上直接用 `message_queen` 发三级地址；当前会走本地 roster 校验并返回未知 queen。
+- WAN 版本（A 公网 hub + B/C/D NAT，rendezvous + relay + 可选委派发现）另见 `docs/wan-peers-design.html`；同样是 design-only，不改变本页的 LAN 五键方案。
 
 ## 7. 2026-11-20 真实双 queen 端到端（已验证）
 

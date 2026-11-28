@@ -125,6 +125,9 @@ func TestLiveToolsActualIsEagerPlusAskUserNotTheRegistry(t *testing.T) {
 	if ready, _ := data["phase_state_ready"].(bool); !ready {
 		t.Fatalf("phase_state_ready = %#v, want true", data["phase_state_ready"])
 	}
+	if _, ok := data["executor"]; ok {
+		t.Fatal("live_tools must not report a second executor field")
+	}
 
 	actual := liveToolsNames(data["actual_tools"])
 	want := map[string]struct{}{

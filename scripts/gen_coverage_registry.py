@@ -765,7 +765,8 @@ def build_phase_rows(
             "owner": "tasks",
             "notes": (
                 "Colony-phase pivot wired in the CLI session catalogue (tasks.NewColonyPivotField); "
-                "the lean-handoff accept endpoint remains 501 (gap:colony_pivot_lean_handoff)"
+                "the lean-handoff accept landed in colony_pivot_lean.go "
+                "(gap:colony_pivot_lean_handoff is fixed)"
             ),
         }
     )
@@ -1018,38 +1019,71 @@ def build_known_gaps() -> list[dict[str, Any]]:
             "tests": "internal/cli/colony_pivot_accept_test.go; internal/agentloop/colony_dispatch_test.go",
             "notes": (
                 "The colony phase now exposes new_colony and the agentloop intercept/pending-pivot/"
-                "event path landed. The lean-handoff accept endpoint is still 501 (separate open gap)."
+                "event path landed. The lean-handoff accept endpoint landed in colony_pivot_lean.go "
+                "(gap:colony_pivot_lean_handoff is fixed)."
             ),
         },
         {
             "id": "gap:colony_pivot_lean_handoff",
-            "title": "colony pivot accept (lean-handoff sibling colony) is not implemented",
+            "title": "colony pivot accept (lean-handoff sibling colony) implemented",
             "upstream_anchor": optional(ROOT / "core" / "framework" / "server" / "routes_sessions.py", "def _create_sibling_colony_from_colony"),
-            "go_anchor": optional(GO_INTERNAL / "cli" / "loader.go", "the colony lean-handoff accept path is not implemented"),
-            "status": "open",
+            "go_anchor": optional(GO_INTERNAL / "cli" / "colony_pivot_lean.go", "func (l *colonyLifecycle) createSiblingColonyFromColony"),
+            "status": "fixed",
             "owner": "server",
             "lane": "",
-            "commit": "",
-            "tests": "internal/cli/colony_pivot_accept_test.go::TestCreateColonyFromSourceRefusesColonyPivotAcceptPath",
+            "commit": "96e64c62",
+            "tests": "internal/cli/colony_pivot_accept_test.go::TestCreateColonyFromSourceSpawnsLeanHandoffSibling",
             "notes": (
-                "Accepting a colony-phase pivot currently returns 501. Upstream builds a sibling colony "
-                "from goal/handoff/tasks, with no transcript copy, no compaction and no spawn lock."
+                "Accepting a colony-phase pivot creates a sibling colony from goal/handoff/tasks: "
+                "fresh queen session seeded with the handoff brief only, plan seeded before the "
+                "session opens, no transcript copy, no compaction, source colony stays live and "
+                "unlocked. The HTTP test asserts 201, handoff-only transcript, seeded plan, "
+                "COLONY_CREATED skipped/colony and pivot cleared."
             ),
         },
         {
             "id": "gap:dm_fork_seed_compaction",
-            "title": "DM fork into a colony does not copy/compact the source session",
+            "title": "DM fork into a colony copies and compacts the source session",
             "upstream_anchor": optional(ROOT / "core" / "framework" / "server" / "routes_execution.py", "compaction_status.mark_in_progress"),
-            "go_anchor": optional(GO_INTERNAL / "cli" / "colony_worker_definition.go", "func writeColonyFromSession"),
-            "status": "open",
+            "go_anchor": optional(GO_INTERNAL / "cli" / "colony_fork_seed.go", "func prepareColonyForkSeed"),
+            "status": "fixed",
             "owner": "server",
             "lane": "",
-            "commit": "",
-            "tests": "internal/cli/colony_pivot_accept_test.go::TestCreateColonyFromSourceWakesSourceQueenAndPublishesColonyCreated",
+            "commit": "2f73bbfd",
+            "tests": "internal/cli/colony_fork_seed_test.go::TestCreateColonyFromSourceCopiesQueenSessionAndRewritesMeta; internal/cli/colony_fork_seed_test.go::TestCreateColonyFromSourceAwaitsCompactionBeforeInitialPrompt",
             "notes": (
-                "Go creates metadata/worker.json and a fresh colony session only; upstream copytree's "
-                "the queen session and schedules a background compaction into an inherited seed. "
-                "Memories are not copied on either side (queen-scope memories stay shared)."
+                "The DM fork copytree-merges the queen session into a fresh colony session dir, "
+                "rewrites meta.json, schedules a bounded background compaction into the colony's "
+                "seed conversation and awaits the marker before opening the session; every stage "
+                "is fail-soft to the raw copied transcript. Memories are not copied on either "
+                "side (queen-scope memories stay shared)."
+            ),
+        },
+        {
+            "id": "gap:dm_fork_worker_surface",
+            "title": "DM fork worker.json inherits the live queen surface",
+            "upstream_anchor": optional(ROOT / "core" / "framework" / "agents" / "queen" / "worker_definition.py", "def build_meta"),
+            "go_anchor": optional(GO_INTERNAL / "cli" / "colony_worker_definition.go", "func writeColonyFromSession"),
+            "status": "fixed",
+            "owner": "server",
+            "lane": "",
+            "commit": "de827224",
+            "tests": (
+                "internal/cli/colony_fork_worker_surface_test.go::TestCreateColonyFromSourceDMForkWritesLiveQueenSurface; "
+                "internal/cli/colony_fork_worker_surface_test.go::TestCreateColonyFromSourceDMFWritesForkMetadata; "
+                "internal/cli/colony_fork_worker_surface_test.go::TestCreateColonyFromSourceDMFPersistsSourceProvenance; "
+                "internal/cli/colony_fork_worker_surface_test.go::TestCreateColonyFromSourceDMForkRequiresLiveQueen; "
+                "internal/cli/colony_fork_seed_test.go::TestCreateColonyFromSourceCopiesQueenSessionAndRewritesMeta; "
+                "internal/cli/colony_fork_seed_test.go::TestCreateColonyFromSourceAwaitsCompactionBeforeInitialPrompt"
+            ),
+            "notes": (
+                "fork_session_into_colony now refuses a source without a queen executor or registered "
+                "queen node with a 503 before the colony directory is created. writeColonyFromSession "
+                "snapshots the live queen surface into worker.json: tool snapshot, rendered skills "
+                "catalog filtered for her phase, protocols prompt, allowlisted skill dirs, loop config, "
+                "queen phase/id, tracker binding in input_data, and the handoff goal. The fork also "
+                "persists source provenance (agent_path/agent_name, spawn lock, colony binding on the "
+                "source record) and metadata.json source_session_id/worker spawned_at."
             ),
         },
         {
@@ -1112,22 +1146,57 @@ def build_known_gaps() -> list[dict[str, Any]]:
             ),
         },
         {
+            "id": "gap:credentials_aden_client",
+            "title": "Aden credential HTTP client is ported",
+            "upstream_anchor": optional(ROOT / "core" / "framework" / "credentials" / "aden" / "client.py", "class AdenCredentialClient"),
+            "go_anchor": optional(GO_INTERNAL / "credentials" / "aden_client.go", "func NewAdenCredentialClient"),
+            "status": "fixed",
+            "owner": "credentials",
+            "lane": "",
+            "commit": "4f054249 (merge af771897)",
+            "tests": (
+                "internal/credentials/aden_client_test.go::TestAdenListIntegrations; "
+                "internal/credentials/aden_client_test.go::TestAdenGetCredential; "
+                "internal/credentials/aden_client_test.go::TestAdenRequestRefresh; "
+                "internal/credentials/aden_client_test.go::TestAdenValidateToken; "
+                "internal/credentials/aden_client_test.go::TestAdenHealthCheck; "
+                "internal/credentials/aden_client_test.go::TestAdenAuthenticationError; "
+                "internal/credentials/aden_client_test.go::TestAdenRateLimitError; "
+                "internal/credentials/aden_client_test.go::TestAdenRefreshError; "
+                "internal/credentials/aden_client_test.go::TestAdenRetriesOnConnectionFailure"
+            ),
+            "notes": (
+                "AdenCredentialClient ports the Aden platform endpoints over Bearer auth: list "
+                "integrations, get credential (auto-refresh), request refresh and validate token, "
+                "plus health/close. It keeps upstream's config/env resolution, retry/backoff on "
+                "connection and 5xx failures, and typed auth/not-found/refresh/rate-limit errors. "
+                "Production call sites are unchanged: agent_validation.go still records the Aden "
+                "token pre-sync as a no-op, so this gap covers the client port only."
+            ),
+        },
+        {
             "id": "gap:memory_cloud_sync_schedule_push",
-            "title": "memory routes do not schedule a cloud-sync push",
+            "title": "memory cloud-sync schedule_push is a no-op in the reference baseline",
             "upstream_anchor": optional(
                 ROOT / "core" / "framework" / "server" / "routes_memories.py",
                 'schedule_push("memory", rel)',
             ),
             "go_anchor": optional(GO_INTERNAL / "server" / "routes_memories_extra.go", "type MemoryRouteDeps struct"),
-            "status": "open",
+            "status": "fixed",
             "owner": "memory",
             "lane": "",
             "commit": "",
             "tests": "",
             "notes": (
-                "Go MemoryRouteDeps only carries Home; no SchedulePush seam and no cloud-sync "
-                "implementation is wired. Upstream only pushes global/ and agents/queens/ "
-                "paths via _maybe_sync_memory."
+                "Reference baseline 6703b434 contains only core/framework/cloud_sync_hooks.py: "
+                "core/framework/cloud_sync.py is absent (git cat-file -e exits 128) and no reachable "
+                "commit ever added it. schedule_push imports framework.cloud_sync inside its try block, "
+                "so the missing module raises ModuleNotFoundError and is swallowed by `except Exception`, "
+                "returning before _safe_push is ever scheduled. The hook is therefore an observable no-op "
+                "in the frozen baseline, and Go's nil MemoryRouteDeps.SchedulePush in internal/server/app.go "
+                "is behaviorally equivalent. No cloud-sync scheduler/uploader was implemented; the hook "
+                "could only do work if a deployed Python package supplied framework.cloud_sync outside "
+                "this repo."
             ),
         },
         {

@@ -6,10 +6,11 @@ package agentloop
 // inter-event silence) the loop cancels the stream, consults the
 // STREAM_STALLED reminder sources synchronously, injects their nudge into the
 // conversation and re-streams the same inner turn. The Go transport differs —
-// the watchdog lives in the streaming completer (internal/server/chat_stream.go)
-// and reports the trip as a typed *llm.StreamStalledError — but the loop-side
-// recovery is the same: collect, inject, retry; the source owns the body and
-// the per-turn cap.
+// the watchdog lives in a streaming completer adapter (agentloop's
+// StreamingCompleter for colony loops, internal/server/chat_stream.go for the
+// chat queen) and reports the trip as a typed *llm.StreamStalledError — but the
+// loop-side recovery is the same: collect, inject, retry; the source owns the
+// body and the per-turn cap.
 //
 // Parity: framework/agent_loop/agent_loop.py::_run_turn_loop
 // (the `_watchdog_verdict != "ok"` recovery block)

@@ -14,6 +14,7 @@ package colony
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -50,7 +51,9 @@ func (c *workerReminderClock) idleSeconds() float64 {
 
 // workerTaskReminderSource bridges tasks.TaskReminderSource (whose Render takes
 // tasks.TaskReminderContext) onto agentloop.ReminderSource. It is the worker
-// twin of the chat runtime's adapter; both wrap the one ported policy.
+// twin of the chat runtime's adapter; both wrap the one ported policy. The
+// inner source is store-scoped so it reads the worker's own task list rather
+// than the process-wide store.
 //
 // Parity: framework/tasks/reminders.py::TaskReminderSource
 type workerTaskReminderSource struct {
@@ -161,6 +164,106 @@ func intStatValue(value any) int {
 	}
 }
 
+// workerTaskStore resolves the task store a worker's own task tools write
+// (newWorkerTaskToolSet): the worker's directory, with the worker id as the
+// session id, so the list lands under <workerDir>/_misc/<workerID>.
+func (r *ColonyRuntime) workerTaskStore(worker *Worker) *tasks.TaskStore {
+	if r == nil || worker == nil || worker.ID == "" {
+		return nil
+	}
+	workerDir := worker.StoragePath
+	if workerDir == "" {
+		workerDir = r.workerStorage(worker.ID)
+	}
+	return tasks.NewTaskStore(workerDir)
+}
+
+// idleTasksFromStore maps a task store's records onto the idle nudge's task
+// view. Read failures degrade to an empty list (upstream _open_tasks is
+// best-effort); completed/archived filtering stays in the source.
+//
+// Parity: framework/agent_loop/idle_nudge.py::_open_tasks
+func idleTasksFromStore(store *tasks.TaskStore, sessionID string) []agentloop.IdleTask {
+	if store == nil || sessionID == "" {
+		return nil
+	}
+	records := store.ListTasks(sessionID)
+	out := make([]agentloop.IdleTask, 0, len(records))
+	for _, record := range records {
+		if record == nil {
+			continue
+		}
+		out = append(out, agentloop.IdleTask{
+			ID:      strconv.Itoa(record.ID),
+			Subject: record.Subject,
+			Status:  string(record.Status),
+		})
+	}
+	return out
+}
+
+// sessionGoalFromStore reads the task list's anchor goal for the idle nudge's
+// goal prefix. A missing list/goal degrades to "" (no prefix).
+//
+// Parity: framework/agent_loop/idle_nudge.py::_session_goal
+func sessionGoalFromStore(store *tasks.TaskStore, sessionID string) string {
+	if store == nil || sessionID == "" {
+		return ""
+	}
+	meta := store.GetMeta(sessionID)
+	if meta == nil || meta.Goal == nil {
+		return ""
+	}
+	return *meta.Goal
+}
+
+// attachWorkerTaskReminderProviders installs the worker's task providers on
+// its AgentContext. AgentLoop.ExecuteTurn re-binds the hub from that context
+// (bindReminders), so providers set only on a pre-built ReminderAgentContext
+// would be replaced before the first render.
+func attachWorkerTaskReminderProviders(ctx *agentloop.AgentContext, store *tasks.TaskStore, workerID string) {
+	if ctx == nil {
+		return
+	}
+	// The idle source's _open_tasks/_session_goal guards skip an empty
+	// session id. Upstream's worker agent context carries its session id;
+	// here it is the same worker id the task tools write under.
+	if ctx.SessionID == nil && workerID != "" {
+		sessionID := workerID
+		ctx.SessionID = &sessionID
+	}
+	ctx.OpenTasksProvider = func() []agentloop.IdleTask {
+		return idleTasksFromStore(store, workerID)
+	}
+	ctx.SessionGoalProvider = func() string {
+		return sessionGoalFromStore(store, workerID)
+	}
+}
+
+// workerReminderContext is the worker's reminder view. Its task providers read
+// the same store the worker's task tools write, so the idle nudge's
+// parked_open_tasks variant sees open work and the goal prefix resolves.
+func (r *ColonyRuntime) workerReminderContext(worker *Worker, tools []llm.ToolDef) *agentloop.ReminderAgentContext {
+	reminderCtx := &agentloop.ReminderAgentContext{
+		SessionID:      fmt.Sprintf("%s/%s", r.streamID, worker.ID),
+		ColonyID:       r.streamID,
+		AvailableTools: reminderToolsFromDefs(tools),
+	}
+	// The worker tracker nudge resolves the colony's tracker DB through the
+	// same binding the tracker tools write to. A runtime without a provisioned
+	// tracker returns nil, so the source self-skips.
+	reminderCtx.ColonyBindingProvider = r.reminderColonyBinding
+	store := r.workerTaskStore(worker)
+	workerID := worker.ID
+	reminderCtx.OpenTasksProvider = func() []agentloop.IdleTask {
+		return idleTasksFromStore(store, workerID)
+	}
+	reminderCtx.SessionGoalProvider = func() string {
+		return sessionGoalFromStore(store, workerID)
+	}
+	return reminderCtx
+}
+
 // newWorkerAgentLoop builds a worker loop whose Hub carries the task reminder
 // and the idle nudge. The idle ticker is started here and stopped by the
 // returned cleanup; a parked reminder is drained back into the loop's input
@@ -174,19 +277,46 @@ func (r *ColonyRuntime) newWorkerAgentLoop(worker *Worker, cfg agentloop.LoopCon
 		return baseExec(req)
 	}
 	loop := agentloop.NewAgentLoop(cfg, executor)
+	// A resumed worker rebuilds its loop over the saved conversation; the
+	// cursor also carries the cumulative tool-call count and the doom
+	// fingerprint window, so the restarted run continues the same budget and
+	// repetition history instead of refilling both.
+	//
+	// Parity: framework/agent_loop/internals/cursor_persistence.py::restore
+	// Parity: framework/agent_loop/agent_loop.py::execute (restored counters)
+	if worker.conversation != nil {
+		_ = loop.RestoreCursorState(worker.conversation)
+	}
+	// P0-14: a worker's cross-turn replay publishes tool_call_replay_detected
+	// on the colony bus, the same bus its doom-loop sink and turn emitter use.
+	//
+	// Parity: framework/host/event_bus.py::emit_tool_call_replay_detected
+	if r.bus != nil {
+		loop.ReplayEvents = r.bus
+	}
+	r.attachToolLiveness(loop)
+	// Install the transport-level stream watchdog on the worker's LLM seam.
+	// A provider without streaming support is left untouched.
+	streamingLLM := r.wireStreamingLLM(worker, cfg)
 	if loop.Hub == nil {
 		return loop, func() {}
 	}
 
 	hub := loop.Hub
-	hub.Register(&workerTaskReminderSource{inner: tasks.NewTaskReminderSource()})
+	// The worker's task reminder reads and persists against the worker's own
+	// task store + session id, the exact scope its task tools write. The
+	// providers also go on the AgentContext, which the loop re-binds from at
+	// the start of the first turn.
+	taskStore := r.workerTaskStore(worker)
+	attachWorkerTaskReminderProviders(worker.Context, taskStore, worker.ID)
+	hub.Register(&workerTaskReminderSource{inner: tasks.NewTaskReminderSourceFor(taskStore, worker.ID)})
 	// Worker-role tracker cadence (upstream WorkerTrackerSnapshotReminderSource:
 	// workers fill the queen's tables, so the nudge is cadence-driven and
 	// self-skips when the tracker has no rows).
 	hub.Register(agentloop.NewWorkerTrackerSnapshotReminderSource())
-	// The stream-stall source is registered on every loop upstream; a worker's
-	// completer may or may not stream today, but the registration matrix and
-	// the recovery path stay identical to the queen's.
+	// The stream-stall source is registered on every loop upstream. The
+	// watchdog itself lives in the completer adapter installed by
+	// wireStreamingLLM, so a real trip reaches this source's continue-nudge.
 	hub.Register(agentloop.NewStreamStallSource(cfg.ContinueNudgeMaxPerTurn, cfg.ContinueNudgeEnabled))
 	idle := agentloop.NewIdleNudgeSource(agentloop.IdleNudgeConfig{
 		BudgetSeconds:         cfg.SessionIdleNudgeSeconds,
@@ -196,22 +326,16 @@ func (r *ColonyRuntime) newWorkerAgentLoop(worker *Worker, cfg agentloop.LoopCon
 	})
 	hub.Register(idle)
 
-	reminderCtx := &agentloop.ReminderAgentContext{
-		SessionID:      fmt.Sprintf("%s/%s", r.streamID, worker.ID),
-		ColonyID:       r.streamID,
-		AvailableTools: reminderToolsFromDefs(tools),
-	}
-	// The worker tracker nudge resolves the colony's tracker DB through the
-	// same binding the tracker tools write to. A runtime without a provisioned
-	// tracker returns nil, so the source self-skips.
-	reminderCtx.ColonyBindingProvider = r.reminderColonyBinding
+	reminderCtx := r.workerReminderContext(worker, tools)
 	hub.Bind(reminderCtx)
 	hub.Start(reminderCtx, func() *agentloop.LoopSignals {
-		return &agentloop.LoopSignals{
+		// Real stream state: the idle-nudge slow-TTFT branch and the
+		// watchdog-owned inter-event branch both read these fields, so a
+		// worker streaming right now must not look idle between turns.
+		return loopSignalsSnapshot(agentloop.LoopSignals{
 			IdleSeconds:    clock.idleSeconds(),
-			StreamActive:   false,
 			FirstEventSeen: true,
-		}
+		}, streamingLLM)
 	}, func() {
 		items := hub.TakePending()
 		if len(items) == 0 {

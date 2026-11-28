@@ -48,6 +48,9 @@ func applyJudgeVerdict(conv *NodeConversation, verdict JudgeVerdict, completion 
 		result.InnerTurns = iteration + 1
 		return true, fmt.Errorf("agent loop: judge escalated: %s", verdict.Feedback)
 	default:
+		if verdict.Silent {
+			return false, nil
+		}
 		if feedbackErr := injectJudgeFeedback(conv, verdict); feedbackErr != nil {
 			result.Success = false
 			return true, feedbackErr

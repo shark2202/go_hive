@@ -14,8 +14,6 @@ import (
 
 var configMu sync.Mutex
 
-const internalServerError = "Internal server error"
-
 var FeatureKeys = []string{"adaptive_tool_budget", "email_senders", "memory_timeline", "stall_check"}
 
 func envFeatureFlag(name string) (value bool, set bool) {

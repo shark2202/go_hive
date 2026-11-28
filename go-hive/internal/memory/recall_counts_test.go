@@ -32,7 +32,7 @@ func referenceRecall(homeRoot string, ref ScopeRef, text, exclude string, topK i
 		}
 		docs = append(docs, pastRecallDoc{
 			turn:  PastTurn{Session: turn.Session, Ordinal: turn.Ordinal, User: turn.User, Reply: turn.Reply},
-			freqs: recallTermFreqsFromCounts(pastRecallTurnCounts(turn.User, turn.Reply)),
+			freqs: recallTermFreqsFromTurn(turn.User, turn.Reply),
 		})
 	}
 	return pastRecallChoose(docs, len(docs), terms, exclude, topK)
@@ -85,13 +85,47 @@ func TestRecallTermFreqsMatchMapFrequency(t *testing.T) {
 	}
 	for _, turn := range turns {
 		counts := pastRecallTurnCounts(turn[0], turn[1])
-		freqs := recallTermFreqsFromCounts(counts)
+		freqs := recallTermFreqsFromTurn(turn[0], turn[1])
 		for _, term := range terms {
 			want := pastRecallFrequencyMap(counts, term)
 			if got := pastRecallFrequency(freqs, term); got != want {
 				t.Fatalf("turn %.30q term %q: sorted freq = %d, map freq = %d", turn[0], term, got, want)
 			}
 		}
+	}
+}
+
+// Parity: tools/src/memory_tools/turn_index.py::_put_turn (BM25's document
+// length is len(user)*2 + len(reply) characters — Python str length, so
+// Unicode code points — not the turn's token total. The scorer's denominator
+// must use the same unit or a long CJK turn weighs differently on each side.)
+func TestRecallDocumentLengthMatchesUpstreamCharacters(t *testing.T) {
+	cases := []struct {
+		user  string
+		reply string
+		want  int
+	}{
+		{"refund refund policy", "refund", 46},
+		{"数据库迁移", "两步", 12},
+		{"don't didn't it's", "", 34},
+		{"I've been listening to audiobooks on my commute, 45 minutes each way.", "That's a great use of the time.", 169},
+	}
+	for _, tc := range cases {
+		if got := recallDocumentLength(tc.user, tc.reply); got != tc.want {
+			t.Fatalf("recallDocumentLength(%q, %q) = %d, want %d", tc.user, tc.reply, got, tc.want)
+		}
+		freqs := recallTermFreqsFromTurn(tc.user, tc.reply)
+		if freqs.length != tc.want {
+			t.Fatalf("turn %q: BM25 length = %d, want %d characters", tc.user, freqs.length, tc.want)
+		}
+	}
+
+	// The same turn's token total is deliberately different: 7 tokens but 46
+	// characters. Pinning the character count catches a fallback to sum(tf).
+	user, reply := "refund refund policy", "refund"
+	freqs := recallTermFreqsFromTurn(user, reply)
+	if freqs.length == 7 {
+		t.Fatalf("BM25 length = %d, want the character count", freqs.length)
 	}
 }
 
@@ -109,7 +143,7 @@ func TestRecallTurnFreqsCacheMatchesRecompute(t *testing.T) {
 	hits := recallCountsHits.Load()
 	misses := recallCountsMisses.Load()
 	for _, turn := range turns {
-		want := recallTermFreqsFromCounts(pastRecallTurnCounts(turn.User, turn.Reply))
+		want := recallTermFreqsFromTurn(turn.User, turn.Reply)
 		freqs := recallTurnFreqsFor(home, ref, 42, turn.Session, turn.Ordinal, turn.User, turn.Reply)
 		if !reflect.DeepEqual(freqs, want) {
 			t.Fatalf("turn %s/%d freqs = %+v, want %+v", turn.Session, turn.Ordinal, freqs, want)
@@ -128,9 +162,11 @@ func TestRecallTurnFreqsCacheMatchesRecompute(t *testing.T) {
 
 	// The reference counts the user text twice and the reply once
 	// (pastRecallTurnCounts); the memo must reproduce that exact shape.
+	// Its BM25 length is the reference's character count, not the token
+	// total (7 tokens here): len(user)*2 + len(reply) = 20*2 + 6.
 	freqs := recallTurnFreqsFor(home, ref, 1, "s-quirk", 0, "refund refund policy", "refund")
-	if got := pastRecallFrequency(freqs, "refund"); got != 5 || freqs.length != 7 {
-		t.Fatalf("quirk refund freq = %d len %d, want refund:5 len 7", got, freqs.length)
+	if got := pastRecallFrequency(freqs, "refund"); got != 5 || freqs.length != 46 {
+		t.Fatalf("quirk refund freq = %d len %d, want refund:5 len 46", got, freqs.length)
 	}
 	if got := pastRecallFrequency(freqs, "policy"); got != 2 {
 		t.Fatalf("quirk policy freq = %d, want 2", got)

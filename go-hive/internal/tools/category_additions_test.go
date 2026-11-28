@@ -7,7 +7,10 @@ import (
 )
 
 // The additions table is data mirrored byte-for-byte from the Python
-// reference; this snapshot is the drift alarm for a silent edit.
+// reference; this snapshot is the drift alarm for a silent edit. The web_core
+// entry is the one Go-only addition: it heals saved sidecars for the native
+// HTTP family (http_request/http_download/http_upload), which has no Python
+// counterpart.
 //
 // Parity: framework/agents/queen/queen_tools_defaults.py::_CATEGORY_ADDITIONS
 func TestCategoryAdditionsTableMirrorsUpstream(t *testing.T) {
@@ -16,6 +19,11 @@ func TestCategoryAdditionsTableMirrorsUpstream(t *testing.T) {
 		"file_ops":          {"attach_file": "0.2.19"},
 		"context_awareness": {"search_timeline": "0.7.2"},
 		"media":             {"image_generate": "0.3.0"},
+		"web_core": {
+			"http_request":  "1.0.27",
+			"http_download": "1.0.27",
+			"http_upload":   "1.0.27",
+		},
 		"email_senders": {
 			"list_senders":       "0.2.30",
 			"send_from_sender":   "0.2.30",

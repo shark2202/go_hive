@@ -56,22 +56,24 @@ type adenPlatformCredentialRow struct {
 }
 
 // checkAgentCredentialRequirements runs the same validation agent startup
-// uses and shapes the result for the modal.
+// uses and shapes the result for the modal. The route lives in
+// internal/server/routesagents; ensureCredentialEnv is its hermetic test seam
+// (nil keeps the production shell-config bootstrap).
 //
 // Parity: framework/server/routes_credentials.py::handle_check_agent
-func (deps AgentRouteDeps) checkAgentCredentialRequirements(agentPath string, verify bool) (map[string]any, error) {
+func checkAgentCredentialRequirements(home hivehome.Home, ensureCredentialEnv func(), agentPath string, verify bool) (map[string]any, error) {
 	// Load env vars from shell config (same as runtime startup).
-	if deps.EnsureCredentialEnv != nil {
-		deps.EnsureCredentialEnv()
+	if ensureCredentialEnv != nil {
+		ensureCredentialEnv()
 	} else {
 		credentials.EnsureCredentialKeyEnv(
 			credentials.WithExtraEnvVars(agentCredentialEnvVars()...),
-			credentials.WithLLMEnvVar(configuredLLMEnvVar(deps.Home)),
+			credentials.WithLLMEnvVar(configuredLLMEnvVar(home)),
 		)
 	}
 
 	nodes := checkAgentNodes(agentPath)
-	store := checkAgentCredentialStore(deps.Home)
+	store := checkAgentCredentialStore(home)
 	result, err := credentials.ValidateAgentCredentials(nodes, store, credentials.ValidateAgentCredentialsOptions{
 		SkipVerification: !verify,
 		ForceRefresh:     true,

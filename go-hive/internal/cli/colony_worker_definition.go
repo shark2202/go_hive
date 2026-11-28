@@ -17,69 +17,172 @@ import (
 	hivecolony "github.com/shark2202/go_hive/go-hive/internal/colony"
 	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
 	"github.com/shark2202/go_hive/go-hive/internal/llm"
-	"github.com/shark2202/go_hive/go-hive/internal/queen"
 	hiveserver "github.com/shark2202/go_hive/go-hive/internal/server"
+	"github.com/shark2202/go_hive/go-hive/internal/tools"
 	"github.com/shark2202/go_hive/go-hive/internal/tools/builtin"
+	"github.com/shark2202/go_hive/go-hive/internal/tracker"
 )
 
+// colonyForkWorkerName is the single worker definition the DM fork's
+// worker.json declares, verbatim upstream.
+const colonyForkWorkerName = "worker"
+
 // writeColonyFromSession writes the colony directory the fork resumes from:
-// metadata.json plus a worker.json carrying the worker runtime identity (the
-// worker system prompt from the worker definition, never the queen's persona)
-// and the user's handoff goal when the dialog supplied one.
+// metadata.json plus a worker.json carrying the live queen surface the source
+// session had at fork time (tools, skills/protocols prompts, skill dirs, loop
+// config, queen phase/id) and the user's handoff goal when the dialog supplied
+// one. It returns the colony binding it threaded into the worker's input_data
+// so the caller can stamp the source session with it.
 //
 // Parity: framework/server/routes_execution.py::fork_session_into_colony
-func writeColonyFromSession(colonyPath, colonyID, queenName string, params hiveserver.CreateColonyFromSourceParams) error {
+// Parity: framework/agents/queen/worker_definition.py::build_meta
+func writeColonyFromSession(
+	colonyPath, colonyID, queenName string,
+	source *hiveserver.Session,
+	params hiveserver.CreateColonyFromSourceParams,
+) (*tracker.Binding, error) {
 	if err := os.MkdirAll(colonyPath, 0o755); err != nil {
-		return err
+		return nil, err
 	}
-	meta := map[string]any{
-		"name":              colonyID,
-		"created_at":        float64(time.Now().UnixNano()) / 1e9,
-		"source_session_id": params.SourceSessionID,
+	// tracker.db first, so its absolute path is threaded into the worker's
+	// input_data binding before worker.json is written (upstream
+	// ensure_tracker_db runs before build_meta).
+	trackerDB, err := tracker.EnsureTrackerDB(colonyPath)
+	if err != nil {
+		return nil, err
 	}
-	if queenName != "" {
-		meta["queen_name"] = queenName
+	dir := colonyPath
+	if absolute, absErr := filepath.Abs(colonyPath); absErr == nil {
+		dir = absolute
 	}
-	if err := atomicfs.WriteJSON(filepath.Join(colonyPath, "metadata.json"), meta, 0o644); err != nil {
-		return err
-	}
+	binding := &tracker.Binding{Name: colonyID, Dir: dir, TrackerDB: trackerDB}
 
 	goal := "Work on tasks for colony " + colonyID
 	if params.InitialPrompt != nil && strings.TrimSpace(*params.InitialPrompt) != "" {
 		goal = strings.TrimSpace(*params.InitialPrompt)
 	}
-	// The forked worker runs its own identity: the worker definition's prompt
-	// (focus, no escalation, fail-fast) with the handoff task appended, as
-	// upstream build_meta writes it. The queen's persona belongs to the
-	// colony's overseer, which startColonyHost arms separately.
-	worker := map[string]any{
-		"name":          humanizeColonyName(colonyID),
-		"description":   "Colony " + colonyID,
-		"system_prompt": hivecolony.BuildSystemPrompt(&goal),
-		"tools":         colonyToolsFor(queenName),
-		"goal":          map[string]any{"description": goal},
+	// The forked worker runs its own identity (the worker definition's prompt):
+	// the queen's persona belongs to the colony's overseer, which
+	// startColonyHost arms separately. Everything else in worker.json is the
+	// live queen surface, as upstream build_meta writes it.
+	surface := colonyForkQueenSurface(source)
+	var loopConfig *hivecolony.QueenLoopConfig
+	if surface.HasLoop {
+		loopConfig = &hivecolony.QueenLoopConfig{
+			MaxIterations:      surface.MaxIterations,
+			ToolCallBudget:     surface.ToolCallBudget,
+			MaxContextTokens:   surface.MaxContextTokens,
+			MaxToolResultChars: surface.MaxToolResultChars,
+		}
 	}
-	if queenName != "" {
-		worker["queen_name"] = queenName
+	skillsCatalog, protocolsPrompt, skillDirs := colonyForkQueenPrompts(source)
+	worker := hivecolony.BuildMeta(hivecolony.WorkerMetaInput{
+		WorkerName:          colonyForkWorkerName,
+		SourceSessionID:     params.SourceSessionID,
+		Task:                &goal,
+		ToolNames:           colonySiblingInheritedToolNames(surface.ToolNames),
+		SkillsCatalogPrompt: skillsCatalog,
+		ProtocolsPrompt:     protocolsPrompt,
+		SkillDirs:           skillDirs,
+		QueenLoopConfig:     loopConfig,
+		QueenPhase:          colonyForkQueenPhase(source),
+		QueenID:             colonyForkQueenID(source),
+		InputData: hivecolony.BuildInputData(hivehome.Colony{
+			Name:      binding.Name,
+			Dir:       binding.Dir,
+			TrackerDB: binding.TrackerDB,
+		}, ""),
+	})
+	if err := atomicfs.WriteJSON(filepath.Join(colonyPath, "worker.json"), worker, 0o644); err != nil {
+		return nil, err
 	}
-	return atomicfs.WriteJSON(filepath.Join(colonyPath, "worker.json"), worker, 0o644)
+	return binding, colonyForkWriteMetadata(colonyPath, colonyID, queenName, params.SourceSessionID, goal)
 }
 
-// colonyToolsFor is the declared tool set the forked worker config carries: the
-// bound queen's default tool categories, or an empty list (never null) when the
-// colony has no queen binding.
-//
-// The values are the queen profile's category labels (the Go fork path has no
-// live queen tool snapshot, which is what upstream writes here); the colony
-// runtime expands a category label to the tools it stands for when it applies
-// the worker's declared set. Unknown labels resolve to nothing and are dropped.
-//
-// Parity: framework/server/routes_execution.py::fork_session_into_colony
-func colonyToolsFor(queenName string) []string {
-	if tools := queen.DefaultToolsFor(queenName); len(tools) > 0 {
-		return tools
+// colonyForkQueenSurface reads the forkable surface of the source queen. A
+// session with no chat runtime contributes nothing, which is upstream's
+// queen_ctx None path: the worker inherits no tools and keeps the default
+// worker loop config.
+func colonyForkQueenSurface(source *hiveserver.Session) hiveserver.QueenForkSurface {
+	if source == nil || source.Chat == nil {
+		return hiveserver.QueenForkSurface{}
 	}
-	return []string{}
+	return source.Chat.ForkSurfaceSnapshot()
+}
+
+// colonyForkQueenPhase is the source queen's phase label written to
+// worker.json (upstream's phase_state.phase, empty when no state is stamped).
+func colonyForkQueenPhase(source *hiveserver.Session) string {
+	if source == nil {
+		return ""
+	}
+	return hiveserver.SessionPhaseLabel(source)
+}
+
+// colonyForkQueenID is the source queen's identity written to worker.json
+// (upstream's phase_state.queen_id, empty when no state is stamped).
+func colonyForkQueenID(source *hiveserver.Session) string {
+	if source == nil {
+		return ""
+	}
+	return colonySiblingQueenID(source)
+}
+
+// colonyForkQueenPrompts reads the source queen's rendered skills catalog
+// (filtered for her live phase, as queen_ctx carries it), protocols prompt and
+// skill dirs from her live skills manager. A session with no manager (a cold
+// record) contributes empties, matching upstream's queen_ctx None path.
+func colonyForkQueenPrompts(source *hiveserver.Session) (skillsCatalog, protocols string, dirs []string) {
+	if source == nil || source.LiveSkills == nil {
+		return "", "", nil
+	}
+	if catalog, ok := source.LiveSkills.(*queenSkillsCatalog); ok {
+		skillsCatalog = catalog.CatalogForPhase(colonyForkQueenPhase(source))
+		if manager := catalog.managerInstance(); manager != nil {
+			protocols = manager.ProtocolsPrompt()
+			dirs = manager.AllowlistedDirs()
+		}
+		return skillsCatalog, protocols, dirs
+	}
+	return source.LiveSkills.SkillsCatalogPrompt(), "", nil
+}
+
+// colonyForkWriteMetadata records the fork's colony provenance: the source
+// session it came from, the worker slot it spawned and the timestamps the UI
+// and loader read back. queen_session_id is stamped later, once the session
+// opens (recordColonyQueenSessionID).
+//
+// Parity: framework/server/routes_execution.py::fork_session_into_colony (metadata.json)
+func colonyForkWriteMetadata(colonyPath, colonyID, queenName, sourceSessionID, task string) error {
+	now := time.Now().UTC()
+	stamp := colonySiblingTimestamp(now)
+	meta := map[string]any{
+		"name":              colonyID,
+		"colony_id":         colonyID,
+		"created_at":        float64(now.UnixNano()) / 1e9,
+		"updated_at":        stamp,
+		"source_session_id": sourceSessionID,
+		"workers": map[string]any{
+			colonyForkWorkerName: map[string]any{
+				"task":       colonyForkWorkerTask(task),
+				"spawned_at": stamp,
+			},
+		},
+	}
+	if queenName != "" {
+		meta["queen_name"] = queenName
+	}
+	return atomicfs.WriteJSON(filepath.Join(colonyPath, "metadata.json"), meta, 0o644)
+}
+
+// colonyForkWorkerTask carries the worker's committed task into metadata,
+// truncated to 100 characters like upstream's “worker_task[:100]“.
+func colonyForkWorkerTask(task string) string {
+	runes := []rune(strings.TrimSpace(task))
+	if len(runes) > 100 {
+		return string(runes[:100])
+	}
+	return string(runes)
 }
 
 // recordColonyQueenSessionID stamps the session id a forked colony resumes
@@ -112,16 +215,29 @@ func recordColonyQueenSessionID(colonyPath, sessionID, queenName string) {
 	_ = atomicfs.WriteJSON(path, meta, 0o644)
 }
 
-// colonyWorkerToolSurface assembles the colony worker's tool wiring: the
+// colonyWorkerSurface is the assembled colony-worker tool wiring: the
 // builtin base surface every worker keeps, the declared-tool pool a
 // worker.json "tools" list selects from (the session integration catalogue),
-// and the executor that runs both under the colony workspace root. The
-// executor carries the catalogue's content blocks, so a worker's attach_file
-// reaches its model as image/PDF parts exactly like the queen's.
+// the executor that runs both under the colony workspace root, and the
+// factory that rebuilds the same wiring under a worker's own storage
+// directory. The executor carries the catalogue's content blocks, so a
+// worker's attach_file reaches its model as image/PDF parts exactly like the
+// queen's.
 //
 // Parity: framework/host/colony_runtime.py::ColonyRuntime (spawn_tools +
 // _apply_tool_allowlist resolution for a colony worker)
-func colonyWorkerToolSurface(colonyPath string, toolbox *builtin.Toolbox, home hivehome.Home) ([]llm.ToolDef, []llm.ToolDef, func(agentloop.ToolCallRequest) (agentloop.ToolResult, error)) {
+type colonyWorkerSurface struct {
+	catalogue     *sessionToolCatalogue
+	baseTools     []llm.ToolDef
+	declaredTools []llm.ToolDef
+	liveness      *tools.RegistryExecutor
+}
+
+// newColonyWorkerSurface builds the worker tool surface for a colony
+// workspace root. The catalogue is built once; per-worker executors are
+// derived from it with WithRoot, so definitions and installed integrations
+// stay shared.
+func newColonyWorkerSurface(colonyPath string, toolbox *builtin.Toolbox, home hivehome.Home) *colonyWorkerSurface {
 	catalogue := newSessionToolCatalogue(colonyPath, toolbox, home)
 	// The agent package this worker runs is the colony directory, so its base
 	// name is the agent name upstream gives every MCP subprocess of the agent
@@ -130,12 +246,80 @@ func colonyWorkerToolSurface(colonyPath string, toolbox *builtin.Toolbox, home h
 	if name := filepath.Base(filepath.Clean(colonyPath)); name != "" && name != "." && name != string(filepath.Separator) {
 		catalogue.SetAgentName(name)
 	}
-	execute := func(request agentloop.ToolCallRequest) (agentloop.ToolResult, error) {
+	return &colonyWorkerSurface{
+		catalogue:     catalogue,
+		baseTools:     toolbox.Defs(),
+		declaredTools: catalogue.Defs(),
+		liveness:      catalogue.Registry().GetExecutor(),
+	}
+}
+
+// execute runs one worker tool call under the colony workspace root. It is
+// the executor the colony runtime holds for the overseer and for any worker
+// without its own storage root.
+func (s *colonyWorkerSurface) execute(request agentloop.ToolCallRequest) (agentloop.ToolResult, error) {
+	return s.executorAt(s.catalogue)(request)
+}
+
+// executorForRoot returns the executor a single worker's own tool calls run
+// through: the same definitions and integrations, with the builtin file-tool
+// sandbox and the injected session_cwd moved to the worker's storage
+// directory (<colony>/workers/<id>). Upstream scopes a Worker's execution
+// context to its storage path, so a worker's relative file paths and its
+// terminal's default cwd are the worker directory, not the colony's.
+//
+// Only the builtin surface is re-rooted: every other tool (integrations, MCP,
+// a trigger pipeline's registry) delegates to base, which is the executor the
+// runtime would have used for the worker anyway. That keeps the worker tool
+// surface and any host-injected executor intact while the file/terminal root
+// follows the worker's storage.
+//
+// Parity: framework/host/worker.py::Worker.run (session_cwd=str(storage_path))
+func (s *colonyWorkerSurface) executorForRoot(root string, base agentloop.ToolExecutor) agentloop.ToolExecutor {
+	root = strings.TrimSpace(root)
+	if root == "" || s.catalogue == nil {
+		return base
+	}
+	rooted := s.executorAt(s.catalogue.WithRoot(root))
+	return func(request agentloop.ToolCallRequest) (agentloop.ToolResult, error) {
+		if _, builtin := s.catalogue.builtinNames[request.Name]; builtin {
+			return rooted(request)
+		}
+		if base != nil {
+			return base(request)
+		}
+		return rooted(request)
+	}
+}
+
+// executorAt wraps one catalogue's ExecuteBlocks in the agent-loop executor
+// signature.
+func (s *colonyWorkerSurface) executorAt(catalogue *sessionToolCatalogue) func(agentloop.ToolCallRequest) (agentloop.ToolResult, error) {
+	return func(request agentloop.ToolCallRequest) (agentloop.ToolResult, error) {
 		content, isError, imageContent, execErr := catalogue.ExecuteBlocks(context.Background(), request.Name, request.Input)
 		if execErr != nil {
 			return agentloop.ToolResult{}, execErr
 		}
 		return agentloop.ToolResult{Content: content, IsError: isError, ImageContent: imageContent}, nil
 	}
-	return toolbox.Defs(), catalogue.Defs(), execute
+}
+
+// colonyWorkerToolSurface assembles the colony worker's tool wiring rooted at
+// the colony workspace.
+func colonyWorkerToolSurface(colonyPath string, toolbox *builtin.Toolbox, home hivehome.Home) ([]llm.ToolDef, []llm.ToolDef, func(agentloop.ToolCallRequest) (agentloop.ToolResult, error)) {
+	surface := newColonyWorkerSurface(colonyPath, toolbox, home)
+	return surface.baseTools, surface.declaredTools, surface.execute
+}
+
+// colonyWorkerToolSurfaceWithLiveness is colonyWorkerToolSurface plus the
+// catalogue's registry executor. The tool-timeout recovery needs a
+// probe_for_tool / kill_for_tool pair on the loop, and the executor closure
+// above cannot carry methods, so the registry executor travels separately and
+// the colony runtime hands it to every worker/overseer loop.
+//
+// Parity: framework/loader/tool_registry.py (executor.probe_for_tool /
+// executor.kill_for_tool)
+func colonyWorkerToolSurfaceWithLiveness(colonyPath string, toolbox *builtin.Toolbox, home hivehome.Home) ([]llm.ToolDef, []llm.ToolDef, func(agentloop.ToolCallRequest) (agentloop.ToolResult, error), *tools.RegistryExecutor) {
+	surface := newColonyWorkerSurface(colonyPath, toolbox, home)
+	return surface.baseTools, surface.declaredTools, surface.execute, surface.liveness
 }

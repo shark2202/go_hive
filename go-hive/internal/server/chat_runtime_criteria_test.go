@@ -13,9 +13,9 @@ import (
 	"github.com/shark2202/go_hive/go-hive/internal/schemas"
 )
 
-// criteriaJudgeLLM answers the queen's turn with a plain completion and the
-// loop judge's evaluation with an ACCEPT JSON payload. The judge prompt is the
-// single-message "Respond with JSON" template from internal/llmjudge.
+// criteriaJudgeLLM answers the queen's turn with a plain completion and records
+// any request that carries the loop judge's prompt. The queen must never issue
+// one, whether or not the session or its colony declares success criteria.
 type criteriaJudgeLLM struct {
 	mu         sync.Mutex
 	chatCalls  int
@@ -43,10 +43,18 @@ func (m *criteriaJudgeLLM) counts() (chat, judge int) {
 	return m.chatCalls, m.judgeCalls
 }
 
-// Parity: core/tests/test_event_loop_node.py::TestJudgeIntegration::test_judge_accept
-func TestChatRuntimeConfiguredCriteriaRunsJudge(t *testing.T) {
+func assertNoJudgeFeedback(t *testing.T, runtime *ChatRuntime) {
+	t.Helper()
+	for _, message := range runtime.conv.Messages() {
+		if strings.Contains(message.Content, "[Judge feedback]") {
+			t.Fatalf("conversation carries judge feedback: %#v", message)
+		}
+	}
+}
+
+// Parity: framework/server/queen_orchestrator.py::_queen_loop (skip_judge=True)
+func TestChatRuntimeQueenCriteriaDoesNotArmJudge(t *testing.T) {
 	bus := eventbus.NewEventBus()
-	recorder := recordChatEvents(bus)
 	model := &criteriaJudgeLLM{}
 	criteria := "the answer names the honeycomb"
 	runtime, err := NewChatRuntime(ChatRuntimeDeps{
@@ -60,32 +68,31 @@ func TestChatRuntimeConfiguredCriteriaRunsJudge(t *testing.T) {
 		t.Fatalf("NewChatRuntime: %v", err)
 	}
 	t.Cleanup(func() { _ = runtime.Close() })
-	if runtime.loop.Judge == nil {
-		t.Fatal("configured criteria left the loop judge off")
+	if !runtime.agentCtx.AgentSpec.SkipJudge {
+		t.Fatalf("queen spec SkipJudge = false, want true")
+	}
+	if runtime.loop.Judge != nil {
+		t.Fatalf("queen loop Judge = %#v, want nil", runtime.loop.Judge)
 	}
 
 	if err := runtime.Deliver("summarise the hive"); err != nil {
 		t.Fatalf("Deliver: %v", err)
 	}
-	waitForChatEvents(t, recorder, eventbus.EventJudgeVerdict, 1)
-	verdicts := recorder.ofType(eventbus.EventJudgeVerdict)
-	if len(verdicts) != 1 {
-		t.Fatalf("judge verdicts = %d, want 1", len(verdicts))
-	}
-	if verdicts[0].Data["action"] != string(agentloop.JudgeAccept) {
-		t.Fatalf("verdict action = %#v, want ACCEPT", verdicts[0].Data["action"])
+	parts := waitForAssistantParts(t, runtime, 1)
+	if got := parts[len(parts)-1]["content"]; got != "The honeycomb is ready." {
+		t.Fatalf("assistant content = %#v, want the normal queen reply", got)
 	}
 	chatCalls, judgeCalls := model.counts()
-	if chatCalls != 1 || judgeCalls != 1 {
-		t.Fatalf("model calls = chat %d / judge %d, want 1/1", chatCalls, judgeCalls)
+	if chatCalls != 1 || judgeCalls != 0 {
+		t.Fatalf("model calls = chat %d / judge %d, want 1/0", chatCalls, judgeCalls)
 	}
+	assertNoJudgeFeedback(t, runtime)
 }
 
-// Parity-exempt: upstream's queen spec has an empty success_criteria list; this
-// pins the Go inheritance seam that arms the judge from a bound colony's goal.
-func TestChatRuntimeInheritsColonyGoalCriteriaForJudge(t *testing.T) {
+// Parity: framework/server/queen_orchestrator.py::_queen_loop (skip_judge=True)
+// Parity: framework/agents/queen/nodes/__init__.py::queen_node (skip_judge=True)
+func TestChatRuntimeColonyBoundQueenSkipsJudgeDespiteGoalCriteria(t *testing.T) {
 	bus := eventbus.NewEventBus()
-	recorder := recordChatEvents(bus)
 	model := &criteriaJudgeLLM{}
 	goal := &schemas.Goal{
 		ID:   "hive-goal",
@@ -119,19 +126,26 @@ func TestChatRuntimeInheritsColonyGoalCriteriaForJudge(t *testing.T) {
 		t.Fatalf("NewChatRuntime: %v", err)
 	}
 	t.Cleanup(func() { _ = runtime.Close() })
-	if !agentloop.HasSuccessCriteria(runtime.agentCtx.AgentSpec) {
-		t.Fatalf("chat spec = %#v, want inherited colony criteria", runtime.agentCtx.AgentSpec)
+	if !runtime.agentCtx.AgentSpec.SkipJudge {
+		t.Fatalf("colony-bound queen spec SkipJudge = false, want true")
 	}
-	if runtime.loop.Judge == nil {
-		t.Fatal("inherited criteria left the loop judge off")
+	if agentloop.HasSuccessCriteria(runtime.agentCtx.AgentSpec) {
+		t.Fatalf("chat spec = %#v, want no inherited colony criteria", runtime.agentCtx.AgentSpec)
+	}
+	if runtime.loop.Judge != nil {
+		t.Fatalf("colony-bound queen loop Judge = %#v, want nil", runtime.loop.Judge)
 	}
 
 	if err := runtime.Deliver("summarise the hive"); err != nil {
 		t.Fatalf("Deliver: %v", err)
 	}
-	waitForChatEvents(t, recorder, eventbus.EventJudgeVerdict, 1)
-	chatCalls, judgeCalls := model.counts()
-	if chatCalls != 1 || judgeCalls != 1 {
-		t.Fatalf("model calls = chat %d / judge %d, want 1/1", chatCalls, judgeCalls)
+	parts := waitForAssistantParts(t, runtime, 1)
+	if got := parts[len(parts)-1]["content"]; got != "The honeycomb is ready." {
+		t.Fatalf("assistant content = %#v, want the normal queen reply", got)
 	}
+	chatCalls, judgeCalls := model.counts()
+	if chatCalls != 1 || judgeCalls != 0 {
+		t.Fatalf("model calls = chat %d / judge %d, want 1/0", chatCalls, judgeCalls)
+	}
+	assertNoJudgeFeedback(t, runtime)
 }

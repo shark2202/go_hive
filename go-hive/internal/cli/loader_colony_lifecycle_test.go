@@ -13,6 +13,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/shark2202/go_hive/go-hive/internal/agentloop"
 	"github.com/shark2202/go_hive/go-hive/internal/eventbus"
@@ -20,6 +21,7 @@ import (
 	colonyhost "github.com/shark2202/go_hive/go-hive/internal/host"
 	"github.com/shark2202/go_hive/go-hive/internal/llm"
 	hiveserver "github.com/shark2202/go_hive/go-hive/internal/server"
+	"github.com/shark2202/go_hive/go-hive/internal/triggers"
 )
 
 const lifecycleWorkerSpec = `{"name":"worker","description":"trader","system_prompt":"be a careful trader",` +
@@ -66,6 +68,9 @@ func newLifecycleFixture(t *testing.T) *lifecycleFixture {
 	live := make([]*hiveserver.Session, 0)
 	runner := &Runner{Stdout: io.Discard, Stderr: io.Discard}
 	lifecycle := runner.newColonyLifecycle(manager, &liveMu, &live, home, "")
+	// The fork's compaction await uses the production 180s cap but a fast
+	// poll so the tests that fork a copied session do not each sleep 500ms.
+	lifecycle.forkAwaitPoll = 5 * time.Millisecond
 	lifecycle.build = func(colonyPath, colonyID, model string) (*colonyhost.Host, error) {
 		return colonyhost.New(colonyhost.Config{
 			ColonyID:    colonyID,
@@ -95,8 +100,74 @@ func (f *lifecycleFixture) cleanup(t *testing.T) {
 	}
 }
 
+// Parity: framework/server/session_manager.py::SessionManager._load_worker_core
+// (a marked session refuses a second colony load, and a completed load clears
+// the marker)
+func TestLoadColonyHonoursAndClearsLoadingMarker(t *testing.T) {
+	fixture := newLifecycleFixture(t)
+	t.Cleanup(func() { fixture.cleanup(t) })
+	_ = writeColonySpecFixture(t, fixture.home, "honeycomb", lifecycleWorkerSpec)
+
+	session := hiveserver.NewSession("s-loading", eventbus.NewEventBus())
+	fixture.manager.AddSession(session)
+
+	if !fixture.manager.MarkLoading("s-loading") {
+		t.Fatal("MarkLoading on a fresh session = false")
+	}
+	_, err := fixture.lifecycle.LoadColony("s-loading", "honeycomb", nil)
+	if err == nil || !strings.Contains(err.Error(), "currently loading a colony") {
+		t.Fatalf("LoadColony while marked = %v, want the loading conflict", err)
+	}
+	fixture.manager.ClearLoading("s-loading")
+
+	loaded, err := fixture.lifecycle.LoadColony("s-loading", "honeycomb", nil)
+	if err != nil {
+		t.Fatalf("LoadColony: %v", err)
+	}
+	if fixture.manager.IsLoading("s-loading") {
+		t.Fatal("LoadColony left the session marked as loading")
+	}
+	if loaded == nil || loaded.Colony == nil {
+		t.Fatal("LoadColony did not bind a runtime")
+	}
+}
+
+// Parity: framework/server/routes_config.py::_apply_adaptive_budget_flag
+// (the loader's live-session snapshot must carry the colony runtime, not just
+// its id, or colonies_applied is always 0).
+func TestFeatureSessionsSnapshotCarriesColonyRuntime(t *testing.T) {
+	fixture := newLifecycleFixture(t)
+	built, err := fixture.lifecycle.build(t.TempDir(), "probe", "")
+	if err != nil {
+		t.Fatalf("build colony host: %v", err)
+	}
+	session := hiveserver.NewSession("s-feature", eventbus.NewEventBus())
+	session.ColonyID = "colony_live"
+	session.Colony = built
+	live := []*hiveserver.Session{session}
+
+	snapshot := featureSessionsSnapshot(nil, live)
+	if len(snapshot) != 1 {
+		t.Fatalf("snapshot length = %d, want 1", len(snapshot))
+	}
+	if snapshot[0].Colony == nil {
+		t.Fatal("snapshot dropped the live colony runtime")
+	}
+	if snapshot[0].ColonyID != "colony_live" {
+		t.Fatalf("colony id = %q, want colony_live", snapshot[0].ColonyID)
+	}
+	snapshot[0].Colony.SetAdaptiveToolBudget(false)
+	if enabled, _ := built.AdaptiveToolBudget(); enabled {
+		t.Fatal("hot-apply did not reach the live runtime")
+	}
+}
+
+// TestLoadColonyStartsRuntimeWithoutOverseer pins Hive 1.0.15's production
+// ownership: loading a colony starts the runtime, but no live overseer; the
+// colony-bound queen chat executes the turn.
+//
 // Parity: tests/test_session_unified_colony_runtime.py::test_start_unified_colony_runtime_creates_real_colony
-func TestLoadColonyStartsRuntimeAndOverseer(t *testing.T) {
+func TestLoadColonyStartsRuntimeWithoutOverseer(t *testing.T) {
 	fixture := newLifecycleFixture(t)
 	t.Cleanup(func() { fixture.cleanup(t) })
 	_ = writeColonySpecFixture(t, fixture.home, "honeycomb", lifecycleWorkerSpec)
@@ -115,8 +186,8 @@ func TestLoadColonyStartsRuntimeAndOverseer(t *testing.T) {
 	if !built.Started() {
 		t.Fatal("colony runtime was not started")
 	}
-	if !built.OverseerRunning() {
-		t.Fatal("colony overseer was not started")
+	if built.OverseerRunning() {
+		t.Fatal("colony overseer started by default; the colony-bound queen chat must own the turn")
 	}
 	if loaded.ColonyID != "honeycomb" {
 		t.Fatalf("session colony id = %q", loaded.ColonyID)
@@ -137,13 +208,14 @@ func TestLoadColonyStartsRuntimeAndOverseer(t *testing.T) {
 }
 
 // Parity: tests/test_colony_fork_live.py::test_live_queen_fork_to_colony
-func TestCreateColonyFromSourceMarksSourceAndStartsOverseer(t *testing.T) {
+func TestCreateColonyFromSourceMarksSourceWithoutOverseer(t *testing.T) {
 	fixture := newLifecycleFixture(t)
 	t.Cleanup(func() { fixture.cleanup(t) })
 	_ = writeColonySpecFixture(t, fixture.home, "honeycomb", lifecycleWorkerSpec)
 
 	source := hiveserver.NewSession("src", eventbus.NewEventBus())
 	source.QueenName = "queen_alpha"
+	source.QueenExecutor = &hiveserver.QueenExecutor{NodeRegistry: map[string]hiveserver.QueenNode{"queen": &recordingQueenNode{}}}
 	fixture.manager.AddSession(source)
 
 	request := httptest.NewRequest(http.MethodPost, "/api/sessions",
@@ -175,8 +247,8 @@ func TestCreateColonyFromSourceMarksSourceAndStartsOverseer(t *testing.T) {
 	if !ok {
 		t.Fatalf("created session colony = %T, want *host.Host", created.Colony)
 	}
-	if !built.Started() || !built.OverseerRunning() {
-		t.Fatalf("created colony started=%v overseer=%v", built.Started(), built.OverseerRunning())
+	if !built.Started() || built.OverseerRunning() {
+		t.Fatalf("created colony started=%v overseer=%v, want true/false", built.Started(), built.OverseerRunning())
 	}
 
 	// The fork records the session it resumes under (queen_session_id), exactly
@@ -199,7 +271,7 @@ func TestCreateColonyFromSourceMarksSourceAndStartsOverseer(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read forked worker.json: %v", err)
 	}
-	if !strings.Contains(string(workerData), `"description": "Colony forked"`) {
+	if !strings.Contains(string(workerData), `"description": "Worker clone from queen session src"`) {
 		t.Fatalf("forked worker.json = %s", workerData)
 	}
 	var forked map[string]any
@@ -223,6 +295,7 @@ func TestCreateColonyFromSourceReportsRuntimeFailure(t *testing.T) {
 		return nil, errors.New("no provider configured")
 	}
 	source := hiveserver.NewSession("src", eventbus.NewEventBus())
+	source.QueenExecutor = &hiveserver.QueenExecutor{NodeRegistry: map[string]hiveserver.QueenNode{"queen": &recordingQueenNode{}}}
 	fixture.manager.AddSession(source)
 
 	request := httptest.NewRequest(http.MethodPost, "/api/sessions",
@@ -355,5 +428,206 @@ func TestCreateSessionWithoutColonyKeepsFallingBackToDisk(t *testing.T) {
 	}
 	if session.ColonyID != "" {
 		t.Fatalf("unbound session colony id = %q", session.ColonyID)
+	}
+}
+
+// colonyTriggerCapture collects trigger_removed events off a session bus.
+type colonyTriggerCapture struct {
+	mu     sync.Mutex
+	events []*eventbus.AgentEvent
+}
+
+func newColonyTriggerCapture(bus *eventbus.EventBus) *colonyTriggerCapture {
+	capture := &colonyTriggerCapture{}
+	bus.Subscribe([]eventbus.EventType{eventbus.EventTriggerRemoved}, func(event *eventbus.AgentEvent) {
+		capture.mu.Lock()
+		capture.events = append(capture.events, event.Clone())
+		capture.mu.Unlock()
+	})
+	return capture
+}
+
+func (c *colonyTriggerCapture) removedByID() map[string]*eventbus.AgentEvent {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	out := make(map[string]*eventbus.AgentEvent, len(c.events))
+	for _, event := range c.events {
+		triggerID, _ := event.Data["trigger_id"].(string)
+		out[triggerID] = event
+	}
+	return out
+}
+
+func writeColonyTriggersJSON(t *testing.T, colonyPath string, entries []map[string]any) {
+	t.Helper()
+	if err := triggers.WriteAgentTriggersJSON(colonyPath, entries); err != nil {
+		t.Fatalf("write triggers.json: %v", err)
+	}
+}
+
+// Parity-exempt: upstream unload_colony cancels trigger timers/subscriptions,
+// publishes TRIGGER_REMOVED per available trigger and clears available_triggers
+// (framework/server/session_manager.py:1284-1302 via _emit_trigger_events), but
+// no Python test covers it. This drives the loader's real UnloadColony through
+// the HTTP route and asserts the session state and the session bus events.
+func TestUnloadColonyRemovesTriggersAndPublishesRemoved(t *testing.T) {
+	fixture := newLifecycleFixture(t)
+	t.Cleanup(func() { fixture.cleanup(t) })
+	colonyPath := writeColonySpecFixture(t, fixture.home, "honeycomb", lifecycleWorkerSpec)
+	writeColonyTriggersJSON(t, colonyPath, []map[string]any{
+		{
+			"id":             "hourly-sweep",
+			"name":           "Hourly sweep",
+			"trigger_type":   "timer",
+			"trigger_config": map[string]any{"interval_minutes": 60},
+			"task":           "sweep the inbox",
+			"enabled":        true,
+		},
+		{
+			"id":             "deploy-hook",
+			"name":           "deploy hook",
+			"trigger_type":   "webhook",
+			"trigger_config": map[string]any{"path": "/hooks/deploy", "methods": []any{"POST"}},
+			"task":           "ship it",
+			"enabled":        false,
+		},
+	})
+
+	session := hiveserver.NewSession("s1", eventbus.NewEventBus())
+	fixture.manager.AddSession(session)
+	capture := newColonyTriggerCapture(session.EventBus)
+
+	if _, err := fixture.lifecycle.LoadColony("s1", "honeycomb", nil); err != nil {
+		t.Fatalf("LoadColony: %v", err)
+	}
+	if available := session.AvailableTriggers(); len(available) != 2 {
+		t.Fatalf("available triggers after load = %+v, want 2", available)
+	}
+
+	// DELETE is the production unload path: it must still answer 200.
+	recorder := httptest.NewRecorder()
+	fixture.newApp().Handler().ServeHTTP(recorder, httptest.NewRequest(http.MethodDelete, "/api/sessions/s1/colony", nil))
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("unload status = %d body = %s, want 200", recorder.Code, recorder.Body.String())
+	}
+
+	if available := session.AvailableTriggers(); len(available) != 0 {
+		t.Fatalf("available triggers after unload = %+v, want none", available)
+	}
+	if session.Colony != nil || session.ColonyID != "" || session.WorkerPath != "" {
+		t.Fatalf("unload left colony=%v id=%q path=%q", session.Colony, session.ColonyID, session.WorkerPath)
+	}
+	if active := session.ActiveTriggerIDs(); len(active) != 0 {
+		t.Fatalf("active triggers after unload = %v, want none", active)
+	}
+	if nextFire := session.TriggerNextFire(); len(nextFire) != 0 {
+		t.Fatalf("next-fire map after unload = %v, want none", nextFire)
+	}
+
+	removed := capture.removedByID()
+	if len(removed) != 2 {
+		t.Fatalf("trigger_removed events = %v, want one per available trigger", removed)
+	}
+	hourly := removed["hourly-sweep"]
+	if hourly == nil {
+		t.Fatal("no trigger_removed event for hourly-sweep")
+	}
+	if hourly.StreamID != "queen" || hourly.Data["name"] != "Hourly sweep" || hourly.Data["trigger_type"] != "timer" {
+		t.Fatalf("hourly trigger_removed = %q/%v", hourly.StreamID, hourly.Data)
+	}
+	hourlyConfig, ok := hourly.Data["trigger_config"].(map[string]any)
+	if !ok || hourlyConfig["interval_minutes"] == nil {
+		t.Fatalf("hourly trigger_config = %v, want the persisted interval", hourly.Data["trigger_config"])
+	}
+	if _, ok := hourlyConfig["next_fire_in"]; !ok {
+		t.Fatalf("hourly trigger_config lost its live countdown: %v", hourlyConfig)
+	}
+	hook := removed["deploy-hook"]
+	if hook == nil {
+		t.Fatal("no trigger_removed event for deploy-hook")
+	}
+	if hook.Data["name"] != "deploy hook" || hook.Data["trigger_type"] != "webhook" {
+		t.Fatalf("hook trigger_removed = %v", hook.Data)
+	}
+
+	// The session still exists without a colony: the route answers 409.
+	recorder = httptest.NewRecorder()
+	fixture.newApp().Handler().ServeHTTP(recorder, httptest.NewRequest(http.MethodDelete, "/api/sessions/s1/colony", nil))
+	if recorder.Code != http.StatusConflict {
+		t.Fatalf("second unload status = %d body = %s, want 409", recorder.Code, recorder.Body.String())
+	}
+}
+
+// Parity-exempt: upstream load_colony refuses a session that already holds a
+// colony (framework/server/session_manager.py:1027) and unload clears
+// available_triggers (:1299-1302); the Go loader swaps colonies on one session,
+// so unload A then load B must leave only B's triggers. No Python test covers
+// the swap.
+func TestUnloadColonyThenLoadOtherColonyKeepsOnlyNewTriggers(t *testing.T) {
+	fixture := newLifecycleFixture(t)
+	t.Cleanup(func() { fixture.cleanup(t) })
+	colonyA := writeColonySpecFixture(t, fixture.home, "colony-a", lifecycleWorkerSpec)
+	colonyB := writeColonySpecFixture(t, fixture.home, "colony-b", lifecycleWorkerSpec)
+	writeColonyTriggersJSON(t, colonyA, []map[string]any{{
+		"id":             "alpha-poll",
+		"name":           "alpha poll",
+		"trigger_type":   "timer",
+		"trigger_config": map[string]any{"interval_minutes": 60},
+		"task":           "poll a",
+		"enabled":        true,
+	}})
+	writeColonyTriggersJSON(t, colonyB, []map[string]any{{
+		"id":             "beta-poll",
+		"name":           "beta poll",
+		"trigger_type":   "timer",
+		"trigger_config": map[string]any{"interval_minutes": 60},
+		"task":           "poll b",
+		"enabled":        true,
+	}})
+
+	session := hiveserver.NewSession("s1", eventbus.NewEventBus())
+	fixture.manager.AddSession(session)
+	capture := newColonyTriggerCapture(session.EventBus)
+
+	if _, err := fixture.lifecycle.LoadColony("s1", "colony-a", nil); err != nil {
+		t.Fatalf("LoadColony A: %v", err)
+	}
+	if available := session.AvailableTriggers(); len(available) != 1 || available[0].ID != "alpha-poll" {
+		t.Fatalf("colony A triggers = %+v, want only alpha-poll", available)
+	}
+
+	if !fixture.lifecycle.UnloadColony("s1") {
+		t.Fatal("UnloadColony A = false, want true")
+	}
+	if available := session.AvailableTriggers(); len(available) != 0 {
+		t.Fatalf("unload A left triggers = %+v, want none", available)
+	}
+
+	if _, err := fixture.lifecycle.LoadColony("s1", "colony-b", nil); err != nil {
+		t.Fatalf("LoadColony B: %v", err)
+	}
+	available := session.AvailableTriggers()
+	if len(available) != 1 || available[0].ID != "beta-poll" {
+		t.Fatalf("colony B triggers = %+v, want only beta-poll", available)
+	}
+	if _, ok := session.LookupTrigger("alpha-poll"); ok {
+		t.Fatal("colony B inherited colony A's trigger definition")
+	}
+	if session.IsTriggerActive("alpha-poll") {
+		t.Fatal("colony A's trigger is still active under colony B")
+	}
+	if !session.IsTriggerActive("beta-poll") {
+		t.Fatal("colony B's enabled trigger was not activated")
+	}
+
+	removed := capture.removedByID()
+	if len(removed) != 1 {
+		t.Fatalf("trigger_removed events = %v, want only alpha-poll", removed)
+	}
+	if _, ok := removed["alpha-poll"]; !ok {
+		t.Fatal("unload A published no trigger_removed for alpha-poll")
+	}
+	if _, ok := removed["beta-poll"]; ok {
+		t.Fatal("beta-poll was reported removed although it was just restored")
 	}
 }

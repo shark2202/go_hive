@@ -46,17 +46,74 @@ func (r *ColonyRuntime) publishReport(worker *Worker, finalText string) {
 	}
 }
 
-func (r *ColonyRuntime) publishFailed(worker *Worker, errorText string) {
-	payload := map[string]any{
-		"worker_id":        worker.ID,
-		"colony_id":        r.streamID,
-		"task":             worker.Task,
-		"status":           "failed",
-		"summary":          "Worker crashed: " + errorText,
-		"data":             map[string]any{},
-		"error":            errorText,
-		"duration_seconds": worker.Result().DurationSeconds,
+// publishSynthesizedPartial publishes the P0-1 backstop report: a worker that
+// terminated cleanly without report_to_parent. The runtime status is
+// COMPLETED; the report status is `partial` and data carries
+// no_explicit_report=true, matching Worker._build_result's outcome 2.
+//
+// Parity: framework/host/worker.py::Worker._build_result (outcome 2) +
+// Worker._emit_terminal_events (SUBAGENT_REPORT)
+func (r *ColonyRuntime) publishSynthesizedPartial(worker *Worker, summary string, data map[string]any) {
+	payload := worker.reportPayload()
+	payload["colony_id"] = r.streamID
+	payload["task"] = worker.Task
+	payload["status"] = "partial"
+	payload["summary"] = summary
+	payload["data"] = data
+	if worker.BatchID != "" {
+		payload["batch_id"] = worker.BatchID
+		payload["batch_index"] = worker.BatchIndex
+		payload["batch_size"] = worker.BatchSize
 	}
+	r.recordWorkerTerminal(worker, payload)
+	r.publishEvent(worker, payload)
+	if r.bus != nil {
+		executionID := ""
+		if worker.Context != nil {
+			executionID = worker.Context.ExecutionID
+		}
+		r.bus.EmitExecutionCompleted(worker.StreamID, executionID, map[string]any{"status": payload["status"]}, nil, nil)
+	}
+}
+
+// publishBrowserPreflightFailure publishes the failed report for a worker
+// failed before its first model call because its bound Chrome profile has no
+// connected Hive extension. Upstream emits no execution lifecycle event on
+// this path (agent_result is None), only the SUBAGENT_REPORT.
+//
+// Parity: framework/host/worker.py::Worker.run (pre-flight) +
+// Worker._emit_terminal_events(None, force_status="failed")
+func (r *ColonyRuntime) publishBrowserPreflightFailure(worker *Worker, errorText, summary string) {
+	payload := worker.reportPayload()
+	payload["colony_id"] = r.streamID
+	payload["task"] = worker.Task
+	payload["status"] = "failed"
+	payload["summary"] = summary
+	payload["error"] = errorText
+	payload["data"] = map[string]any{}
+	if worker.BatchID != "" {
+		payload["batch_id"] = worker.BatchID
+		payload["batch_index"] = worker.BatchIndex
+		payload["batch_size"] = worker.BatchSize
+	}
+	r.recordWorkerTerminal(worker, payload)
+	r.publishEvent(worker, payload)
+}
+
+func (r *ColonyRuntime) publishFailed(worker *Worker, errorText string) {
+	// A21: start from the shared report payload so a failed worker carries the
+	// same telemetry as every other terminal report — tool_calls_used,
+	// budget_limited/budget_pinned, tool_call_lifetime_budget, tokens_used,
+	// duration_seconds and output_file. The old hand-built map dropped all of
+	// them, leaving the queen's failed rows blank.
+	payload := worker.reportPayload()
+	payload["colony_id"] = r.streamID
+	payload["task"] = worker.Task
+	payload["status"] = "failed"
+	payload["summary"] = "Worker crashed: " + errorText
+	payload["error"] = errorText
+	payload["data"] = map[string]any{}
+	payload["duration_seconds"] = worker.Result().DurationSeconds
 	if worker.BatchID != "" {
 		payload["batch_id"] = worker.BatchID
 		payload["batch_index"] = worker.BatchIndex
@@ -75,16 +132,19 @@ func (r *ColonyRuntime) publishFailed(worker *Worker, errorText string) {
 }
 
 func (r *ColonyRuntime) publishStopped(worker *Worker, summary string) {
-	payload := map[string]any{
-		"worker_id":        worker.ID,
-		"colony_id":        r.streamID,
-		"task":             worker.Task,
-		"status":           "stopped",
-		"summary":          summary,
-		"data":             map[string]any{},
-		"error":            nil,
-		"duration_seconds": worker.Result().DurationSeconds,
-	}
+	// A21: same shared payload as publishReport/publishFailed. Python's
+	// synthesized stopped report (ColonyRuntime._publish_stopped_report) and
+	// its Worker._emit_terminal_events(force_status="stopped") both carry the
+	// telemetry block; the Go port used to drop tool_calls_used/budget_* and
+	// hard-code tokens_used.
+	payload := worker.reportPayload()
+	payload["colony_id"] = r.streamID
+	payload["task"] = worker.Task
+	payload["status"] = "stopped"
+	payload["summary"] = summary
+	payload["error"] = nil
+	payload["data"] = map[string]any{}
+	payload["duration_seconds"] = worker.Result().DurationSeconds
 	if worker.BatchID != "" {
 		payload["batch_id"] = worker.BatchID
 		payload["batch_index"] = worker.BatchIndex

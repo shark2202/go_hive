@@ -21,7 +21,7 @@ func TestChatRuntimeSedimentsReflectionIntoQueenSoul(t *testing.T) {
 	// sediment is in flight.
 	config := `{
   "memory_reflection": {"every_turns": 1, "long_every": 4},
-  "soul": {"queens": {"queen_technology": {"enabled": true, "sections": [
+  "soul": {"queens": {"queen_technology": {"enabled": true, "mode": "auto", "sections": [
     {"key": "now", "title": "Now", "limit": 300}
   ]}}}
 }`
@@ -120,5 +120,67 @@ func TestChatRuntimeSkipsSoulSedimentWithoutSoulConfig(t *testing.T) {
 	entries, err := os.ReadDir(filepath.Join(homeRoot, "queens"))
 	if err != nil || len(entries) != 1 || entries[0].Name() != "queen_other" {
 		t.Fatalf("queens dir = %v (err %v)", entries, err)
+	}
+}
+
+// Parity-exempt: no upstream counterpart; two-sided counterpart of
+// TestChatRuntimeSedimentsReflectionIntoQueenSoul. In review mode (the soul
+// default) the routed pass may not touch the soul: it stages a pending proposal
+// that the owner decides through the ordinary soul decide route.
+func TestChatRuntimeReviewSoulSedimentStagesProposal(t *testing.T) {
+	homeRoot := t.TempDir()
+	config := `{
+  "memory_reflection": {"every_turns": 1, "long_every": 4},
+  "soul": {"queens": {"queen_technology": {"enabled": true, "mode": "review", "sections": [
+    {"key": "now", "title": "Now", "limit": 300}
+  ]}}}
+}`
+	if err := os.WriteFile(filepath.Join(homeRoot, "configuration.json"), []byte(config), 0o644); err != nil {
+		t.Fatalf("write configuration: %v", err)
+	}
+	queenRoot := filepath.Join(homeRoot, "queens", "queen_technology")
+	if err := os.MkdirAll(queenRoot, 0o755); err != nil {
+		t.Fatalf("create queen dir: %v", err)
+	}
+
+	runtime, err := NewChatRuntime(ChatRuntimeDeps{
+		LLM:       &reflectionEchoLLM{},
+		Root:      t.TempDir(),
+		QueenName: "queen_technology",
+		HomeRoot:  homeRoot,
+	})
+	if err != nil {
+		t.Fatalf("NewChatRuntime: %v", err)
+	}
+	t.Cleanup(func() { _ = runtime.Close() })
+
+	if err := runtime.Deliver("remember that I prefer implementation-first answers"); err != nil {
+		t.Fatalf("Deliver: %v", err)
+	}
+	waitForAssistantParts(t, runtime, 1)
+	waitForPath(t, filepath.Join(memory.QueenMemoryDir(homeRoot, "queen_technology"), "turn-learnings.md"), 5*time.Second)
+
+	proposalDir := filepath.Join(queenRoot, "soul", "proposals")
+	deadline := time.Now().Add(5 * time.Second)
+	var proposals []os.DirEntry
+	for {
+		proposals, _ = os.ReadDir(proposalDir)
+		if len(proposals) > 0 {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("timed out waiting for the review-mode sediment proposal")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	if _, err := os.Stat(filepath.Join(queenRoot, "soul", "soul.json")); !os.IsNotExist(err) {
+		t.Fatalf("review-mode sediment wrote the soul: %v", err)
+	}
+	pending := soul.PendingProposal(filepath.Join(homeRoot, "queens"), "queen_technology")
+	if pending == nil || len(pending.Edits) != 1 {
+		t.Fatalf("pending proposal = %#v", pending)
+	}
+	if pending.Edits[0].Text != "reflected queen memory" || pending.Edits[0].Op != "add" {
+		t.Fatalf("proposal edit = %#v", pending.Edits[0])
 	}
 }

@@ -1,6 +1,6 @@
 # exports/ 解析基准决策备忘（P0-G2-1 / blocked #4）
 
-> 状态：**决策材料，未改产品行为**（基线 `7a14adf0`）。
+> 状态：**已决策 A（维持 `$HIVE_HOME` 基准，登记 CWD 差异，不改产品行为）**；决策记录见 `pending-decisions.md` §D2。
 > 范围：v1→v2 启动迁移读取 `exports/` 的基准；附 F4（`colonies/.migrations` 被 `hive colony list` 当 colony）的两侧复核。
 > 证据：`go_hive/docs/e2e-assets/exports-baseline/`（本备忘 §2/§7 的每个数字都出自该目录），探针 `go_hive/scripts/emoh_exports_baseline.sh`。
 > 既有登记：`docs/g2-lossless-migration.md` §P0-G2-1、`go_hive/docs/g2-lossless-replacement.html`、`docs/support-matrix.md:83`、`go_hive/docs/storage-contract-diff.md:92`。
@@ -9,8 +9,8 @@
 
 - **差异实测成立**：Python `migrate_v2` 读 **进程 CWD 下**的 `exports/`；Go 读 **`$HIVE_HOME/exports`**。9 组启动场景 + 3 组 API 直调矩阵见 §2。
 - **迁移是“复制”不是“移动”**（`copytree`/`copyTree`，源目录保留）；首跑即写 `<home>/.migrated-v2` 标记，**即使一个 colony 也没搬**（实测：Python `m4`）——首跑没找到 exports，之后启动永不重试（两侧同）。
-- **需要拍板 2 个问题**（§6）：① 是否要求 Go 自动迁移“`exports/` 在检出根”的 v1 用户；② 若要求，回退锚点选 **CWD**（与上游逐行为一致）还是 **检出根**（与 agent allowlist 同锚、不引入 CWD 依赖）。
-- 本备忘的推荐（供参考，不代替拍板）：**选项 A：保持 Go 现状 + 发布说明 + 首启诊断**；若 Q1 答“必须自动迁移”，选 **C′（home 优先、检出根回退，见 §5 备注）**，而不是 B（CWD 回退）。
+- **已决策 A**：保持 Go 的 `$HIVE_HOME` 基准；Q1/Q2 已关闭（见 `pending-decisions.md` §D2）。
+- **决策后口径**：采用 **A（保持 Go 现状 + 发布说明 + 首启诊断）**；不再考虑 C′/B，除非未来重新开决策。
 - **F4 复核**：`colony list` 文本输出**逐字一致**（两侧 sha256 相同）；`--json` **语义一致**、仅对象键序不同（Go `encoding/json` 对 map 键排序，属仓库已登记的排版类残余）。登记：**行为对齐、无需修**。若产品决定过滤点目录，必须两侧联合改，单改 Go 破坏对齐。
 
 ## 1. 现状（代码基准）
@@ -146,7 +146,9 @@ go_hive/docs/e2e-assets/exports-baseline/
 **A**：保持 `$HIVE_HOME/exports` + 发布说明 + 首启诊断。理由：① 不把 Python 的 CWD 缺陷复制进新运行时；② 与已文档化的存储契约、G2 夹具一致；③ 迁移复制语义使“漏迁”可补救、无数据删除；④ 代码零改动。
 若 Q1 的答案是“v1 检出根用户必须自动迁移”，优先选 **C′ = C 的回退锚点换成检出根**（home → `$REPO_ROOT/exports`，不引入 CWD 依赖；即“D 的 Go 先行版”）；只有在“逐行为一致优先于启动确定性”时才选 **B**（或 C 的 CWD 回退形态）。
 
-## 6. 需要拍板的问题（不自行决定）
+## 6. 已关闭的问题（D2 决策 A）
+
+> **状态：已关闭。** 2026-11-23 按 **Q1(b) / 选项 A** 决策：保持 Go `$HIVE_HOME/exports` 基准，发布说明 + 手工迁移指引，不改产品 exports 行为（`pending-decisions.md` §D2）。以下保留问题原文与选项，作为决策历史，不再等待拍板。
 
 **Q1. Go 1.0.26 首启是否必须自动迁移“`exports/` 在检出根”的 v1 用户？**
 - (a) 必须 → 实现回退基准（进入 Q2），并同步更新 storage 契约与夹具；

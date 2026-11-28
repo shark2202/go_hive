@@ -527,3 +527,64 @@ func TestMCPStdioEchoProcess(t *testing.T) {
 		_, _ = writer.Write(append(payload, '\n'))
 	}
 }
+
+// Parity-exempt: Go-only MCP protocol-version negotiation against the SDK's
+// advertised latest version; the upstream assert lives in the external MCP SDK.
+func TestMCPProtocolVersionNegotiation(t *testing.T) {
+	if mcpProtocolVersion != "2025-11-25" {
+		t.Fatalf("offered protocol version = %q, want the SDK's latest", mcpProtocolVersion)
+	}
+	for _, version := range []string{"2024-11-05", "2025-03-26", "2025-06-18", "2025-11-25"} {
+		raw := json.RawMessage(`{"protocolVersion":"` + version + `"}`)
+		if err := validateMCPProtocolVersion(raw); err != nil {
+			t.Fatalf("version %q rejected: %v", version, err)
+		}
+	}
+	err := validateMCPProtocolVersion(json.RawMessage(`{"protocolVersion":"1999-01-01"}`))
+	if err == nil || err.Error() != "Unsupported protocol version from the server: 1999-01-01" {
+		t.Fatalf("unsupported version error = %v", err)
+	}
+	if err := validateMCPProtocolVersion(nil); err == nil {
+		t.Fatal("missing protocolVersion should fail")
+	}
+}
+
+type pingableSSESession struct {
+	fakeSSESession
+	pingErr error
+	pings   int
+}
+
+func (s *pingableSSESession) Ping(time.Duration) error {
+	s.pings++
+	return s.pingErr
+}
+
+// Parity: core/framework/loader/mcp_client.py::MCPClient.probe_liveness --
+// the SSE probe pings the live session instead of trusting the connected bit.
+func TestMCPSSEProbeLivenessPingsSession(t *testing.T) {
+	client := newSSEMCPClient(&MCPServerConfig{Name: "sse", Transport: "sse", URL: "http://localhost/sse"})
+	session := &pingableSSESession{}
+	client.session = session
+	client.conn = true
+
+	if !client.ProbeLiveness() {
+		t.Fatal("live ping should report alive")
+	}
+	if session.pings != 1 || client.ConsecutiveProbeFailures() != 0 {
+		t.Fatalf("pings = %d, failures = %d", session.pings, client.ConsecutiveProbeFailures())
+	}
+
+	session.pingErr = errors.New("stream reset")
+	if client.ProbeLiveness() {
+		t.Fatal("failed ping should report dead")
+	}
+	if client.ConsecutiveProbeFailures() != 1 {
+		t.Fatalf("failures = %d", client.ConsecutiveProbeFailures())
+	}
+
+	client.session = &fakeSSESession{}
+	if !client.ProbeLiveness() {
+		t.Fatal("a session without Ping keeps the connected answer")
+	}
+}

@@ -39,6 +39,7 @@ func CatalogNamedSpecs() []NamedSpec {
 				AdenProviderName: spec.AdenProviderName,
 				Description:      spec.Description,
 			},
+			EnvVar: spec.EnvVar,
 		})
 	}
 	sort.SliceStable(named, func(i, j int) bool {

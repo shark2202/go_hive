@@ -3,6 +3,10 @@ package colony
 // Parity: framework/agent_loop/internals/event_publishing.py (queen stream)
 // Parity: framework/host/colony_runtime.py::ColonyRuntime.start_overseer
 //
+// Legacy (2026-11-26): the production serve path does not start an overseer
+// (internal/cli/loader_colony_host.go); the colony-bound queen session is the
+// executor. This emitter remains for the parity/self-host/e2e overseer path.
+//
 // The persistent overseer is the colony's client-facing queen: upstream starts
 // it with stream_id="overseer" and its turns publish the same client-facing
 // event family a chat queen's turn does. The Go worker loop publishes no
@@ -43,13 +47,32 @@ func (e *overseerEmitter) begin() {
 // end closes the turn. It publishes the same awaiting_user loop state the chat
 // emitter does, so the session snapshot reports why the turn yielded — an
 // ask_user park, or an ordinary turn_done — instead of leaving the last
-// "executing" state to age into a false stall. A failed turn reports
-// execution_failed so the session does not keep a spinner forever.
+// "executing" state to age into a false stall. A turn the loop parked by
+// design (the empty-response ghost stream, the deterministic doom loop)
+// announces the wait the way the chat boundary does: client_input_requested
+// carries the park reason and the loop state takes the reason's own activity
+// (interrupted for both broken parks); no execution_failed is published,
+// because nothing failed. An ordinary error announces llm_error and then
+// reports execution_failed so the session does not keep a spinner forever.
+//
+// Parity: framework/agent_loop/agent_loop.py::_await_user_input
 func (e *overseerEmitter) end(err error, parkReason agentloop.ParkReason) {
 	if e == nil || e.bus == nil {
 		return
 	}
 	if err != nil {
+		reason := string(parkReason)
+		if reason == "" {
+			reason = string(agentloop.ParkReasonUnknown)
+		}
+		e.bus.EmitClientInputRequested(e.streamID, e.streamID, &e.executionID, nil, &reason)
+		if parkedReason, parked := loopRaisedParkReason(err); parked {
+			// The loop chose to park; the park's activity (interrupted) is the
+			// authoritative state and no failure frame is published.
+			e.bus.EmitLoopStateChanged(e.streamID, e.streamID, string(parkedReason.Activity()), &e.executionID, &reason, nil, nil)
+			return
+		}
+		e.bus.EmitLoopStateChanged(e.streamID, e.streamID, string(agentloop.LoopActivityInterrupted), &e.executionID, &reason, nil, nil)
 		e.bus.EmitExecutionFailed(e.streamID, e.executionID, err.Error(), nil, nil)
 		return
 	}

@@ -50,7 +50,7 @@
             },
             {
               "file": "go_hive/go-hive/internal/cli/loader.go",
-              "line": 320,
+              "line": 333,
               "snippet": "channelHost := newServeChannelHost(home, manager, createSession)"
             },
             {
@@ -197,7 +197,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/server/llm_config.go",
-              "line": 340,
+              "line": 278,
               "snippet": "provider, hasProvider := llmSection[\"provider\"]"
             },
             {
@@ -224,7 +224,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/server/llm_config.go",
-              "line": 344,
+              "line": 282,
               "snippet": "model, hasModel := llmSection[\"model\"]"
             },
             {
@@ -251,7 +251,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/server/llm_config.go",
-              "line": 431,
+              "line": 369,
               "snippet": "if pyTruthy(llmSection[\"api_key\"]) {"
             },
             {
@@ -283,7 +283,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/server/llm_config.go",
-              "line": 423,
+              "line": 361,
               "snippet": "if pool, ok := llmSection[\"api_keys\"].([]any); ok && len(pool) > 0 {"
             },
             {
@@ -303,7 +303,7 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/main_slot.go",
-              "line": 281,
+              "line": 280,
               "snippet": "func MainSlotKeyPool(home hivehome.Home) *llm.KeyPool {"
             }
           ],
@@ -325,7 +325,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/server/llm_config.go",
-              "line": 405,
+              "line": 343,
               "snippet": "\"api_base\":               llmSection[\"api_base\"],"
             },
             {
@@ -352,7 +352,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/server/llm_config.go",
-              "line": 458,
+              "line": 396,
               "snippet": "if envValue := llmSection[\"api_key_env_var\"]; pyTruthy(envValue) {"
             },
             {
@@ -379,17 +379,17 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/server/llm_config.go",
-              "line": 399,
+              "line": 337,
               "snippet": "\"max_tokens\":             llmSection[\"max_tokens\"],"
             },
             {
               "file": "go_hive/go-hive/internal/server/chat_memory_wiring.go",
-              "line": 29,
+              "line": 30,
               "snippet": "func chatTurnMaxTokens(homeRoot string) int {"
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 385,
+              "line": 366,
               "snippet": "func LLMMaxTokens(home hivehome.Home) int {"
             }
           ],
@@ -411,12 +411,12 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/server/llm_config.go",
-              "line": 400,
+              "line": 338,
               "snippet": "\"max_context_tokens\":     llmSection[\"max_context_tokens\"],"
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 437,
+              "line": 438,
               "snippet": "mainSection := configSection(home, \"llm\")"
             }
           ],
@@ -438,7 +438,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 471,
+              "line": 472,
               "snippet": "func AuxMaxTokens(home hivehome.Home) int {"
             }
           ],
@@ -460,7 +460,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/server/llm_config.go",
-              "line": 417,
+              "line": 355,
               "snippet": "if name, ok := llmSection[\"endpoint\"].(string); ok && name != \"\" {"
             },
             {
@@ -659,7 +659,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 546,
+              "line": 547,
               "snippet": "func AntigravityClientID(home hivehome.Home) string {"
             },
             {
@@ -691,7 +691,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 553,
+              "line": 554,
               "snippet": "func AntigravityClientSecret(home hivehome.Home) string {"
             },
             {
@@ -723,12 +723,12 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/agentloop/loop_config.go",
-              "line": 169,
+              "line": 237,
               "snippet": "MaxToolResultChars:    30_000,"
             },
             {
               "file": "go_hive/go-hive/internal/hiveconf/hiveconf.go",
-              "line": 81,
+              "line": 97,
               "snippet": "func MaxToolResultChars(home hivehome.Home, fallback int) int {"
             }
           ],
@@ -888,8 +888,8 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/server/chat_memory_wiring.go",
-              "line": 325,
-              "snippet": "cfg.EveryTurns = positive(\"every_turns\", cfg.EveryTurns)"
+              "line": 308,
+              "snippet": "cfg.EveryTurns = reflectionPositiveInt(section[\"every_turns\"], cfg.EveryTurns)"
             }
           ],
           "status": "aligned",
@@ -910,8 +910,8 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/server/chat_memory_wiring.go",
-              "line": 326,
-              "snippet": "cfg.LongEvery = positive(\"long_every\", cfg.LongEvery)"
+              "line": 309,
+              "snippet": "cfg.LongEvery = reflectionPositiveInt(section[\"long_every\"], cfg.LongEvery)"
             }
           ],
           "status": "aligned",
@@ -932,7 +932,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/server/chat_memory_wiring.go",
-              "line": 327,
+              "line": 310,
               "snippet": "if model, ok := section[\"model\"].(string); ok && (model == \"main\" || model == \"worker\") {"
             }
           ],
@@ -986,12 +986,12 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/colony/trigger.go",
-              "line": 119,
+              "line": 135,
               "snippet": "rawStages, present := section[\"stages\"]"
             }
           ],
           "status": "aligned",
-          "notes": "Declarative trigger middleware (upstream framework/pipeline). Stages run in ascending order on every ColonyRuntime.trigger before a worker spawns; a reject short-circuits as PipelineRejectedError and spawns nothing; a missing/empty list is the no-op default (PipelineRunner([])). Go builds the same runner in internal/pipeline from the same type/order/config spec, reads it in NewColonyRuntime, and fails startup on an unknown type (upstream's KeyError). The seven built-in stage semantics and the Go-side applied-output subset are documented in docs/pipeline.md."
+          "notes": "Declarative trigger middleware (upstream framework/pipeline). Stages run in ascending order on every ColonyRuntime.trigger before a worker spawns; a reject short-circuits as PipelineRejectedError and spawns nothing; a missing/empty list is the no-op default (PipelineRunner([])). Go builds the same runner in internal/pipeline from the same type/order/config spec, reads it in NewColonyRuntime, and fails startup on an unknown type (upstream's KeyError). The seven built-in stage semantics and the Go-side applied-output subset are documented in docs/pipeline.md. Production reachability: no production caller on either side — upstream's ColonyRuntime.trigger is only an embedding/timer API (register_trigger has no callers) and the server injects the queen node instead; see docs/pipeline.md §7."
         }
       ]
     },
@@ -1045,12 +1045,12 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/server/routes_queens.go",
-              "line": 526,
+              "line": 527,
               "snippet": "if sections, ok := config[\"queen_llm\"].(map[string]any); ok {"
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 311,
+              "line": 292,
               "snippet": "func QueenLLMSection(home hivehome.Home, queenID string) map[string]any {"
             },
             {
@@ -1077,12 +1077,12 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/server/routes_queens.go",
-              "line": 564,
+              "line": 565,
               "snippet": "if strings.TrimSpace(queenStr(object[\"provider\"])) == \"\" || strings.TrimSpace(queenStr(object[\"model\"])) == \"\" {"
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 311,
+              "line": 292,
               "snippet": "func QueenLLMSection(home hivehome.Home, queenID string) map[string]any {"
             },
             {
@@ -1109,12 +1109,12 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/server/routes_queens.go",
-              "line": 569,
+              "line": 570,
               "snippet": "apiKey := queenStr(object[\"api_key\"])"
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 311,
+              "line": 292,
               "snippet": "func QueenLLMSection(home hivehome.Home, queenID string) map[string]any {"
             },
             {
@@ -1141,12 +1141,12 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/server/routes_queens.go",
-              "line": 575,
+              "line": 576,
               "snippet": "apiBase := strings.TrimSpace(queenStr(object[\"api_base\"]))"
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 311,
+              "line": 292,
               "snippet": "func QueenLLMSection(home hivehome.Home, queenID string) map[string]any {"
             },
             {
@@ -1173,12 +1173,12 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/server/routes_queens.go",
-              "line": 571,
+              "line": 572,
               "snippet": "if envName := queenStr(object[\"api_key_env_var\"]); envName != \"\" {"
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 311,
+              "line": 292,
               "snippet": "func QueenLLMSection(home hivehome.Home, queenID string) map[string]any {"
             },
             {
@@ -1205,12 +1205,12 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/server/routes_queens.go",
-              "line": 526,
+              "line": 527,
               "snippet": "if sections, ok := config[\"queen_llm\"].(map[string]any); ok {"
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 311,
+              "line": 292,
               "snippet": "func QueenLLMSection(home hivehome.Home, queenID string) map[string]any {"
             },
             {
@@ -1237,12 +1237,12 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/server/routes_queens.go",
-              "line": 526,
+              "line": 527,
               "snippet": "if sections, ok := config[\"queen_llm\"].(map[string]any); ok {"
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 311,
+              "line": 292,
               "snippet": "func QueenLLMSection(home hivehome.Home, queenID string) map[string]any {"
             },
             {
@@ -1269,12 +1269,12 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/server/routes_queens.go",
-              "line": 526,
+              "line": 527,
               "snippet": "if sections, ok := config[\"queen_llm\"].(map[string]any); ok {"
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 311,
+              "line": 292,
               "snippet": "func QueenLLMSection(home hivehome.Home, queenID string) map[string]any {"
             },
             {
@@ -1306,7 +1306,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/queenmail/config.go",
-              "line": 120,
+              "line": 134,
               "snippet": "config.Enabled = section[\"enabled\"] == true"
             }
           ],
@@ -1328,7 +1328,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/queenmail/config.go",
-              "line": 122,
+              "line": 136,
               "snippet": "if rawQueens, present := section[\"queens\"]; present {"
             }
           ],
@@ -1350,7 +1350,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/queenmail/config.go",
-              "line": 134,
+              "line": 148,
               "snippet": "config.DailyLimit = positiveInt(section[\"daily_limit\"], config.DailyLimit)"
             }
           ],
@@ -1372,7 +1372,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/queenmail/config.go",
-              "line": 135,
+              "line": 149,
               "snippet": "config.MaxDepth = positiveInt(section[\"max_depth\"], config.MaxDepth)"
             }
           ],
@@ -1394,7 +1394,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/queenmail/config.go",
-              "line": 136,
+              "line": 150,
               "snippet": "config.MaxParallelTurns = positiveInt(section[\"max_parallel_turns\"], config.MaxParallelTurns)"
             }
           ],
@@ -1416,7 +1416,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/queenmail/config.go",
-              "line": 157,
+              "line": 347,
               "snippet": "Name:            textOr(entry[\"name\"], queenID),"
             }
           ],
@@ -1438,7 +1438,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/queenmail/config.go",
-              "line": 158,
+              "line": 348,
               "snippet": "Title:           textOr(entry[\"title\"], DefaultClaudeTitle),"
             }
           ],
@@ -1460,7 +1460,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/queenmail/config.go",
-              "line": 159,
+              "line": 349,
               "snippet": "Command:         commandOf(entry[\"command\"]),"
             }
           ],
@@ -1482,7 +1482,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/queenmail/config.go",
-              "line": 160,
+              "line": 350,
               "snippet": "Auth:            authOf(entry[\"auth\"]),"
             }
           ],
@@ -1504,7 +1504,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/queenmail/config.go",
-              "line": 161,
+              "line": 351,
               "snippet": "APIKey:          textOr(entry[\"api_key\"], \"\"),"
             }
           ],
@@ -1526,7 +1526,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/queenmail/config.go",
-              "line": 162,
+              "line": 352,
               "snippet": "APIBase:         textOr(entry[\"api_base\"], \"\"),"
             }
           ],
@@ -1548,7 +1548,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/queenmail/config.go",
-              "line": 163,
+              "line": 353,
               "snippet": "ConfigDir:       textOr(entry[\"config_dir\"], \"\"),"
             }
           ],
@@ -1570,7 +1570,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/queenmail/config.go",
-              "line": 164,
+              "line": 354,
               "snippet": "Cwd:             textOr(entry[\"cwd\"], \"\"),"
             }
           ],
@@ -1592,7 +1592,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/queenmail/config.go",
-              "line": 165,
+              "line": 355,
               "snippet": "PermissionMode:  textOr(entry[\"permission_mode\"], DefaultClaudePermissionMode),"
             }
           ],
@@ -1614,7 +1614,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/queenmail/config.go",
-              "line": 166,
+              "line": 356,
               "snippet": "AllowedTools:    stringsList(entry[\"allowed_tools\"]),"
             }
           ],
@@ -1636,7 +1636,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/queenmail/config.go",
-              "line": 167,
+              "line": 357,
               "snippet": "DisallowedTools: stringsList(entry[\"disallowed_tools\"]),"
             }
           ],
@@ -1658,7 +1658,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/queenmail/config.go",
-              "line": 168,
+              "line": 358,
               "snippet": "AddDirs:         stringsList(entry[\"add_dirs\"]),"
             }
           ],
@@ -1680,7 +1680,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/queenmail/config.go",
-              "line": 169,
+              "line": 359,
               "snippet": "Model:           textOr(entry[\"model\"], \"\"),"
             }
           ],
@@ -1702,7 +1702,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/queenmail/config.go",
-              "line": 170,
+              "line": 360,
               "snippet": "TimeoutMinutes:  positiveInt(entry[\"timeout_minutes\"], DefaultClaudeTimeoutMinutes),"
             }
           ],
@@ -1724,7 +1724,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/queenmail/config.go",
-              "line": 171,
+              "line": 361,
               "snippet": "SystemPrompt:    textOr(entry[\"system_prompt\"], \"\"),"
             }
           ],
@@ -1746,7 +1746,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/queenmail/config.go",
-              "line": 172,
+              "line": 362,
               "snippet": "Env:             envMap(entry[\"env\"]),"
             }
           ],
@@ -2756,8 +2756,8 @@
           ],
           "go": [
             {
-              "file": "go_hive/go-hive/internal/cli/browser_supervisor.go",
-              "line": 118,
+              "file": "go_hive/go-hive/internal/cli/browser_supervisor_adapters.go",
+              "line": 51,
               "snippet": "if enabled, present := config[\"gcu_enabled\"].(bool); present {"
             }
           ],
@@ -3013,7 +3013,7 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 350,
+              "line": 331,
               "snippet": "func VisionFallbackSection(home hivehome.Home) map[string]any {"
             },
             {
@@ -3045,7 +3045,7 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 350,
+              "line": 331,
               "snippet": "func VisionFallbackSection(home hivehome.Home) map[string]any {"
             },
             {
@@ -3077,7 +3077,7 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 350,
+              "line": 331,
               "snippet": "func VisionFallbackSection(home hivehome.Home) map[string]any {"
             },
             {
@@ -3109,7 +3109,7 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 350,
+              "line": 331,
               "snippet": "func VisionFallbackSection(home hivehome.Home) map[string]any {"
             },
             {
@@ -3141,7 +3141,7 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 350,
+              "line": 331,
               "snippet": "func VisionFallbackSection(home hivehome.Home) map[string]any {"
             },
             {
@@ -3173,7 +3173,7 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 350,
+              "line": 331,
               "snippet": "func VisionFallbackSection(home hivehome.Home) map[string]any {"
             },
             {
@@ -3205,7 +3205,7 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 350,
+              "line": 331,
               "snippet": "func VisionFallbackSection(home hivehome.Home) map[string]any {"
             },
             {
@@ -3246,13 +3246,13 @@
               "snippet": "var RoleSections = []string{\"llm\", \"worker_llm\", \"vision_fallback\", \"judge\"}"
             },
             {
-              "file": "go_hive/go-hive/internal/colony/runtime.go",
-              "line": 71,
+              "file": "go_hive/go-hive/internal/colony/runtime_options.go",
+              "line": 51,
               "snippet": "// worker_llm separately)."
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 339,
+              "line": 320,
               "snippet": "func WorkerLLMSection(home hivehome.Home) map[string]any {"
             },
             {
@@ -3284,7 +3284,7 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 339,
+              "line": 320,
               "snippet": "func WorkerLLMSection(home hivehome.Home) map[string]any {"
             },
             {
@@ -3316,7 +3316,7 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 339,
+              "line": 320,
               "snippet": "func WorkerLLMSection(home hivehome.Home) map[string]any {"
             },
             {
@@ -3348,7 +3348,7 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 339,
+              "line": 320,
               "snippet": "func WorkerLLMSection(home hivehome.Home) map[string]any {"
             },
             {
@@ -3380,7 +3380,7 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 339,
+              "line": 320,
               "snippet": "func WorkerLLMSection(home hivehome.Home) map[string]any {"
             },
             {
@@ -3412,12 +3412,12 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 339,
+              "line": 320,
               "snippet": "func WorkerLLMSection(home hivehome.Home) map[string]any {"
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 454,
+              "line": 455,
               "snippet": "func WorkerMaxTokens(home hivehome.Home) int {"
             }
           ],
@@ -3444,7 +3444,7 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 339,
+              "line": 320,
               "snippet": "func WorkerLLMSection(home hivehome.Home) map[string]any {"
             },
             {
@@ -3476,7 +3476,7 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 339,
+              "line": 320,
               "snippet": "func WorkerLLMSection(home hivehome.Home) map[string]any {"
             },
             {
@@ -3508,7 +3508,7 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 339,
+              "line": 320,
               "snippet": "func WorkerLLMSection(home hivehome.Home) map[string]any {"
             },
             {
@@ -3540,7 +3540,7 @@
             },
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 339,
+              "line": 320,
               "snippet": "func WorkerLLMSection(home hivehome.Home) map[string]any {"
             },
             {
@@ -3572,7 +3572,7 @@
           "go": [
             {
               "file": "go_hive/go-hive/internal/server/config_slots.go",
-              "line": 526,
+              "line": 527,
               "snippet": "func WorkerKeepSetFromConfig(home hivehome.Home) func() map[string]struct{} {"
             }
           ],
@@ -3676,7 +3676,7 @@
         },
         {
           "file": "go_hive/go-hive/internal/hiveconf/hiveconf.go",
-          "line": 37,
+          "line": 38,
           "snippet": "if err := decoder.Decode(&out); err != nil || out == nil {"
         }
       ],
@@ -3735,7 +3735,7 @@
         },
         {
           "file": "go_hive/go-hive/internal/server/llm_config.go",
-          "line": 458,
+          "line": 396,
           "snippet": "if envValue := llmSection[\"api_key_env_var\"]; pyTruthy(envValue) {"
         }
       ],

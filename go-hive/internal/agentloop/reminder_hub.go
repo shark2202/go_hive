@@ -1,6 +1,7 @@
 package agentloop
 
 import (
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -128,6 +129,47 @@ func (h *ReminderHub) ResetTurn() {
 	}
 }
 
+// Parity: framework/agent_loop/agent_loop.py::__init__ — the order upstream
+// registers its reminder sources. The hub delivers bodies in registration
+// order, and this port's hosts (server sessions, colony workers) register the
+// same sources in a different order, so `collect` re-sorts known sources by
+// this canonical order: memory notes render before turn context, the tools
+// manifest and skills catalog after it, tracker snapshots after those, exactly
+// as an upstream session renders them. Unknown sources keep their registration
+// order after every known one.
+var reminderSourceOrder = []string{
+	"tasks",
+	"colony_parallel",
+	"active_workers",
+	"past_conversations",
+	"memory_recall",
+	"memory_index",
+	"turn_context",
+	"searchable_tools",
+	"skills_catalog",
+	"tracker_snapshot",
+	"worker_tracker_snapshot",
+	"colony_worker_snapshot",
+	"idle_nudge",
+	"sentinel_escalation",
+	"stream_stall",
+}
+
+var reminderSourceRanks = func() map[string]int {
+	ranks := make(map[string]int, len(reminderSourceOrder))
+	for i, name := range reminderSourceOrder {
+		ranks[name] = i
+	}
+	return ranks
+}()
+
+func reminderSourceRank(name string) int {
+	if rank, ok := reminderSourceRanks[name]; ok {
+		return rank
+	}
+	return len(reminderSourceOrder)
+}
+
 // Parity: ReminderHub.collect. Sources whose Points does not include point
 func (h *ReminderHub) Collect(point ReminderPoint, agentCtx *ReminderAgentContext, toolNames []string, userText string) []Reminder {
 	return h.CollectWithSignals(point, agentCtx, nil, toolNames, userText)
@@ -169,6 +211,11 @@ func (h *ReminderHub) CollectWithSignals(point ReminderPoint, agentCtx *Reminder
 		}
 		out = append(out, reminder)
 	}
+	// Hosts register the same sources in different orders; deliver them in
+	// upstream's registration order so merged blocks read the same way.
+	sort.SliceStable(out, func(i, j int) bool {
+		return reminderSourceRank(out[i].Source) < reminderSourceRank(out[j].Source)
+	})
 	return out
 }
 

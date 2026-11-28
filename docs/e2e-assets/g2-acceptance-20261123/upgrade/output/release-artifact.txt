@@ -1,0 +1,5 @@
+name=hive-1.0.26-go.1-darwin-arm64.tar.gz
+bytes=36059855
+sha256=500112984b5aafb3cd54351a1fcf8c9a65eb90019150af358dc79208cf7b3bde
+built_binary_version=hive 1.0.27-go.1
+drill_release_label=1.0.26-go.1

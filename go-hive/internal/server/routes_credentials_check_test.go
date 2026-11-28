@@ -7,13 +7,30 @@ package server
 
 import (
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/shark2202/go_hive/go-hive/internal/agents"
 	"github.com/shark2202/go_hive/go-hive/internal/credentials"
 	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/server/routesagents"
 )
+
+func checkAgentRoutesMux(home hivehome.Home) *http.ServeMux {
+	mux := http.NewServeMux()
+	roots := agents.NewAllowedRoots(home.ColoniesDir(), home.Root, filepath.Join(home.Root, "agents"))
+	routesagents.RegisterRoutes(mux, routesagents.Deps{
+		Home:  home,
+		Roots: roots,
+		CheckAgentCredentials: func(path string, verify bool) (map[string]any, error) {
+			// Hermetic: never read the developer's real shell config.
+			return checkAgentCredentialRequirements(home, func() {}, path, verify)
+		},
+	})
+	return mux
+}
 
 func makeCredentialColony(t *testing.T, home hivehome.Home, name, workerTools string) string {
 	t.Helper()
@@ -21,9 +38,18 @@ func makeCredentialColony(t *testing.T, home hivehome.Home, name, workerTools st
 	if err := os.MkdirAll(colony, 0o755); err != nil {
 		t.Fatalf("mkdir colony: %v", err)
 	}
-	writeAgentFixture(t, colony, "worker.json",
+	writeCredentialFixture(t, colony, "worker.json",
 		`{"name":"`+name+`","description":"d","tools":`+workerTools+`}`)
 	return colony
+}
+
+func writeCredentialFixture(t *testing.T, dir, name, content string) string {
+	t.Helper()
+	path := filepath.Join(dir, name)
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("write %s: %v", path, err)
+	}
+	return path
 }
 
 func checkAgentRequest(t *testing.T, mux *http.ServeMux, payload string) (int, map[string]any) {
@@ -72,7 +98,7 @@ func TestCheckAgentWorkerConfigRows(t *testing.T) {
 	t.Setenv("HIVE_CREDENTIAL_KEY", "")
 	t.Setenv(credentials.AdenEnvVar, "")
 	t.Setenv("GITHUB_TOKEN", "gh-token")
-	mux := agentRoutesMux(home, NewSessionManager())
+	mux := checkAgentRoutesMux(home)
 
 	status, body := checkAgentRequest(t, mux, `{"agent_path":"`+colony+`","verify":false}`)
 	if status != http.StatusOK {
@@ -134,7 +160,7 @@ func TestCheckAgentDeclarativeAgentJSONRow(t *testing.T) {
 	if err := os.MkdirAll(colony, 0o755); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}
-	writeAgentFixture(t, colony, "agent.json", `{
+	writeCredentialFixture(t, colony, "agent.json", `{
 	  "name": "json-agent",
 	  "goal": {"description": "g"},
 	  "nodes": [{"id": "start", "tools": {"policy": "explicit", "allowed": ["github_create_issue"]}}],
@@ -144,7 +170,7 @@ func TestCheckAgentDeclarativeAgentJSONRow(t *testing.T) {
 	t.Setenv("HIVE_CREDENTIAL_KEY", "")
 	t.Setenv(credentials.AdenEnvVar, "")
 	t.Setenv("GITHUB_TOKEN", "gh-token")
-	mux := agentRoutesMux(home, NewSessionManager())
+	mux := checkAgentRoutesMux(home)
 
 	status, body := checkAgentRequest(t, mux, `{"agent_path":"`+colony+`","verify":false}`)
 	if status != http.StatusOK {
@@ -165,8 +191,15 @@ func TestCheckAgentAdenRowPrepended(t *testing.T) {
 	colony := makeCredentialColony(t, home, "aden_colony", `["notion_search"]`)
 	t.Setenv("HIVE_CREDENTIAL_KEY", "")
 	t.Setenv(credentials.AdenEnvVar, "aden-key")
+	// Keep the token pre-sync offline: an empty Aden list is the same
+	// not-connected state this endpoint test asserts.
+	adenServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"integrations":[]}`))
+	}))
+	t.Cleanup(adenServer.Close)
+	t.Setenv("ADEN_API_URL", adenServer.URL)
 	t.Setenv("NOTION_API_TOKEN", "")
-	mux := agentRoutesMux(home, NewSessionManager())
+	mux := checkAgentRoutesMux(home)
 
 	status, body := checkAgentRequest(t, mux, `{"agent_path":"`+colony+`","verify":false}`)
 	if status != http.StatusOK {
@@ -219,7 +252,7 @@ func TestCheckAgentUnknownAgentInRootsIsEmpty(t *testing.T) {
 	home := hivehome.Home{Root: t.TempDir()}
 	t.Setenv("HIVE_CREDENTIAL_KEY", "")
 	t.Setenv(credentials.AdenEnvVar, "")
-	mux := agentRoutesMux(home, NewSessionManager())
+	mux := checkAgentRoutesMux(home)
 
 	status, body := checkAgentRequest(t, mux, `{"agent_path":"`+filepath.Join(home.ColoniesDir(), "ghost")+`"}`)
 	if status != http.StatusOK {
@@ -237,7 +270,7 @@ func TestCheckAgentUnknownAgentInRootsIsEmpty(t *testing.T) {
 // Parity: core/framework/server/routes_credentials.py::handle_check_agent
 func TestCheckAgentNonStringPath(t *testing.T) {
 	home := hivehome.Home{Root: t.TempDir()}
-	mux := agentRoutesMux(home, NewSessionManager())
+	mux := checkAgentRoutesMux(home)
 	status, body := checkAgentRequest(t, mux, `{"agent_path":123}`)
 	if status != http.StatusInternalServerError {
 		t.Fatalf("status = %d, body = %#v", status, body)

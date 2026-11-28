@@ -27,6 +27,8 @@ Agent 看到的永远只是普通函数调用，但这些调用来自三处：
 | `chart-tools` | ECharts、Mermaid（Playwright 渲染） |
 | `memory-tools` | 会话搜索、recall |
 | `hive_tools` | 附件、PDF、网页抓取、CSV、图片生成等 |
+| `http-tools` | 原生 HTTP 请求/下载/上传（Go-only；不依赖 curl；配置只读 `$HIVE_HOME/http_tools.json`；cookie 按 Hive 会话隔离） |
+| `ast-tools` | AST 结构搜索与仓库分析（Go-only；`ast_grep` / `ast_analyze`；配置只读 `$HIVE_HOME/ast_*.json`；路径输入绝对） |
 
 这些工具「启动时不需要任何子进程」，是 Hive 相比「每个工具一个 MCP server」的显著简化。
 

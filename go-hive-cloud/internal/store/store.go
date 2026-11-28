@@ -254,6 +254,27 @@ CREATE TABLE IF NOT EXISTS runtime_connections (
   last_seen_at TEXT NOT NULL,
   PRIMARY KEY (runtime_id, kind)
 );
+CREATE TABLE IF NOT EXISTS crm_people (
+  id           TEXT PRIMARY KEY,
+  stage        TEXT,
+  created_at   TEXT NOT NULL,
+  updated_at   TEXT NOT NULL,
+  archived_at  TEXT
+);
+CREATE TABLE IF NOT EXISTS crm_companies (
+  id           TEXT PRIMARY KEY,
+  stage        TEXT,
+  created_at   TEXT NOT NULL,
+  updated_at   TEXT NOT NULL,
+  archived_at  TEXT
+);
+CREATE TABLE IF NOT EXISTS crm_opportunities (
+  id           TEXT PRIMARY KEY,
+  stage        TEXT,
+  created_at   TEXT NOT NULL,
+  updated_at   TEXT NOT NULL,
+  archived_at  TEXT
+);
 `
 	if _, err := t.rw.Exec(schema); err != nil {
 		return fmt.Errorf("store: init team %s schema: %w", t.ID, err)
@@ -419,8 +440,21 @@ func (t *Team) queryRows(ctx context.Context, readOnly bool, sqlText string, row
 // QueryRaw runs an internal (ungated) query on the rw pool and returns rows as
 // maps. Used for introspection and the inbox bookkeeping tables.
 func (t *Team) QueryRaw(ctx context.Context, sqlText string, args ...any) ([]map[string]any, error) {
-	rows, err := t.rw.QueryContext(ctx, sqlText, args...)
+	return queryRawWith(ctx, t.rw, sqlText, args...)
+}
+
+// QueryRawReadOnly runs an internal (ungated) query on the read-only pool.
+// Grid queries use it so a builder bug cannot write through the query path.
+func (t *Team) QueryRawReadOnly(ctx context.Context, sqlText string, args ...any) ([]map[string]any, error) {
+	return queryRawWith(ctx, t.ro, sqlText, args...)
+}
+
+func queryRawWith(ctx context.Context, db *sql.DB, sqlText string, args ...any) ([]map[string]any, error) {
+	rows, err := db.QueryContext(ctx, sqlText, args...)
 	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) || errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			return nil, fmt.Errorf("%w: query exceeded timeout", ErrTimeout)
+		}
 		return nil, sqlError(err)
 	}
 	defer rows.Close()
@@ -445,6 +479,9 @@ func (t *Team) QueryRaw(ctx context.Context, sqlText string, args ...any) ([]map
 		out = append(out, row)
 	}
 	if err := rows.Err(); err != nil {
+		if errors.Is(err, context.DeadlineExceeded) || errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			return nil, fmt.Errorf("%w: query exceeded timeout", ErrTimeout)
+		}
 		return nil, sqlError(err)
 	}
 	return out, nil
@@ -693,7 +730,7 @@ func (t *Team) ListTables(ctx context.Context) ([]TableOverview, error) {
 	out := []TableOverview{}
 	for _, row := range rows {
 		name := asString(row["name"])
-		if internalTables[name] || strings.HasPrefix(name, "_") || strings.HasPrefix(strings.ToLower(name), "sqlite_") {
+		if internalTables[name] || strings.HasPrefix(name, "_") || strings.HasPrefix(name, "crm_") || strings.HasPrefix(strings.ToLower(name), "sqlite_") {
 			continue
 		}
 		columns, err := t.TableInfo(ctx, name)

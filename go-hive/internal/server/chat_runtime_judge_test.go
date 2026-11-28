@@ -6,12 +6,16 @@ import (
 	"github.com/shark2202/go_hive/go-hive/internal/agentloop"
 )
 
-// Parity-exempt: Go chat sessions carry no success criteria, so the judge must
-// stay off and a turn must cost exactly one LLM call (the queen's own).
+// Parity-exempt: Go chat sessions carry no success criteria, and the queen spec
+// sets SkipJudge=true (upstream queen_orchestrator), so the judge must stay off
+// and a turn must cost exactly one LLM call (the queen's own).
 func TestChatRuntimeWithoutCriteriaNeverRunsJudge(t *testing.T) {
 	root := t.TempDir()
 	runtime, model := newTestChatRuntime(t, root)
 
+	if !runtime.agentCtx.AgentSpec.SkipJudge {
+		t.Fatalf("chat AgentSpec = %#v, want SkipJudge=true", runtime.agentCtx.AgentSpec)
+	}
 	if agentloop.HasSuccessCriteria(runtime.agentCtx.AgentSpec) {
 		t.Fatalf("chat AgentSpec = %#v, want no success criteria", runtime.agentCtx.AgentSpec)
 	}

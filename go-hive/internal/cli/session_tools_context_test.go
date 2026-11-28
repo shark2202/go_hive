@@ -80,9 +80,9 @@ func TestSessionTerminalExecUsesInjectedSessionCwd(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// The chat loader builds its toolbox with an empty root; the session
-	// directory only reaches the tool through the injected context param.
-	catalogue := newSessionToolCatalogue(root, builtin.New(""), hivehome.Home{Root: root})
+	// The fileops toolbox is rooted at the session directory, but terminal_exec
+	// ignores that root and resolves the injected session_cwd.
+	catalogue := newSessionToolCatalogue(root, builtin.New(root), hivehome.Home{Root: root})
 
 	content, isError, err := catalogue.Execute(context.Background(), builtin.ToolTerminalExec, map[string]any{"command": "pwd"})
 	if err != nil {

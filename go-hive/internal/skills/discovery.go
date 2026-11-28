@@ -3,12 +3,17 @@ package skills
 // Parity: framework/skills/discovery.py::SkillDiscovery
 
 import (
+	"bytes"
+	"crypto/sha256"
 	"embed"
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -57,45 +62,250 @@ type DiscoveryConfig struct {
 var bundledSkillsFS embed.FS
 
 var (
-	bundledOnce sync.Once
-	bundledRoot string
-	bundledErr  error
+	// bundledRoots caches the extracted root per content-addressed target
+	// path. The key carries both the resolved cache base (and therefore
+	// HIVE_HOME) and the bundle content id, so an in-process home change
+	// resolves the new home instead of reusing the first home's stale path.
+	// A cached entry is revalidated before use; if the directory disappeared
+	// (a removed temp home, a cleaned cache) or its files no longer match the
+	// embedded bytes (a partial or corrupt extraction), it is dropped and
+	// re-extracted.
+	bundledRootsMu sync.Mutex
+	bundledRoots   = make(map[string]string)
+
+	bundledIDOnce sync.Once
+	bundledID     string
+	bundledIDErr  error
 )
 
+// bundledSkillsRoot returns the directory holding the extracted embedded skill
+// trees.
+//
+// The root must be deterministic for a given embedded bundle and Hive home:
+// ParsedSkill.Location embeds it in the system prompt, /api/skills and
+// `hive skill list`. A per-process os.MkdirTemp("", "hive-sk-") root changed
+// that path on every start, so the bundled trees are extracted once into a
+// content-addressed cache directory under <HIVE_HOME>/cache/skills instead.
+//
+// The extracted-root cache is keyed by that target path rather than held in a
+// single process-global sync.Once: HIVE_HOME can change within one process
+// (tests, embedded use), and a single cached root then pointed at a home that
+// no longer existed. Extraction itself is idempotent and safe across
+// concurrent starters, so a cache miss just ensures the new target.
 func bundledSkillsRoot() (string, error) {
-	bundledOnce.Do(func() {
-		// The catalog's compact-mode threshold (5000 chars) counts absolute
-		// locations, so keep the extraction root short: a long TMPDIR prefix
-		// (e.g. macOS /private/var/folders/...) otherwise flips the default
-		// bundled catalog to compact, hiding every description.
-		root, err := os.MkdirTemp("", "hive-sk-")
+	base, err := bundledSkillsCacheBase()
+	if err != nil {
+		return "", err
+	}
+	id, err := bundledSkillsContentID()
+	if err != nil {
+		return "", err
+	}
+	key := bundledTarget(base, id)
+
+	bundledRootsMu.Lock()
+	defer bundledRootsMu.Unlock()
+	if root, ok := bundledRoots[key]; ok {
+		// Revalidate: the home that produced this root may have been removed
+		// since it was cached, or the cached tree may be partial or corrupt
+		// (an interrupted extraction, a cleaned file). Returning either would
+		// surface as SKILL_NOT_FOUND / SKILL_ACTIVATION_FAILED for framework
+		// skills, so drop the entry and let ensureBundledSkillsAt repair it.
+		if complete, completeErr := bundledSkillsComplete(root); completeErr == nil && complete {
+			return root, nil
+		}
+		delete(bundledRoots, key)
+	}
+	root, err := ensureBundledSkillsAt(base, id)
+	if err != nil {
+		return "", err
+	}
+	bundledRoots[key] = root
+	return root, nil
+}
+
+// bundledSkillsCacheBase is <HIVE_HOME>/cache/skills. If HIVE_HOME cannot be
+// resolved (no override and no usable user home), it falls back to the OS user
+// cache dir (<user-cache>/hive/skills). Both are stable across process starts;
+// this never returns a random TMPDIR name, and an error here disables the
+// framework/preset scopes instead of reintroducing a per-process path.
+func bundledSkillsCacheBase() (string, error) {
+	home, homeErr := hivehome.Resolve()
+	if homeErr == nil {
+		return filepath.Join(home.CacheDir(), "skills"), nil
+	}
+	cache, cacheErr := os.UserCacheDir()
+	if cacheErr == nil {
+		return filepath.Join(cache, "hive", "skills"), nil
+	}
+	return "", fmt.Errorf("bundled skills cache root: hive home: %v; user cache dir: %w", homeErr, cacheErr)
+}
+
+// bundledSkillsContentID is the content-addressed directory name: SHA-256 of
+// the embedded trees, truncated to 64 bits. Only a handful of bundle versions
+// coexist, so 16 hex chars keep versions distinct while the short directory
+// name leaves the 12-skill default catalog under CompactThresholdChars (a
+// longer bundled path would flip it to compact mode and drop every description
+// from the system prompt).
+const bundledSkillsIDBytes = 8
+
+func bundledSkillsContentID() (string, error) {
+	bundledIDOnce.Do(func() {
+		digest, err := hashBundledSkills(bundledSkillsFS)
 		if err != nil {
-			bundledErr = err
+			bundledIDErr = err
 			return
 		}
-		for _, top := range []string{"_default_skills", "_preset_skills"} {
-			walkErr := fs.WalkDir(bundledSkillsFS, top, func(path string, d fs.DirEntry, err error) error {
-				if err != nil {
-					return err
-				}
-				target := filepath.Join(root, filepath.FromSlash(path))
-				if d.IsDir() {
-					return os.MkdirAll(target, 0o755)
-				}
-				data, err := bundledSkillsFS.ReadFile(path)
-				if err != nil {
-					return err
-				}
-				return os.WriteFile(target, data, 0o644)
-			})
-			if walkErr != nil {
-				bundledErr = walkErr
-				return
-			}
-		}
-		bundledRoot = root
+		bundledID = hex.EncodeToString(digest[:bundledSkillsIDBytes])
 	})
-	return bundledRoot, bundledErr
+	return bundledID, bundledIDErr
+}
+
+// hashBundledSkills hashes every embedded file with its path and length, in a
+// deterministic order. The embedded bytes stay the source of truth: changing
+// any bundled SKILL.md yields a new cache directory.
+func hashBundledSkills(fsys fs.FS) ([]byte, error) {
+	h := sha256.New()
+	h.Write([]byte("hive-bundled-skills-v1\x00"))
+	var paths []string
+	if err := fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !d.IsDir() {
+			paths = append(paths, path)
+		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	// WalkDir is lexical, but sorting keeps the digest independent of walk
+	// implementation details.
+	sort.Strings(paths)
+	for _, path := range paths {
+		data, err := fs.ReadFile(fsys, path)
+		if err != nil {
+			return nil, err
+		}
+		h.Write([]byte(strconv.Itoa(len(data))))
+		h.Write([]byte{0})
+		h.Write([]byte(path))
+		h.Write([]byte{0})
+		h.Write(data)
+	}
+	return h.Sum(nil), nil
+}
+
+// bundledTarget is the content-addressed directory for one bundle version
+// under a resolved cache base: <base>/bundled-<id>.
+func bundledTarget(base, id string) string {
+	return filepath.Join(base, "bundled-"+id)
+}
+
+// ensureBundledSkillsAt extracts the embedded trees to base/bundled-<id> and
+// returns that directory. A directory whose files already match the embedded
+// bytes is reused untouched. Stale bundled-* roots are deliberately left in
+// place: another process running an older binary may still be serving
+// SKILL.md paths out of one, so deleting them is not safe.
+func ensureBundledSkillsAt(base, id string) (string, error) {
+	target := bundledTarget(base, id)
+	if err := os.MkdirAll(base, 0o755); err != nil {
+		return "", err
+	}
+	if complete, err := bundledSkillsComplete(target); err == nil && complete {
+		return target, nil
+	}
+	if err := extractBundledSkills(target); err != nil {
+		return "", err
+	}
+	complete, err := bundledSkillsComplete(target)
+	if err != nil {
+		return "", err
+	}
+	if !complete {
+		return "", fmt.Errorf("bundled skills: %s is incomplete after extraction", target)
+	}
+	return target, nil
+}
+
+// bundledSkillsComplete reports whether target already holds the embedded
+// bytes exactly. Comparing content (not just existence) repairs a truncated or
+// corrupted file from an earlier interrupted run.
+func bundledSkillsComplete(target string) (bool, error) {
+	complete := true
+	err := fs.WalkDir(bundledSkillsFS, ".", func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+		want, err := bundledSkillsFS.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		got, err := os.ReadFile(filepath.Join(target, filepath.FromSlash(path)))
+		if err != nil || !bytes.Equal(got, want) {
+			complete = false
+			return fs.SkipAll
+		}
+		return nil
+	})
+	if err != nil {
+		return false, err
+	}
+	return complete, nil
+}
+
+func extractBundledSkills(target string) error {
+	if err := os.MkdirAll(target, 0o755); err != nil {
+		return err
+	}
+	return fs.WalkDir(bundledSkillsFS, ".", func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		dest := filepath.Join(target, filepath.FromSlash(path))
+		if d.IsDir() {
+			return os.MkdirAll(dest, 0o755)
+		}
+		data, err := bundledSkillsFS.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		return writeBundledSkillsFile(dest, data)
+	})
+}
+
+// writeBundledSkillsFile publishes one embedded file with a temp-file+rename so
+// a concurrent starter never observes a partially written SKILL.md.
+func writeBundledSkillsFile(path string, data []byte) error {
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".bundled-*")
+	if err != nil {
+		return err
+	}
+	tmpName := tmp.Name()
+	defer os.Remove(tmpName)
+	if _, err := tmp.Write(data); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Chmod(0o644); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	if err := os.Rename(tmpName, path); err != nil {
+		// Another starter may have published identical bytes between our
+		// completeness check and this write; that is success, not a failure.
+		if existing, readErr := os.ReadFile(path); readErr == nil && bytes.Equal(existing, data) {
+			return nil
+		}
+		return err
+	}
+	return nil
 }
 
 type SkillDiscovery struct {

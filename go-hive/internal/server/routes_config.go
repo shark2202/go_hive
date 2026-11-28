@@ -22,12 +22,6 @@ type ConfigRouteDeps struct {
 	SentinelRefresh func()
 }
 
-func writeJSON(w http.ResponseWriter, status int, body any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(body)
-}
-
 func decodeConfigBodyRaw(w http.ResponseWriter, r *http.Request) (map[string]any, []byte, bool) {
 	invalid := func() (map[string]any, []byte, bool) {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "Invalid JSON body"})
@@ -36,7 +30,7 @@ func decodeConfigBodyRaw(w http.ResponseWriter, r *http.Request) (map[string]any
 	var data []byte
 	if r.Body != nil {
 		var err error
-		data, err = io.ReadAll(r.Body)
+		data, err = readLimitedBody(r, maxJSONBodyBytes)
 		if err != nil {
 			return invalid()
 		}

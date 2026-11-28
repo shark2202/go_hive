@@ -5,14 +5,17 @@ package server
 // Parity: framework/host/webhook_server.py::WebhookServerConfig
 
 import (
+	"bytes"
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"io"
+	"math/big"
 	"net"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -29,6 +32,18 @@ import (
 // Measured against real aiohttp 3.13.5: 1 MiB-1 -> 202, 1 MiB -> 400,
 // 1 MiB+1 -> 400. Evidence: docs/e2e-assets/webhook-semantics/.
 const webhookBodyLimitBytes int64 = 1 << 20
+
+// Fixed webhook responses carry the exact bytes aiohttp's web.json_response
+// produces for the same dicts: Python json.dumps default separators (", " /
+// ": ") and no trailing newline. They stay literals because these bytes are a
+// wire contract; the shared writeJSON emits compact JSON plus a newline and
+// must not move for unrelated endpoints.
+const (
+	webhookJSONAccepted     = `{"status": "accepted"}`
+	webhookJSONReadFailed   = `{"error": "Failed to read request body"}`
+	webhookJSONBadSignature = `{"error": "Invalid signature"}`
+	webhookJSONNotFound     = `{"error": "Not found"}`
+)
 
 type webhookRoute struct {
 	sourceID string
@@ -63,12 +78,21 @@ func (s *webhookServer) AddRoute(sourceID, path string, methods []string) {
 }
 
 func (s *webhookServer) AddRouteWithSecret(sourceID, path, secret string, methods []string) {
+	// Parity: aiohttp upper-cases every method at registration
+	// (aiohttp/web_urldispatcher.py::AbstractRoute.__init__), so a lowercase
+	// configured method still matches an uppercase HTTP request. An empty
+	// list stays empty: WebhookServer.start registers one aiohttp route per
+	// method, so such a path has no route at all.
+	normalized := make([]string, len(methods))
+	for index, method := range methods {
+		normalized[index] = strings.ToUpper(method)
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.routes[path] = &webhookRoute{
 		sourceID: sourceID,
 		path:     path,
-		methods:  append([]string(nil), methods...),
+		methods:  normalized,
 		secret:   secret,
 	}
 }
@@ -143,10 +167,24 @@ func (s *webhookServer) handleRequest(w http.ResponseWriter, r *http.Request) {
 	s.mu.Unlock()
 
 	if route == nil {
-		writeJSON(w, http.StatusNotFound, map[string]any{"error": "Not found"})
+		writeWebhookJSON(w, http.StatusNotFound, webhookJSONNotFound)
+		return
+	}
+	// Parity: upstream registers one aiohttp route per configured method
+	// (framework/host/webhook_server.py::WebhookServer.start), so methods: []
+	// leaves the path with no HTTP route and aiohttp answers 404. The route
+	// stays in this table so Start()/replacement semantics do not move.
+	if len(route.methods) == 0 {
+		writeWebhookJSON(w, http.StatusNotFound, webhookJSONNotFound)
 		return
 	}
 	if !route.allowsMethod(r.Method) {
+		// Parity: aiohttp's HTTPMethodNotAllowed sets
+		// Allow: ",".join(sorted(allowed_methods)) — upper-cased, sorted,
+		// comma-separated with no spaces. Measured against real aiohttp
+		// 3.13.5: methods ["PUT","POST","GET"] -> `Allow: GET,POST,PUT`.
+		// The 405 body bytes stay exactly as before.
+		w.Header().Set("Allow", route.allowedMethodsHeader())
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		_, _ = io.WriteString(w, "405: Method Not Allowed")
@@ -158,12 +196,12 @@ func (s *webhookServer) handleRequest(w http.ResponseWriter, r *http.Request) {
 		// Parity: upstream catches the aiohttp HTTPRequestEntityTooLarge raised
 		// by request.read() with a bare `except Exception` and answers 400 with
 		// this exact message — oversized bodies never surface as 413.
-		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "Failed to read request body"})
+		writeWebhookJSON(w, http.StatusBadRequest, webhookJSONReadFailed)
 		return
 	}
 
 	if route.secret != "" && !verifyWebhookSignature(r.Header.Get("X-Hub-Signature-256"), route.secret, body) {
-		writeJSON(w, http.StatusUnauthorized, map[string]any{"error": "Invalid signature"})
+		writeWebhookJSON(w, http.StatusUnauthorized, webhookJSONBadSignature)
 		return
 	}
 
@@ -178,30 +216,107 @@ func (s *webhookServer) handleRequest(w http.ResponseWriter, r *http.Request) {
 		webhookQueryParams(r),
 	)
 
-	writeJSON(w, http.StatusAccepted, map[string]any{"status": "accepted"})
+	writeWebhookJSON(w, http.StatusAccepted, webhookJSONAccepted)
+}
+
+// writeWebhookJSON emits one fixed webhook response with aiohttp's exact body
+// bytes and content type. It is webhook-local on purpose: the shared writeJSON
+// appends a newline and omits the charset, and unrelated endpoints must not
+// move.
+func writeWebhookJSON(w http.ResponseWriter, status int, body string) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(status)
+	_, _ = io.WriteString(w, body)
 }
 
 func (r *webhookRoute) allowsMethod(method string) bool {
 	for _, candidate := range r.methods {
-		if candidate == method {
+		if strings.EqualFold(candidate, method) {
 			return true
 		}
 	}
 	return false
 }
 
+// allowedMethodsHeader renders aiohttp's HTTPMethodNotAllowed Allow value:
+// ",".join(sorted(allowed_methods)) (aiohttp/web_exceptions.py), where
+// registration upper-cases each method. Duplicates collapse like aiohttp's
+// set-backed allowed_methods.
+func (r *webhookRoute) allowedMethodsHeader() string {
+	seen := make(map[string]struct{}, len(r.methods))
+	allowed := make([]string, 0, len(r.methods))
+	for _, method := range r.methods {
+		upper := strings.ToUpper(method)
+		if _, duplicate := seen[upper]; duplicate {
+			continue
+		}
+		seen[upper] = struct{}{}
+		allowed = append(allowed, upper)
+	}
+	sort.Strings(allowed)
+	return strings.Join(allowed, ",")
+}
+
 // parseWebhookBody mirrors upstream's `payload = json.loads(body) if body else {}`:
 // every valid JSON type is kept verbatim (including null -> nil); only a decode
-// failure falls back to {"raw_body": ...}.
+// failure falls back to {"raw_body": ...}. Numbers follow Python's split:
+// integer literals stay integers, while fractions and exponents become float64.
 func parseWebhookBody(body []byte) any {
 	if len(body) == 0 {
 		return map[string]any{}
 	}
+	decoder := json.NewDecoder(bytes.NewReader(body))
+	decoder.UseNumber()
 	var decoded any
-	if err := json.Unmarshal(body, &decoded); err != nil {
-		return map[string]any{"raw_body": strings.ToValidUTF8(string(body), "\uFFFD")}
+	if err := decoder.Decode(&decoded); err != nil {
+		return webhookRawBody(body)
 	}
-	return decoded
+	// json.loads rejects trailing non-whitespace after the first value, while
+	// Decoder.Decode would silently stop there; the second Decode must hit EOF.
+	var trailing any
+	if err := decoder.Decode(&trailing); err != io.EOF {
+		return webhookRawBody(body)
+	}
+	return webhookJSONValue(decoded)
+}
+
+func webhookRawBody(body []byte) map[string]any {
+	return map[string]any{"raw_body": strings.ToValidUTF8(string(body), "\uFFFD")}
+}
+
+// webhookJSONValue re-types the json.Number leaves Decoder produced, matching
+// json.loads' parse_int/parse_float split: an integer literal becomes int64
+// (or *big.Int past int64, like Python's arbitrary-precision int) and a
+// fraction/exponent literal becomes float64.
+func webhookJSONValue(value any) any {
+	switch typed := value.(type) {
+	case json.Number:
+		text := typed.String()
+		if !strings.ContainsAny(text, ".eE") {
+			if integer, err := strconv.ParseInt(text, 10, 64); err == nil {
+				return integer
+			}
+			if integer, ok := new(big.Int).SetString(text, 10); ok {
+				return integer
+			}
+		}
+		// ParseFloat can only report a range error for decoder-vetted JSON
+		// numbers; its ±Inf / 0 result still matches Python's float parsing.
+		number, _ := strconv.ParseFloat(text, 64)
+		return number
+	case map[string]any:
+		for key, entry := range typed {
+			typed[key] = webhookJSONValue(entry)
+		}
+		return typed
+	case []any:
+		for index, entry := range typed {
+			typed[index] = webhookJSONValue(entry)
+		}
+		return typed
+	default:
+		return value
+	}
 }
 
 // readWebhookBody mirrors upstream `await request.read()`: aiohttp rejects a

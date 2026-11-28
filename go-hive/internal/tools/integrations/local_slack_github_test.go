@@ -40,17 +40,23 @@ func TestSlackAnalysisComposites(t *testing.T) {
 		t.Fatal(err)
 	}
 	withUsers := contextResult.(map[string]any)
-	users, _ := withUsers["users"].(map[string]any)
-	if len(users) != 1 || users["U1"] == nil {
+	users, _ := withUsers["users_in_conversation"].([]any)
+	if len(users) != 1 || users[0] != "U1" {
 		t.Fatalf("users = %v", users)
+	}
+	if withUsers["message_count"] != 2 {
+		t.Fatalf("context = %v", withUsers)
 	}
 }
 
-// Parity-exempt: upstream has no github_get_user_emails test; the /user/emails path is
-// pinned here only.
+// Parity: tools/tests/tools/test_github_tool.py has no get_user_emails test;
+// this pins the upstream profile+public-events lookup and its projection.
 func TestGitHubUserEmails(t *testing.T) {
 	provider := newFakeProvider(t, func(r *http.Request) (int, string) {
-		return 200, `[{"email":"a@example.com","primary":true}]`
+		if strings.HasSuffix(r.URL.Path, "/events/public") {
+			return 200, `[{"type":"PushEvent","payload":{"commits":[{"author":{"email":"a@example.com"}},{"author":{"email":"123+octocat@users.noreply.github.com"}},{"author":{"email":"a@example.com"}}]}}]`
+		}
+		return 200, `{"id":7,"login":"acme"}`
 	})
 	registry := New(
 		WithBaseURL("github_tool", provider.server.URL),
@@ -63,11 +69,20 @@ func TestGitHubUserEmails(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	emails, ok := result.([]any)
-	if !ok || len(emails) != 1 {
-		t.Fatalf("result = %v", result)
+	object := result.(map[string]any)
+	if object["username"] != "acme" || object["total"] != 1 {
+		t.Fatalf("result = %v", object)
 	}
-	if path := provider.snapshot()[0].path; path != "/user/emails" {
-		t.Fatalf("path = %s", path)
+	emails, _ := object["emails"].([]any)
+	if len(emails) != 1 {
+		t.Fatalf("emails = %v", emails)
+	}
+	entry := emails[0].(map[string]any)
+	if entry["email"] != "a@example.com" || entry["source"] != "commit" {
+		t.Fatalf("entry = %v", entry)
+	}
+	requests := provider.snapshot()
+	if len(requests) != 2 || requests[0].path != "/users/acme" || requests[1].path != "/users/acme/events/public" {
+		t.Fatalf("requests = %v", requests)
 	}
 }

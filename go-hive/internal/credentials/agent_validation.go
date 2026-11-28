@@ -62,12 +62,15 @@ type ValidateAgentCredentialsOptions struct {
 	// RaiseOnError makes a failed validation return a CredentialError
 	// (upstream raise_on_error=True; the reference default).
 	RaiseOnError bool
-	// ForceRefresh is accepted for signature parity with the reference's
-	// force_refresh kwarg. The Go port has no Aden token pre-sync yet (the
-	// Aden client is a separate backlog item), so it is a no-op.
+	// ForceRefresh re-syncs Aden tokens even when their env vars are already
+	// set (upstream force_refresh). It only affects Aden-supported specs and
+	// requires ADEN_API_KEY.
 	ForceRefresh bool
 	// HealthCheck overrides the registered checker table (tests).
 	HealthCheck func(credentialName, credentialValue, healthCheckEndpoint, healthCheckMethod string) HealthCheckResult
+	// AdenClient overrides the client used by the Aden token pre-sync (tests).
+	// When nil, a client is built from ADEN_API_KEY and ADEN_API_URL.
+	AdenClient AdenTokenClient
 }
 
 // RegistryEnvMapping maps every merged CREDENTIAL_SPECS credential id to its
@@ -117,7 +120,10 @@ func mergedAgentSpecRows() []agentSpecRow {
 }
 
 // ValidateAgentCredentials checks that required credentials are available and,
-// unless skipped, valid.
+// unless skipped, valid. When ADEN_API_KEY is set it first syncs Aden-backed
+// OAuth tokens into the environment (presence needs them even when health
+// checks are skipped), so validation sees fresh tokens instead of stale store
+// values.
 //
 // Parity: core/framework/credentials/validation.py::validate_agent_credentials
 func ValidateAgentCredentials(nodes []AgentNode, store AgentCredentialStore, opts ValidateAgentCredentialsOptions) (AgentCredentialValidationResult, error) {
@@ -155,6 +161,15 @@ func ValidateAgentCredentials(nodes []AgentNode, store AgentCredentialStore, opt
 
 	hasAdenKey := os.Getenv(AdenEnvVar) != ""
 	result.HasAdenKey = hasAdenKey
+	if hasAdenKey {
+		// Presence validation reads env vars: refresh Aden-backed tokens
+		// before any status row is built.
+		specs := make([]GeneratedCredentialSpec, len(rows))
+		for index, row := range rows {
+			specs[index] = row.spec
+		}
+		presyncAdenTokens(specs, opts.ForceRefresh, opts.AdenClient)
+	}
 	checked := map[string]bool{}
 	toVerify := []int{}
 

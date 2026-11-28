@@ -243,7 +243,7 @@ flowchart TB
 - **层是严格有序的**：`entry(0) / harness(0) → assembly(1) → transport(2) → orchestration(3) → runtime(4) → capability(5) → foundation(6)`。`harness` 是测试与评测装置（e2e 假上游、契约对照工具），不随发布物交付；与 `entry` 同为 depth 0，只被测试和内部评测入口引用。生成器会检查每条 import 边，从深层指向浅层就写进 `warnings`。
 - **同层依赖是允许的**（例如 `colony → tracker`）：它们是一组协作的编排组件，不是分层违规。
 - **入度高的包是改动放大器**：`internal/hivehome`（15 个包依赖）、`internal/eventbus`、`internal/schemas`、`internal/agentloop` 改一次要考虑的面很大。具体数字在 `MODULES.md`。
-- **当前分层检查结果**：223 条 import 边，**0 条反向依赖**；**1 个包没有内部导入方**（`internal/orchestrator`，未接线）。`internal/quality`、`internal/envcontract` 与 e2e 命令按 `expected_orphan` 约定不计入。
+- **当前分层检查结果**：223 条 import 边，**0 条反向依赖**；没有无内部导入方的包（`internal/quality`、`internal/envcontract` 与 e2e 命令按 `expected_orphan` 约定不计入）。
 
 层定义、每包职责、依赖/被依赖计数与入口标记，全部在 [`MODULES.md`](./MODULES.md)。
 
@@ -277,7 +277,7 @@ flowchart TB
 | `make race` | `go test -race`（单独目标，不在 `ci` 里） | 并发数据竞争 | 非并发逻辑 |
 | parity 注解 + `parity-targets` | 每个 `Test` 必须带 `// Parity:` 或 `// Parity-exempt:`，引用的 Python 测试必须真实存在 | 上游行为有对应测试；port 没漏测试 | 行为等价性本身——注解只证明“有对应”，不证明“等价” |
 | `wiring-check` | 静态扫描关键装配调用点（memory 注入、事件日志、会话工具安装） | 防止“编译通过但没接线”的静默退化 | 未列入 `WIRING` 的接线 |
-| `make compat-check`（C1–C12） | 冻结契约自洽 + 升级兼容（新旧构建 × 3 夹具 × 读写/回滚/幂等/CLI 面）；C11 校验 CLI 外观 | env/config、storage、API 形状与值、工具定义、CLI 面 | 真实第三方服务、未安装的 OS 平台 |
+| `make compat-check`（C1–C13） | 冻结契约自洽 + 升级兼容（新旧构建 × 3 夹具 × 读写/回滚/幂等/CLI 面）；C11 校验 CLI 外观，C13 校验 OpenAPI 3.1 / AsyncAPI 3 canonical 文档 | env/config、storage、API 形状与值、工具定义、CLI 面、OpenAPI/AsyncAPI 文档 | 真实第三方服务、未安装的 OS 平台 |
 | `make cli-surface-check` | 递归采集两侧 `--help`（子命令树 / flag / 取值 / 默认值 / 文案）并与 `contracts/cli-surface.json` 对拍 | CLI 对外面（`hive` / `hive-browser` / `hive-cred`） | 行为语义；help 的 80 列折行仍是已知文案差异 |
 | `make arch-check`（`gen_arch.py --check`） | 7 个生成物逐字节比较；路由表与事件表随代码更新 | 文档/图/契约清单与 `model.yaml` + 代码不漂移 | 契约文本的语义正确性；README 手写段；前端类型 |
 | `python3 -m py_compile scripts/gen_arch.py` | 生成器自身语法 | 生成器可执行 | 生成逻辑正确性 |
@@ -610,7 +610,7 @@ python3 go_hive/scripts/gen_arch.py --check || {
 
 ## 已知限制
 
-- `internal/orchestrator` 没有任何内部导入方，属于未接线代码；生成器以 `no_importer` 列为 info，不阻断。e2e 命令与部分测试网关按 `expected_orphan` 约定不报。
+- `internal/quality`、`internal/envcontract` 与 e2e 命令按 `expected_orphan` 约定不报 `no_importer`。
 - 反向依赖已清零：`internal/soul` 不再导入 `internal/queen`。反思的身份读取经由 soul 侧接口 `soul.QueenProfileSource`（`LoadQueenProfile` / `FormatQueenIdentityPrompt`），由装配层 `internal/cli/loader_soul_profile_source.go` 注入 queen 实现；`soul.Reflect` 的调用方（手写 reflect 适配器与每日 runner）都在同一装配点接线。
 - 12 条能力里已有真实模型端到端证据的包括 `queen-triage`、`tools-credentials`、`memory-sediment`、`worker-dispatch` 与部分 `triggers-sentinel`（`go-hive/e2e/` 与 `docs/e2e-assets/`）；其余为单元/集成测试级，标为 `tested` 而不是 `live`。
 - 依赖图只表达编译期 import，不表达运行时的 goroutine、事件订阅或 HTTP 调用；那部分看序列图与 `capability-tech-crosswalk.md` 的入口列，接口边界看 `contracts.md`。

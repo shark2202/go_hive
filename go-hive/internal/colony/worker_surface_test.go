@@ -7,6 +7,7 @@ package colony
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -167,7 +168,9 @@ func TestLiveWorkersExposeRegistryRows(t *testing.T) {
 // Parity: tests/test_colony_scheduler.py::test_colony_stop_synthesises_stopped_report_for_queued
 func TestStopWorkersCancelsQueuedAndRunningWorkers(t *testing.T) {
 	provider := newGateLLM("slow task")
-	runtime := makeRunTestColony(t, provider, eventbus.NewEventBus(), 1)
+	bus := eventbus.NewEventBus()
+	runtime := makeRunTestColony(t, provider, bus, 1)
+	reports := collectEvents(bus, eventbus.EventSubagentReport)
 
 	ids, err := runtime.SpawnBatch(context.Background(), []BatchTask{{Task: "slow task a"}, {Task: "slow task b"}})
 	if err != nil {
@@ -211,14 +214,92 @@ func TestStopWorkersCancelsQueuedAndRunningWorkers(t *testing.T) {
 		t.Fatal("blockDispatch=true did not hold dispatch closed")
 	}
 
-	// A fresh spawn is a new work request and re-opens dispatch.
-	if _, err := runtime.SpawnBatch(context.Background(), []BatchTask{{Task: "after stop"}}); err != nil {
-		t.Fatalf("SpawnBatch after stop: %v", err)
+	// P0-19: a spawn while dispatch is blocked must be refused like Python's
+	// _dispatch_blocked admission gate — the worker reaches a terminal STOPPED
+	// state with a stopped report, and the gate stays closed. Nothing but the
+	// next user turn (UnblockDispatch) re-opens it.
+	callsBeforeSpawn := provider.totalCalls()
+	blockedIDs, err := runtime.SpawnBatch(context.Background(), []BatchTask{{Task: "after stop"}})
+	if err != nil {
+		t.Fatalf("SpawnBatch while blocked: %v", err)
 	}
+	if !runtime.DispatchBlocked() {
+		t.Fatal("spawn re-opened dispatch; a stop sweep must hold the gate")
+	}
+	if len(blockedIDs) != 1 {
+		t.Fatalf("blocked spawn returned %d ids, want 1", len(blockedIDs))
+	}
+	blockedWorker := runtime.GetWorker(blockedIDs[0])
+	if blockedWorker == nil {
+		t.Fatal("blocked spawn worker missing from the registry")
+	}
+	if !eventually(t, 2*time.Second, func() bool { return blockedWorker.Status().Done() }) {
+		t.Fatalf("blocked worker status = %s, want a terminal status", blockedWorker.Status())
+	}
+	if blockedWorker.Status() != WorkerStopped {
+		t.Fatalf("blocked worker status = %s, want stopped", blockedWorker.Status())
+	}
+	// The refusal synthesises the same stopped report Python's
+	// _enqueue_or_admit_worker publishes (so the queen's batch counter still
+	// resolves) and the worker's model never runs.
+	if calls := provider.totalCalls(); calls != callsBeforeSpawn {
+		t.Fatalf("model calls = %d, want the pre-spawn count %d", calls, callsBeforeSpawn)
+	}
+	var stoppedReport map[string]any
+	if !eventually(t, 2*time.Second, func() bool {
+		for _, event := range reports.snapshot() {
+			if event.Data["worker_id"] == blockedIDs[0] {
+				stoppedReport = event.Data
+				return true
+			}
+		}
+		return false
+	}) {
+		t.Fatal("blocked spawn published no SUBAGENT_REPORT")
+	}
+	if stoppedReport["status"] != "stopped" {
+		t.Fatalf("blocked report status = %v, want stopped", stoppedReport["status"])
+	}
+	if stoppedReport["summary"] != "Colony was stopped — this task was never started." {
+		t.Fatalf("blocked report summary = %q, want the stopped-admission text", stoppedReport["summary"])
+	}
+	if stoppedReport["tokens_used"] != 0 {
+		t.Fatalf("blocked report tokens_used = %v, want 0", stoppedReport["tokens_used"])
+	}
+	if blockedWorker.OutputFile == "" || stoppedReport["output_file"] != blockedWorker.OutputFile {
+		t.Fatalf("blocked report output_file = %v, want %q", stoppedReport["output_file"], blockedWorker.OutputFile)
+	}
+	waited, err := runtime.WaitForWorkerReports(context.Background(), blockedIDs, time.Second)
+	if err != nil {
+		t.Fatalf("WaitForWorkerReports(blocked): %v", err)
+	}
+	if len(waited) != 1 || waited[0]["status"] != "stopped" {
+		t.Fatalf("waited blocked report = %#v, want one stopped report", waited)
+	}
+
+	runtime.UnblockDispatch()
 	if runtime.DispatchBlocked() {
-		t.Fatal("spawn did not re-open dispatch")
+		t.Fatal("UnblockDispatch did not re-open admission")
+	}
+	if _, err := runtime.SpawnBatch(context.Background(), []BatchTask{{Task: "after resume"}}); err != nil {
+		t.Fatalf("SpawnBatch after UnblockDispatch: %v", err)
 	}
 	close(provider.gate)
+}
+
+// Parity: framework/host/colony_runtime.py::ColonyRuntime.spawn ("ColonyRuntime
+// is not running")
+func TestSpawnAfterStopIsRefused(t *testing.T) {
+	runtime := makeTestColony(t, newScriptedLLM(textResponse("noop")), eventbus.NewEventBus())
+	runtime.Stop()
+
+	ids, err := runtime.SpawnBatch(context.Background(), []BatchTask{{Task: "too late"}})
+	if err == nil || !strings.Contains(err.Error(), "not running") {
+		t.Fatalf("SpawnBatch after Stop = ids %v, err %v; want a not-running refusal", ids, err)
+	}
+	if ids != nil {
+		t.Fatalf("SpawnBatch returned ids %v after a refusal", ids)
+	}
 }
 
 // Parity-exempt: the terminal/unknown branching lives in the Go route seam;

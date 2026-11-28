@@ -52,7 +52,7 @@ CGO_ENABLED=0 GOPROXY=off GOSUMDB=off GOFLAGS=-mod=mod \
 | 10 | 未知对象 | 丢弃 | `TestMCPSplitContentUnknownItemDropped` | PASS |
 | 11 | HTTP legacy 首块 text | `content="a"` | `TestMCPExecutorLegacyContentListFirstTextBlock` | PASS |
 | 12 | HTTP 空列表 / None | `"[]"` / `"null"` | `TestMCPExecutorLegacyContentListEmptyAndNil` | PASS |
-| 13 | HTTP 首块非 text | JSON 对象（插入序） | `TestMCPExecutorLegacyContentListFirstNonTextBlock`（已登记 L3 键序差异） | PASS |
+| 13 | HTTP 首块非 text | JSON 对象（插入序） | `TestMCPHTTPFirstNonTextContentBlockPreservesKeyOrder`（R3 关闭：键序逐字一致） | PASS |
 
 补充钉子（不属于 13 条计数）：
 

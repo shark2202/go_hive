@@ -16,6 +16,10 @@ func (r *ChatRuntime) configureContextCompacted() {
 	// A completed compaction is published on the session bus; the queen's
 	// reflection subscriber turns it into one long memory pass.
 	r.loop.OnContextCompacted = r.publishContextCompacted
+	// A starting compaction is published too: the debug panel (and any
+	// "agent is busy" indicator) otherwise sees nothing for the whole
+	// multi-minute pass and assumes the agent has frozen.
+	r.loop.OnContextCompactionStarted = r.publishContextCompactionStarted
 	r.wireContextCompactedReflection()
 }
 
@@ -34,6 +38,24 @@ func (r *ChatRuntime) wireContextCompactedReflection() {
 		eventbus.WithFilterStream(chatStreamID),
 	)
 	r.contextCompactedUnsub = func() { r.bus.Unsubscribe(subID) }
+}
+
+// publishContextCompactionStarted publishes the loop's starting compaction on
+// the session bus with upstream's payload fields.
+//
+// Parity: framework/agent_loop/internals/compaction.py::compact
+func (r *ChatRuntime) publishContextCompactionStarted(payload agentloop.ContextCompactionStarted) {
+	if r == nil || r.bus == nil {
+		return
+	}
+	event := eventbus.NewAgentEvent(eventbus.EventContextCompactionStarted, chatStreamID)
+	event.NodeID = eventbus.StrPtr(chatNodeID)
+	event.Data = map[string]any{
+		"usage_before":           payload.UsageBefore,
+		"message_count":          payload.MessageCount,
+		"llm_compaction_skipped": payload.LLMCompactionSkipped,
+	}
+	r.bus.Publish(event)
 }
 
 // publishContextCompacted publishes the loop's completed compaction on the

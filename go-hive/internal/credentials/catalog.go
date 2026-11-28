@@ -20,6 +20,9 @@ type CredentialSpec struct {
 type NamedSpec struct {
 	Name string
 	Spec CredentialSpec
+	// EnvVar is the credential's env fallback (upstream CredentialSpec.env_var).
+	// The default adapter maps names to it so env-only keys resolve.
+	EnvVar string
 }
 
 type CatalogAdapter interface {

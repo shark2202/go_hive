@@ -491,7 +491,22 @@ func makeUpdateExecutor(store *TaskStore) func(map[string]any) map[string]any {
 
 		current := store.GetTask(sessionID, taskID)
 
-		statusIn, _ := inputs["status"].(string)
+		statusRaw, hasStatus := inputs["status"]
+		var statusIn string
+		if hasStatus && statusRaw != nil {
+			text, ok := statusRaw.(string)
+			if !ok {
+				return map[string]any{"success": false, "error": InvalidTaskStatusMessage(statusRaw)}
+			}
+			statusIn = text
+		}
+		// Python's TaskStatus(status_in) raises before the store is touched.
+		// Persisting an unknown status makes the whole tasks.json unreadable to
+		// the Python implementation (pydantic rejects the document), so reject
+		// it here instead of writing it. 'deleted' is the synthetic delete path.
+		if statusIn != "" && statusIn != "deleted" && !ValidTaskStatus(statusIn) {
+			return map[string]any{"success": false, "error": InvalidTaskStatusMessage(statusIn)}
+		}
 		if statusIn == "deleted" {
 			deleted, cascade, _ := store.DeleteTask(sessionID, taskID)
 			if !deleted {

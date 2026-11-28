@@ -12,6 +12,7 @@ import (
 	"net/http"
 
 	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/memory"
 	"github.com/shark2202/go_hive/go-hive/internal/queen"
 	soulstore "github.com/shark2202/go_hive/go-hive/internal/soul"
 )
@@ -111,6 +112,14 @@ func (rt *SoulProbeRoutes) handleProbeSoulProposal(w http.ResponseWriter, r *htt
 	}
 	answerFor := rt.deps.AnswerFor
 	queensDir := rt.queensDir()
+	// Recall brings a speaker's memory files beside a live message; the probe
+	// reads the same two scopes, her own before global, so the answers are
+	// about the same person the chat is about.
+	// Parity: framework/agents/queen/soul_probes.py::related_memories
+	memoryDirs := []string{
+		memory.QueenMemoryDir(rt.deps.Home.Root, queenID),
+		memory.GlobalMemoryDir(rt.deps.Home.Root),
+	}
 
 	run := func() {
 		defer soulstore.EndProbing(queenID)
@@ -120,12 +129,13 @@ func (rt *SoulProbeRoutes) handleProbeSoulProposal(w http.ResponseWriter, r *htt
 			return
 		}
 		if _, err := soulstore.Probe(soulstore.ProbeOptions{
-			QueensDir: queensDir,
-			QueenID:   queenID,
-			Config:    cfg,
-			Proposal:  proposal,
-			Identity:  identity,
-			Answer:    answer,
+			QueensDir:  queensDir,
+			QueenID:    queenID,
+			Config:     cfg,
+			Proposal:   proposal,
+			Identity:   identity,
+			MemoryDirs: memoryDirs,
+			Answer:     answer,
 		}); err != nil {
 			log.Printf("soul: probing %s failed: %v", queenID, err)
 		}

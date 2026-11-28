@@ -1,63 +1,82 @@
-# 待拍板决策清单（2026-11-22）
+# 决策清单（维护至 2026-11-23）
 
-> **状态（2026-11-23）：D1 = 批准（go.mod→1.26.11，合并中）；D3 = 终选 B′（MCP 默认裸名，2026-11-23 拍板；worktree `.wt/mcp-bare-default` 实现）；D2 = 选 A（维持 $HIVE_HOME 基准，无需改代码）。**
+> **当前状态：无待用户拍板项。** D1、D2、D3 均已决策并落地或登记；本页保留决策记录与证据，不再作为待办清单使用。
+>
+> 维护规则：新决策追加到本页；已决策项保留「决定 / 落地 / 证据 / 残余」，不删除历史理由。若后续出现新的待拍板项，再在本页顶部单列。
 
-> 本页只汇总**需要用户决策**的三项，其余对齐/修复由流水线自主推进。
-> 每项给出：现状实测、选项、推荐、影响面、回滚方式。决策前不做改动。
+## 状态总览
 
-## D1. govulncheck：stdlib CVE 修复需要依赖变更批准
-
-**现状**：`go.mod` 固定在 `go 1.26.5`；`govulncheck` 报告 stdlib（net/http、crypto/tls 等）存在
-已在 go1.26.6–1.26.11 修复的 CVE。门禁因此保持红，未做假绿处理。
-
-| 选项 | 做法 | 影响 |
-|---|---|---|
-| A（推荐） | `go.mod` 升到 go1.26.11（或当前最新 patch）并重跑全量门禁 | 一次性依赖变更；构建产物无行为变化；需重新生成 cross/归档 |
-| B | 维持 1.26.5，把 vulncheck 登记为已知例外（含理由与复查条件） | 门禁转绿但带风险例外；外发布（G3）前必须复议 |
-| C | 只升到满足 CVE 的最小 patch（1.26.6） | 变更最小；后续仍需再升 |
-
-**为什么需要你**：项目纪律规定依赖变更（go.mod/go.sum）必须显式批准。
-**回滚**：`git revert` 对应提交 + 重新构建；无数据面影响。
-
-## D2. exports/ 基准：Python=CWD vs Go=$HIVE_HOME
-
-**现状**：两侧对 `exports/` 的迁移基准不同（实测矩阵见 `docs/exports-baseline-decision.md`）：
-Python 以 CWD 为基准（吃任何 CWD 下的 exports/），Go 以 `$HIVE_HOME` 为基准；API 直调时两侧都支持显式绝对路径。
-`.migrations` 进 `colony list` 的行为已复核：两侧逐字一致（sha `30e73cca`），登记为对齐、无需修。
-
-| 选项 | 做法 | 迁移兼容 | 可发现性 | 与上游一致度 |
+| 编号 | 主题 | 状态 | 结论 | 证据 |
 |---|---|---|---|---|
-| A（推荐） | 维持 home 基准 + 文档写明 | 高（旧 home 自动迁移） | 中 | 中 |
-| B | 改成 CWD 基准 | 低（v1 检出根用户可能漏迁移） | 高 | 高 |
-| C′ | home 优先 + 检出根回退（A+B 混合） | 高 | 高 | 中高 |
+| D1 | govulncheck / stdlib CVE | **已完成** | 批准升 `go.mod` 到 `go 1.26.11` | `go.mod`、`govulncheck-bump-prep.md`、CI |
+| D2 | `exports/` 基准 | **已决策 A** | 维持 Go `$HIVE_HOME` 基准，登记与 Python CWD 的差异，不改产品行为 | `exports-baseline-decision.md`、`storage-contract-diff.md` |
+| D3 | MCP 工具命名 | **已完成 B′** | 默认裸名；显式非空 `mcp.namespace` 保留前缀模式 | `mcp-namespace-residuals.md`、`e2e-assets/mcp-bare-default/REPORT.md`、`config-keys.json` |
 
-**需要你答两个问题**：
-- **Q1**：是否必须保证「v1 时代在检出根跑 serve 的用户」升级后自动迁移？（是 → 选 C′）
-- **Q2**：回退锚点用 CWD 还是检出根（git 根）？
+---
 
-**回滚**：纯读路径逻辑，回滚无数据风险；迁移只搬不改。
+## D1. govulncheck：stdlib CVE（已决策，已完成）
 
-## D3. MCP 工具命名：Python 裸名 vs Go 前缀扩展
+**决定**：采用选项 A，将 `go.mod` 从 `1.26.5` 升到 `1.26.11`。
 
-**现状**（`docs/mcp-namespace-residuals.md`，13 条冻结用例）：
-- Python 注册键 = 裸 `mcp_tool.name`，无命名空间折叠；跨 server 同名 first-wins。
-- Go 使用 `mcp__<ns>__<server>__<tool>`，非 `[A-Za-z0-9_]` → `_`；该方案已写入冻结契约。
-- 后果：含 `-` 的工具名在两侧**模型可见名不同**；`a-b` 与 `a_b` 两个 server 在 Go 侧会折叠成 1 个工具（Python 侧 2 个）。
-- 长名（≥64）两侧注册层都不截断（Python 的 64 截断只发生在 Antigravity provider，Go 未移植该 provider）。
+**落地**：
 
-| 选项 | 做法 | 影响 |
-|---|---|---|
-| A（推荐，若以兼容为先） | 保留 Go 前缀方案，登记差异，路由层做双向别名（旧名→新名） | 不动冻结契约；需补 alias 层与测试 |
-| B | 切回裸名（与 Python 完全一致） | 动所有含 `-` 的模型可见工具名与 `mcpToolNames()` 反查；契约需改版 |
-| C | 双模式（配置开关：namespaced / bare） | 面最大、验证成本最高，但可两者兼容 |
+- `go_hive/go-hive/go.mod` 当前为 `go 1.26.11`。
+- 1.26.11 覆盖 go1.26.6–1.26.11 的 stdlib 修复，包括 `GO-2026-6859`（`net/http` `MaxBytesReader` 头竞争）。
+- `govulncheck` 已从 23 OSV / 1423 events 变为 **0 OSV / 0 events**；后续 wave 复验保持 0。
+- 全量 `make ci` 已在 go1.26.11 下通过。
 
-**为什么需要你**：这不是 bug 修复，是**对外可见命名方案**的取舍，且改动面覆盖契约与全部 MCP 工具名。
-**回滚**：A 只加别名可随时撤；B/C 需契约版本化，回滚需反向迁移。
+**回滚**：`git revert` 对应升版提交并重建；无数据面影响。
 
-**决策记录（2026-11-23，用户拍板终选 B′）**：
+**残余**：无待决策项。G3 发布前按发布门禁再次执行 govulncheck，不把历史结果当永久豁免。
 
-- **默认裸名**：`mcp.namespace` 默认值改为空。namespace 为空时注册键 = server 侧原始工具名，**不折叠、不消毒**（`x-y` 与 `x_y` 并存，同 Python `core/framework/loader/tool_registry.py::register_mcp_server`）。
-- **冲突语义不变**：跨 server 同名工具仍按现有 preserve / first-wins；裸名模式下 `mcpAliases` 恒等（不记录别名）。
-- **前缀模式保留**：显式设非空 `mcp.namespace` 时行为与旧版一致（`mcp__<ns>__<srv>__<tool>` + `[^A-Za-z0-9_]`→`_` + 裸名回退别名）。它是 Go-only 可选模式，不再是默认，也不再是契约描述的主路径。
-- **证据**：`docs/mcp-namespace-residuals.md`（R1/R2 在默认模式已一致）、`docs/e2e-assets/mcp-bare-default/REPORT.md`（13 用例实测 + 模式矩阵）、`contracts/config-keys.json`（`mcp.namespace` default `""`）、`contracts/tool-definitions.json` 与 `tool_surface_flat.json` 无 MCP 名漂移。
-- **回滚**：`configuration.json` 写 `"mcp": {"namespace": "mcp"}` 即回到前缀/折叠/别名回退的旧行为；或 revert 本分支提交。无数据迁移。
+---
+
+## D2. `exports/` 基准：Python=CWD vs Go=`$HIVE_HOME`（已决策 A）
+
+**决定**：采用选项 A，**保持 Go 的 `$HIVE_HOME/exports` 基准**，在文档和发布说明中写明；不改为 Python 的 CWD 基准。
+
+**理由**：
+
+- 旧 home 自动迁移的兼容性优先；Go 的迁移不依赖启动目录，行为更稳定。
+- API 直调时两侧都支持显式绝对路径，差异只在 serve 启动调用点。
+- 两侧函数能力一致；差异已登记，不是静默缺口。
+
+**保留的已登记差异**：
+
+- Python `migrate_v2` 在 serve 启动时读取 **进程 CWD** 下的 `exports/`。
+- Go serve 读取 **`$HIVE_HOME/exports`**。
+- 两侧都会写 `<home>/.migrated-v2`；首跑没找到 exports 后不会在后续启动重试（两侧同）。
+- `.migrations` 出现在 `colony list` 的行为两侧逐字一致，无需修。
+
+**证据**：`go_hive/docs/exports-baseline-decision.md` 的实测矩阵与 `go_hive/docs/e2e-assets/exports-baseline/`。
+
+**残余**：无待用户问题。Q1/Q2（是否必须自动迁移 CWD exports、回退锚点）已由 A 方案关闭；如未来要求 CWD 自动迁移，需重新开决策，不走本页默认路径。
+
+---
+
+## D3. MCP 工具命名（已决策 B′，已完成）
+
+**决定**：采用 **B′：默认裸名 + 可选前缀模式**。
+
+**落地**：
+
+- `mcp.namespace` 默认值为空。
+- 默认模式注册键 = MCP server 侧原始工具名，不折叠、不消毒；`x-y` 与 `x_y` 可并存，与 Python 的 `register_mcp_server` 默认语义一致。
+- 跨 server 同名工具沿用 preserve / first-wins；默认模式下 `mcpAliases` 恒等。
+- 显式设置非空 `mcp.namespace` 时，保留旧的 `mcp__<ns>__<server>__<tool>`、`[^A-Za-z0-9_] → _`、裸名回退别名。这是 Go-only 可选模式，不是默认，也不是契约主路径。
+- 回滚：`configuration.json` 写 `"mcp": {"namespace": "mcp"}` 回到前缀/折叠/别名回退模式；或 revert 对应提交。无数据迁移。
+
+**证据**：
+
+- `go_hive/docs/mcp-namespace-residuals.md`：默认模式 R1/R2 与 Python 一致；13 条冻结用例。
+- `go_hive/docs/e2e-assets/mcp-bare-default/REPORT.md`：13 用例实测 + 模式矩阵。
+- `go_hive/contracts/config-keys.json`：`mcp.namespace` 默认 `""`。
+- `contracts/tool-definitions.json` 与 `tool_surface_flat.json` 无 MCP 名漂移。
+
+**残余**：无待决策项。前缀模式是明确的 Go-only 扩展，按登记口径保留。
+
+---
+
+## 维护记录
+
+- 2026-11-23：三项决策全部闭环；本页从「待拍板」改为「决策记录」。D1 升版完成，D2 选 A，D3 选 B′。

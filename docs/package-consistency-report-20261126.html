@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>go_hive ↔ hive 逐源码包一致性与不一致清单（2026-11-27 更新）</title>
+<style>
+:root{--bg:#0b0f14;--panel:#121923;--panel2:#0f1620;--line:#233041;--text:#e6edf3;--muted:#8b9bb0;--accent:#f0b429;--accent2:#58a6ff;--ok:#3fb950;--warn:#d29922;--bad:#f85149;--code:#0a0e13}
+*{box-sizing:border-box} html{scroll-behavior:auto} body{margin:0;background:linear-gradient(180deg,#0b0f14,#0d131b 55%,#0b0f14);color:var(--text);font:14.5px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+a{color:var(--accent2);text-decoration:none} a:hover{text-decoration:underline}
+.wrap{max-width:1320px;margin:0 auto;padding:44px 26px 80px}
+header{border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:28px}
+.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+h1{font-size:33px;line-height:1.2;margin:10px 0 10px;letter-spacing:-.02em} h1 span{color:var(--accent);white-space:nowrap}
+.lede{color:var(--muted);max-width:1080px;font-size:15px} .meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:15px;color:var(--muted);font-size:12.5px} .meta b{color:var(--text)}
+section{margin:38px 0} h2{font-size:22px;margin:0 0 8px} h2 .num{color:var(--accent);font-size:14px;margin-right:8px} h3{font-size:15px;margin:24px 0 8px;color:#cfdae6}
+p{color:#c6d2df;margin:8px 0} .sub{color:var(--muted);font-size:13px}
+.grid{display:grid;gap:12px} .g3{grid-template-columns:repeat(3,minmax(0,1fr))} .g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media(max-width:900px){.g3,.g4{grid-template-columns:1fr 1fr}} @media(max-width:560px){.g3,.g4{grid-template-columns:1fr}.wrap{padding:30px 16px 60px}h1{font-size:25px}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:15px} .card .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700} .card .v{font-size:24px;font-weight:800;margin-top:5px;letter-spacing:-.01em;color:var(--accent)} .card .d{color:var(--muted);font-size:12px;margin-top:5px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:14px 0;background:var(--panel2);max-width:100%}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed} th,td{border-bottom:1px solid var(--line);padding:9px 10px;vertical-align:top;text-align:left;overflow-wrap:anywhere;word-break:break-word} th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;background:#0d141d;position:sticky;top:0;z-index:1} tr:hover td{background:#121a25} tr:last-child td{border-bottom:0}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--code);border:1px solid #1e2937;border-radius:5px;padding:1px 4px;color:#d7e3f0;overflow-wrap:anywhere}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;font:12px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#cfe0f2}
+.pill{display:inline-flex;align-items:center;font-size:11px;border-radius:999px;padding:2px 8px;border:1px solid var(--line);color:var(--muted);white-space:normal} .pill.ok{color:var(--ok);border-color:#1d3b26;background:#0f1a13} .pill.warn{color:var(--warn);border-color:#3d3013;background:#1a150a} .pill.bad{color:var(--bad);border-color:#3d1a1a;background:#1a0f0f} .pill.info{color:var(--accent2);border-color:#17324d;background:#0d1622}
+.callout{border-left:3px solid var(--accent);background:#161207;padding:11px 14px;border-radius:0 9px 9px 0;margin:14px 0;color:#e8d9b4} .callout.bad{border-color:var(--bad);background:#1a0f0f;color:#f2c7c7} .callout.info{border-color:var(--accent2);background:#0d1622;color:#cfe3ff} .callout.ok{border-color:var(--ok);background:#0f1a13;color:#c8e8cf}
+.toc{display:flex;flex-wrap:wrap;gap:7px;margin-top:18px} .toc a{font-size:12px;border:1px solid var(--line);background:var(--panel);padding:5px 9px;border-radius:999px;color:var(--muted)} .toc a:hover{color:var(--text);text-decoration:none}
+ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin-top:44px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:12px}
+.small{font-size:11.5px;color:var(--muted);margin-top:3px}
+@media(max-width:560px){table{font-size:12px}th,td{padding:7px 6px}}
+@media(max-width:760px){table{min-width:900px}}
+@media(max-width:560px){.toc a{padding:8px 12px;font-size:13px;min-height:44px;display:inline-flex;align-items:center}}
+</style>
+</head><body>
+<div class="wrap">
+
+<header>
+<div class="eyebrow">Consistency Report · 2026-11-27 更新</div>
+<h1>go_hive ↔ hive 逐源码包<br><span>一致性与不一致清单</span></h1>
+<p class="lede">基于当前 <code>package-parity.json</code> 与 2026-11-27 逐包行为审计，给出 24 组产品包的 functional / semantic 判定，并单独列出仍不一致的功能缺口、已登记语义差异、结构性未接线、验证缺口与文档账本偏差。</p>
+<div class="meta">
+<span>代码 HEAD：<b>9b9f8bc68（w197–w201）</b></span>
+<span>full CI HEAD：<b>eef1048cb</b></span>
+<span>行为审计快照：<b>9fd0af8fd（2026-11-26）+ w197–w201 验证</b></span>
+<span>矩阵刷新：<b>gen_package_parity.py --check OK — nativehttp/netguard/astanalyze 已按 Go-only 映射</b></span>
+<span>范围：<b>Python core/framework/** + tools/src/** ↔ Go internal/** + cmd/** + frontend/**</b></span>
+</div>
+<div class="toc">
+<a href="#s1">01 口径与总账</a><a href="#s2">02 逐包总表</a><a href="#s3">03 功能缺口</a><a href="#s4">04 语义差异</a><a href="#s5">05 结构未接线</a><a href="#s6">06 验证缺口</a><a href="#s7">07 已闭环</a><a href="#s8">08 优先级</a><a href="#s9">09 复现</a>
+</div>
+</header>
+
+<section id="s1">
+<h2><span class="num">01</span>口径与总账</h2>
+<div class="tablewrap"><table><tr><th>判定</th><th>定义</th></tr>
+<tr><td><b>功能一致 ✅</b></td><td>模型 / 客户端 / 持久化 / CLI 任一方可观测的能力存在且可调用</td></tr>
+<tr><td><b>语义一致 ✅</b></td><td>同一输入两侧产生相同可观察行为；✅ 表示已实测或逐项对齐，◐ 表示有已登记/窄面差异</td></tr>
+<tr><td><b>⚠</b></td><td>结构性或开发工具缺口，不能算用户面 parity</td></tr>
+<tr><td><b>—</b></td><td>不适用 / out_of_scope / test-only / dev-only</td></tr></table></div>
+
+<div class="grid g4">
+<div class="card"><div class="k">产品包对</div><div class="v">24</div><div class="d">25 个 Python 包 → 60 个 Go 包；另有 10 个 Go-only 内部包</div></div>
+<div class="card"><div class="k">功能判定</div><div class="v">16 / 6 / 1 / 1</div><div class="d">✅ 一致 / ◐ 部分面 / dev-only / missing（orchestrator 图引擎 out_of_scope）</div></div>
+<div class="card"><div class="k">语义判定</div><div class="v">4 / 19 / 1</div><div class="d">✅ 一致 / ◐ 登记差异 / — 不适用</div></div>
+<div class="card"><div class="k">C12 账本</div><div class="v">239 / 24 / 10 / 0</div><div class="d">ported / partial / out_of_scope / unported</div></div>
+</div>
+
+<div class="callout info">
+<b>判定分布：</b><code>aligned</code> 1、<code>partial_registry</code> 2、<code>partial_phase</code> 5、<code>partial_dim</code> 8、<code>struct_only</code> 6、<code>test_only</code> 1、<code>dev_tool</code> 1、<code>missing</code> 1（orchestrator 图引擎 out_of_scope）；<code>unwired_packages = []</code>。
+</div>
+<div class="callout bad">
+<b>不要把 <code>open_gaps: 0</code> 读成“没有已知差异”。</b>它只统计 coverage-registry 的 11 条 gap（当前全部 fixed），不包含 <code>alignment-differences.md §2</code> 的开放项、验证缺口和本页列出的不一致。
+</div>
+<p class="sub">行为审计基线 <code>9fd0af8fd</code>；w197–w201 合并后的 full <code>make ci</code> 为 <b>6,965 tests</b>、staticcheck 370、deadcode 441、gosec 775、compat 13/13、arch-check 一致、C12 <b>239/24/10/0</b>，RC=0。当前 HTTP/AST lane 已补齐 parity 注解、staticcheck/deadcode/gosec 和架构模型，最新 full <code>make ci</code> 为 <b>7,016 tests</b>、staticcheck 369 / new 0、deadcode 440 / new 0、gosec 774 / new 0（HEAD <code>eef1048cb</code>），结构矩阵已把 <code>nativehttp</code>/<code>netguard</code>/<code>astanalyze</code> 作为 Go-only 包刷新。</p>
+</section>
+
+<section id="s2">
+<h2><span class="num">02</span>逐包总表</h2>
+<div class="tablewrap"><table><tr><th style="width:4%">#</th><th style="width:17%">Python → Go</th><th style="width:9%">功能/语义</th><th style="width:10%">C12 P/Pa/O/U</th><th>结论 / 残余</th></tr>
+<tr><td>1</td><td><code>agent_loop</code> → <code>agentloop</code>, <code>visionfallback</code></td><td>✅/◐</td><td>26/3/0/0</td><td>核心回合、cold-resume cursor 已闭；残余 P2 queen park 形态、P3 冷重启验证；<code>collect_result</code> 由 background-tool registry 执行，<code>credentials</code> 由 session catalogue 执行，<code>set_output</code> 按上游在 executor 前拒绝，registry 不再有这 3 个虚假 executable</td></tr>
+<tr><td>2</td><td><code>llm</code> → <code>llm</code></td><td>✅/◐</td><td>11/1/0/0</td><td>thinking/StreamError/402/Codex/credits 已实现；SSE <code>model</code> 前缀、断流帧为登记值差；main/worker/judge 槽位不在本页证据范围</td></tr>
+<tr><td>3</td><td><code>pipeline</code> → <code>pipeline</code></td><td><b>◐/◐</b></td><td>10/0/0/0</td><td>7 stage/runner 已移植；<b>生产触发路径没有调用方</b>，<code>ColonyRuntime.Trigger</code> 只是 API surface（out_of_scope）；无行为级双跑（V-2）</td></tr>
+<tr><td>4</td><td><code>schemas</code> → <code>schemas</code></td><td>✅/✅</td><td>5/1/0/0</td><td>datetime/必填/显式 0/started_at 全对齐；wire-proto 仍 partial</td></tr>
+<tr><td>5</td><td><code>host</code> → <code>host</code>/<code>colony</code>/<code>eventbus</code>/<code>playbook</code>/<code>triggers</code>/<code>session</code>/<code>tracker</code>/<code>runtimehealth</code>/<code>resources</code>/<code>server</code></td><td>✅/◐</td><td>18/3/2/0</td><td>1:N 拆分最重（10 个 Go 包）；Stop 生命周期、trigger/webhook、skills overrides 已闭；SSE/doom park 形态登记；图引擎 2 项 out_of_scope</td></tr>
+<tr><td>6</td><td><code>tracker</code> + <code>trackerdb</code> → <code>tracker</code> + <code>runtimelogs</code></td><td>◐/◐</td><td>5+1/0/0/0</td><td>DecisionTracker/stream_runtime 已移植并由 colony 接线；<b>Go agent loop 尚无 graph-node decide 生产调用方</b>，不能按包名判全绿</td></tr>
+<tr><td>7</td><td><code>tasks</code> → <code>tasks</code></td><td>✅/✅</td><td>10/1/0/0</td><td>P0-10/A37/A38 已修；worker/overseer 的 task reminder 注册仍有残余；<code>colony_template_*</code> 已标记 deprecated（2026-11-26）</td></tr>
+<tr><td>8</td><td><code>storage</code> → <code>storage</code> + <code>hivehome</code></td><td>✅/◐</td><td>8/0/0/0</td><td>迁移/并发/checkpoint 一致；disk-contract 仍 partial（SC-02/03/04/06）；A15/A36/A38 登记</td></tr>
+<tr><td>9</td><td><code>maintenance</code> → <code>maintenance</code></td><td>✅/✅</td><td>4/0/0/0</td><td>四文件对应；0600 权限已对齐</td></tr>
+<tr><td>10</td><td><code>sentinel</code> → <code>sentinel</code></td><td>◐/◐</td><td>8/0/0/0</td><td>引擎/配置/决策/投递/存储一致；Slack Socket Mode dialer 与冷恢复已落（假 server）；<b>真实 Slack 凭据 E2E 未跑</b>；missed-fire 场景仍缺</td></tr>
+<tr><td>11</td><td><code>orchestrator</code> → <code>orchestrator</code></td><td>—/—</td><td>2/6/5/0</td><td>上游图引擎整体 <b>out_of_scope</b>；Go <code>internal/orchestrator</code> 已删除（w201），<code>safe_eval/validator</code> 记为 out_of_scope，不再有未接线包</td></tr>
+<tr><td>12</td><td><code>agents</code> → <code>agents</code>/<code>queen</code>/<code>soul</code>/<code>memory</code></td><td>✅/◐</td><td>15/4/0/0</td><td>13 个 queen YAML 逐字节；D-1 已闭；Mem-S1 sediment、S2 经上游核对为 no-op、S3 已修</td></tr>
+<tr><td>13</td><td><code>credentials</code> → <code>credentials</code></td><td>✅/◐</td><td>19/3/0/0</td><td>OAuth2 family、AdenSyncProvider/AdenCachedStorage、ValidateAccount 已实现；<b>真实 Aden/OAuth E2E 未跑</b>；本地默认 store 仍只注册 StaticProvider</td></tr>
+<tr><td>14</td><td><code>skills</code> → <code>skills</code></td><td>✅/◐</td><td>18/0/0/0</td><td>25 个内置文件逐字节；queen overrides 已修；内置 location 临时路径、安装事件、reload 时序、无扫描契约仍开放</td></tr>
+<tr><td>15</td><td><code>loader</code> → <code>mcpregistry</code>/<code>tools</code>/<code>agents</code></td><td>✅/◐</td><td>9/0/1/0</td><td>默认 MCP 路径一致；R4/R5/R6 已闭，R3/L3 与 Go <code>tools/list</code> 分页已关闭；Python 侧分页仍单页；R7 为有意扩展</td></tr>
+<tr><td>16</td><td><code>server</code> → <code>server</code>/<code>session</code>/<code>sessionreport</code>/<code>channels</code>/<code>claudecode</code>/<code>queenmail</code>/<code>streamtoken</code></td><td>✅/◐</td><td>41/0/0/0</td><td>API routes/SSE/errors 三维已实测对齐；frontend/disk-contract/migration 仍 partial；SSE 帧差异登记</td></tr>
+<tr><td>17</td><td><code>tools</code> + <code>tools/src</code> → <code>tools</code>/<code>charts</code>/<code>senders</code>/<code>playbook</code>/<code>queenmail</code></td><td>✅/◐</td><td>8/1/0/0</td><td>会话工具面 48/48；集成 102/854+9；DuckDB 有意缺失；Senders 云/ESP 缺口；91 个集成无凭据验证</td></tr>
+<tr><td>18</td><td><code>testing</code> → <code>quality</code>/<code>toolgolden</code>/<code>llmjudge</code>/<code>testframework</code></td><td>—/—</td><td>8/0/0/0</td><td><b>8/8 已移植</b>；<code>hive test-approval</code> 为隐藏 dev-only，不注册模型工具，不计入用户面</td></tr>
+<tr><td>19</td><td><code>global_db</code> → <code>globaldb</code></td><td><b>✅/✅</b></td><td>4/0/0/0</td><td>client/count_cache/grid 一致；<b>CLI 6 命令已移植</b>；C12 已 0 unported</td></tr>
+<tr><td>20</td><td><code>(root)</code>：<code>config.py</code>/<code>cli.py</code>/<code>rate_limiter.py</code> → <code>cli</code>/<code>hiveconf</code>/<code>pyenv</code>/<code>envcontract</code>/<code>ratelimit</code></td><td>◐/◐</td><td>4/2/0/0</td><td>config 131/137 aligned（4 go_only/1 partial/1 unread）；JSONInt/HIVE_HOME 已修；rate limiter 仅 <code>halt_campaign</code> omitempty 等微差</td></tr>
+<tr><td>21</td><td><code>observability</code> → <code>logging</code>/<code>runtimelogs</code>/<code>runtimehealth</code></td><td>◐/◐</td><td>1/0/0/0</td><td>文件轮转/路径一致；JSON 日志、<code>[LEVEL]</code>、trace 上下文为 Python-only（登记）</td></tr>
+<tr><td>22</td><td><code>utils</code> → <code>atomicfs</code>/<code>platform</code>/<code>hiveclock</code>/<code>pyenv</code>/<code>arghelp</code></td><td>◐/◐</td><td>3/1/0/0</td><td>atomic_write/int 解析已对齐；<code>drop_launcher_pythonhome</code>、<code>TaskRegistry</code> 已补；剩 1 partial</td></tr>
+<tr><td>23</td><td><code>core/hive</code> 公共 SDK → <code>go_hive/go-hive/hive</code></td><td>✅/◐</td><td>—</td><td>公共 facade 已落地，外部 consumer smoke 通过；不暴露 internal/HTTP serve/credentials/channels/sentinel/cloud</td></tr>
+<tr><td>24</td><td><code>core/frontend</code> → <code>frontend</code></td><td>✅/◐</td><td>—</td><td>233 文件全覆盖；167 字节相同 / 66 i18n 等；A39 ghost 路由/i18n 为有意改进</td></tr>
+</table></div>
+<p class="sub">小包：<code>debugger</code> → <code>internal/cli/debugger.go</code>（CLI 维度 partial）；<code>trackerdb</code> → <code>internal/tracker</code>（结构合并，语义对齐）；<code>runtime</code> 仅 1 个测试文件，<b>test-only</b>，不构成移植包。</p>
+</section>
+
+<section id="s3">
+<h2><span class="num">03</span>仍然影响使用的功能缺口</h2>
+<p><b>口径：</b>w197–w201 已关闭 trace 生产接线、PDF 引导、similarweb 工具名、集成面账本范围和 Go-only orchestrator 死码。当前仍影响使用的外部面只剩 Senders/Sentinel 真实投递和 91 个无凭据集成验证；OAuth2 本地-only 默认 <code>StaticProvider</code>、DecisionTracker 无生产写入方、pipeline/graph orchestrator 均按上游边界登记，不是待补的代码不一致。</p>
+<div class="tablewrap"><table><tr><th style="width:4%">#</th><th style="width:20%">不一致</th><th>现状</th><th style="width:30%">影响 / 证据</th></tr>
+<tr><td>1</td><td><b>本地 OAuth2 凭证没有默认 provider</b></td><td>OAuth2 的 Base/Zoho/HubSpot provider、生命周期、刷新实现都已存在；但 <code>NewCredentialStore</code> 默认只注册 <code>StaticProvider</code>，生产路径没有 <code>RegisterProvider(OAuth2...)</code>。只有配置 Aden sync 时 <code>AdenSyncProvider</code> 才接管</td><td>本地-only store 里 <code>oauth2</code> 凭证没有 provider 认领：best-effort 读取仍返回 stale 值；raise-on-failure 路径（如 <code>hive-cred token</code>）现在返回 <code>reauth_required</code>，不再把过期 token 说成已刷新。<code>hive-cred</code> 只有 token/browse/inspect，没有 login/authorize</td></tr>
+<tr><td>2</td><td><b>DecisionTracker 后验审计链不完整</b></td><td><code>DecisionTracker</code>/<code>StreamDecisionTracker</code> 已移植，colony 也建了 decision runtime；但 agent loop / graph-node 没有 <code>decide()</code>/<code>record_outcome()</code> 生产调用方</td><td>运行时不受影响；缺“决策→选项→理由→结果”的事后审计数据。不能按“tracker 包已 ported”判全绿</td></tr>
+<tr><td>3</td><td><b>图执行引擎整体 out_of_scope</b></td><td>Go 侧 <code>internal/orchestrator</code> 已删除（w201）；Python 的 checkpoint 续跑、node 级重试、条件路由、EntryPoint 热替换没有 1:1 等价物</td><td>依赖图能力的用法必须改写成 colony + agent loop，不能直接迁移</td></tr>
+<tr><td>4</td><td><b>pipeline 没有生产触发路径</b></td><td>7 stage/runner 已移植，但生产代码没有调用方；<code>ColonyRuntime.Trigger</code> 只是 API surface，pipeline 维度标为 out_of_scope</td><td>包内测试不等行为对齐；不能宣称 pipeline 端到端一致</td></tr>
+<tr><td>5</td><td><b>Senders / Sentinel 的外部面未闭环</b></td><td>Senders 无云端池/ESP/OAuth 投递、无 team quota；threads.json 与 provider seam 已补，Sentinel Slack Socket Mode 已接线但只用假 server 验证</td><td>真实 Slack/ESP/云投递不可宣称对齐</td></tr>
+<tr><td>6</td><td><b>集成工具面仍有未验证/缺失</b></td><td>会话工具 48/48，但集成 102/854+9；DuckDB 有意缺失；91 个集成无凭据验证</td><td>实际第三方调用能力未被证明</td></tr>
+</table></div>
+</section>
+
+<section id="s4">
+<h2><span class="num">04</span>已登记的语义 / 线格式差异</h2>
+<div class="tablewrap"><table><tr><th style="width:18%">面</th><th>差异</th></tr>
+<tr><td><b>SSE</b></td><td>每回合 envelope 多 +36 帧；<code>iteration</code> 会话累计 vs 每回合；<code>model</code> 前缀；<code>context_usage</code> 五字段；DELETE 停机尾帧</td></tr>
+<tr><td><b>API 路由</b></td><td>参考 222 / Go 225：有效缺失 0，2 条 alias，5 条 Go 扩展，1 条方法差</td></tr>
+<tr><td><b>configuration.json</b></td><td>137 键：aligned 128 / go_only 4 / go_partial 4 / unread 1；<code>JSONInt</code>、<code>HIVE_HOME</code> 已修</td></tr>
+<tr><td><b>MCP</b></td><td>默认裸名一致；显式 namespace 是 Go-only 前缀模式；JSON 键序 L3、畸形 <code>mimeType</code> 等边角；R4/R5/R6 已修，R3/L3 与 Go <code>tools/list</code> 分页已关闭；<b>Python 侧分页仍单页</b></td></tr>
+<tr><td><b>工具契约</b></td><td>desc 48/48 逐字；schema 归一 48/48，raw 40/48（8 条纯表示差：数值字面拼写、<code>session_cwd</code>）</td></tr>
+<tr><td><b>Trigger / Webhook</b></td><td>NaN/Infinity 走 <code>raw_body</code>；header wire 拼写；超限 drain；trigger webhook 无 secret 鉴权</td></tr>
+<tr><td><b>Logging</b></td><td><code>LOG_FORMAT=json</code>、<code>[LEVEL]</code>、trace 上下文为 Python-only</td></tr>
+<tr><td><b>Skills</b></td><td>内置 location 临时路径、缺 <code>SKILL_INSTALL_REQUESTED</code> 事件、写后 reload 时序、无扫描面契约</td></tr>
+<tr><td><b>Storage</b></td><td>disk-contract 的 SC-02/03/04/06 仍 partial；A15/A36/A38 登记</td></tr>
+<tr><td><b>Frontend</b></td><td>233 文件覆盖，167 字节一致 / 66 个 i18n 等；ghost 路由与 i18n 包装是 Go 侧有意改进（A39）</td></tr>
+<tr><td><b>Judge</b></td><td>w195 移除 Go-only 的 colony goal criteria 激活；queen <code>SkipJudge=true</code>，worker/overseer 不再继承 goal criteria judge，严格对齐上游</td></tr></table></div>
+</section>
+
+<section id="s5">
+<h2><span class="num">05</span>结构性 / 未接线</h2>
+<ul>
+<li><b>生产未接线包</b>：当前无；w201 删除 <code>internal/orchestrator</code> 后，<code>architecture/graph.json</code> 的 no_importer 告警已清空。</li>
+<li><b>pipeline 生产触发</b>：<code>ColonyRuntime.Trigger</code> 是 API surface；生产触发路径没有调用方，属 out_of_scope。</li>
+<li><b>Go-only 未评审项</b>：<code>quality</code>、<code>arghelp</code>、<code>hive-browser</code>、<code>hive-longmemeval</code>、<code>queen-mail-mcp</code> 尚未按三分类裁决；<code>release</code>/<code>toolgolden</code> 的放置仍建议清理。</li>
+<li><b>colony_template_*</b>：历史孤儿，已标记 deprecated + 防误接测试，等待移除。</li>
+</ul>
+</section>
+
+<section id="s6">
+<h2><span class="num">06</span>验证缺口（未证明 ≠ 已证明一致）</h2>
+<div class="tablewrap"><table><tr><th style="width:8%">#</th><th>缺口</th></tr>
+<tr><td>V-1</td><td>写操作双跑仅 <b>19/134 ≈ 14.2%</b></td></tr>
+<tr><td>V-2</td><td>pipeline 无行为 cross-check；91 个集成无凭据；Windows / 真实 MCP 未验</td></tr>
+<tr><td>外部</td><td>真实 Slack、Senders/ESP、Aden/OAuth、图片 provider、cloud、多进程 DecisionTracker E2E 未跑</td></tr>
+<tr><td>契约</td><td>OpenAPI 多数路由无响应快照/请求体 schema；AsyncAPI WebSocket 仍 design-only</td></tr>
+<tr><td>恢复</td><td>真实 serve Stop/冷重启 E2E、<code>superseded_by</code>/<code>colony_spawned</code> 恢复缺口未做完整验证</td></tr>
+<tr><td>快照</td><td>行为审计基线 <code>9fd0af8fd</code>；HTTP/AST lane 后 full CI <b>7,016 tests</b>（HEAD <code>eef1048cb</code>）；结构矩阵已按 Go-only 映射刷新（<code>nativehttp</code>/<code>netguard</code>/<code>astanalyze</code>）</td></tr>
+</table></div>
+</section>
+
+<section id="s7">
+<h2><span class="num">07</span>相比上一版已闭环</h2>
+<div class="tablewrap"><table><tr><th>项</th><th>变化</th></tr>
+<tr><td><b>C12 unported</b></td><td>10 → <b>0</b>；total 273：239 ported / 24 partial / 10 out_of_scope / 0 unported</td></tr>
+<tr><td><b>trace（w197）</b></td><td>生产 session 现在绑定独立 TraceID/ExecutionID；并发 session 隔离测试通过</td></tr>
+<tr><td><b>PDF（w198）</b></td><td>scanned PDF 的 <code>next_step</code> 改为 attach_file/vision 优先；OCR 仅非 vision fallback</td></tr>
+<tr><td><b>similarweb（w199）</b></td><td>29 个 <code>similarweb_v5_*</code> 上游工具名已作为兼容 alias 发布；聚合 <code>similarweb</code> 仍保留</td></tr>
+<tr><td><b>集成账本（w200）</b></td><td>新增 <code>integration_scope.not_computed</code> 与集成覆盖矩阵；<code>unported: 0</code> 明确只覆盖 core/framework</td></tr>
+<tr><td><b>orchestrator（w201）</b></td><td>删除 Go-only 3,410 行死码；反向依赖 0，C12 将 safe_eval/validator 标为 out_of_scope</td></tr>
+<tr><td><b>suggest_colony</b></td><td>已由 <code>phase_tool_surface.go</code> 的 independent 合成工具 + <code>agentloop/colony_dispatch.go</code> 接线；不再列为功能缺口</td></tr>
+<tr><td><b>ast_grep（w196）</b></td><td>默认关闭；只有 <code>$HIVE_HOME/ast_grep.json</code> 或 <code>&lt;cwd&gt;/.hive/ast_grep.json</code> 的 <code>enabled=true</code> 才注册；缺文件/格式错误均不注册。默认 48 工具面不受 Go-only 扩展影响</td></tr>
+<tr><td><b>global_db</b></td><td>功能 ◐ → <b>✅</b>；CLI <code>tables/query/sql/upsert/import/export</code> 已移植</td></tr>
+<tr><td><b>testing</b></td><td>仅 <code>llm_judge</code> → <b>8/8 移植</b>；新增 <code>internal/testframework</code></td></tr>
+<tr><td><b>utils</b></td><td>python_env / task_registry 已补；unported 0</td></tr>
+<tr><td><b>pipeline</b></td><td>功能判定降为 <b>◐</b>：生产触发路径无调用方，API surface 是 out_of_scope</td></tr>
+<tr><td><b>judge（w195）</b></td><td>移除 Go-only 的 colony goal criteria 激活，严格对齐上游</td></tr>
+<tr><td><b>MCP</b></td><td>R3/L3 与 Go <code>tools/list</code> 分页已关闭；Python 分页仍单页</td></tr>
+<tr><td><b>Memory/Soul</b></td><td>S1/S3 已修；S2 经上游核对为平台 no-op</td></tr>
+<tr><td><b>Senders</b></td><td>threads/provider seam 已落；云/ESP 真实投递仍缺</td></tr></table></div>
+</section>
+
+<section id="s8">
+<h2><span class="num">08</span>如果只修 5 个，优先级建议</h2>
+<div class="tablewrap"><table><tr><th style="width:6%">优先</th><th>动作</th><th>理由</th></tr>
+<tr><td><b>已判定</b></td><td>OAuth2 本地-only 默认 <code>StaticProvider</code>、DecisionTracker 无生产写入方：保留边界说明，不伪造生产者</td><td>与上游存储默认/调用图一致；真正风险是文档误读，已完成口径修正</td></tr>
+<tr><td><b>已判定</b></td><td>pipeline / graph orchestrator：按 <code>out_of_scope</code> 登记，不硬接生产触发</td><td>上游生产路径同样不经过 pipeline/graph；强行接线会改变 spawn-vs-inject 语义</td></tr>
+<tr><td><b>P1</b></td><td>真实外部面验证：Slack/Sentinel、Senders/ESP、Aden/OAuth、Windows/真实 MCP</td><td>当前最大不确定性；缺凭据/环境，不能用结构门禁代替</td></tr>
+<tr><td><b>P1</b></td><td>集成工具面：91 个无凭据集成的可用性分级，以及真实第三方调用验证</td><td>会话工具 48/48 只证明会话面，不等于集成面</td></tr>
+<tr><td><b>P2</b></td><td>Go-only 清理：<code>release</code>/<code>toolgolden</code> 位置；<code>orchestrator</code> 死包和 <code>astgrep</code> 默认闸门已分别由 w201/w196 完成</td><td>不影响 Python parity，但影响 Go 侧工程质量与工具面安全</td></tr>
+</table></div>
+</section>
+
+<section id="s9">
+<h2><span class="num">09</span>复现与证据</h2>
+<pre># 结构化矩阵（当前工作树）
+uv run python go_hive/scripts/gen_package_parity.py --check
+
+# 关键产物
+go_hive/docs/package-parity.json
+go_hive/docs/package-parity-matrix.html
+go_hive/docs/reports/package-parity-20261125.md   # 2026-11-27 刷新
+go_hive/docs/alignment-differences.md
+go_hive/docs/api-contract-diff.md
+go_hive/docs/tool-parity-matrix.html
+go_hive/docs/migration-known-gaps.md
+go_hive/docs/go-only-packages-triage.md</pre>
+<div class="callout ok">
+<b>复现状态：</b>w197–w201 基线 full <code>make ci</code> RC=0（6,965 tests）。HTTP/AST 工具面补齐后，最新 full <code>make ci</code> RC=0（<b>7,016 tests</b>；staticcheck 369 / new 0、deadcode 440 / new 0、gosec 774 / new 0、arch-check 一致；HEAD <code>eef1048cb</code>）。<code>nativehttp</code>/<code>netguard</code>/<code>astanalyze</code> 已按 <b>Go-only</b> 映射，<code>gen_package_parity.py --check</code> <b>OK</b>。行为审计基线为 <code>9fd0af8fd</code>。</div>
+</div>
+</section>
+
+<footer>
+手写一致性报告 v2 · 2026-11-27 更新 · 代码 HEAD <code>9b9f8bc68</code>（w197–w201），行为审计基线 <code>9fd0af8fd</code>。<br>
+事实源：<code>go_hive/docs/package-parity.json</code>、<code>go_hive/docs/reports/package-parity-20261125.md</code>、<code>go_hive/docs/alignment-differences.md</code>、<code>go_hive/docs/api-contract-diff.md</code>、<code>go_hive/docs/tool-parity-matrix.html</code>、<code>go_hive/docs/migration-known-gaps.md</code>、<code>go_hive/docs/go-only-packages-triage.md</code>。<br>
+相关：<a href="state-memory-disk-sync.html">state-memory-disk-sync.html</a> · <a href="restart-recovery.html">restart-recovery.html</a> · <a href="session-meta-and-colony-metadata.html">session-meta-and-colony-metadata.html</a> · <a href="queen-dm-session-lifecycle.html">queen-dm-session-lifecycle.html</a>。
+</footer>
+
+</div>
+</body></html>

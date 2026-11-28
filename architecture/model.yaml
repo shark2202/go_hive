@@ -74,11 +74,36 @@ packages:
     responsibility: "LongMemEval 评测入口（内部工具）：用真实 queen 会话跑基准，并按基准自带判分提示评分。"
     stability: evolving
     entrypoint: true
+  - package: hive
+    layer: entry
+    responsibility: "公共 Go SDK facade：给衍生项目提供 loop/colony/session/queen-profile/tool/event/memory/soul/skill/playbook/tracker 的稳定封装，不暴露 internal 实现。"
+    stability: evolving
+    entrypoint: true
 
   # ---------------- assembly ----------------
   - package: internal/cli
     layer: assembly
     responsibility: "装配根：解析命令与配置，构造 home、ToolRegistry、MCP runtime、ChatRuntime、ColonyRuntime，并注册 serve/chat/queen/colony/session/skill/mcp/janitor 子命令。"
+    stability: evolving
+  - package: internal/cli/cliguard
+    layer: assembly
+    responsibility: "CLI panic 边界：把未捕获 panic 映射为 Python compat 的崩溃头、traceback 与退出码；由 cmd/* 入口复用。"
+    stability: stable
+  - package: internal/cli/cliargs
+    layer: assembly
+    responsibility: "CLI argparse 兼容层：命令/参数/位置参数类型、解析与 help/usage 渲染；不依赖 internal/cli。"
+    stability: evolving
+  - package: internal/cli/browsersupervisor
+    layer: assembly
+    responsibility: "Browser Bridge 生命周期子包：启动/停止、二进制解析、健康检查、进程属性与子进程环境；通过窄 seam 注入控制 keepalive。"
+    stability: evolving
+  - package: internal/cli/browsercli
+    layer: assembly
+    responsibility: "Browser CLI 命令族：bridge 客户端、命令解析、ensure/control、help/usage；通过 root adapter 接入 CLI 分发。"
+    stability: evolving
+  - package: internal/cli/toolcatalog
+    layer: assembly
+    responsibility: "CLI 工具目录投影：task/search 工具、flat surface、Tool Library 与 lifecycle 行；不依赖 internal/cli 的运行时装配。"
     stability: evolving
 
   # ---------------- transport ----------------
@@ -86,6 +111,22 @@ packages:
     layer: transport
     responsibility: "HTTP/SSE 传输层：路由注册、会话管理、ChatRuntime 的 turn 队列、colony/tracker/sentinel 适配器与事件桥。"
     stability: evolving
+  - package: internal/server/routeutil
+    layer: transport
+    responsibility: "HTTP/JSON 路由共享原语：JSON 写入、请求体解码、Python truthy/int 兼容与内部错误响应。"
+    stability: stable
+  - package: internal/server/routesbrowser
+    layer: transport
+    responsibility: "Browser panel HTTP 路由子包：contexts/tabs/close 三端点；通过 Deps 注入 bridge URL 与 client，不依赖父 server 包。"
+    stability: stable
+  - package: internal/server/routesapp
+    layer: transport
+    responsibility: "App-extra HTTP 路由子包：资源健康、browser status/stream 与 tab reveal；通过 Deps 注入资源快照，不依赖父 server 包。"
+    stability: stable
+  - package: internal/server/routesagents
+    layer: transport
+    responsibility: "Agent 路由子包：discover、delete、metadata 更新与 check-agent；通过回调注入 session 与凭据校验，不依赖父 server 包。"
+    stability: stable
   - package: internal/server/uiembed
     layer: transport
     responsibility: "embed_ui 构建标签下的前端静态资源；未带标签时返回空，让服务端回退到磁盘目录。"
@@ -162,11 +203,6 @@ packages:
     layer: runtime
     responsibility: "基于 LLM 的判定器适配：把成功标准与升级判定包装成可注入的 Judge。"
     stability: evolving
-  - package: internal/orchestrator
-    layer: runtime
-    responsibility: "Python 图编排时代遗留的 DataBuffer 原语（权限、幻觉内容校验）。"
-    stability: stable
-    note: "未接线：仓库内无调用方；本 port 以 run_worker 的扇出取代图编排。"
 
   # ---------------- capability ----------------
   - package: internal/tools
@@ -180,6 +216,10 @@ packages:
   - package: internal/tools/integrations
     layer: capability
     responsibility: "集成工具集（装配根）：生成目录、领域实现与 InstallBatch* 入口；领域实现按 internal/tools/integrations/<domain> 子包迁出，子包只依赖 integrationkit。"
+    stability: evolving
+  - package: internal/tools/integrations/image
+    layer: capability
+    responsibility: "图像生成领域子包：image_generate 目录、artifact/SSRF/reference 处理与 action 实现；只依赖 integrationkit 与 stdlib。"
     stability: evolving
   - package: internal/tools/integrations/excel
     layer: capability
@@ -241,6 +281,10 @@ packages:
     layer: capability
     responsibility: "电商/财务领域子包（P3 第十五个领域子包）：Shopify / QuickBooks / Plaid / Razorpay 的目录、29 个 action 实现与共享 helper；只 import integrationkit。"
     stability: evolving
+  - package: internal/tools/integrations/scrape
+    layer: capability
+    responsibility: "Web-scrape 领域子包（第十六个领域子包）：web_scrape 工具目录、单 action 实现、无依赖 HTML 词法/抽取栈与 go-rod 浏览器池；只 import integrationkit。"
+    stability: evolving
   - package: internal/llm
     layer: capability
     responsibility: "LLM 传输：provider 选择、Anthropic/OpenAI 协议、流式事件、模型目录与出站限速门。"
@@ -298,6 +342,18 @@ packages:
   - package: internal/tools/integrationkit
     layer: capability
     responsibility: "集成工具的共享原语：传输、凭据与参数 schema 复用件，供 internal/tools/integrations 各模块使用。"
+    stability: evolving
+  - package: internal/nativehttp
+    layer: capability
+    responsibility: "原生 HTTP 工具面（http_request/download/upload）：请求、响应、下载/上传、原子落盘与会话 cookie；属 post-1.0 Go-only 扩展。"
+    stability: evolving
+  - package: internal/astanalyze
+    layer: capability
+    responsibility: "只读仓库 AST 分析核心（ast_analyze）：逐文件事实、unit/import 图、wave、风险与有界报告；属 post-1.0 Go-only 扩展。"
+    stability: evolving
+  - package: internal/netguard
+    layer: foundation
+    responsibility: "出站 URL/IP 安全策略：拒绝回环、私网、链路本地、CGNAT、ULA 与 metadata 地址，并在拨号时校验解析 IP。"
     stability: evolving
   - package: internal/visionfallback
     layer: capability
@@ -539,7 +595,7 @@ capabilities:
     name: "工具与凭据边界"
     business_outcome: "模型只看见按 tier 过滤后的工具；外部系统的凭据在边界内注入，缺失时停下来等人填，而不是猜。"
     actors: ["模型", "客户", "运维/开发者"]
-    modules: ["internal/tools", "internal/tools/builtin", "internal/tools/integrations", "internal/tools/integrationkit", "internal/mcpregistry", "internal/mcpregistry/nativecli", "internal/credentials", "internal/ratelimit", "internal/llm", "internal/charts", "internal/visionfallback"]
+    modules: ["internal/tools", "internal/tools/builtin", "internal/tools/integrations", "internal/tools/integrationkit", "internal/nativehttp", "internal/netguard", "internal/astanalyze", "internal/mcpregistry", "internal/mcpregistry/nativecli", "internal/credentials", "internal/ratelimit", "internal/llm", "internal/charts", "internal/visionfallback"]
     operates: ["internal/tools", "internal/cli"]
     entrypoints: ["CLI hive mcp install|list|doctor", "HTTP GET|PUT /api/credentials", "HTTP GET /api/mcp/servers", "tool search_tools"]
     state_artifacts: ["~/.hive/credentials/（规格与存储）", "~/.hive/secrets/", "~/.hive/mcp_registry/", "~/.hive/configuration.json（rate_limits）"]
@@ -945,7 +1001,7 @@ contracts:
     consumers: ["ext:operator"]
     definition: "internal/cli/loader.go:serveCommand（hive serve / hive open）"
     guarantee: "默认绑定 127.0.0.1:8787；支持 --host / --port / --colony(可重复) / --model / --open / --verbose / --debug；启动 HTTP+SSE 并阻塞到信号；退出码 0 正常、非 0 启动失败。"
-    failure_behavior: "端口占用或监听失败打印错误并返回非 0；非 loopback 且未设 HIVE_DESKTOP_TOKEN 时拒绝启动返回 1；SIGINT/SIGTERM 触发优雅停止。"
+    failure_behavior: "端口占用或监听失败打印错误并返回非 0；命名非 loopback 且未设 HIVE_DESKTOP_TOKEN 时打印警告；显式 0.0.0.0/:: 通配绑定允许不设 token；SIGINT/SIGTERM 触发优雅停止。"
     compatibility: "additive"
     enforcement: ["test"]
     owner_layer: "assembly"

@@ -291,7 +291,12 @@ func TestTelegramTokenInPathAndUnwrap(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.(map[string]any)["message_id"] != float64(42) {
+	object := result.(map[string]any)
+	if object["ok"] != true {
+		t.Fatalf("result = %v", result)
+	}
+	envelope, _ := object["result"].(map[string]any)
+	if envelope["message_id"] != float64(42) {
 		t.Fatalf("result = %v", result)
 	}
 	request := provider.snapshot()[0]

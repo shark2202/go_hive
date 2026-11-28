@@ -7,6 +7,7 @@
 > 见 `e2e-assets/upgrade-compat/REPORT.md`。
 
 - 基线：`main` `13e6a4bb`；工作树 `.wt/g2-rollback-install`
+- 2026-11-23 复核：HEAD `42f2b932` 重跑本演练（EXIT=0，数据面 diff 与本文一致）；证据 `docs/e2e-assets/g2-acceptance-20261123/`，验收记录 `g2-acceptance-20261123.md`
 - 被测版本：Go `1.0.26-go.1`（HEAD 构建）；上一发布 `v1.0.25-go.1`（用于“老用户”）
 - 证据目录：`docs/e2e-assets/g2-rollback/`（快照 manifest、逐步 diff、命令输出、归档校验）
 - 一键复现：`bash go_hive/scripts/g2_rollback_drill.sh --work <scratch>`（`--skip-upgrade` 只跑回滚段）
@@ -176,7 +177,7 @@ install: verified browserbridge -version
 | F1 | 验证脚本与 serve 输出漂移 | **低**（不影响运行时/数据，只让归档验证误报） | `serve` 的桥就绪行已变为 `(pid N, viewport scale S)`，而 `verify_release_archive.sh` / `e2e_browser_host.sh` 仍按 `(pid N)` 解析 PID，导致 `no live bridge child process` 假失败（11 检查中 1 FAIL、2 跳过） | **已修复**：两个脚本的 sed 改为 `(pid \([0-9][0-9]*\).*`；复跑 13/13 PASS |
 | F2 | 读路径缓存写 | **低** | Python 冷会话读取会在 Go home 中新增 6 个 `summary.json`；Go 读 Python 写的同一文件不重写（D3=0 变化） | 无需修复：两侧同 schema、同过期规则、缺失才重建；不覆盖用户数据 |
 | F3 | 共享日志追加 | **低** | Python `serve` 与 Go `serve` 都写 `logs/hive-server.log`，行格式不同但 append-only（295→1366→1661 bytes） | 无需修复；文档说明（日志消费者按行前缀区分） |
-| F4 | 点目录被当作 colony | **低** | `colonies/.migrations/` 会被 `hive colony list` 列为名为 `.migrations` 的 colony（Python 侧同样行为，Go 逐字对齐）；存在被误 `colony delete .migrations` 的展示层风险 | **未在本 lane 修**：若只改 Go 会破坏 Python 对齐；建议在统一 parity 决策后两侧一起过滤点目录（后续 lane） |
+| F4 | 点目录被当作 colony | **低** | `colonies/.migrations/` 会被 `hive colony list` 列为名为 `.migrations` 的 colony（Python 侧同样行为，Go 逐字对齐）；存在被误 `colony delete .migrations` 的展示层风险 | **已登记**：两侧行为对齐、无需修；若未来产品决定过滤点目录，两侧联合改（不要单改 Go） |
 | F5 | 旧版本读不到未迁移会话 | **中**（用户感知，非数据损坏） | v1.0.25 在 v2 home 上 `session list --cold` 为空；新版本启动迁移后可读，且旧二进制在迁移后仍可读（§4.2/4.3） | 文档化前提 + 升级即迁移；无需代码修复 |
 | F6 | CLI JSON 数字序列化 | **低**（值相等，严格字符串比对会差） | 同一 `created_at`：Python `1767225600.0`，Go `1767225600`（`colony list` 输出） | **未修**：属值级 parity lane 的序列化口径；不影响读取 |
 | F7 | Go serve 未维护 janitor `server.lock` | **中**（离线 janitor 的在线互斥保护缺口） | Python `create_app` 的 on_startup/on_shutdown 会写/清 `maintenance/server.lock`；Go 只有 `maintenance.WriteServerMarker/ClearServerMarker` 与测试，**serve 启动链没有调用**。回滚演练中 Python serve 写出了该文件而 Go serve 没有（run4）；非默认端口/桌面临时端口下，离线 `hive janitor --execute --tiers 2,3` 可能误判“无在线运行时” | **已修复**：`internal/cli/loader.go` 在 listener 绑定成功后 `WriteServerMarker(home, nil)` 并 `defer ClearServerMarker(home)`（与上游一致、失败不影响启动）；实测 `marker=present` → `marker-after=absent` |

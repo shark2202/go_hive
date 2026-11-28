@@ -27,9 +27,28 @@ func chatQueenStaticPrompt(deps ChatRuntimeDeps, queenName string) string {
 	return queen.StaticPrompt(queen.StaticPromptOptions{
 		Identity:    chatQueenIdentityPrompt(deps.HomeRoot, queenName),
 		Base:        queen.PhasePrompt(chatPhaseLabel(deps)),
-		Credentials: queen.CredentialsSummaryBlock(chatConnectedAccounts(deps)),
+		Credentials: chatCredentialsAmbientBlock(deps),
 		MCPCLI:      chatMCPCLIPrompt(deps),
 	})
+}
+
+// chatCredentialsAmbientBlock renders the "# Credentials" section: the compact
+// provider summary, plus — when the session pinned credentials with the
+// credentials tool — their full per-account detail under upstream's
+// "Pinned to this session:" heading. The pinned read happens at every prompt
+// build, so attach/detach is visible on the next model request.
+//
+// Parity: framework/server/queen_orchestrator.py::_build_credentials_provider
+func chatCredentialsAmbientBlock(deps ChatRuntimeDeps) string {
+	block := queen.CredentialsSummaryBlock(chatConnectedAccounts(deps))
+	if deps.PinnedCredentials == nil {
+		return block
+	}
+	pinned := strings.TrimSpace(deps.PinnedCredentials())
+	if pinned == "" {
+		return block
+	}
+	return block + "\n\nPinned to this session:\n" + pinned
 }
 
 // chatPhaseLabel reads the session's live phase, defaulting to independent when

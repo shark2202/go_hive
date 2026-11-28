@@ -50,6 +50,7 @@ func (r *ChatRuntime) startLoopGuards() {
 	chatGuards[r] = guards
 	if r.loop != nil {
 		r.loop.ParkSink = r.publishLoopPark
+		r.loop.NodeStalledSink = r.publishNodeStalled
 	}
 	guards.stall = startStallCheck(r.bus, r.deps.HomeRoot, func() QueenNode { return r }, nil)
 }
@@ -72,6 +73,7 @@ func (r *ChatRuntime) stopLoopGuards() {
 	}
 	if r.loop != nil {
 		r.loop.ParkSink = nil
+		r.loop.NodeStalledSink = nil
 	}
 }
 
@@ -108,5 +110,20 @@ func (r *ChatRuntime) publishLoopPark(reason agentloop.ParkReason, detail string
 		r.bus.EmitToolDoomLoop(chatStreamID, chatNodeID, detail, executionID)
 		return
 	}
-	r.bus.EmitNodeStalled(chatStreamID, chatNodeID, string(reason), executionID)
+	r.publishNodeStalled(string(reason))
+}
+
+// publishNodeStalled mirrors a response-text stall or another loop-raised
+// node_stalled reason onto the session bus. The response stall guard leaves
+// the loop failed rather than parked; the event is its host-visible signal.
+func (r *ChatRuntime) publishNodeStalled(reason string) {
+	if r == nil || r.bus == nil {
+		return
+	}
+	var executionID *string
+	if r.agentCtx != nil && r.agentCtx.ExecutionID != "" {
+		id := r.agentCtx.ExecutionID
+		executionID = &id
+	}
+	r.bus.EmitNodeStalled(chatStreamID, chatNodeID, reason, executionID)
 }

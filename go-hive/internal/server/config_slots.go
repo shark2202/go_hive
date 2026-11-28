@@ -17,9 +17,7 @@ package server
 // framework/agents/queen/queen_tools_defaults.py::configured_worker_always_enabled_categories
 
 import (
-	"encoding/json"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/shark2202/go_hive/go-hive/internal/hiveconf"
@@ -35,28 +33,11 @@ func configSection(home hivehome.Home, name string) map[string]any {
 	return section
 }
 
-// jsonIntValue reports the value as an int only when it is a JSON integer.
-// Python's readers compare against int: 7 counts, 7.0, true and "7" do not.
+// jsonIntValue reports the value as an int with hiveconf.JSONInt's Python
+// semantics: integers, integral floats (8192.0) and booleans (true → 1) are
+// accepted; strings, nulls and fractional floats are not.
 func jsonIntValue(value any) (int, bool) {
-	number, ok := value.(json.Number)
-	if !ok {
-		switch v := value.(type) {
-		case int:
-			return v, true
-		case int64:
-			return int(v), true
-		}
-		return 0, false
-	}
-	text := number.String()
-	if strings.ContainsAny(text, ".eE") {
-		return 0, false
-	}
-	parsed, err := strconv.Atoi(text)
-	if err != nil {
-		return 0, false
-	}
-	return parsed, true
+	return hiveconf.JSONInt(value)
 }
 
 // SectionConfigured reports whether a model slot carries a usable
@@ -391,6 +372,26 @@ func LLMMaxTokens(home hivehome.Home) int {
 		return limits[0]
 	}
 	return llm.DefaultMaxTokens
+}
+
+// DefaultRuntimeMaxContextTokens is Python's DEFAULT_MAX_CONTEXT_TOKENS,
+// the fallback get_max_context_tokens uses when the llm section names neither
+// a ceiling nor a catalogued model.
+const DefaultRuntimeMaxContextTokens = 32_000
+
+// LLMMaxContextTokens ports get_max_context_tokens: llm.max_context_tokens,
+// else the configured model's catalog window, else the caller's fallback.
+//
+// Parity: framework/config.py::get_max_context_tokens
+func LLMMaxContextTokens(home hivehome.Home, fallback int) int {
+	llmSection := configSection(home, "llm")
+	if value, ok := jsonIntValue(llmSection["max_context_tokens"]); ok {
+		return value
+	}
+	if limits, ok := catalogLimits(llmSection); ok {
+		return limits[1]
+	}
+	return fallback
 }
 
 // catalogLimits looks the section's provider/model pair up in the curated

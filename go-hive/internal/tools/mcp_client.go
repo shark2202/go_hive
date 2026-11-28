@@ -67,7 +67,42 @@ func mcpTimeoutFromEnv() (time.Duration, bool) {
 
 const mcpReconnectCooldown = 30 * time.Second
 
-const mcpProtocolVersion = "2025-06-18"
+// mcpProtocolVersion is the revision the client offers in initialize. The MCP
+// SDK upstream ships (mcp.types.LATEST_PROTOCOL_VERSION) is the offer, so this
+// tracks the newest revision rather than pinning an older one; the server's
+// answer is validated against supportedMCPProtocolVersions below.
+const mcpProtocolVersion = "2025-11-25"
+
+// supportedMCPProtocolVersions mirrors mcp.shared.version.
+// SUPPORTED_PROTOCOL_VERSIONS: a server may negotiate any of these, and any
+// other value is a hard connect error ("Unsupported protocol version from the
+// server: <v>").
+var supportedMCPProtocolVersions = map[string]struct{}{
+	"2024-11-05": {},
+	"2025-03-26": {},
+	"2025-06-18": {},
+	"2025-11-25": {},
+}
+
+// validateMCPProtocolVersion checks the initialize result's protocolVersion the
+// way ClientSession.initialize does after a server answers. An empty or
+// unparseable result fails like an unsupported version, because upstream's
+// InitializeResult requires the field.
+func validateMCPProtocolVersion(result json.RawMessage) error {
+	version := ""
+	if len(result) > 0 {
+		var payload struct {
+			ProtocolVersion string `json:"protocolVersion"`
+		}
+		if err := json.Unmarshal(result, &payload); err == nil {
+			version = payload.ProtocolVersion
+		}
+	}
+	if _, ok := supportedMCPProtocolVersions[version]; ok {
+		return nil
+	}
+	return fmt.Errorf("Unsupported protocol version from the server: %s", version)
+}
 
 type MCPToolNotFoundError struct {
 	Server   string
@@ -105,6 +140,26 @@ func NewMCPClient(config *MCPServerConfig) MCPClient {
 	}
 }
 
+// SplitMCPContent splits an MCP tool result's content list into joined text and
+// OpenAI-style image/file blocks.
+//
+// The decision tree is a literal transcription of
+// core/framework/loader/mcp_client.py::_split_mcp_content, which keys on
+// attribute presence (hasattr), not on value types:
+//
+//   - a block carrying `text` is a text block;
+//   - a block carrying both `data` and `mimeType` is image/file content — even
+//     when `mimeType` is null, because the SDK model always carries the field.
+//     The data URL renders the value the way Python's f-string renders it
+//     ("None" for null, "True"/"False" for booleans, str() for scalars);
+//   - a block carrying `data` but no `mimeType` falls back to str(data) text;
+//   - everything else (resource_link, embedded resource, unknown blocks) is
+//     dropped.
+//
+// Only the camelCase `mimeType` field is recognised; Python reads the SDK field
+// name and has no snake_case alias, so `mime_type` is not a second spelling.
+// Frozen probe: go_hive/docs/e2e-assets/mcp-namespace/python-output.json
+// (`split.null_mime`, `split.data_only`, `split.resource_link_only`).
 func SplitMCPContent(items []any) (string, []map[string]any) {
 	textParts := make([]string, 0, len(items))
 	imageParts := make([]map[string]any, 0)
@@ -119,13 +174,11 @@ func SplitMCPContent(items []any) (string, []map[string]any) {
 			continue
 		}
 
-		data, hasData := item["data"].(string)
-		mime, hasMime := item["mimeType"].(string)
-		if !hasMime {
-			mime, hasMime = item["mime_type"].(string)
-		}
+		data, hasData := item["data"]
+		mime, hasMime := item["mimeType"]
 		if hasData && hasMime {
-			if strings.ToLower(mime) == "application/pdf" {
+			mimeText := mcpContentString(mime)
+			if strings.ToLower(mimeText) == "application/pdf" {
 				filename := "document.pdf"
 				if meta, ok := item["_meta"].(map[string]any); ok {
 					if name, ok := meta["filename"].(string); ok {
@@ -135,7 +188,7 @@ func SplitMCPContent(items []any) (string, []map[string]any) {
 				imageParts = append(imageParts, map[string]any{
 					"type": "file",
 					"file": map[string]any{
-						"file_data": "data:application/pdf;base64," + data,
+						"file_data": "data:application/pdf;base64," + mcpContentString(data),
 						"filename":  filename,
 					},
 				})
@@ -143,14 +196,14 @@ func SplitMCPContent(items []any) (string, []map[string]any) {
 				imageParts = append(imageParts, map[string]any{
 					"type": "image_url",
 					"image_url": map[string]any{
-						"url": "data:" + mime + ";base64," + data,
+						"url": "data:" + mimeText + ";base64," + mcpContentString(data),
 					},
 				})
 			}
 			continue
 		}
 		if hasData {
-			textParts = append(textParts, data)
+			textParts = append(textParts, mcpContentString(data))
 		}
 	}
 
@@ -159,6 +212,35 @@ func SplitMCPContent(items []any) (string, []map[string]any) {
 		text = strings.Join(textParts, "\n")
 	}
 	return text, imageParts
+}
+
+// mcpContentString renders a JSON-decoded content field the way Python's str()
+// renders the corresponding SDK value. Only the malformed-payload cases need
+// the Python spellings: a real TextContent/ImageContent carries str fields, but
+// Go decodes raw JSON, so null/number/bool values reach the splitter. Python's
+// str() spells null "None" and capitalises booleans; containers (unreachable
+// through the SDK's str-typed fields) fall back to Go's fmt.Sprint.
+func mcpContentString(value any) string {
+	switch v := value.(type) {
+	case nil:
+		return "None"
+	case string:
+		return v
+	case bool:
+		if v {
+			return "True"
+		}
+		return "False"
+	case float64:
+		// Shortest decimal spelling: JSON decodes every number to float64, and
+		// Python's json layer keeps integral literals as int, whose str() has
+		// no exponent ("1000000", not "1e+06"). 'f' matches that for the
+		// integral and ordinary decimal cases that can appear in a payload.
+		return strconv.FormatFloat(v, 'f', -1, 64)
+	case json.Number:
+		return v.String()
+	}
+	return fmt.Sprint(value)
 }
 
 func isMCPDeadSessionError(err error) bool {
@@ -390,49 +472,41 @@ func (c *httpMCPClient) connectLocked() error {
 }
 
 func (c *httpMCPClient) listToolsLocked() (map[string]MCPTool, error) {
-	request := map[string]any{
-		"jsonrpc": "2.0",
-		"id":      1,
-		"method":  "tools/list",
-		"params":  map[string]any{},
-	}
-	resp, err := c.http.Post("/mcp/v1", request)
+	// Follow nextCursor like mcp2cli 3.8.0 (and the native CLI): the first page
+	// carries no cursor, later pages send the previous page's opaque cursor.
+	tools, err := mcpListToolsPaged(func(cursor string) (json.RawMessage, error) {
+		request := map[string]any{
+			"jsonrpc": "2.0",
+			"id":      1,
+			"method":  "tools/list",
+			"params":  mcpToolsListParams(cursor),
+		}
+		resp, err := c.http.Post("/mcp/v1", request)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to list tools via HTTP: %w", err)
+		}
+		var envelope struct {
+			Result json.RawMessage `json:"result"`
+			Error  any             `json:"error"`
+		}
+		if err := json.Unmarshal(resp.Body, &envelope); err != nil {
+			return nil, fmt.Errorf("Failed to list tools via HTTP: invalid JSON-RPC response: %w", err)
+		}
+		if envelope.Error != nil {
+			return nil, fmt.Errorf("MCP error: %v", envelope.Error)
+		}
+		return envelope.Result, nil
+	})
 	if err != nil {
-		return nil, fmt.Errorf("Failed to list tools via HTTP: %w", err)
-	}
-	data, err := decodeMCPRPCBody(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to list tools via HTTP: %w", err)
-	}
-	if errObj, ok := data["error"]; ok && errObj != nil {
-		return nil, fmt.Errorf("MCP error: %v", errObj)
+		return nil, err
 	}
 
-	tools := map[string]MCPTool{}
-	result, _ := data["result"].(map[string]any)
-	rawTools, _ := result["tools"].([]any)
-	for _, raw := range rawTools {
-		entry, ok := raw.(map[string]any)
-		if !ok {
-			continue
-		}
-		name, _ := entry["name"].(string)
-		if name == "" {
-			continue
-		}
-		description, _ := entry["description"].(string)
-		schema, _ := entry["inputSchema"].(map[string]any)
-		if schema == nil {
-			schema = map[string]any{}
-		}
-		tools[name] = MCPTool{
-			Name:        name,
-			Description: description,
-			InputSchema: schema,
-			ServerName:  c.config.Name,
-		}
+	byName := make(map[string]MCPTool, len(tools))
+	for _, tool := range tools {
+		tool.ServerName = c.config.Name
+		byName[tool.Name] = tool
 	}
-	return tools, nil
+	return byName, nil
 }
 
 func (c *httpMCPClient) ListTools() []MCPTool {
@@ -535,6 +609,11 @@ func (c *httpMCPClient) callToolHTTP(name string, arguments map[string]any) (any
 	content := result["content"]
 	if content == nil {
 		return []any{}, nil
+	}
+	if list, ok := content.([]any); ok {
+		// Python forwards result["content"] as json.loads built it, so a
+		// first non-text block must keep the server's key order (L3).
+		return mcpOrderFirstNonTextContentBlock(resp.Body, list), nil
 	}
 	return content, nil
 }
@@ -659,14 +738,18 @@ type stdioMCPClient struct {
 
 	connectMu sync.Mutex
 	mu        sync.Mutex
-	cmd       *execCmd
-	stdin     io.WriteCloser
-	tools     map[string]MCPTool
-	conn      bool
-	nextID    int64
-	pending   map[int64]chan mcpRPCResponse
-	closed    chan struct{}
-	readErr   error
+	// writeMu keeps one JSON-RPC line per stdin write. The read loop answers
+	// server-initiated requests while callers write their own requests, so
+	// without it two concurrent frames could interleave on the pipe.
+	writeMu sync.Mutex
+	cmd     *execCmd
+	stdin   io.WriteCloser
+	tools   map[string]MCPTool
+	conn    bool
+	nextID  int64
+	pending map[int64]chan mcpRPCResponse
+	closed  chan struct{}
+	readErr error
 
 	probeFailures int
 	calls         atomic.Int64
@@ -724,13 +807,17 @@ func (c *stdioMCPClient) Connect() error {
 
 	initResult := make(chan error, 1)
 	go func() {
-		_, initErr := c.rpc("initialize", map[string]any{
+		result, initErr := c.rpc("initialize", map[string]any{
 			"protocolVersion": mcpProtocolVersion,
 			"capabilities":    map[string]any{},
 			"clientInfo":      map[string]any{"name": "hive-go", "version": "0.1.0"},
 		})
 		if initErr != nil {
 			initResult <- initErr
+			return
+		}
+		if versionErr := validateMCPProtocolVersion(result); versionErr != nil {
+			initResult <- versionErr
 			return
 		}
 		initResult <- c.writeMessage(map[string]any{
@@ -791,6 +878,14 @@ func (c *stdioMCPClient) readLoop(stdout io.Reader) {
 			continue
 		}
 		if response.ID == nil {
+			// Notifications carry no id and are never answered.
+			continue
+		}
+		if method := mcpFrameMethod(line); method != "" {
+			// An id plus a non-empty method is a request the server is making
+			// of this client, not the answer a caller is waiting for. Answer
+			// it on the same transport; it must never resolve a pending call.
+			c.respondToServerRequest(*response.ID, method)
 			continue
 		}
 		id, ok := parseRPCID(*response.ID)
@@ -807,6 +902,77 @@ func (c *stdioMCPClient) readLoop(stdout io.Reader) {
 			ch <- response
 		}
 	}
+}
+
+// JSON-RPC error codes used when answering server-initiated requests. They are
+// the codes mcp 1.26.0 puts in ErrorData on the Python side.
+const (
+	mcpJSONRPCInvalidRequest = -32600
+	mcpJSONRPCInvalidParams  = -32602
+)
+
+// mcpFrameMethod reports the method of a JSON-RPC frame, or "" when the frame
+// has none (a response). Callers have already unmarshalled the frame, so a
+// method field that is not a JSON string is treated as absent and keeps the
+// frame on its pre-existing response path.
+func mcpFrameMethod(line string) string {
+	var frame struct {
+		Method json.RawMessage `json:"method"`
+	}
+	if err := json.Unmarshal([]byte(line), &frame); err != nil {
+		return ""
+	}
+	var method string
+	if err := json.Unmarshal(frame.Method, &method); err != nil {
+		return ""
+	}
+	return method
+}
+
+// respondToServerRequest answers a server-initiated request the way Python's
+// mcp.ClientSession does (mcp 1.26.0, mcp/client/session.py
+// _received_request). A ping gets an empty result; the client-side features
+// Hive does not implement get the SDK's ErrorData instead of being dropped.
+//
+// Verified against the installed SDK, not assumed: _default_list_roots_callback
+// returns ErrorData(INVALID_REQUEST, "List roots not supported") when no
+// list_roots_callback is configured, which is the case for
+// core/framework/loader/mcp_client.py. Sampling and elicitation default the
+// same way, and a method outside types.ServerRequest fails validation in
+// BaseSession._receive_loop, which answers INVALID_PARAMS "Invalid request
+// parameters" with data "". So roots/list is an error, not {"roots": []}.
+//
+// Parity: core/framework/loader/mcp_client.py::MCPClient
+func (c *stdioMCPClient) respondToServerRequest(id json.RawMessage, method string) {
+	reply := map[string]any{"jsonrpc": "2.0", "id": id}
+	switch method {
+	case "ping":
+		reply["result"] = map[string]any{}
+	case "roots/list":
+		reply["error"] = map[string]any{
+			"code":    mcpJSONRPCInvalidRequest,
+			"message": "List roots not supported",
+		}
+	case "sampling/createMessage":
+		reply["error"] = map[string]any{
+			"code":    mcpJSONRPCInvalidRequest,
+			"message": "Sampling not supported",
+		}
+	case "elicitation/create":
+		reply["error"] = map[string]any{
+			"code":    mcpJSONRPCInvalidRequest,
+			"message": "Elicitation not supported",
+		}
+	default:
+		reply["error"] = map[string]any{
+			"code":    mcpJSONRPCInvalidParams,
+			"message": "Invalid request parameters",
+			"data":    "",
+		}
+	}
+	// A write failure means the transport is gone; readLoop observes EOF on
+	// its next read, so there is no pending caller to report it to here.
+	_ = c.writeMessage(reply)
 }
 
 func parseRPCID(raw json.RawMessage) (int64, bool) {
@@ -836,6 +1002,8 @@ func (c *stdioMCPClient) writeMessage(message map[string]any) error {
 		return &mcpTransportClosedError{msg: "MCP stdio transport closed: stdin unavailable"}
 	}
 	payload = append(payload, '\n')
+	c.writeMu.Lock()
+	defer c.writeMu.Unlock()
 	_, err = stdin.Write(payload)
 	return err
 }
@@ -887,37 +1055,21 @@ func (c *stdioMCPClient) rpc(method string, params map[string]any) (json.RawMess
 }
 
 func (c *stdioMCPClient) listToolsRPC() (map[string]MCPTool, error) {
-	raw, err := c.rpc("tools/list", map[string]any{})
+	// Follow nextCursor to exhaustion. The Python SDK's ClientSession.list_tools
+	// is single-page, but MCP defines pagination and mcp2cli 3.8.0 (the upstream
+	// CLI this client mirrors) walks it; a paginating server must not lose tools.
+	tools, err := mcpListToolsPaged(func(cursor string) (json.RawMessage, error) {
+		return c.rpc("tools/list", mcpToolsListParams(cursor))
+	})
 	if err != nil {
 		return nil, err
 	}
-	var result struct {
-		Tools []struct {
-			Name        string         `json:"name"`
-			Description string         `json:"description"`
-			InputSchema map[string]any `json:"inputSchema"`
-		} `json:"tools"`
+	byName := make(map[string]MCPTool, len(tools))
+	for _, tool := range tools {
+		tool.ServerName = c.config.Name
+		byName[tool.Name] = tool
 	}
-	if err := json.Unmarshal(raw, &result); err != nil {
-		return nil, err
-	}
-	tools := map[string]MCPTool{}
-	for _, t := range result.Tools {
-		if t.Name == "" {
-			continue
-		}
-		schema := t.InputSchema
-		if schema == nil {
-			schema = map[string]any{}
-		}
-		tools[t.Name] = MCPTool{
-			Name:        t.Name,
-			Description: t.Description,
-			InputSchema: schema,
-			ServerName:  c.config.Name,
-		}
-	}
-	return tools, nil
+	return byName, nil
 }
 
 func (c *stdioMCPClient) ListTools() []MCPTool {

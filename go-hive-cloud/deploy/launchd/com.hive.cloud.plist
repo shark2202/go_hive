@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  go-hive-cloud LaunchDaemon (macOS).
+
+  Install as /Library/LaunchDaemons/com.hive.cloud.plist owned by root:wheel
+  mode 0644, then:
+    sudo launchctl bootstrap system /Library/LaunchDaemons/com.hive.cloud.plist
+  See deploy/README.md for user/dir setup. The daemon runs as the dedicated
+  non-root user "hivecloud". Configuration (never secret values by default)
+  is sourced from /usr/local/etc/hive-cloud/hive-cloud.env by the wrapper.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.hive.cloud</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/local/bin/hive-cloud-launchd</string>
+  </array>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <key>HIVE_CLOUD_ENV_FILE</key>
+    <string>/usr/local/etc/hive-cloud/hive-cloud.env</string>
+  </dict>
+
+  <key>WorkingDirectory</key>
+  <string>/usr/local/var/hive-cloud</string>
+
+  <key>UserName</key>
+  <string>hivecloud</string>
+  <key>GroupName</key>
+  <string>staff</string>
+
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
+  <key>ProcessType</key>
+  <string>Background</string>
+  <key>Umask</key>
+  <integer>63</integer>
+
+  <key>StandardOutPath</key>
+  <string>/usr/local/var/log/hive-cloud/stdout.log</string>
+  <key>StandardErrorPath</key>
+  <string>/usr/local/var/log/hive-cloud/stderr.log</string>
+</dict>
+</plist>

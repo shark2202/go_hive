@@ -1,0 +1,885 @@
+{
+  "schema": "hive.ui-e2e-linux/v1",
+  "status": "PASS",
+  "ok": true,
+  "exit_code": 0,
+  "generated_at": "2026-11-25T07:33:12+00:00",
+  "duration_ms": 15512.8,
+  "image": "hive-linux-qa:ui",
+  "arch": "arm64",
+  "binary_sha256": "487c3ada956f17dba97a500d0e7b6dede99deeca6c2ced20a1680f7f10ca45cb",
+  "serve_port": 53101,
+  "environment": {
+    "image": "hive-linux-qa:ui",
+    "arch": "arm64",
+    "platform": "Linux-7.0.14-linuxkit-aarch64-with-glibc2.41",
+    "python": "3.13.5",
+    "chromium": "/usr/bin/chromium",
+    "binary": "/repo/go_hive/go-hive/dist/hive-embed-linux-arm64",
+    "binary_format": "ELF",
+    "binary_arch": "arm64",
+    "binary_sha256": "487c3ada956f17dba97a500d0e7b6dede99deeca6c2ced20a1680f7f10ca45cb",
+    "hive_home": "/tmp/ui-e2e-linux-1-288b78e4",
+    "home_kept": false,
+    "colony_id": "ui_gate_linux",
+    "route_id": "ui-gate-linux",
+    "base_url": "http://127.0.0.1:53101",
+    "serve_port": 53101,
+    "serve_pid": 7,
+    "health_status": 200,
+    "evidence_dir": "/repo/go_hive/docs/e2e-assets/linux-ui",
+    "_dm_session": "session_20261125_073258_aaa33877",
+    "_child_session": "session_20261125_073258_2aeecb49",
+    "_colony_id": "ui_gate_linux",
+    "spawn_state": {
+      "child_response": {
+        "colony_spawned": false,
+        "spawned_colony_id": null
+      },
+      "source_meta": {
+        "colony_spawned": true,
+        "spawned_colony_id": "ui_gate_linux",
+        "path": "/tmp/ui-e2e-linux-1-288b78e4/queens/queen_growth/sessions/session_20261125_073258_aaa33877/meta.json"
+      },
+      "verdict": "completed",
+      "explanation": "colony_spawned/spawned_colony_id describe the SOURCE DM session that forked the colony. The child colony session's response carries false/null by design; reading it as the spawn state is a harness bug."
+    }
+  },
+  "spawn_state": {
+    "child_response": {
+      "colony_spawned": false,
+      "spawned_colony_id": null
+    },
+    "source_meta": {
+      "colony_spawned": true,
+      "spawned_colony_id": "ui_gate_linux",
+      "path": "/tmp/ui-e2e-linux-1-288b78e4/queens/queen_growth/sessions/session_20261125_073258_aaa33877/meta.json"
+    },
+    "verdict": "completed",
+    "explanation": "colony_spawned/spawned_colony_id describe the SOURCE DM session that forked the colony. The child colony session's response carries false/null by design; reading it as the spawn state is a harness bug."
+  },
+  "api": {
+    "b": {
+      "http_status": 200,
+      "status": "pass",
+      "actual": "http://127.0.0.1:53101 · HIVE_HOME=/tmp/ui-e2e-linux-1-288b78e4 · pid=7"
+    },
+    "c": {
+      "http_status": 201,
+      "status": "pass",
+      "actual": "HTTP 201 session=session_20261125_073258_aaa33877 queen=queen_growth"
+    },
+    "c2": {
+      "http_status": 200,
+      "status": "pass",
+      "actual": "HTTP 200 queen='queen_growth' name='Steve Jobs' title='Head of Growth'"
+    },
+    "d": {
+      "http_status": 201,
+      "status": "pass",
+      "actual": "HTTP 201 colony='ui_gate_linux' session=session_20261125_073258_2aeecb49 worker=True"
+    },
+    "e": {
+      "http_status": null,
+      "status": "pass",
+      "actual": "colony_spawned=True spawned_colony_id='ui_gate_linux'"
+    },
+    "f": {
+      "http_status": 200,
+      "status": "pass",
+      "actual": "discover=True tools=True created_at=1795591978.8339922"
+    }
+  },
+  "dom_assertions": [
+    {
+      "step": "g",
+      "name": "onboarding was observed or absent",
+      "ok": true,
+      "actual": "present=True"
+    },
+    {
+      "step": "g",
+      "name": "onboarding is gone after dismissal/reload",
+      "ok": true,
+      "actual": "after_reload_present=False"
+    },
+    {
+      "step": "h",
+      "name": "sidebar rendered colony links",
+      "ok": true,
+      "actual": "1 link(s)"
+    },
+    {
+      "step": "h",
+      "name": "sidebar contains #/colony/ui-gate-linux",
+      "ok": true,
+      "actual": "target={'href': '#/colony/ui-gate-linux', 'text': 'Ui Gate Linux'} links=['#/colony/ui-gate-linux']"
+    },
+    {
+      "step": "h",
+      "name": "sidebar label names this colony",
+      "ok": true,
+      "actual": "want~'uigatelinux' got=['uigatelinux']"
+    },
+    {
+      "step": "h",
+      "name": "sidebar uses the English Colonies label",
+      "ok": true,
+      "actual": "sections=['OpenHive', 'Open', 'Hive', 'New Chat', 'New Chat', 'Org Chart', 'Org Chart', 'Configuration', 'Configuration', 'Colonies10123456789', 'Colonies', '10123456789']"
+    },
+    {
+      "step": "i",
+      "name": "sidebar click navigates to the colony route",
+      "ok": true,
+      "actual": "url=http://127.0.0.1:53101/#/colony/ui-gate-linux hash=#/colony/ui-gate-linux"
+    },
+    {
+      "step": "i",
+      "name": "colony page h1 names the colony",
+      "ok": true,
+      "actual": "h1='Ui Gate Linux' want~'Ui Gate Linux'"
+    },
+    {
+      "step": "i",
+      "name": "queen title chip is rendered",
+      "ok": true,
+      "actual": "want='Head of Growth' header='Ui Gate Linux\\nHead of Growth'"
+    },
+    {
+      "step": "i",
+      "name": "conversation panel is rendered",
+      "ok": true,
+      "actual": "body='Open\\nHive\\nNew Chat\\nOrg Chart\\nConfiguration\\nCOLONIES\\n1\\n0\\n1\\n2\\n3\\n4\\n5\\n6\\n7\\n8\\n9\\nUi Gate Linux\\nQUEEN BEES\\nSteve Jobs\\nGrowth\\nLarry Ellison\\nRevOps\\nGary Vaynerchuk\\nContent\\nAlex Hormozi\\nLead Generation\\nChris Voss\\nOutbound\\nJony Ive\\nBrand & Design\\nv1.0.27-go.1\\nEN\\n中文\\nUi Gate Linux\\nHead of Growth\\nColony panel\\nRepo'"
+    },
+    {
+      "step": "i",
+      "name": "Colony panel is rendered",
+      "ok": true,
+      "actual": "tabs=['Automations', 'Data', 'Plan', 'Workers']"
+    },
+    {
+      "step": "i",
+      "name": "Data/Plan/Automations/Workers tabs render",
+      "ok": true,
+      "actual": "tabs=['Automations', 'Data', 'Plan', 'Workers']"
+    },
+    {
+      "step": "i",
+      "name": "colony page is not a not-found state",
+      "ok": true,
+      "actual": "not_found=False"
+    },
+    {
+      "step": "i",
+      "name": "colony page is not the app 404",
+      "ok": true,
+      "actual": "page_not_found=False"
+    },
+    {
+      "step": "j",
+      "name": "ghost colony is absent from the sidebar",
+      "ok": true,
+      "actual": "listed=False"
+    },
+    {
+      "step": "j",
+      "name": "ghost route is not a working colony page",
+      "ok": true,
+      "actual": "named=False queen=False panels=False"
+    },
+    {
+      "step": "j",
+      "name": "ghost route has no colony panel tabs",
+      "ok": true,
+      "actual": "tabs=[]"
+    },
+    {
+      "step": "j",
+      "name": "ghost route shows an explicit not-found state",
+      "ok": true,
+      "actual": "not_found=True h1='ui-gate-ghost-does-not-exist'"
+    },
+    {
+      "step": "j",
+      "name": "ghost route is not stuck on the connecting overlay",
+      "ok": true,
+      "actual": "connecting=False"
+    }
+  ],
+  "steps": [
+    {
+      "id": "a",
+      "title": "Linux server binary is runnable here",
+      "status": "pass",
+      "actual": "hive-embed-linux-arm64: ELF/arm64 (487c3ada956f17db…)",
+      "checks": [
+        {
+          "name": "server binary exists",
+          "ok": true,
+          "actual": "/repo/go_hive/go-hive/dist/hive-embed-linux-arm64"
+        },
+        {
+          "name": "server binary is ELF",
+          "ok": true,
+          "actual": "ELF"
+        },
+        {
+          "name": "server binary matches container arch",
+          "ok": true,
+          "actual": "binary=arm64 container=arm64"
+        }
+      ],
+      "fields": {
+        "format": "ELF",
+        "arch": "arm64",
+        "sha256": "487c3ada956f17dba97a500d0e7b6dede99deeca6c2ced20a1680f7f10ca45cb"
+      },
+      "http_status": null,
+      "duration_ms": null
+    },
+    {
+      "id": "a2",
+      "title": "slugToColonyId mapping matches the frontend",
+      "status": "pass",
+      "actual": "cases={'ui_gate_linux': 'ui-gate-linux', 'email_inbound_agent': 'inbound', 'email_inbound': 'inbound', 'outbound_agent': 'outbound', 'demo': 'demo'} mismatches={}",
+      "checks": [
+        {
+          "name": "slug -> route id",
+          "ok": true,
+          "actual": "{}"
+        }
+      ],
+      "fields": {},
+      "http_status": null,
+      "duration_ms": null
+    },
+    {
+      "id": "b",
+      "title": "hive-embed serve answers on the throwaway home",
+      "status": "pass",
+      "actual": "http://127.0.0.1:53101 · HIVE_HOME=/tmp/ui-e2e-linux-1-288b78e4 · pid=7",
+      "checks": [
+        {
+          "name": "/api/health is 200",
+          "ok": true,
+          "actual": "HTTP 200"
+        }
+      ],
+      "fields": {},
+      "http_status": 200,
+      "duration_ms": null
+    },
+    {
+      "id": "c",
+      "title": "create the source queen DM session",
+      "status": "pass",
+      "actual": "HTTP 201 session=session_20261125_073258_aaa33877 queen=queen_growth",
+      "checks": [
+        {
+          "name": "DM create is 201",
+          "ok": true,
+          "actual": "HTTP 201"
+        },
+        {
+          "name": "DM carries session_id",
+          "ok": true,
+          "actual": "'session_20261125_073258_aaa33877'"
+        },
+        {
+          "name": "DM is an independent queen session",
+          "ok": true,
+          "actual": "'independent'"
+        }
+      ],
+      "fields": {
+        "session_id": "session_20261125_073258_aaa33877",
+        "queen_id": "queen_growth",
+        "body": {
+          "agent_path": "",
+          "colony_id": null,
+          "colony_spawned": false,
+          "description": "",
+          "goal": "",
+          "has_worker": false,
+          "loaded_at": 1795591978.7382474,
+          "node_count": 0,
+          "queen_id": "queen_growth",
+          "queen_name": "Steve Jobs",
+          "queen_phase": "independent",
+          "queen_supports_images": true,
+          "session_id": "session_20261125_073258_aaa33877",
+          "spawned_colony_id": null,
+          "uptime_seconds": 0
+        }
+      },
+      "http_status": 201,
+      "duration_ms": null
+    },
+    {
+      "id": "c2",
+      "title": "resolve the queen's display title",
+      "status": "pass",
+      "actual": "HTTP 200 queen='queen_growth' name='Steve Jobs' title='Head of Growth'",
+      "checks": [
+        {
+          "name": "queen title available",
+          "ok": true,
+          "actual": "'Head of Growth'"
+        }
+      ],
+      "fields": {},
+      "http_status": 200,
+      "duration_ms": null
+    },
+    {
+      "id": "d",
+      "title": "fork the DM into a colony through the popup path",
+      "status": "pass",
+      "actual": "HTTP 201 colony='ui_gate_linux' session=session_20261125_073258_2aeecb49 worker=True",
+      "checks": [
+        {
+          "name": "fork create is 201",
+          "ok": true,
+          "actual": "HTTP 201"
+        },
+        {
+          "name": "fork returns a session",
+          "ok": true,
+          "actual": "'session_20261125_073258_2aeecb49'"
+        },
+        {
+          "name": "fork is bound to the colony",
+          "ok": true,
+          "actual": "'ui_gate_linux'"
+        },
+        {
+          "name": "fork has a worker",
+          "ok": true,
+          "actual": "True"
+        },
+        {
+          "name": "fork phase is colony",
+          "ok": true,
+          "actual": "'colony'"
+        }
+      ],
+      "fields": {
+        "body": {
+          "agent_path": "/tmp/ui-e2e-linux-1-288b78e4/colonies/ui_gate_linux",
+          "colony_id": "ui_gate_linux",
+          "colony_spawned": false,
+          "description": "",
+          "goal": "",
+          "has_worker": true,
+          "loaded_at": 1795591979.3788311,
+          "node_count": 0,
+          "queen_id": "queen_growth",
+          "queen_name": "Steve Jobs",
+          "queen_phase": "colony",
+          "queen_supports_images": true,
+          "session_id": "session_20261125_073258_2aeecb49",
+          "spawned_colony_id": null,
+          "uptime_seconds": 0
+        },
+        "request": {
+          "source_session_id": "session_20261125_073258_aaa33877",
+          "colony_id": "ui_gate_linux",
+          "queen_name": "queen_growth",
+          "initial_phase": "colony"
+        }
+      },
+      "http_status": 201,
+      "duration_ms": null
+    },
+    {
+      "id": "e",
+      "title": "source session records the spawn lock",
+      "status": "pass",
+      "actual": "colony_spawned=True spawned_colony_id='ui_gate_linux'",
+      "checks": [
+        {
+          "name": "source meta.json exists",
+          "ok": true,
+          "actual": "/tmp/ui-e2e-linux-1-288b78e4/queens/queen_growth/sessions/session_20261125_073258_aaa33877/meta.json"
+        },
+        {
+          "name": "colony_spawned is true",
+          "ok": true,
+          "actual": "True"
+        },
+        {
+          "name": "spawned_colony_id names this colony",
+          "ok": true,
+          "actual": "'ui_gate_linux'"
+        }
+      ],
+      "fields": {
+        "meta_path": "/tmp/ui-e2e-linux-1-288b78e4/queens/queen_growth/sessions/session_20261125_073258_aaa33877/meta.json",
+        "meta": {
+          "agent_name": "Ui Gate Linux",
+          "agent_path": "/tmp/ui-e2e-linux-1-288b78e4/colonies/ui_gate_linux",
+          "colony_spawned": true,
+          "created_at": 1795591978.749001,
+          "phase": "independent",
+          "queen_id": "queen_growth",
+          "spawned_colony_at": "2026-11-25T07:32:59.396929+00:00",
+          "spawned_colony_id": "ui_gate_linux"
+        }
+      },
+      "http_status": null,
+      "duration_ms": null
+    },
+    {
+      "id": "f",
+      "title": "API, disk metadata and the live session agree",
+      "status": "pass",
+      "actual": "discover=True tools=True created_at=1795591978.8339922",
+      "checks": [
+        {
+          "name": "/api/discover lists the colony",
+          "ok": true,
+          "actual": "HTTP 200 rows=1"
+        },
+        {
+          "name": "/api/colonies/tools-index lists the colony",
+          "ok": true,
+          "actual": "HTTP 200"
+        },
+        {
+          "name": "tools-index queen matches",
+          "ok": true,
+          "actual": "'queen_growth'"
+        },
+        {
+          "name": "colony metadata.json exists",
+          "ok": true,
+          "actual": "/tmp/ui-e2e-linux-1-288b78e4/colonies/ui_gate_linux/metadata.json"
+        },
+        {
+          "name": "API and disk created_at agree",
+          "ok": true,
+          "actual": "api=1795591978.8339922 disk=1795591978.8339922"
+        },
+        {
+          "name": "colony metadata records the queen session",
+          "ok": true,
+          "actual": "queen_session_id='session_20261125_073258_2aeecb49'"
+        }
+      ],
+      "fields": {
+        "discover_row": {
+          "category": "Your Agents",
+          "created_at": 1795591978.8339922,
+          "description": "Worker clone from queen session session_20261125_073258_aaa33877",
+          "icon": null,
+          "is_loaded": true,
+          "last_active": "2026-11-25T07:32:59.400940",
+          "name": "Ui Gate Linux",
+          "node_count": 1,
+          "path": "/tmp/ui-e2e-linux-1-288b78e4/colonies/ui_gate_linux",
+          "run_count": 0,
+          "session_count": 1,
+          "tags": [],
+          "tool_count": 25,
+          "workers": [
+            {
+              "colony_id": "ui_gate_linux",
+              "config_path": "/tmp/ui-e2e-linux-1-288b78e4/colonies/ui_gate_linux/worker.json",
+              "description": "Worker clone from queen session session_20261125_073258_aaa33877",
+              "name": "worker",
+              "queen_name": "queen_growth",
+              "spawned_at": "2026-11-25T07:32:58.831168+00:00",
+              "task": "UI E2E gate: prove the colony renders in the sidebar and on its page.",
+              "tool_count": 25
+            }
+          ]
+        },
+        "tools_row": {
+          "created_at": 1795591978.8339922,
+          "enabled_count": null,
+          "has_allowlist": false,
+          "name": "ui_gate_linux",
+          "queen_name": "queen_growth"
+        },
+        "colony_metadata": {
+          "colony_id": "ui_gate_linux",
+          "created_at": 1795591978.8339922,
+          "name": "ui_gate_linux",
+          "queen_name": "queen_growth",
+          "queen_session_id": "session_20261125_073258_2aeecb49",
+          "source_session_id": "session_20261125_073258_aaa33877",
+          "updated_at": "2026-11-25T07:32:58.833992+00:00",
+          "workers": {
+            "worker": {
+              "spawned_at": "2026-11-25T07:32:58.833992+00:00",
+              "task": "UI E2E gate: prove the colony renders in the sidebar and on its page."
+            }
+          }
+        }
+      },
+      "http_status": 200,
+      "duration_ms": null
+    },
+    {
+      "id": "g0",
+      "title": "headless Chromium starts and exposes CDP",
+      "status": "pass",
+      "actual": "/usr/bin/chromium · profile=/tmp/ui-e2e-linux-1-288b78e4/chrome-profile",
+      "checks": [],
+      "fields": {
+        "chromium": "/usr/bin/chromium"
+      },
+      "http_status": null,
+      "duration_ms": null
+    },
+    {
+      "id": "g",
+      "title": "first-run onboarding is handled",
+      "status": "pass",
+      "actual": "present=True dismissed=True method=Skip tour button after_reload=False",
+      "checks": [
+        {
+          "name": "onboarding was observed or absent",
+          "ok": true,
+          "actual": "present=True"
+        },
+        {
+          "name": "onboarding is gone after dismissal/reload",
+          "ok": true,
+          "actual": "after_reload_present=False"
+        }
+      ],
+      "fields": {
+        "present": true,
+        "dismissed": true,
+        "method": "Skip tour button",
+        "after_reload_present": false,
+        "storage_key": "hive:u:_:tutorial-seen-v1"
+      },
+      "http_status": null,
+      "duration_ms": null
+    },
+    {
+      "id": "h",
+      "title": "colony appears in the sidebar after real JS renders",
+      "status": "pass",
+      "actual": "1 link(s) · target=#/colony/ui-gate-linux · labels=['Ui Gate Linux']",
+      "checks": [
+        {
+          "name": "sidebar rendered colony links",
+          "ok": true,
+          "actual": "1 link(s)"
+        },
+        {
+          "name": "sidebar contains #/colony/ui-gate-linux",
+          "ok": true,
+          "actual": "target={'href': '#/colony/ui-gate-linux', 'text': 'Ui Gate Linux'} links=['#/colony/ui-gate-linux']"
+        },
+        {
+          "name": "sidebar label names this colony",
+          "ok": true,
+          "actual": "want~'uigatelinux' got=['uigatelinux']"
+        },
+        {
+          "name": "sidebar uses the English Colonies label",
+          "ok": true,
+          "actual": "sections=['OpenHive', 'Open', 'Hive', 'New Chat', 'New Chat', 'Org Chart', 'Org Chart', 'Configuration', 'Configuration', 'Colonies10123456789', 'Colonies', '10123456789']"
+        }
+      ],
+      "fields": {
+        "links": [
+          {
+            "href": "#/colony/ui-gate-linux",
+            "text": "Ui Gate Linux"
+          }
+        ],
+        "sections": [
+          "OpenHive",
+          "Open",
+          "Hive",
+          "New Chat",
+          "New Chat",
+          "Org Chart",
+          "Org Chart",
+          "Configuration",
+          "Configuration",
+          "Colonies10123456789",
+          "Colonies",
+          "10123456789",
+          "10123456789",
+          "1",
+          "0123456789",
+          "0123456789",
+          "0123456789",
+          "0",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8",
+          "9",
+          "Ui Gate Linux",
+          "Queen Bees",
+          "Queen Bees",
+          "Steve Jobs",
+          "Growth",
+          "Larry Ellison",
+          "RevOps",
+          "Gary Vaynerchuk",
+          "Content",
+          "Alex Hormozi",
+          "Lead Generation",
+          "Chris Voss",
+          "Outbound"
+        ],
+        "badges": [
+          "1"
+        ],
+        "body": "Open\nHive\nNew Chat\nOrg Chart\nConfiguration\nCOLONIES\n1\n0\n1\n2\n3\n4\n5\n6\n7\n8\n9\nUi Gate Linux\nQUEEN BEES\nSteve Jobs\nGrowth\nLarry Ellison\nRevOps\nGary Vaynerchuk\nContent\nAlex Hormozi\nLead Generation\nChris Voss\nOutbound\nJony Ive\nBrand & Design\nv1.0.27-go.1\nEN\n中文\nU\nOPENHIVE // QUEEN NETWORK\nOPENHIVE // QUEEN NETWORK\n6\n0\n1\n2\n3\n4\n5\n6\n7\n8\n9\n QUEENS\n·\n1\n0\n1\n2\n3\n4\n5\n6\n7\n8\n9\n COLONY\n·\n0\n0\n1\n2\n3\n4\n5\n6\n7\n8\n9\n WORKING\nHey there, what can I help you with?\n\nDescribe a task and I'll deploy an agent to handle it\n\nHIVE MAP\n1 WORKING\n0 NEED YOU\n6 HIVES\nSteve\nSteve\nUi Gate Linux\nWORKING\nNEW COLONY\nNEW COLONY\nNEW COLONY\nNEW COLONY\nNEW COLONY\nLarry\nLarry\nNEW COLONY\nNEW COLONY\nNEW COLONY\nNEW COLONY\nNEW COLONY\nNEW COLONY\nGary\nGary\nNEW COLONY\nNEW COLONY\nNEW COLONY\nNEW COLONY\nNEW COLONY\nNEW COLONY\nAlex\nAlex\nNEW COLONY\nNE"
+      },
+      "http_status": null,
+      "duration_ms": null
+    },
+    {
+      "id": "i",
+      "title": "clicking the sidebar entry renders the real colony page",
+      "status": "pass",
+      "actual": "h1='Ui Gate Linux' queen='Head of Growth' tabs=['Automations', 'Data', 'Plan', 'Workers'] conversation=True",
+      "checks": [
+        {
+          "name": "sidebar click navigates to the colony route",
+          "ok": true,
+          "actual": "url=http://127.0.0.1:53101/#/colony/ui-gate-linux hash=#/colony/ui-gate-linux"
+        },
+        {
+          "name": "colony page h1 names the colony",
+          "ok": true,
+          "actual": "h1='Ui Gate Linux' want~'Ui Gate Linux'"
+        },
+        {
+          "name": "queen title chip is rendered",
+          "ok": true,
+          "actual": "want='Head of Growth' header='Ui Gate Linux\\nHead of Growth'"
+        },
+        {
+          "name": "conversation panel is rendered",
+          "ok": true,
+          "actual": "body='Open\\nHive\\nNew Chat\\nOrg Chart\\nConfiguration\\nCOLONIES\\n1\\n0\\n1\\n2\\n3\\n4\\n5\\n6\\n7\\n8\\n9\\nUi Gate Linux\\nQUEEN BEES\\nSteve Jobs\\nGrowth\\nLarry Ellison\\nRevOps\\nGary Vaynerchuk\\nContent\\nAlex Hormozi\\nLead Generation\\nChris Voss\\nOutbound\\nJony Ive\\nBrand & Design\\nv1.0.27-go.1\\nEN\\n中文\\nUi Gate Linux\\nHead of Growth\\nColony panel\\nRepo'"
+        },
+        {
+          "name": "Colony panel is rendered",
+          "ok": true,
+          "actual": "tabs=['Automations', 'Data', 'Plan', 'Workers']"
+        },
+        {
+          "name": "Data/Plan/Automations/Workers tabs render",
+          "ok": true,
+          "actual": "tabs=['Automations', 'Data', 'Plan', 'Workers']"
+        },
+        {
+          "name": "colony page is not a not-found state",
+          "ok": true,
+          "actual": "not_found=False"
+        },
+        {
+          "name": "colony page is not the app 404",
+          "ok": true,
+          "actual": "page_not_found=False"
+        }
+      ],
+      "fields": {
+        "page": {
+          "url": "http://127.0.0.1:53101/#/colony/ui-gate-linux",
+          "hash": "#/colony/ui-gate-linux",
+          "path": "/",
+          "h1": "Ui Gate Linux",
+          "header": "Ui Gate Linux\nHead of Growth",
+          "tabs": [
+            "Data",
+            "Plan",
+            "Automations",
+            "Workers"
+          ],
+          "has_conversation": true,
+          "has_colony_panel": true,
+          "not_found": false,
+          "page_not_found": false,
+          "connecting": false,
+          "body": "Open\nHive\nNew Chat\nOrg Chart\nConfiguration\nCOLONIES\n1\n0\n1\n2\n3\n4\n5\n6\n7\n8\n9\nUi Gate Linux\nQUEEN BEES\nSteve Jobs\nGrowth\nLarry Ellison\nRevOps\nGary Vaynerchuk\nContent\nAlex Hormozi\nLead Generation\nChris Voss\nOutbound\nJony Ive\nBrand & Design\nv1.0.27-go.1\nEN\n中文\nUi Gate Linux\nHead of Growth\nColony panel\nReport a problem\nU\n\nCONVERSATION\n\nData\nPlan\nAutomations\nWorkers\nNo data recorded yet\n\nQueen manages a tracker table inside colony to track the progress.\n\nOpen colony folder\nBridge runtime offline"
+        },
+        "console_errors": [],
+        "screenshot": "go_hive/docs/e2e-assets/linux-ui/linux-colony.png"
+      },
+      "http_status": null,
+      "duration_ms": null
+    },
+    {
+      "id": "j",
+      "title": "negative control: a nonexistent colony does not render",
+      "status": "pass",
+      "actual": "listed=False h1='ui-gate-ghost-does-not-exist' not_found=True connecting=False",
+      "checks": [
+        {
+          "name": "ghost colony is absent from the sidebar",
+          "ok": true,
+          "actual": "listed=False"
+        },
+        {
+          "name": "ghost route is not a working colony page",
+          "ok": true,
+          "actual": "named=False queen=False panels=False"
+        },
+        {
+          "name": "ghost route has no colony panel tabs",
+          "ok": true,
+          "actual": "tabs=[]"
+        },
+        {
+          "name": "ghost route shows an explicit not-found state",
+          "ok": true,
+          "actual": "not_found=True h1='ui-gate-ghost-does-not-exist'"
+        },
+        {
+          "name": "ghost route is not stuck on the connecting overlay",
+          "ok": true,
+          "actual": "connecting=False"
+        }
+      ],
+      "fields": {
+        "ghost": {
+          "url": "http://127.0.0.1:53101/#/colony/ui-gate-ghost-does-not-exist",
+          "hash": "#/colony/ui-gate-ghost-does-not-exist",
+          "path": "/",
+          "h1": "ui-gate-ghost-does-not-exist",
+          "header": "ui-gate-ghost-does-not-exist",
+          "tabs": [],
+          "has_conversation": false,
+          "has_colony_panel": false,
+          "not_found": true,
+          "page_not_found": false,
+          "connecting": false,
+          "body": "Open\nHive\nNew Chat\nOrg Chart\nConfiguration\nCOLONIES\n1\n0\n1\n2\n3\n4\n5\n6\n7\n8\n9\nUi Gate Linux\nQUEEN BEES\nSteve Jobs\nGrowth\nLarry Ellison\nRevOps\nGary Vaynerchuk\nContent\nAlex Hormozi\nLead Generation\nChris Voss\nOutbound\nJony Ive\nBrand & Design\nv1.0.27-go.1\nEN\n中文\nui-gate-ghost-does-not-exist\nU\n\nColony not found: ui-gate-ghost-does-not-exist"
+        },
+        "sidebar": {
+          "links": [
+            {
+              "href": "#/colony/ui-gate-linux",
+              "text": "Ui Gate Linux"
+            }
+          ],
+          "sections": [
+            "OpenHive",
+            "Open",
+            "Hive",
+            "New Chat",
+            "New Chat",
+            "Org Chart",
+            "Org Chart",
+            "Configuration",
+            "Configuration",
+            "Colonies10123456789",
+            "Colonies",
+            "10123456789",
+            "10123456789",
+            "1",
+            "0123456789",
+            "0123456789",
+            "0123456789",
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "Ui Gate Linux",
+            "Queen Bees",
+            "Queen Bees",
+            "Steve Jobs",
+            "Growth",
+            "Larry Ellison",
+            "RevOps",
+            "Gary Vaynerchuk",
+            "Content",
+            "Alex Hormozi",
+            "Lead Generation",
+            "Chris Voss",
+            "Outbound"
+          ],
+          "badges": [
+            "1"
+          ],
+          "body": "Open\nHive\nNew Chat\nOrg Chart\nConfiguration\nCOLONIES\n1\n0\n1\n2\n3\n4\n5\n6\n7\n8\n9\nUi Gate Linux\nQUEEN BEES\nSteve Jobs\nGrowth\nLarry Ellison\nRevOps\nGary Vaynerchuk\nContent\nAlex Hormozi\nLead Generation\nChris Voss\nOutbound\nJony Ive\nBrand & Design\nv1.0.27-go.1\nEN\n中文\nui-gate-ghost-does-not-exist\nU\n\nColony not found: ui-gate-ghost-does-not-exist"
+        },
+        "screenshot": "go_hive/docs/e2e-assets/linux-ui/linux-colony-ghost.png"
+      },
+      "http_status": null,
+      "duration_ms": null
+    },
+    {
+      "id": "k",
+      "title": "evidence artifacts written",
+      "status": "pass",
+      "actual": "root=go_hive/docs/e2e-assets/linux-ui/linux-root.png colony=go_hive/docs/e2e-assets/linux-ui/linux-colony.png ghost=go_hive/docs/e2e-assets/linux-ui/linux-colony-ghost.png",
+      "checks": [],
+      "fields": {
+        "screenshots": [
+          "go_hive/docs/e2e-assets/linux-ui/linux-root.png",
+          "go_hive/docs/e2e-assets/linux-ui/linux-colony.png",
+          "go_hive/docs/e2e-assets/linux-ui/linux-colony-ghost.png"
+        ]
+      },
+      "http_status": null,
+      "duration_ms": null
+    }
+  ],
+  "failed": [],
+  "cleanup": [
+    {
+      "action": "delete the colony through the API",
+      "ok": true,
+      "detail": "HTTP 200"
+    },
+    {
+      "action": "colony directory removed",
+      "ok": true,
+      "detail": "/tmp/ui-e2e-linux-1-288b78e4/colonies/ui_gate_linux"
+    },
+    {
+      "action": "stop the colony session",
+      "ok": true,
+      "detail": "HTTP 404 session=session_20261125_073258_2aeecb49 (already stopped by the colony purge)"
+    },
+    {
+      "action": "stop the source DM session",
+      "ok": true,
+      "detail": "HTTP 200 session=session_20261125_073258_aaa33877"
+    },
+    {
+      "action": "stop serve",
+      "ok": true,
+      "detail": "serve stopped (rc=0)"
+    },
+    {
+      "action": "delete temp HIVE_HOME",
+      "ok": true,
+      "detail": "/tmp/ui-e2e-linux-1-288b78e4"
+    }
+  ],
+  "cleanup_ok": true,
+  "product_findings": [],
+  "notes": [
+    "fork response colony_spawned=False spawned_colony_id=None is the CHILD session; the source session's meta.json is authoritative for the spawn lock"
+  ],
+  "screenshots": [
+    "go_hive/docs/e2e-assets/linux-ui/linux-root.png",
+    "go_hive/docs/e2e-assets/linux-ui/linux-colony.png",
+    "go_hive/docs/e2e-assets/linux-ui/linux-colony-ghost.png"
+  ]
+}

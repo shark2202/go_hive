@@ -8,6 +8,7 @@
 //	classifier.go         nudge-vs-escalate one-shot LLM judgement
 //	escalation_source.go  the temporal decision engine (agentloop source)
 //	listeners.go          Telegram long-poll, Slack Socket Mode, Hive SSE
+//	socket_dialer.go      stdlib RFC 6455 client for Socket Mode
 //	notifier.go           Telegram / Slack / Hive Inbox senders
 //	runtime_identity.go   stable per-runtime id and cloud/local kind
 //	store.go              notifications config + escalation records on disk

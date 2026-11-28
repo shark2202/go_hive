@@ -17,3 +17,22 @@ func TestLoopbackListenHost(t *testing.T) {
 		}
 	}
 }
+
+// Parity-exempt: Go-only wildcard listen policy; no upstream test.
+func TestWildcardListenDoesNotRequireDesktopToken(t *testing.T) {
+	for _, host := range []string{"0.0.0.0", "::", "[::]"} {
+		if requiresDesktopToken(host) {
+			t.Fatalf("requiresDesktopToken(%q) = true, want false", host)
+		}
+	}
+	for _, host := range []string{"127.0.0.1", "localhost"} {
+		if requiresDesktopToken(host) {
+			t.Fatalf("requiresDesktopToken(%q) = true, want false", host)
+		}
+	}
+	for _, host := range []string{"192.168.1.10", "example.com", ""} {
+		if !requiresDesktopToken(host) {
+			t.Fatalf("requiresDesktopToken(%q) = false, want true", host)
+		}
+	}
+}

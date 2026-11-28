@@ -30,20 +30,21 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
   <h1>交付治理板：<span>目标 / 时间 / 效率 / 质量</span></h1>
   <p class="lede">本页是 go_hive 对 Hive 字段级逐字一致的交付控制面：三个门槛（G1 字段级、G2 无损替换 RC、G3 商业外发布）、WIP 与合并节奏、质量门禁、时间台账与风险登记。日期是条件日期，取决于外部依赖（Windows 实机、Actions 权限）；未验证项不记为通过。</p>
   <div class="meta">
-    <span>更新：<b>2026-11-21 14:35 CST</b></span>
-    <span>main：<code>d99a7a85</code>（G1 闭包、G2 文档齐备）</span>
-    <span>CI：<b>5,306 测试 / 5,709 refs</b>（HEAD parity 复跑；CI 日志 5,687）</span>
-    <span>QC：<b>8/8</b>（默认项；C3 smoke 复跑 13/13）</span>
-    <span>磁盘：可用 <b>240Gi</b>（46%）</span>
+    <span>更新：<b>2026-11-23 23:03 CST</b></span>
+    <span>验收代码点：<code>42f2b932</code>；当前 HEAD <code>afcb4098</code>，本页为 G1/G2 验收版</span>
+    <span>CI：<b>5,979 测试 / 6,689 refs</b>（afcb4098 全量；QC 10/10）</span>
+    <span>QC：<b>10/10</b>（C3 smoke）</span>
+    <span>磁盘：可用 <b>152Gi</b></span>
   </div>
 </header>
 
 <section id="g1"><h2><span class="num">01</span>目标与门槛</h2>
 <div class="grid g3">
-  <div class="card"><div class="k">G1 · 字段级逐字一致</div><div class="v">已闭包 · 11-22</div><div class="d">独立闭包验收通过（8/8 条件，例外已登记）：契约 <code>--check</code> + 双跑 golden + smoke 13/13。报告 <a href="g1-closure-report.md">g1-closure-report.md</a>。</div></div>
-  <div class="card"><div class="k">G2 · 老用户无损替换 RC</div><div class="v" style="color:var(--ok)">证据齐备 · 11-22</div><div class="d">数据级无损（v1-rich 50/50、v2-rich 99/99 文件）、凭据互读、回滚 0 删除/0 覆盖、升级实测通过；1 项行为差异 <b>P0-G2-1 待决策</b>（v1 exports 基准，未改行为）。</div></div>
-  <div class="card"><div class="k">G3 · 商业外发布</div><div class="v">目标 11-22</div><div class="d">G2 已完成；安全项（govulncheck 门禁 + 安装/升级 E2E）已落地实测——vulncheck 当前 <b>FAIL</b>（23 个 stdlib CVE，待工具链 ≥1.26.11），install-verify 17 PASS/0 FAIL/1 SKIP。Windows 实机、GitHub Actions release 执行仍为外部未验证项。</div></div>
+  <div class="card"><div class="k">G1 · 字段级逐字一致</div><div class="v">已验收 · 11-23（账本截止 11-22 逾期）</div><div class="d">在 <code>42f2b932</code> 重跑独立验收：8/8 条件 PASS，例外已登记；契约 <code>--check</code> + 双跑 golden + smoke 13/13。当前报告 <a href="g1-acceptance-20261123.md">g1-acceptance-20261123.md</a>，旧报告 <a href="g1-closure-report.md">g1-closure-report.md</a>。截止不后移。</div></div>
+  <div class="card"><div class="k">G2 · 老用户无损替换 RC</div><div class="v" style="color:var(--ok)">已验收 · 11-23（账本截止 11-22 逾期）</div><div class="d">在 <code>42f2b932</code> 重跑：v1-rich 50/50、v2-rich 99/99、回滚 0 删除/0 覆盖、升级实测通过；P0-G2-1 已按 D2=A 关闭（保持 <code>$HIVE_HOME/exports</code>，登记 CWD 差异）。报告 <a href="g2-acceptance-20261123.md">g2-acceptance-20261123.md</a>。截止不后移。</div></div>
+  <div class="card"><div class="k">G3 · 商业外发布</div><div class="v">目标 11-22</div><div class="d">内控 RC 12-04 · 外部复验 12-10；安全项已落地（go1.26.11、govulncheck 0 OSV）；Windows 实机、GitHub Actions release 仍是外部未验证项。G3 外限 12-18，只能提前。</div></div>
 </div>
+<div class="callout info"><b>倒排复核（2026-11-23 23:03）：</b>G1/G2 已于 <code>42f2b932</code> 完成当前 HEAD 验收；账本截止仍为 11-22（只记录逾期，不后移）。G3 功能闭环估算约 100 lane-hours（含 1.5 缓冲约 12 个工作日），内控目标 12-04 冻结、12-10 完成外部复验，G3 外限仍为 12-18。详见 <a href="reports/reverse-schedule-20261123-1844.md">倒排排期</a>。</div>
 <div class="callout info"><b>口径：</b>“字段级”= 名称/类型/默认值/可空/enum/required/读取行为一致；值级差异必须 canonicalize 后比较；字节级、时序、运行期值列为例外，不冒充一致。</div>
 </section>
 
@@ -52,7 +53,7 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 <tr><td>tools 首轮 24 + 延迟层</td><td>已合并</td><td><span class="pill ok">完成</span></td><td>首轮 24 与 Python 抓包逐字；search_tools 51；colony 39；grouped 150</td></tr>
 <tr><td>Browser R15 / doom-loop / 分页 / SSE</td><td>已合并</td><td><span class="pill ok">完成</span></td><td>真 Chrome 19 步、seq 26 事件、GitHub/Stripe 分页、judge 3/3</td></tr>
 <tr><td>存储字段与迁移</td><td>已合并</td><td><span class="pill ok">字段级</span></td><td>v1/v2/colony-fork 全同；凭据双向互读；SC-01 启动迁移已接线并实测</td></tr>
-<tr><td>G2 回滚 / 升级</td><td>已合并</td><td><span class="pill ok">证据齐备</span></td><td>非空旧 home 双跑 50/50 · 99/99（字段/SQLite/读/API 差异 0）；回滚 0 删除/0 覆盖；v1.0.25→1.0.26 升级与旧二进制回读通过；P0-G2-1 待决策</td></tr>
+<tr><td>G2 回滚 / 升级</td><td>已合并</td><td><span class="pill ok">已验收</span></td><td>非空旧 home 双跑 50/50 · 99/99（字段/SQLite/读/API 差异 0）；回滚 0 删除/0 覆盖；v1.0.25→1.0.26 升级与旧二进制回读通过；P0-G2-1 已按 D2=A 关闭</td></tr>
 <tr><td>G3 依赖漏洞 / 安装升级（非外部项）</td><td>已落地</td><td><span class="pill warn">vulncheck FAIL</span></td><td>2026-11-21 实测：<code>make vulncheck</code> 命中 23 个 Go 标准库 CVE（govulncheck v1.10.0 / DB 2026-11-11 / go1.26.5，fixed ≥1.26.6–1.26.11），0 第三方模块 finding；离线降级 exit 3=UNVERIFIED。<code>make install-verify</code> 17 PASS/0 FAIL/1 SKIP：install.sh SHA256 门禁（篡改被拒）、四二进制、冷启动 health 200、旧 slot→新构建原地升级 0 用户数据改写。见 <a href="install-verify.md"><code>install-verify.md</code></a>、<code>e2e-assets/vulncheck/20261121/</code>、<code>e2e-assets/install-verify/</code></td></tr>
 <tr><td>env 20 变量</td><td>已合并</td><td><span class="pill ok">完成</span></td><td>20/20 收敛：14 接入 + 6 GCU 平台差异；七门禁 5208 测试；Python 89 / Go 118 / 共有 83</td></tr>
 <tr><td>config 134 键</td><td>已合并</td><td><span class="pill ok">完成</span></td><td>125 aligned / 4 partial / 0 python_only / 4 go_only / 1 unread；主槽 llm.* 统一 MainSlotProvider</td></tr>
@@ -111,7 +112,7 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 
 <section id="risk"><h2><span class="num">06</span>风险与阻塞</h2>
 <div class="tablewrap"><table><thead><tr><th style="width:26%">风险</th><th style="width:10%">级别</th><th>缓解 / 状态</th></tr></thead><tbody>
-<tr><td>P0-G2-1 exports 解析基准</td><td><span class="pill warn">决策</span></td><td>Python v1 迁移按 CWD、Go 按 <code>$HIVE_HOME</code>（Go 更安全）；是否逐行为复刻待用户拍板；发布说明须注明，本次未改 exports 行为</td></tr>
+<tr><td>P0-G2-1 exports 解析基准</td><td><span class="pill info">已决策 A</span></td><td>D2（2026-11-22）决定：保持 Go 的 <code>$HIVE_HOME/exports</code>，登记 Python CWD 差异，不改产品行为；G2 文档、支持矩阵、发布说明已同步。详见 <code>pending-decisions.md</code> §D2 与 <a href="g2-acceptance-20261123.md">g2-acceptance-20261123.md</a>。</td></tr>
 <tr><td>G2 低风险残余 F4/F6</td><td><span class="pill info">P2</span></td><td><code>colony list</code> 把 <code>.migrations</code> 当 colony（两侧同行为，待联合决策）；CLI JSON 数字格式差异（值相等）</td></tr>
 <tr><td>Go 构建缓存 152G</td><td><span class="pill warn">P1</span></td><td>等 4 条 lane 编译结束后 <code>go clean -cache</code>；已释放 13.8G worktree</td></tr>
 <tr><td>Windows 未实机</td><td><span class="pill bad">P1</span></td><td>需用户提供机器/VM；未跑前 G3 不成立</td></tr>

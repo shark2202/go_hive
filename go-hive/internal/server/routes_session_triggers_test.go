@@ -286,6 +286,137 @@ func TestUpdateTriggerCronRestartsActiveTimer(t *testing.T) {
 	}
 }
 
+// Parity-exempt: Python's update handler lets a start failure escape as an
+// unhandled 500 while the id stays in active_trigger_ids; Go must report the
+// same 500 shape and drop the dead trigger from the active set instead of
+// claiming the new config is live.
+func TestUpdateActiveWebhookRestartOutcomes(t *testing.T) {
+	t.Run("start failure is reported and deactivates", func(t *testing.T) {
+		bus := eventbus.NewEventBus()
+		capture := newEventCapture(bus, eventbus.EventTriggerUpdated)
+		session := newTriggerTestSession(t, "test_agent", bus)
+		startErr := errors.New("listen tcp 127.0.0.1:8090: bind: address already in use")
+		session.WebhookServer = &fakeWebhookServer{startErr: startErr}
+		def := triggers.TriggerDefinition{
+			ID:            "hook",
+			TriggerType:   "webhook",
+			TriggerConfig: map[string]any{"path": "/old", "port": 8090},
+			Task:          "handle",
+			Enabled:       true,
+		}
+		session.PutTrigger(def)
+		session.ActivateTrigger("hook")
+		if err := saveTriggerToAgent(session, "hook", &def); err != nil {
+			t.Fatalf("seed triggers.json: %v", err)
+		}
+		subID := bus.Subscribe(
+			[]eventbus.EventType{eventbus.EventWebhookReceived},
+			func(*eventbus.AgentEvent) {},
+			eventbus.WithFilterStream("hook"),
+		)
+		session.SetActiveWebhookSub("hook", subID)
+		app := newAppWithSession(t, session)
+
+		status, body, _ := doJSON(t, app, http.MethodPatch, "/api/sessions/test_agent/triggers/hook", map[string]any{
+			"trigger_config": map[string]any{"path": "/new"},
+		})
+		if status != 500 {
+			t.Fatalf("status = %d, want 500 (body %#v)", status, body)
+		}
+		wantError := "Failed to start trigger: " + startErr.Error()
+		if body["error"] != wantError {
+			t.Fatalf("error = %#v, want %q", body["error"], wantError)
+		}
+		if _, claimed := body["trigger_id"]; claimed {
+			t.Fatalf("failure body reported success fields: %#v", body)
+		}
+		if session.IsTriggerActive("hook") {
+			t.Fatalf("trigger still active after failed restart")
+		}
+		stored, ok := session.LookupTrigger("hook")
+		if !ok || stored.Enabled {
+			t.Fatalf("stored definition = %#v, want present and disabled", stored)
+		}
+		if events := capture.eventsOf(eventbus.EventTriggerUpdated); len(events) != 0 {
+			t.Fatalf("TRIGGER_UPDATED published on failed restart: %d", len(events))
+		}
+		// Only the EventTriggerUpdated capture may remain: the pre-restart
+		// subscription and the half-installed replacement are both gone.
+		if count := bus.SubscriptionCount(); count != 1 {
+			t.Fatalf("subscriptions = %d, want 1 (capture only)", count)
+		}
+		entries := triggers.ReadAgentTriggersJSON(session.WorkerPath)
+		if len(entries) != 1 || entries[0]["enabled"] != false {
+			t.Fatalf("persisted entries = %#v, want one disabled entry", entries)
+		}
+	})
+
+	t.Run("successful restart keeps the trigger active", func(t *testing.T) {
+		bus := eventbus.NewEventBus()
+		capture := newEventCapture(bus, eventbus.EventTriggerUpdated)
+		session := newTriggerTestSession(t, "test_agent", bus)
+		fakeServer := &fakeWebhookServer{}
+		session.WebhookServer = fakeServer
+		session.PutTrigger(triggers.TriggerDefinition{
+			ID:            "hook",
+			TriggerType:   "webhook",
+			TriggerConfig: map[string]any{"path": "/old"},
+			Task:          "handle",
+			Enabled:       true,
+		})
+		t.Cleanup(func() {
+			if subID := session.PopActiveWebhookSub("hook"); subID != "" {
+				bus.Unsubscribe(subID)
+			}
+		})
+		app := newAppWithSession(t, session)
+
+		status, body, _ := doJSON(t, app, http.MethodPost, "/api/sessions/test_agent/triggers/hook/activate", nil)
+		if status != 200 {
+			t.Fatalf("activate = %d/%#v", status, body)
+		}
+
+		status, body, _ = doJSON(t, app, http.MethodPatch, "/api/sessions/test_agent/triggers/hook", map[string]any{
+			"trigger_config": map[string]any{"path": "/new"},
+		})
+		if status != 200 {
+			t.Fatalf("status = %d, want 200 (body %#v)", status, body)
+		}
+		if body["trigger_id"] != "hook" {
+			t.Fatalf("trigger_id = %#v", body["trigger_id"])
+		}
+		config, ok := body["trigger_config"].(map[string]any)
+		if !ok || config["path"] != "/new" {
+			t.Fatalf("trigger_config = %#v, want path /new", body["trigger_config"])
+		}
+		if !session.IsTriggerActive("hook") {
+			t.Fatalf("trigger deactivated by successful restart")
+		}
+		stored, _ := session.LookupTrigger("hook")
+		if !stored.Enabled {
+			t.Fatalf("stored definition disabled by successful restart: %#v", stored)
+		}
+		registrations := fakeServer.registrations()
+		if len(registrations) != 2 || registrations[0].path != "/old" || registrations[1].path != "/new" {
+			t.Fatalf("registrations = %#v, want /old then /new", registrations)
+		}
+		if !fakeServer.Running() {
+			t.Fatalf("listener not running after successful restart")
+		}
+		event := capture.lastOf(eventbus.EventTriggerUpdated)
+		if event == nil {
+			t.Fatalf("TRIGGER_UPDATED not published on successful restart")
+		}
+		eventConfig, _ := event.Data["trigger_config"].(map[string]any)
+		if event.Data["trigger_id"] != "hook" || eventConfig["path"] != "/new" {
+			t.Fatalf("event data = %#v", event.Data)
+		}
+		if count := bus.SubscriptionCount(); count != 2 {
+			t.Fatalf("subscriptions = %d, want 2 (capture + live route)", count)
+		}
+	})
+}
+
 // Parity: framework/server/tests/test_api.py::TestSessionCRUD::test_update_trigger_cron_rejects_invalid_expression
 func TestUpdateTriggerCronRejectsInvalidExpression(t *testing.T) {
 	session := newTriggerTestSession(t, "test_agent", nil)
@@ -1328,8 +1459,10 @@ func TestWebhookServerResponses(t *testing.T) {
 	if status != 202 {
 		t.Fatalf("accepted status = %d, want 202 (body %q)", status, body)
 	}
-	if !strings.Contains(body, `"status":"accepted"`) {
-		t.Fatalf("accepted body = %q", body)
+	// Parity: aiohttp web.json_response({"status": "accepted"}) — json.dumps
+	// default separators, no trailing newline (22 bytes).
+	if body != `{"status": "accepted"}` {
+		t.Fatalf("accepted body = %q (%d bytes), want %q (22 bytes)", body, len(body), `{"status": "accepted"}`)
 	}
 	event := capture.lastOf(eventbus.EventWebhookReceived)
 	if event == nil || event.StreamID != "src" {

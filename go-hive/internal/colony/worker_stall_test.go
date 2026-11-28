@@ -42,9 +42,44 @@ func (m *textOnlyWorkerLLM) callCount() int {
 	return m.calls
 }
 
+// varyingTextOnlyWorkerLLM is the same never-calls-a-tool surface but keeps
+// consecutive texts mutually dissimilar, so the 6f response n-gram guard never
+// fires and the 6h worker text-only policy (grace 2, then a synthesized
+// report_to_parent(status='failed')) is the one that terminates the run.
+type varyingTextOnlyWorkerLLM struct {
+	mu    sync.Mutex
+	calls int
+}
+
+func (m *varyingTextOnlyWorkerLLM) ModelName() string { return "mock-text-only-varying" }
+
+func (m *varyingTextOnlyWorkerLLM) AComplete(context.Context, llm.CompletionRequest) (llm.Completion, error) {
+	m.mu.Lock()
+	m.calls++
+	call := m.calls
+	m.mu.Unlock()
+	text := "Alphabetic summary of the unit"
+	if call%2 == 0 {
+		text = "Zygomorphic outcome reached"
+	}
+	return llm.Completion{Content: text, StopReason: "stop"}, nil
+}
+
+func (m *varyingTextOnlyWorkerLLM) callCount() int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.calls
+}
+
 // Parity: core/tests/test_run_worker_tool.py::test_parallel_worker_stall_auto_fails_with_synthetic_report
+// Parity: framework/agent_loop/agent_loop.py::execute (6h worker text-only auto-fail)
+//
+// A26: the worker LoopConfig keeps stall_detection_threshold=3 (upstream
+// types.py), so the 6f n-gram guard runs first. This test therefore uses
+// dissimilar text-only turns: the 6h policy is what terminates the run, via a
+// synthesized report_to_parent(status='failed') and a clean worker exit.
 func TestParallelWorkerStallAutoFailsWithSyntheticReport(t *testing.T) {
-	provider := &textOnlyWorkerLLM{}
+	provider := &varyingTextOnlyWorkerLLM{}
 	bus := eventbus.NewEventBus()
 	runtime := makeTestColony(t, provider, bus)
 	reports := collectEvents(bus, eventbus.EventSubagentReport)
@@ -112,6 +147,62 @@ func TestParallelWorkerStallAutoFailsWithSyntheticReport(t *testing.T) {
 		}
 		if got := loop.Counter("worker_stall_escalated"); got != 0 {
 			t.Fatalf("worker_stall_escalated = %d, want 0", got)
+		}
+	}
+}
+
+// Parity: core/tests/test_event_loop_node.py::test_stall_detection
+//
+// A26: identical repetitive worker text must trip the response n-gram guard on
+// the third turn, exactly like Python's worker LoopConfig (threshold 3). The
+// turn fails; no synthetic report is produced, and no escalation fires.
+func TestParallelWorkerRepeatedTextTripsResponseStallGuard(t *testing.T) {
+	provider := &textOnlyWorkerLLM{}
+	bus := eventbus.NewEventBus()
+	runtime := makeTestColony(t, provider, bus)
+	reports := collectEvents(bus, eventbus.EventSubagentReport)
+	escalations := collectEvents(bus, eventbus.EventEscalationRequested)
+
+	ids, err := runtime.SpawnBatch(context.Background(), []BatchTask{{Task: "do something"}})
+	if err != nil {
+		t.Fatalf("SpawnBatch: %v", err)
+	}
+	worker := runtime.GetWorker(ids[0])
+	if worker == nil {
+		t.Fatal("GetWorker returned nil for a spawned worker")
+	}
+	if !eventually(t, 10*time.Second, func() bool { return !worker.IsActive() }) {
+		t.Fatalf("worker never terminated; model calls = %d", provider.callCount())
+	}
+	if got := provider.callCount(); got != 3 {
+		t.Fatalf("model calls = %d, want 3 (window of similar responses)", got)
+	}
+	if worker.Status() != WorkerFailed {
+		t.Fatalf("worker status = %s, want failed (the n-gram guard fails the turn)", worker.Status())
+	}
+	if report := worker.ExplicitReport(); report != nil {
+		t.Fatalf("explicit report = %#v, want none on the n-gram path", report)
+	}
+	result := worker.Result()
+	if result.Error == nil || !strings.Contains(*result.Error, "Node stalled: 3 similar responses (85+ threshold)") {
+		t.Fatalf("result error = %v, want the n-gram stall error", result.Error)
+	}
+	if got := escalations.count(); got != 0 {
+		t.Fatalf("ESCALATION_REQUESTED events = %d, want 0", got)
+	}
+	if !eventually(t, 5*time.Second, func() bool { return reports.count() == 1 }) {
+		t.Fatalf("SUBAGENT_REPORT events = %d, want 1", reports.count())
+	}
+	payload := reports.snapshot()[0].Data
+	if payload["status"] != "failed" {
+		t.Fatalf("report event status = %v, want failed", payload["status"])
+	}
+	if loop := worker.AgentLoop(); loop != nil {
+		if got := loop.Counter("response_stall"); got != 1 {
+			t.Fatalf("response_stall = %d, want 1", got)
+		}
+		if got := loop.Counter("worker_stall_auto_failed"); got != 0 {
+			t.Fatalf("worker_stall_auto_failed = %d, want 0", got)
 		}
 	}
 }

@@ -1,0 +1,292 @@
+===== cond1-system =====
+$ (cd /Users/mac/hive/.wt/w91-g1-acceptance && uv run --offline python go_hive/scripts/prompt_system_parity.py)
+[prompt-parity] building Go target
+[prompt-parity] fake turn-context package: /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T/hive-prompt-parity-48284/python-turn-context-plugins
+[prompt-parity] stub LLMs: reference=http://127.0.0.1:61260/v1 target=http://127.0.0.1:61261/v1
+[prompt-parity] Python reference healthy on http://127.0.0.1:61263
+[prompt-parity] Go target healthy on http://127.0.0.1:61264
+[prompt-parity] Python reference session session_20261123_225333_8be018c2
+[prompt-parity] Go target session session_20261123_225333_89740d5e
+[prompt-parity] Python reference: opening queen request captured (1)
+[prompt-parity] Go target: opening queen request captured (1)
+[prompt-parity] Python reference: user-turn queen request captured (2)
+[prompt-parity] Go target: user-turn queen request captured (2)
+first-turn prompt parity (canonicalized)
+  system prompt:        IDENTICAL (python=21584 chars, go=21584 chars)
+  opening messages:     IDENTICAL (python=4344 chars, go=4344 chars)
+  skills catalog block: IDENTICAL (python=3985 chars, go=3985 chars)
+  searchable manifest:  IDENTICAL (python=307 chars, go=307 chars)
+  turn_context:         python_injected=True go_injected=True body=IDENTICAL (keys python=['probe'] go=['probe'])
+[cond1-system] exit=0
+===== cond1-catalog =====
+$ (cd /Users/mac/hive/.wt/w91-g1-acceptance && uv run --offline python go_hive/scripts/prompt_catalog_parity.py)
+[catalog-parity] python render ok: small
+[catalog-parity] python render ok: edge
+[catalog-parity] go capture ok
+skill-catalog / reminder rendering parity (canonicalized, verbatim)
+cases: 10/10 identical
+
+  small.none           IDENTICAL python=3615 chars go=3615 chars
+  small.independent    IDENTICAL python=4394 chars go=4394 chars
+  small.colony         IDENTICAL python=4808 chars go=4808 chars
+  edge.none            IDENTICAL python=4987 chars go=4987 chars
+  edge.independent     IDENTICAL python=3893 chars go=3893 chars
+  edge.colony          IDENTICAL python=4169 chars go=4169 chars
+  caps.none            IDENTICAL python=3966 chars go=3966 chars
+  caps.compact         IDENTICAL python=3088 chars go=3088 chars
+  turn-context         IDENTICAL python=45 chars go=45 chars
+  reminder.block       IDENTICAL python=222 chars go=222 chars
+
+[cond1-catalog] exit=0
+===== cond2-definition-tests =====
+$ (cd /Users/mac/hive/.wt/w91-g1-acceptance/go_hive/go-hive && go test -count=1 ./internal/cli -run TestFlatSurfaceDefaultMatchesPythonContract|TestFlatSurfaceSchemasMatchFrozenContract|TestFlatSurfaceEagerOrderMatchesUpstreamCapture|TestFlatSurfaceLazyLayerPartition|TestSameNameToolDescriptionsMatchFrozenContract|TestQueenLifecycleDefinitionsMatchPythonSource|TestQueenLifecycleRuntimeSchemasMatchFrozenContract|TestRunPlaybookDescriptionMatchesFrozenContract|TestToolContractFreeze|TestToolContractParity)
+ok  	github.com/shark2202/go_hive/go-hive/internal/cli	0.648s
+[cond2-definition-tests] exit=0
+===== cond2-live-capture =====
+$ (cd /Users/mac/hive/.wt/w91-g1-acceptance && uv run --no-project python /Users/mac/.hermes/profiles/omh-tui/cache/scratch/g1_tool_capture.py /tmp/g1-tool-capture-final)
+session: session_20261123_225348_ad6185a6
+{
+ "gateway_requests": 2,
+ "first_count": 24,
+ "first_names": [
+  "search_tools",
+  "write_skill",
+  "task_create",
+  "task_update",
+  "task_list",
+  "task_get",
+  "suggest_colony",
+  "pdf_read",
+  "attach_file",
+  "get_current_time",
+  "image_generate",
+  "get_account_info",
+  "terminal_exec",
+  "terminal_job_logs",
+  "terminal_job_manage",
+  "terminal_rg",
+  "terminal_glob",
+  "terminal_output_get",
+  "search_messages",
+  "browser_setup",
+  "collect_result",
+  "ask_user",
+  "credentials",
+  "sentinel_setup"
+ ],
+ "first_tools_sha256": "0658b3081e61328717d543fa4539d6201b50b5828ec22b004959218c62040f41",
+ "expected_sha256": "0658b3081e61328717d543fa4539d6201b50b5828ec22b004959218c62040f41",
+ "sha_matches": true,
+ "last_count": 75,
+ "last_added": [
+  "chart_render",
+  "credential_status",
+  "csv_append",
+  "csv_info",
+  "csv_read",
+  "csv_write",
+  "dns_security_scan",
+  "edit_file",
+  "excel_append",
+  "excel_info",
+  "excel_read",
+  "excel_search",
+  "excel_sheet_list",
+  "excel_write",
+  "get_playbook_status",
+  "get_worker_status",
+  "http_headers_scan",
+  "inject_message",
+  "list_browser_profiles",
+  "list_playbook_runs",
+  "list_skills",
+  "list_triggers",
+  "list_worker_questions",
+  "port_scan",
+  "read_file",
+  "remove_trigger",
+  "reply_to_worker",
+  "risk_score",
+  "run_playbook",
+  "run_worker",
+  "search_files",
+  "search_wikipedia",
+  "set_trigger",
+  "skill_view",
+  "ssl_tls_scan",
+  "stop_playbook",
+  "stop_worker",
+  "subdomain_enumerate",
+  "tech_stack_detect",
+  "terminal_job_start",
+  "terminal_pty_close",
+  "terminal_pty_open",
+  "terminal_pty_run",
+  "tracker_query",
+  "tracker_register_writable",
+  "tracker_sql",
+  "tracker_upsert",
+  "update_worker_profile",
+  "web_scrape",
+  "web_search",
+  "write_file"
+ ],
+ "last_missing": [],
+ "deferred_expected": 51,
+ "deferred_loaded": 51,
+ "loading_complete_marker": false
+}
+[cond2-live-capture] exit=0
+===== cond3-api =====
+$ (cd /Users/mac/hive/.wt/w91-g1-acceptance && uv run --no-project python go_hive/scripts/api_response_values.py --check)
+value golden --check OK: 107 endpoints, 8716 value paths, 46 declared differences, verdict=PASS
+[cond3-api] exit=0
+===== cond3-sse =====
+$ (cd /Users/mac/hive/.wt/w91-g1-acceptance && uv run --no-project python go_hive/scripts/sse_frames_canonical.py --check)
+SSE frame golden --check OK: 113 reference / 148 target frames, 9 declared exceptions, verdict=PASS
+[cond3-sse] exit=0
+===== cond3-routes =====
+$ (cd /Users/mac/hive/.wt/w91-g1-acceptance && uv run --no-project python go_hive/scripts/export_api_routes.py --check)
+[routes] manifest is current
+[cond3-routes] exit=0
+===== cond3-surface =====
+$ (cd /Users/mac/hive/.wt/w91-g1-acceptance && uv run --no-project python go_hive/scripts/surface_audit.py --strict)
+API / 仓库表面审计
+  根目录: /Users/mac/hive/.wt/w91-g1-acceptance
+  前端 165 条 | Go 225 条 | Python 212 条
+  前端→Go 缺失 0（待修 0）| Python→Go 缺失 0（待修 0）| Go 多余 11
+  卫生: 空目录 0 | lane 文件 0 | 悬空 waiver 0
+
+结论: PASS
+[cond3-surface] exit=0
+===== cond4-freeze-check =====
+$ (cd /Users/mac/hive/.wt/w91-g1-acceptance && uv run --no-project python go_hive/scripts/freeze_env_config_contract.py --check)
+OK: env-vars.json, config-keys.json and env-config-contract-diff.md are up to date
+[cond4-freeze-check] exit=0
+===== cond4-strict =====
+$ (cd /Users/mac/hive/.wt/w91-g1-acceptance && uv run --no-project python go_hive/scripts/check_env_config_contract.py --strict)
+== env/config contract gate (report-only unless --strict) ==
+env audit reproduced: {'python': 90, 'go': 125, 'common': 84, 'python_only': 6, 'go_only': 41} (expected {'python': 90, 'go': 125, 'common': 84, 'python_only': 6, 'go_only': 41}) -> MATCH
+env read-evidence status: {'aligned': 68, 'default_and_parse_differ': 1, 'go_only': 8, 'literal_only': 43, 'parse_differs': 5, 'python_only': 6}
+config keys: 137 -> {'aligned': 131, 'go_only': 4, 'go_partial': 1, 'unread': 1}
+  missing (python_only)=0 extra (go_only)=4 runtime-partial=1 type/default/parse differences=0
+  python_only: []
+  go_only: ['mcp.enabled', 'mcp.namespace', 'mcp.timeout_seconds', 'mcp.servers']
+RESULT: OK — manifests match the tree and the published env audit
+[cond4-strict] exit=0
+===== cond4-html-check =====
+$ (cd /Users/mac/hive/.wt/w91-g1-acceptance && uv run --no-project python go_hive/scripts/gen_configuration_html.py --check)
+ok: /Users/mac/hive/.wt/w91-g1-acceptance/go_hive/docs/configuration.html matches /Users/mac/hive/.wt/w91-g1-acceptance/go_hive/contracts/config-keys.json
+[cond4-html-check] exit=0
+===== cond6-skills-check =====
+$ (cd /Users/mac/hive/.wt/w91-g1-acceptance && uv run --no-project python go_hive/scripts/gen_builtin_skills_manifest.py --check)
+gen_builtin_skills_manifest: OK — /Users/mac/hive/.wt/w91-g1-acceptance/go_hive/contracts/builtin-skills.json is up to date (25 files, 229354 bytes)
+[cond6-skills-check] exit=0
+===== cond6-skills-tree =====
+$ (cd /Users/mac/hive/.wt/w91-g1-acceptance && uv run --no-project python go_hive/scripts/gen_builtin_skills_manifest.py --verify-tree go_hive/go-hive/internal/skills)
+gen_builtin_skills_manifest: go_hive/go-hive/internal/skills matches (25 files, 229354 bytes)
+gen_builtin_skills_manifest: wrote /Users/mac/hive/.wt/w91-g1-acceptance/go_hive/contracts/builtin-skills.json (25 files, 229354 bytes, manifest sha256 c0ae86d4a5eb04ec25a54fb916372a30f102e6b36dcd275d3a5c0e6c76f15ece)
+[cond6-skills-tree] exit=0
+===== cond8-parity =====
+$ (cd /Users/mac/hive/.wt/w91-g1-acceptance/go_hive/go-hive && bash ../scripts/check_parity.sh)
+package                                    tests  annotated  missing
+---------------------------------------- ------- ---------- --------
+e2e                                            7          7        0
+internal/agentloop                           485        485        0
+internal/agents                               56         56        0
+internal/arghelp                               4          4        0
+internal/atomicfs                              7          7        0
+internal/attachments                           5          5        0
+internal/channels                             17         17        0
+internal/charts                               28         28        0
+internal/claudecode                           27         27        0
+internal/cli                                 360        360        0
+internal/colony                              236        236        0
+internal/credentials                          88         88        0
+internal/envcontract                           3          3        0
+internal/eventbus                            117        117        0
+internal/globaldb                             23         23        0
+internal/hivehome                              3          3        0
+internal/host                                 11         11        0
+internal/llm                                 284        284        0
+internal/llmjudge                             25         25        0
+internal/logging                               5          5        0
+internal/longmemeval                          40         40        0
+internal/maintenance                          42         42        0
+internal/mcpregistry                         172        172        0
+internal/mcpregistry/nativecli                46         46        0
+internal/memory                              138        138        0
+internal/orchestrator                         40         40        0
+internal/pipeline                             50         50        0
+internal/playbook                             58         58        0
+internal/pyenv                                 4          4        0
+internal/quality                              12         12        0
+internal/queen                                21         21        0
+internal/queenmail                            28         28        0
+internal/ratelimit                            32         32        0
+internal/release                               2          2        0
+internal/resources                             9          9        0
+internal/runtimehealth                         3          3        0
+internal/runtimelogs                          37         37        0
+internal/schemas                              14         14        0
+internal/senders                              55         55        0
+internal/sentinel                            124        124        0
+internal/server                             1065       1065        0
+internal/server/uiembed                        1          1        0
+internal/session                              23         23        0
+internal/sessionreport                        10         10        0
+internal/skills                              241        241        0
+internal/soul                                 29         29        0
+internal/storage                              60         60        0
+internal/tasks                               123        123        0
+internal/toolgolden                            4          4        0
+internal/tools                               183        183        0
+internal/tools/builtin                       153        153        0
+internal/tools/integrationkit                  8          8        0
+internal/tools/integrations                  653        653        0
+internal/tools/integrations/ai                 1          1        0
+internal/tools/integrations/cloudflare         1          1        0
+internal/tools/integrations/collab           107        107        0
+internal/tools/integrations/commerce          62         62        0
+internal/tools/integrations/crm              206        206        0
+internal/tools/integrations/data             115        115        0
+internal/tools/integrations/devops             1          1        0
+internal/tools/integrations/enrichment         1          1        0
+internal/tools/integrations/excel             51         51        0
+internal/tools/integrations/gworkspace        57         57        0
+internal/tools/integrations/infra              1          1        0
+internal/tools/integrations/pdf                1          1        0
+internal/tools/integrations/schedchat          1          1        0
+internal/tools/integrations/social            12         12        0
+internal/tools/integrations/webintel          21         21        0
+internal/tracker                              37         37        0
+internal/triggers                             23         23        0
+internal/visionfallback                       10         10        0
+---------------------------------------- ------- ---------- --------
+TOTAL                                       5979       5979        0
+
+check_parity: OK — 5979 个测试全部带有 parity 注解或豁免说明。
+[cond8-parity] exit=0
+===== cond8-targets =====
+$ (cd /Users/mac/hive/.wt/w91-g1-acceptance/go_hive/go-hive && bash ../scripts/check_parity_targets.sh)
+----------------------------------------
+test parity refs: 4806 checked, 0 missing files, 0 missing tests, 861 shorthand/prose
+prod parity refs: 1919 checked, 0 missing files, 0 missing symbols, 113 shorthand/prose
+parity refs checked: 6725  missing: 0
+check_parity_targets: OK
+[cond8-targets] exit=0
+===== cond8-gofmt =====
+$ (cd /Users/mac/hive/.wt/w91-g1-acceptance/go_hive/go-hive && gofmt -l .)
+[cond8-gofmt] exit=0
+===== cond8-vet =====
+$ (cd /Users/mac/hive/.wt/w91-g1-acceptance/go_hive/go-hive && go vet ./internal/cli ./internal/skills ./internal/agentloop ./internal/envcontract)
+[cond8-vet] exit=0
+===== cond8-tests =====
+$ (cd /Users/mac/hive/.wt/w91-g1-acceptance/go_hive/go-hive && go test -count=1 ./internal/cli ./internal/skills ./internal/agentloop ./internal/envcontract)
+ok  	github.com/shark2202/go_hive/go-hive/internal/cli	15.973s
+ok  	github.com/shark2202/go_hive/go-hive/internal/skills	0.583s
+ok  	github.com/shark2202/go_hive/go-hive/internal/agentloop	6.367s
+ok  	github.com/shark2202/go_hive/go-hive/internal/envcontract	1.211s
+[cond8-tests] exit=0
+===== SUMMARY =====
+failed_commands=0

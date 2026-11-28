@@ -1,0 +1,1 @@
+OK: env-vars.json, config-keys.json and env-config-contract-diff.md are up to date

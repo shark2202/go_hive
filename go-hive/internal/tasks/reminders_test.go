@@ -4,6 +4,8 @@ package tasks
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -818,5 +820,51 @@ func TestOpenCountIgnoresArchived(t *testing.T) {
 	}
 	if openCount != 0 {
 		t.Fatalf("openCount = %d, want 0 (archived task must not count as open)", openCount)
+	}
+}
+
+// Parity: framework/tasks/reminders.py::TaskReminderSource.render (the Go port
+// scopes the source to a store/session pair: a worker's own task list)
+func TestTaskReminderSourceForReadsItsOwnStore(t *testing.T) {
+	root := t.TempDir()
+	store := NewTaskStore(root)
+	goal := "scope the reminder to the worker"
+	if _, err := store.CreateTasksBatch("worker_alpha", []TaskSpec{{Subject: "collect inputs"}}, &goal); err != nil {
+		t.Fatalf("CreateTasksBatch: %v", err)
+	}
+	src := NewTaskReminderSourceFor(store, "worker_alpha")
+	// The render context carries a different session id on purpose: a scoped
+	// source must read the store/session it was built for, not the context's.
+	body, ok := src.Render(TaskReminderContext{
+		Point: agentloop.SESSION_START,
+		AgentCtx: &TaskReminderAgentContext{
+			SessionID: "colony/other-worker",
+			AvailableTools: []agentloop.Tool{
+				{Name: TaskCreate},
+				{Name: TaskUpdate},
+			},
+		},
+	})
+	if !ok {
+		t.Fatal("scoped task reminder produced no snapshot")
+	}
+	for _, want := range []string{"Goal: " + goal, "#1. [pending] collect inputs"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("scoped snapshot missing %q:\n%s", want, body)
+		}
+	}
+	// The counter persists beside the scoped task list, not the default
+	// session tree.
+	dir, err := store.listDir("worker_alpha")
+	if err != nil {
+		t.Fatalf("scoped listDir: %v", err)
+	}
+	statePath := filepath.Join(dir, StateFilename)
+	if _, err := os.Stat(statePath); err != nil {
+		t.Fatalf("scoped reminder state missing at %s: %v", statePath, err)
+	}
+	// The process-wide default store never saw the list.
+	if records := GetTaskStore().ListTasks("worker_alpha"); len(records) != 0 {
+		t.Fatalf("default store leaked scoped records: %+v", records)
 	}
 }

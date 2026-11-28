@@ -118,7 +118,11 @@ type Session struct {
 	// list for the same trigger.
 	TitleTrigger *TitleTrigger
 
-	SSEClientCount int
+	// SSEClientCount is the number of live SSE subscribers for this session.
+	// Sentinel reads it to decide whether a human is watching (upstream's
+	// Session.sse_client_count). Atomic: the SSE handler adds/removes from its
+	// own goroutine while Sentinel samples it.
+	SSEClientCount atomic.Int64
 
 	AvailableTriggerDefs  map[string]triggers.TriggerDefinition
 	AvailableTriggerOrder []string
@@ -294,6 +298,20 @@ func (s *Session) RemoveTrigger(id string) {
 			break
 		}
 	}
+}
+
+// clearAvailableTriggers drops every available definition and the registration
+// order, leaving live timers/webhooks alone. Callers that own the runtime state
+// go through StopAllTriggers first (RemoveAllTriggers), so no timer can keep
+// pointing at a definition that is no longer in the catalog.
+func (s *Session) clearAvailableTriggers() {
+	if s == nil {
+		return
+	}
+	s.triggerMu.Lock()
+	defer s.triggerMu.Unlock()
+	s.AvailableTriggerDefs = nil
+	s.AvailableTriggerOrder = nil
 }
 
 func (s *Session) IsTriggerActive(id string) bool {
@@ -531,13 +549,23 @@ func (m *SessionManager) IsLoading(sessionID string) bool {
 	return ok
 }
 
-func (m *SessionManager) MarkLoading(sessionID string) {
+// MarkLoading records that a colony load is in flight for sessionID. It
+// returns false when a load is already registered, which is the check-and-set
+// upstream performs under its manager lock before raising "currently loading a
+// colony". Callers that get true must call ClearLoading when the load ends.
+//
+// Parity: framework/server/session_manager.py::SessionManager._load_worker_core
+func (m *SessionManager) MarkLoading(sessionID string) bool {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.loading == nil {
 		m.loading = map[string]struct{}{}
 	}
+	if _, exists := m.loading[sessionID]; exists {
+		return false
+	}
 	m.loading[sessionID] = struct{}{}
+	return true
 }
 
 func (m *SessionManager) ClearLoading(sessionID string) {

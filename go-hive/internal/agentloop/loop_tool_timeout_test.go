@@ -17,6 +17,10 @@ func TestLoopConfigPrefixTimeoutResolution(t *testing.T) {
 		"browser_status":   180.0,
 		"terminal_exec":    60.0,
 		"tracker_query":    60.0,
+		// Upstream runs image_generate as a background tool: its 235s
+		// real-call budget lives on the background path, not in the
+		// foreground override table (upstream ships browser_ only).
+		"image_generate": 60.0,
 	} {
 		if got := loop.ResolveToolTimeout(name); got != want {
 			t.Fatalf("ResolveToolTimeout(%q) = %v, want %v", name, got, want)
@@ -48,6 +52,9 @@ func TestLoopConfigPrefixTimeoutResolution(t *testing.T) {
 		if !(value < ceiling) {
 			t.Fatalf("override %q = %v >= MCP ceiling %v", prefix, value, ceiling)
 		}
+	}
+	if !(cfg.BackgroundToolTimeoutSeconds < ceiling) {
+		t.Fatalf("background_tool_timeout_seconds %v >= MCP ceiling %v", cfg.BackgroundToolTimeoutSeconds, ceiling)
 	}
 }
 

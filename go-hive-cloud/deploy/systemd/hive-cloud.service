@@ -1,0 +1,51 @@
+[Unit]
+Description=go-hive-cloud (private Hive cloud replacement)
+Documentation=https://github.com/shark2202/hive/tree/main/go_hive/go-hive-cloud
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=hive-cloud
+Group=hive-cloud
+WorkingDirectory=/var/lib/hive-cloud
+EnvironmentFile=/etc/hive-cloud/hive-cloud.env
+ExecStart=/usr/local/bin/hive-cloud serve
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=15s
+KillSignal=SIGTERM
+SyslogIdentifier=hive-cloud
+StandardOutput=journal
+StandardError=journal
+
+# StateDirectory creates /var/lib/hive-cloud owned by the service user with
+# mode 0700. Secrets (jwt_secret, stream_secret*) are generated there as 0600.
+StateDirectory=hive-cloud
+StateDirectoryMode=0700
+UMask=0077
+
+# Hardening: no privilege escalation, read-only system, no home access.
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+ReadWritePaths=/var/lib/hive-cloud
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

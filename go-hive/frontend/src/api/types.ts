@@ -248,6 +248,9 @@ export type EventTypeName =
   | "execution_failed"
   | "execution_paused"
   | "execution_resumed"
+  // Provider billing gate: a 402 classified by the LLM layer. Data carries
+  // { message, upstream_status }.
+  | "payment_required"
   | "state_changed"
   | "state_conflict"
   | "goal_progress"

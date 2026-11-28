@@ -1,0 +1,50 @@
+{
+  "schema": "hive.ui-e2e-linux/v1",
+  "status": "FAIL",
+  "ok": false,
+  "exit_code": 2,
+  "generated_at": "2026-11-23T12:17:22+00:00",
+  "duration_ms": 0.1,
+  "image": "hive-linux-qa:ui",
+  "arch": "arm64",
+  "binary_sha256": "",
+  "serve_port": null,
+  "environment": {
+    "image": "hive-linux-qa:ui",
+    "arch": "arm64",
+    "platform": "Linux-7.0.14-linuxkit-aarch64-with-glibc2.41",
+    "python": "3.13.5",
+    "chromium": "/usr/bin/chromium",
+    "binary": "/nonexistent/hive-embed",
+    "binary_format": "",
+    "binary_arch": "",
+    "binary_sha256": "",
+    "hive_home": "/tmp/ui-e2e-linux-1-ad3b812a",
+    "home_kept": false,
+    "colony_id": "ui_gate_linux",
+    "route_id": "ui-gate-linux",
+    "base_url": "",
+    "serve_port": null,
+    "serve_pid": null,
+    "health_status": null,
+    "evidence_dir": "/repo/go_hive/docs/e2e-assets/linux-ui/fault"
+  },
+  "spawn_state": null,
+  "api": {},
+  "dom_assertions": [],
+  "steps": [],
+  "failed": [],
+  "cleanup": [
+    {
+      "action": "delete temp HIVE_HOME",
+      "ok": true,
+      "detail": "/tmp/ui-e2e-linux-1-ad3b812a (never created)"
+    }
+  ],
+  "cleanup_ok": true,
+  "product_findings": [],
+  "notes": [
+    "no server binary at /nonexistent/hive-embed"
+  ],
+  "screenshots": []
+}

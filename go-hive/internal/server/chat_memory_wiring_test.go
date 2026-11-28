@@ -349,6 +349,114 @@ func TestChatRuntimeWritesTimelineAfterTurn(t *testing.T) {
 	}
 }
 
+// Parity: core/framework/config.py::get_memory_reflection_config
+// Parity: core/tests/test_config.py::test_memory_reflection_config
+func TestChatMemoryReflectionConfigAcceptsOnlyJSONIntegers(t *testing.T) {
+	defaults := memory.DefaultReflectionConfig()
+	cases := []struct {
+		name     string
+		document string
+		want     memory.ReflectionConfig
+	}{
+		{
+			name:     "missing key uses defaults",
+			document: `{"memory_reflection":{"model":"worker"}}`,
+			want:     defaults,
+		},
+		{
+			name:     "bare integers are accepted",
+			document: `{"memory_reflection":{"every_turns":7,"long_every":9}}`,
+			want:     memory.ReflectionConfig{EveryTurns: 7, LongEvery: 9, Model: "worker"},
+		},
+		{
+			name:     "integral float falls back",
+			document: `{"memory_reflection":{"every_turns":2.0,"long_every":9}}`,
+			want:     memory.ReflectionConfig{EveryTurns: defaults.EveryTurns, LongEvery: 9, Model: "worker"},
+		},
+		{
+			name:     "decimal falls back",
+			document: `{"memory_reflection":{"every_turns":2.5,"long_every":9}}`,
+			want:     memory.ReflectionConfig{EveryTurns: defaults.EveryTurns, LongEvery: 9, Model: "worker"},
+		},
+		{
+			name:     "exponent falls back",
+			document: `{"memory_reflection":{"every_turns":1e1,"long_every":9}}`,
+			want:     memory.ReflectionConfig{EveryTurns: defaults.EveryTurns, LongEvery: 9, Model: "worker"},
+		},
+		{
+			name:     "numeric string falls back",
+			document: `{"memory_reflection":{"every_turns":"2","long_every":9}}`,
+			want:     memory.ReflectionConfig{EveryTurns: defaults.EveryTurns, LongEvery: 9, Model: "worker"},
+		},
+		{
+			name:     "boolean falls back",
+			document: `{"memory_reflection":{"every_turns":true,"long_every":9}}`,
+			want:     memory.ReflectionConfig{EveryTurns: defaults.EveryTurns, LongEvery: 9, Model: "worker"},
+		},
+		{
+			name:     "zero falls back",
+			document: `{"memory_reflection":{"every_turns":0,"long_every":9}}`,
+			want:     memory.ReflectionConfig{EveryTurns: defaults.EveryTurns, LongEvery: 9, Model: "worker"},
+		},
+		{
+			name:     "negative falls back",
+			document: `{"memory_reflection":{"every_turns":-3,"long_every":-1}}`,
+			want:     defaults,
+		},
+		{
+			name:     "int64 overflow falls back",
+			document: `{"memory_reflection":{"every_turns":9223372036854775808,"long_every":9}}`,
+			want:     memory.ReflectionConfig{EveryTurns: defaults.EveryTurns, LongEvery: 9, Model: "worker"},
+		},
+		{
+			name:     "valid model selection is preserved",
+			document: `{"memory_reflection":{"every_turns":7,"long_every":9,"model":"main"}}`,
+			want:     memory.ReflectionConfig{EveryTurns: 7, LongEvery: 9, Model: "main"},
+		},
+	}
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			homeRoot := t.TempDir()
+			if err := os.WriteFile(filepath.Join(homeRoot, "configuration.json"), []byte(testCase.document), 0o644); err != nil {
+				t.Fatalf("write configuration.json: %v", err)
+			}
+			if got := chatMemoryReflectionConfig(homeRoot); got != testCase.want {
+				t.Fatalf("chatMemoryReflectionConfig() = %+v, want %+v", got, testCase.want)
+			}
+		})
+	}
+}
+
+// Parity: core/framework/config.py::get_memory_reflection_config
+// Parity: core/tests/test_config.py::test_memory_reflection_config
+func TestReflectionPositiveIntRejectsNonIntegerGoValues(t *testing.T) {
+	cases := []struct {
+		name  string
+		value any
+		want  int
+	}{
+		{"go int", 7, 7},
+		{"go int64", int64(7), 7},
+		{"json integer", json.Number("7"), 7},
+		{"json integral float", json.Number("2.0"), 6},
+		{"json exponent", json.Number("1e1"), 6},
+		{"json overflow", json.Number("9223372036854775808"), 6},
+		{"json zero", json.Number("0"), 6},
+		{"json negative", json.Number("-1"), 6},
+		{"string", "2", 6},
+		{"boolean", true, 6},
+		{"go float", 2.0, 6},
+		{"missing", nil, 6},
+	}
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			if got := reflectionPositiveInt(testCase.value, 6); got != testCase.want {
+				t.Fatalf("reflectionPositiveInt(%#v, 6) = %d, want %d", testCase.value, got, testCase.want)
+			}
+		})
+	}
+}
+
 // Parity: core/tests/test_memory_timeline_recall.py::test_backfill_reuses_cached_extractions
 func TestChatRuntimeStartupBackfillsTimelines(t *testing.T) {
 	t.Setenv("HIVE_MEMORY_TIMELINE", "1")

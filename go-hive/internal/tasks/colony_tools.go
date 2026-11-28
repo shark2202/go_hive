@@ -1,11 +1,18 @@
 package tasks
 
 // Parity: framework/tasks/tools/colony_tools.py
+//
+// Deprecated: the colony template tool family is unregistered legacy code.
+// It was introduced with a registrar in 0af597881 (2026-04-26), the registrar
+// was removed in 24f864bc4 (2026-05-11), and the current tree carries this
+// file without any caller. Do not wire or call it; scheduled for removal.
+// See go_hive/docs/hive-package-atlas.html and delivery-backlog.json.
 
 import (
 	"fmt"
 )
 
+// Deprecated: unregistered legacy tool names; see BuildColonyTemplateTools.
 const (
 	ColonyTemplateAdd    = "colony_template_add"
 	ColonyTemplateUpdate = "colony_template_update"
@@ -111,7 +118,28 @@ func makeColonyAddExecutor(store *TaskStore, listID string) func(map[string]any)
 func makeColonyUpdateExecutor(store *TaskStore, listID string) func(map[string]any) map[string]any {
 	return func(inputs map[string]any) map[string]any {
 		taskID := inputInt(inputs["id"])
-		statusIn, _ := inputs["status"].(string)
+		statusRaw, hasStatus := inputs["status"]
+		var statusIn string
+		if hasStatus && statusRaw != nil {
+			text, ok := statusRaw.(string)
+			if !ok {
+				return map[string]any{
+					"success":      false,
+					"task_list_id": listID,
+					"task_id":      taskID,
+					"error":        InvalidTaskStatusMessage(statusRaw),
+				}
+			}
+			statusIn = text
+		}
+		if statusIn != "" && !ValidTaskStatus(statusIn) {
+			return map[string]any{
+				"success":      false,
+				"task_list_id": listID,
+				"task_id":      taskID,
+				"error":        InvalidTaskStatusMessage(statusIn),
+			}
+		}
 		var statusEnum *TaskStatus
 		if statusIn != "" {
 			candidate := TaskStatus(statusIn)
@@ -198,6 +226,12 @@ func makeColonyListExecutor(store *TaskStore, listID string) func(map[string]any
 	}
 }
 
+// BuildColonyTemplateTools returns the colony spawn-plan template tools.
+//
+// Deprecated: this family is not registered anywhere. It was introduced with
+// a registrar in 0af597881, the registrar was removed in 24f864bc4, and the
+// current tree carries it without a caller. Do not register or call it;
+// scheduled for removal. See docs/hive-package-atlas.html.
 func BuildColonyTemplateTools(colonyID string, store *TaskStore) []Tool {
 	if store == nil {
 		store = GetTaskStore()

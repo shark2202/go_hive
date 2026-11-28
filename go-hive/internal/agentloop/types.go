@@ -102,6 +102,15 @@ type AgentContext struct {
 	AgentSpec AgentSpec
 
 	InputData map[string]any
+	// InputDataOrder is the insertion order of InputData keys. Upstream builds
+	// the initial user message by iterating ctx.input_data.items() (Python dict
+	// order); a Go map cannot carry that order, so producers that care about
+	// the task frame's field order record it here. BuildInitialMessage emits
+	// these keys first, then any remaining keys in deterministic sorted order.
+	// Nil keeps the historical sorted-only behaviour.
+	//
+	// Parity: framework/agent_loop/agent_loop.py::_build_initial_message
+	InputDataOrder []string
 
 	LLM            llm.Completer
 	AvailableTools []llm.ToolDef
@@ -138,6 +147,18 @@ type AgentContext struct {
 	DynamicPromptSuffixProvider  func() string
 	DynamicMemoryProvider        func() string
 	DynamicSkillsCatalogProvider func() string
+	// DynamicSystemPromptProvider rebuilds this context's system prompt before
+	// each model call, returning the cache-stable static prefix and the
+	// dynamic suffix. The loop updates the conversation only when the rendered
+	// text actually changed, so a stable prompt costs no cache invalidation.
+	//
+	// It is the Go opt-in for upstream's per-iteration prompt refresh
+	// (framework/agent_loop/agent_loop.py::_execute_impl step 6b3): the colony
+	// worker lifecycle wires it to BuildSystemPromptPartsForContext so the live
+	// skills catalog reaches an in-flight worker. Nil means the conversation's
+	// prompt is caller-owned — the queen's static prompt and the overseer keep
+	// their own, upstream's dynamic-prompt-provider bypass.
+	DynamicSystemPromptProvider func() (string, string)
 
 	SkillsCatalogPrompt string
 	ProtocolsPrompt     string
@@ -334,6 +355,40 @@ type AgentReport struct {
 type AgentProtocol interface {
 	Execute(runtimeCtx context.Context, ctx *AgentContext) (AgentResult, error)
 	ValidateInput(ctx *AgentContext) []string
+}
+
+// InputDataPair is one ordered input_data entry. Callers that know the
+// insertion order (a JSON task frame, a colony worker's task+binding payload)
+// use SetInputData instead of assigning the map directly so BuildInitialMessage
+// can preserve it.
+type InputDataPair struct {
+	Key   string
+	Value any
+}
+
+// SetInputData replaces InputData and records the pairs' insertion order.
+// A duplicate key keeps its first position; later duplicate pairs override the
+// value.
+//
+// Parity: framework/agent_loop/agent_loop.py::_build_initial_message
+func (c *AgentContext) SetInputData(pairs ...InputDataPair) {
+	if c == nil {
+		return
+	}
+	c.InputData = make(map[string]any, len(pairs))
+	order := make([]string, 0, len(pairs))
+	seen := make(map[string]struct{}, len(pairs))
+	for _, pair := range pairs {
+		if pair.Key == "" {
+			continue
+		}
+		if _, ok := seen[pair.Key]; !ok {
+			seen[pair.Key] = struct{}{}
+			order = append(order, pair.Key)
+		}
+		c.InputData[pair.Key] = pair.Value
+	}
+	c.InputDataOrder = order
 }
 
 func ValidateAgentInput(ctx *AgentContext) []string {

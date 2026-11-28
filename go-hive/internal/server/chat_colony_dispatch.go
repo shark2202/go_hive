@@ -15,18 +15,61 @@ import (
 	"github.com/shark2202/go_hive/go-hive/internal/agentloop"
 )
 
-// sinkColonyPivot stashes the rich task_create(new_colony=true) payload on the
-// session while the tool call is still in flight, mirroring upstream's
-// pivot_payload_sink (session.pending_colony_pivot). It never vetoes: this
-// runtime has no fork-kickoff guard to apply, so it returns "".
+// colonyPivotForkKickoffVeto rejects a pivot on the synthetic kickoff turn of
+// a colony that was itself just created by a fork. Copied verbatim from
+// upstream's _make_pivot_payload_sink.
+const colonyPivotForkKickoffVeto = "This colony was just created by a fork — its task plan " +
+	"already exists and this IS the new colony. Do NOT spawn " +
+	"another colony or re-create tasks. Call task_list to " +
+	"see the plan, then task_update to work it. new_colony " +
+	"becomes available again only after the user sends a new " +
+	"message in this colony."
+
+// colonyPivotPopupOpenVeto enforces one open popup at a time per session.
+// Copied verbatim from upstream's _make_pivot_payload_sink.
+const colonyPivotPopupOpenVeto = "A new_colony popup is already open and waiting for the " +
+	"user. Do not call task_create(new_colony=true) again " +
+	"until the current popup resolves."
+
+// sinkColonyPivot validates and stashes the rich task_create(new_colony=true)
+// payload on the session while the tool call is still in flight, mirroring
+// upstream's pivot_payload_sink (session.pending_colony_pivot). A non-empty
+// return vetoes the pivot: the agent-loop intercept surfaces it as an is_error
+// tool result and never opens the popup, so the stash is left untouched.
 //
 // Parity: framework/server/queen_orchestrator.py::_make_pivot_payload_sink
 func (r *ChatRuntime) sinkColonyPivot(payload map[string]any) string {
 	if r == nil || payload == nil {
 		return ""
 	}
+	// Recursion base case: a colony that was itself just created by a fork
+	// must not re-pivot on its synthetic kickoff turn — the handoff seed may
+	// re-trigger divergence detection and chain-fork (A → B → C → ...). The
+	// flag clears on the first genuine user message in this colony.
+	if session := r.deps.Session; session != nil && session.ForkKickoffPending {
+		return colonyPivotForkKickoffVeto
+	}
+	// Concurrent-popup guard: one open popup at a time per session.
+	if r.hasPendingColonyPivot() {
+		return colonyPivotPopupOpenVeto
+	}
 	r.rememberPendingColonyPivot(payload)
 	return ""
+}
+
+// hasPendingColonyPivot reports whether a pivot popup is already open. The
+// runtime stash parks the live turn; the session stash is what the accept and
+// dismiss routes read and what a restarted runtime restores. Either one being
+// set means the user has not answered, so a second pivot would overwrite it.
+func (r *ChatRuntime) hasPendingColonyPivot() bool {
+	r.mu.Lock()
+	pending := r.pendingColonyPivot != nil
+	r.mu.Unlock()
+	if pending {
+		return true
+	}
+	session := r.deps.Session
+	return session != nil && session.HasPendingColonyPivot()
 }
 
 // rememberPendingColonyPivot stores the pivot payload on the runtime and, when

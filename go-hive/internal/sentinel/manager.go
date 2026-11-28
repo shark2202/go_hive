@@ -40,6 +40,13 @@ type SessionManager interface {
 	CreateSession(ctx context.Context, colonyID, queenResumeFrom string) (LiveSession, error)
 }
 
+// SessionRestorer recreates a session for a reply that outlived it. The host
+// owns the loader, provider and tool catalogue a cold session needs, so it can
+// supply a real factory where SessionManager.CreateSession is unsupported.
+//
+// Parity: framework/sentinel/manager.py::SentinelManager._cold_restore
+type SessionRestorer func(ctx context.Context, colonyID, resumeFrom string) (LiveSession, error)
+
 // HiveSessionResolver closes a stale Hive Inbox escalation out of band.
 type HiveSessionResolver interface {
 	ResolveHiveSession(ctx context.Context, sessionID, resolvedBy string) bool
@@ -52,6 +59,7 @@ type ManagerOptions struct {
 	Runtime         *RuntimeIdentity
 	Notifier        Notifier
 	Sessions        SessionManager
+	SessionRestorer SessionRestorer
 	Clock           Clock
 	HTTP            HTTPDoer
 	ListenerFactory func(name string, mgr *Manager) Listener
@@ -92,6 +100,9 @@ type Manager struct {
 	cancel      context.CancelFunc
 	wg          sync.WaitGroup
 	running     bool
+
+	restoreMu       sync.RWMutex
+	sessionRestorer SessionRestorer
 }
 
 // NewManager returns a manager with production defaults.
@@ -102,6 +113,7 @@ func NewManager(opts ManagerOptions) *Manager {
 		Runtime:         opts.Runtime,
 		Notifier:        opts.Notifier,
 		Sessions:        opts.Sessions,
+		sessionRestorer: opts.SessionRestorer,
 		Clock:           opts.Clock,
 		HTTP:            opts.HTTP,
 		ListenerFactory: opts.ListenerFactory,
@@ -712,8 +724,37 @@ func (m *Manager) Resume(ctx context.Context, record *EscalationRecord, reply st
 	return true
 }
 
+// SetSessionRestorer installs the host's cold-restore factory. Wiring it is
+// what lets a reply resume a session that is no longer in the live table;
+// without it ColdRestore falls back to SessionManager.CreateSession.
+func (m *Manager) SetSessionRestorer(restore SessionRestorer) {
+	if m == nil {
+		return
+	}
+	m.restoreMu.Lock()
+	m.sessionRestorer = restore
+	m.restoreMu.Unlock()
+}
+
+func (m *Manager) currentSessionRestorer() SessionRestorer {
+	m.restoreMu.RLock()
+	defer m.restoreMu.RUnlock()
+	return m.sessionRestorer
+}
+
 // ColdRestore recreates a session from a previous one.
 func (m *Manager) ColdRestore(ctx context.Context, record *EscalationRecord) LiveSession {
+	if record == nil {
+		return nil
+	}
+	if restore := m.currentSessionRestorer(); restore != nil {
+		session, err := restore(ctx, record.ColonyID, record.SessionID)
+		if err != nil {
+			sentinelLogf("[sentinel] cold-restore failed for %s: %v", record.SessionID, err)
+			return nil
+		}
+		return session
+	}
 	if m.Sessions == nil {
 		return nil
 	}
@@ -748,7 +789,7 @@ func DefaultListenerFactory(name string, manager *Manager) Listener {
 		if provider == nil {
 			return nil
 		}
-		return NewSlackSocketListener(manager, &http.Client{Timeout: 30 * time.Second}, manager.Clock, provider.SlackAppToken, "", nil)
+		return NewSlackSocketListener(manager, &http.Client{Timeout: 30 * time.Second}, manager.Clock, provider.SlackAppToken, "", NewSocketDialer())
 	case "hive":
 		hiveProvider, ok := manager.Notifier.(interface {
 			HiveBackendBase() string

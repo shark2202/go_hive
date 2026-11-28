@@ -1,0 +1,2 @@
+gen_builtin_skills_manifest: go_hive/go-hive/internal/skills matches (25 files, 229354 bytes)
+gen_builtin_skills_manifest: wrote /Users/mac/hive/.wt/w91-g1-acceptance/go_hive/contracts/builtin-skills.json (25 files, 229354 bytes, manifest sha256 c0ae86d4a5eb04ec25a54fb916372a30f102e6b36dcd275d3a5c0e6c76f15ece)

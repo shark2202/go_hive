@@ -1,7 +1,7 @@
 # 08 · 存储与数据
 
 > **本文描述上游 Hive（Python 参考实现）。**
-> go_hive 的对应实现：`internal/storage`、`internal/hivehome`、`internal/maintenance`。
+> go_hive 的对应实现：`internal/storage`、`internal/hivehome`、`internal/maintenance`；§2.5 与 §3.4 额外记录两侧的启动/创建时机与单向文件口径。
 > 状态：已移植；差异登记见 `docs/alignment-differences.md`。
 
 ## 1. 设计原则
@@ -15,42 +15,88 @@ Hive 不用外部数据库，全部状态落在 `HIVE_HOME`（默认 `~/.hive`�
 
 ## 2. `HIVE_HOME` 布局
 
-来自 `framework/config.py` 与 `docs/configuration.md`：
+来自 `framework/config.py` 与 `docs/configuration.md`。**树里出现的文件不等于启动时就会创建**：本节把 scaffold 必建、功能按需建、启动预建分开标注（Go 侧行为见 §2.5）。
+
+### 2.1 顶层
 
 ```
 $HIVE_HOME/
 ├── configuration.json          # 全局配置：模型、provider、feature flags
-├── queens/<queen_id>/          # Queen 档案 + DM 会话
-│   └── sessions/<session_id>/
-├── colonies/<name>/            # 一个自包含的 Colony
-│   ├── metadata.json
-│   ├── worker.json             # Worker 克隆规格
-│   ├── tools.json              # Colony 工具配置
-│   ├── skills_overrides.json
-│   ├── skills/                 # Colony 作用域技能
-│   ├── tracker/
-│   │   └── tracker.db (+ -wal, -shm)
-│   ├── colony.db               # 框架记账（playbook 运行日志）
-│   ├── triggers.json
-│   ├── playbooks/
-│   ├── seed_conversation/      # fork 时 Queen 快照，供 Worker 继承
-│   ├── queens/<queen>/sessions/<sid>/
-│   └── workers/<session_id>/
-├── memories/                   # 三层 Queen 记忆（见 07）
-├── credentials/                # 加密凭证库
-├── mcp_registry/installed.json # MCP 服务器注册
-├── registry_cache/             # 技能注册表缓存
+├── queens/<queen_id>/          # Queen 档案 + DM 会话（见 2.2）
+├── colonies/<name>/            # 一个自包含的 Colony（见 2.3）
+├── sessions/<session_id>/      # Python 的全局会话根：attached_credentials.json 落在这里
+├── memories/                   # 分层记忆（见 2.4）
+├── credentials/                # 加密凭证库（serve 启动时懒建 key/index）
+├── mcp_registry/               # config.json / installed.json
+├── registry_cache/             # 技能注册表缓存（懒建）
 ├── trusted_repos.json          # 技能信任仓库
 ├── cache/mcp2cli/              # CLI 模式 MCP 工具缓存
+├── cache/skills/bundled-<id>/  # Go 内置 skill 的稳定展开目录（见 2.5）
 ├── event_logs/                 # 事件日志（可清理）
-├── llm_logs/                   # LLM 调试日志（opt-in）
-├── compaction_log/
-├── tool-artifacts/
-├── failed_requests/
+├── llm_logs/                   # LLM 调试日志（opt-in，懒建）
+├── compaction_log/             # 懒建
+├── tool-artifacts/             # 懒建
+├── failed_requests/            # 常量存在，生产路径未写入
+├── maintenance/server.lock     # 在线 runtime 的互斥标记
 └── .migrated-v2 / .migrated-v3 # 迁移标记
 ```
 
-> 注意一处**文档漂移**：`host/tracker_db.py` 的模块 docstring 仍写 `colonies/{name}/data/`，但 `config.py` 与 v3 迁移已把路径改为 `colonies/{name}/tracker/`。以代码为准。
+### 2.2 `queens/<queen_id>/`
+
+| 路径 | 创建时机 | 说明 |
+| --- | --- | --- |
+| `profile.yaml` | 首次加载该 queen 时 materialize | Python 原子写；Go 早期懒创建用 `os.WriteFile`，见 §10 风险 |
+| `catalog.json` | 首次移除 queen 时 | `removed` 列表，只打标记，保留文件 |
+| `sessions/<session_id>/` | 首个 DM 消息 | 会话树，布局同 §3 |
+| `skills/` | 首个 queen UI skill 写入时 | `queen_ui` 扫描根，不在 scaffold 中预建 |
+| `skills_overrides.json` | UI 覆盖/墓碑时 | 覆盖存储，**不是**扫描根 |
+| `soul/` | soul 首次启用时 | `soul.json`、`history/`、`proposals/`、`log.jsonl` |
+
+### 2.3 `colonies/<name>/`：scaffold 必建 vs 功能按需建
+
+| 文件/目录 | 何时创建 | 说明 |
+| --- | --- | --- |
+| `metadata.json` | **scaffold** | Go 原子写 0600；Python 直写 0644（登记 SC-04） |
+| `worker.json` | **scaffold** | Worker 克隆规格 |
+| `tools.json` | 保存 Colony 工具配置时 | 不是 scaffold 产物 |
+| `triggers.json` | 创建第一个触发器时 | 不是 scaffold 产物 |
+| `skills_overrides.json` | UI 覆盖时 | |
+| `skills/` | 首个 colony skill 写入时 | 不再由 scaffold 预建（A17 已闭） |
+| `tracker/tracker.db` | `ensure_tracker_db` / 首次读 | v3 schema/触发器一致；旧 `data/` 路径已迁移 |
+| `colony.db` | 首次 `record_playbook_run` | `playbook_runs` 表；只用于可观测性，不是恢复权威 |
+| `playbooks/` | 首个 playbook 保存时 | Go 写 `.play.json` 并生成 `.play.py` 镜像；Python 只认 `.play.py`（见 §3.4） |
+| `seed_conversation/` | **fork 时** | Queen 快照，供 Worker 继承；普通 scaffold 不建 |
+| `queens/<queen>/sessions/<sid>/` | colony queen 会话创建时 | 迁移与运行期同布局 |
+| `workers/<session_id>/` | worker 启动时 | 含 `result.json` 墓碑、`meta/tasks` 保留 |
+| `legacy_fork_snapshots/` | 迁移时 | |
+| `runs/` | — | Go 旧 scaffold 已移除 |
+
+**清理**：软删只写 `metadata.deleted=true`；`vacate_soft_deleted_colony` 把 `colonies/<id>` 与 `agents/<id>` 改名为 `<id>.deleted.N`；`?purge=true` 才 rmtree 两个目录（含 tracker/colony.db）。两侧逐项一致。
+
+### 2.4 `memories/`
+
+| 作用域 | 路径 | 一致性 |
+| --- | --- | --- |
+| global | `memories/global/` | ✅ |
+| colony | `memories/colonies/<colony_id>/` | ✅ |
+| queen | `memories/agents/queens/<queen_id>/` | ✅ |
+| worker/agent | `memories/agents/<agent_name>/` | ✅ |
+
+- 每作用域 `log.jsonl`、`timeline.jsonl`、`timeline_meta.json`；文件名 slug、frontmatter（name/description/type/author/learned/confirmed）、200 文件/4KB 上限一致。
+- 清理：`retire` 删除正文并追加 `log.jsonl`；`restore` 从 log 恢复；两侧一致。
+
+### 2.5 创建时机：启动预建 vs 懒创建（F3/F4 的选定口径）
+
+两侧对“目录何时存在”的处理不同，但都不承载数据差异。当前**选择保留各自行为并在文档中登记**，不为了目录树完全一致而改动启动链：
+
+| 场景 | Python | Go | 选定行为 |
+| --- | --- | --- | --- |
+| `HIVE_HOME` 顶层目录 | 按功能懒创建 | `hivehome.EnsureDirs` 启动预建 10 个目录（queens/colonies/memories/credentials/mcp_registry/secrets/cache/event_logs/tool-artifacts） | Go 保留预建：幂等、让写入路径先存在；空目录不是数据，retention/扫描不依赖它们 |
+| `hive serve` 启动文件 | `logs/hive-server.log`、`secrets/credential_key`、`credentials/metadata/index.json`、`maintenance/server.lock` | `mcp_registry/config.json`、`maintenance/server.lock`；前三个在首次使用时懒建 | 保留：启动面不同只影响“空 home 的首日树”，不影响迁移/读取 |
+| 新会话子目录 | 首次写入时创建 | `session.Store.Create` 预建 `conversations/parts`、`conversations/partials`、`artifacts`、`checkpoints`、`logs` | Go 保留预建：`state.json` 与 `conversations/meta.json` 本来立即写；retention tier 3 按文件判定，空目录不会被当成“有内容” |
+| 内置 skill 根 | 包内 `core/framework/skills/_default_skills` | `$HIVE_HOME/cache/skills/bundled-<bundle-id>/_default_skills`（内容哈希寻址，版本变化换目录） | Go 的稳定展开路径：不再使用每次启动都变的 TMPDIR 随机目录（F1 已闭） |
+
+> 结论：F3/F4 是**目录政策**差异，不是数据面差异。Go 侧保留“启动/创建时预建”，Python 侧保留“首次写入时建”；两侧读取都容忍目录缺失，清理都只看文件内容。
 
 ## 3. 会话存储
 
@@ -61,6 +107,8 @@ $HIVE_HOME/
 ```
 sessions/session_YYYYMMDD_HHMMSS_{uuid}/
 ├── state.json              # 单一事实来源（会话状态）
+├── attached_credentials.json # 会话固定凭据引用（见 §3.4）
+├── runs.jsonl              # Python 运行时追加的 run 生命周期事件（见 §3.4）
 ├── conversations/          # 对话部分
 │   ├── meta.json
 │   ├── cursor.json
@@ -77,6 +125,10 @@ sessions/session_YYYYMMDD_HHMMSS_{uuid}/
     ├── details.jsonl
     └── tool_logs.jsonl
 ```
+
+目录里的 `conversations/`、`artifacts/`、`checkpoints/`、`logs/` 是**首次写入时懒建**（Python）；Go 的 `session.Store.Create` 会预建这 5 个子目录，见 §2.5。
+
+`attached_credentials.json` 的位置由 Python 的 `credential_tool.attachments_path()` 决定：`$HIVE_HOME/sessions/<session_id>/attached_credentials.json`，与聊天树实际落在 `queens/<q>/sessions/` 还是 colony 会话目录无关。Go 写入同一全局位置，并把早期写在会话目录旁的旧文件读入后迁移（见 §3.4）。
 
 ### 3.2 为什么「一 part 一 JSON」
 
@@ -96,6 +148,18 @@ sessions/session_YYYYMMDD_HHMMSS_{uuid}/
 - `checkpoint_store.py` 提供原子写、索引、过期清理。
 
 `agent_loop/internals/cursor_persistence.py` 负责恢复与队列 drain。
+
+### 3.4 跨实现单向文件（可证据化）
+
+这些文件不是统一的双向格式，文档和测试把方向固定下来：
+
+| 文件 | 方向 | 行为 | 测试 |
+| --- | --- | --- | --- |
+| `attached_credentials.json` | 双向 | 位置固定为 `$HIVE_HOME/sessions/<session_id>/`；Go 读 Python 写的 `[{credential_id, account}]`（`indent=2`，无尾随换行），也写同一形状；单条 malformed 元素被跳过而不是丢弃整份文件；旧 Go 写在会话目录旁的副本读入后迁移并删除 | `internal/server/chat_credentials_tool_test.go`（Python 形状、malformed 容忍、迁移）、`internal/tools/credentials_tool_test.go` |
+| `runs.jsonl` | Python 写 → Go 读 | Python `execution_manager._write_run_event()` 按行追加 `{run_id, event, timestamp, created_at[, error]}`；Go 只在 `agents.discovery.CountRuns` 递归读取 `session_*` worker 目录并统计唯一 `run_id`，**不写**该文件（Go 的 chat turn 没有 Python 的 graph run_id；worker 目录名是 `worker_*`，Python 的统计器本就不扫） | `internal/agents/discovery_test.go`（读形状、`session_` 过滤、坏行容忍） |
+| `.play.json` | Go 写 → Python 不读 | Go 原生声明式 playbook；Go 同时读 Python 的 `.play.py`。Go 保存/加载原生 playbook 时在旁生成 `.play.py` 镜像（首行 `# Generated by go_hive from ...`），Python 因此能列出并运行同一个 playbook；手写的 `.play.py` 不会被覆盖，`.play.json` 在 Go 侧仍优先 | `internal/playbook/python_mirror_test.go`（形状、字面量转义/compile、不覆盖手写脚本、双扩展优先级） |
+
+镜像是一次**单向转换**：`.play.py` 是派生文件，语义以 `.play.json` 为准；Python 修改镜像后 Go 下次刷新会覆盖它是有意的（只在首行是生成标记时刷新）。
 
 ## 4. SQLite：两个库，职责分离
 
@@ -214,6 +278,7 @@ sessions/session_YYYYMMDD_HHMMSS_{uuid}/
 - **SQLite 并发**：WAL 支持一写多读，但多个 Worker 同时 `tracker_upsert` 时仍会串行化写锁；高并发 Playbook 可能遇到 `database is locked`（有 `BEGIN IMMEDIATE` 与重试，但需要实测）。
 - **schema 由 Queen 运行时创建**：没有框架级迁移；Colony 跨版本升级时，Tracker 表结构可能漂移。
 - **文档漂移**：`tracker_db.py` 仍写 `data/`，属于小但会误导维护者的问题。
+- **Go 默认 queen profile 懒创建非原子**（F2）：`internal/queen/profiles.go` 用 `os.WriteFile`，崩溃可能留下截断的 `profile.yaml`；Python 用 tempfile+fsync+replace。属未修的原子写孤例。
 - **凭证明文风险**：`hive-cred token` 会输出真实令牌，若被 Agent 写进日志/对话就泄露；需要明确的使用约束。
 - **保留策略需手动触发**：长期运行的用户可能忘记清理，导致磁盘膨胀。
 

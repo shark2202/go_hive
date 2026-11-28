@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -213,5 +214,265 @@ func TestTelegramRunAdvancesOffsetAndStopsOnCancel(t *testing.T) {
 	}
 	if len(sink.inbound) != 1 || sink.inbound[0].text != "hi" {
 		t.Fatalf("inbound = %#v", sink.inbound)
+	}
+}
+
+// ----- Socket Mode run loop ------------------------------------------------
+
+type fakeRead struct {
+	data []byte
+	err  error
+}
+
+// fakeSocketConn is a scripted SocketConn. Reads come from the script; once it
+// is exhausted ReadMessage blocks until Close, so Run's reconnect and shutdown
+// paths see a real socket's behavior.
+type fakeSocketConn struct {
+	mu        sync.Mutex
+	script    []fakeRead
+	acked     []map[string]any
+	closed    chan struct{}
+	closeOnce sync.Once
+}
+
+func newFakeSocketConn(script ...fakeRead) *fakeSocketConn {
+	return &fakeSocketConn{script: script, closed: make(chan struct{})}
+}
+
+func (c *fakeSocketConn) ReadMessage() ([]byte, error) {
+	c.mu.Lock()
+	if len(c.script) > 0 {
+		next := c.script[0]
+		c.script = c.script[1:]
+		c.mu.Unlock()
+		if next.err != nil {
+			return nil, next.err
+		}
+		return next.data, nil
+	}
+	c.mu.Unlock()
+	<-c.closed
+	return nil, io.EOF
+}
+
+func (c *fakeSocketConn) WriteJSON(value any) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if decoded, ok := value.(map[string]any); ok {
+		c.acked = append(c.acked, decoded)
+	}
+	return nil
+}
+
+func (c *fakeSocketConn) Close() error {
+	c.closeOnce.Do(func() { close(c.closed) })
+	return nil
+}
+
+func (c *fakeSocketConn) ackCount() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return len(c.acked)
+}
+
+type fakeDialer struct {
+	mu    sync.Mutex
+	dial  func(call int, url string) (SocketConn, error)
+	calls int
+	urls  []string
+}
+
+func (d *fakeDialer) Dial(ctx context.Context, url string) (SocketConn, error) {
+	d.mu.Lock()
+	call := d.calls
+	d.calls++
+	d.urls = append(d.urls, url)
+	d.mu.Unlock()
+	if d.dial == nil {
+		return newFakeSocketConn(), nil
+	}
+	conn, err := d.dial(call, url)
+	if err != nil {
+		return nil, err
+	}
+	if conn != nil {
+		// A real dialer closes the socket on cancellation; the fake mirrors
+		// that so a blocking ReadMessage cannot outlive the Run context.
+		go func() {
+			<-ctx.Done()
+			_ = conn.Close()
+		}()
+	}
+	return conn, nil
+}
+
+func (d *fakeDialer) callCount() int {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	return d.calls
+}
+
+type cancelClock struct {
+	*fakeClock
+	after  int
+	sleeps int
+	cancel context.CancelFunc
+}
+
+func (c *cancelClock) Sleep(ctx context.Context, d time.Duration) error {
+	c.sleeps++
+	if c.sleeps >= c.after {
+		c.cancel()
+	}
+	return ctx.Err()
+}
+
+// Parity-exempt: listeners.py has no Python unit tests; this drives the real
+// Socket Mode Run loop (open → dial → ack/dispatch → reconnect) with fakes.
+func TestSlackRunDispatchesInboundAndReconnects(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	sink := &noopSink{}
+	client := &fakeHTTPClient{responses: []fakeResponse{
+		{body: `{"ok": true, "url": "wss://one"}`},
+		{body: `{"ok": true, "url": "wss://two"}`},
+	}}
+	envelope := `{"envelope_id":"env-1","type":"events_api","payload":{"event":{"type":"message","user":"U1","channel":"C1","text":"go","ts":"100.1"}}}`
+	first := newFakeSocketConn(fakeRead{data: []byte(envelope)}, fakeRead{err: io.EOF})
+	second := newFakeSocketConn()
+	dialer := &fakeDialer{dial: func(call int, url string) (SocketConn, error) {
+		switch call {
+		case 0:
+			if url != "wss://one" {
+				t.Errorf("first dial url = %q", url)
+			}
+			return first, nil
+		case 1:
+			if url != "wss://two" {
+				t.Errorf("second dial url = %q", url)
+			}
+			return second, nil
+		}
+		return newFakeSocketConn(), nil
+	}}
+	listener := NewSlackSocketListener(sink, client, newFakeClock(), func() string { return "xapp-1" }, "", dialer)
+	done := make(chan error, 1)
+	go func() { done <- listener.Run(ctx) }()
+
+	waitFor(t, 2*time.Second, "inbound dispatch and reconnect", func() bool {
+		return sink.inboundCount() == 1 && dialer.callCount() >= 2
+	})
+	calls := sink.inboundSnapshot()
+	if calls[0].channel != "slack" || calls[0].senderID != "U1" || calls[0].text != "go" || calls[0].source != "C1" {
+		t.Fatalf("inbound = %#v", calls[0])
+	}
+	if first.ackCount() != 1 {
+		t.Fatalf("ack count = %d, want 1", first.ackCount())
+	}
+	cancel()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("run: %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("slack Run did not stop after cancellation")
+	}
+}
+
+// Parity-exempt: listeners.py has no Python unit tests; this pins the two
+// retry seams (apps.connections.open failure, dial failure) before a good
+// connection is consumed.
+func TestSlackRunRetriesOpenAndDialFailures(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	sink := &noopSink{}
+	client := &fakeHTTPClient{responses: []fakeResponse{
+		{body: `{"ok": false, "error": "ratelimited"}`},
+		{body: `{"ok": true, "url": "wss://one"}`},
+		{body: `{"ok": true, "url": "wss://two"}`},
+	}}
+	envelope := `{"envelope_id":"env-2","type":"events_api","payload":{"event":{"type":"message","user":"U2","channel":"C2","text":"resume","ts":"200.1"}}}`
+	good := newFakeSocketConn(fakeRead{data: []byte(envelope)})
+	dialer := &fakeDialer{dial: func(call int, _ string) (SocketConn, error) {
+		if call == 0 {
+			return nil, io.ErrUnexpectedEOF
+		}
+		return good, nil
+	}}
+	listener := NewSlackSocketListener(sink, client, newFakeClock(), func() string { return "xapp-1" }, "", dialer)
+	done := make(chan error, 1)
+	go func() { done <- listener.Run(ctx) }()
+
+	waitFor(t, 2*time.Second, "inbound dispatch after retries", func() bool {
+		return sink.inboundCount() == 1
+	})
+	calls := sink.inboundSnapshot()
+	if calls[0].text != "resume" {
+		t.Fatalf("inbound = %#v", calls[0])
+	}
+	if len(client.requests) < 3 {
+		t.Fatalf("apps.connections.open calls = %d, want at least 3", len(client.requests))
+	}
+	if dialer.callCount() < 2 {
+		t.Fatalf("dial calls = %d, want at least 2", dialer.callCount())
+	}
+	cancel()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("run: %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("slack Run did not stop after cancellation")
+	}
+}
+
+// Parity-exempt: negative regression for the wiring gap this lane closes — a
+// listener without a dialer must never report or dispatch an inbound event.
+func TestSlackRunWithoutDialerNeverDispatches(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	clock := &cancelClock{fakeClock: newFakeClock(), after: 2, cancel: cancel}
+	sink := &noopSink{}
+	client := &fakeHTTPClient{responses: []fakeResponse{{body: `{"ok": true, "url": "wss://one"}`}}}
+	listener := NewSlackSocketListener(sink, client, clock, func() string { return "xapp-1" }, "", nil)
+	done := make(chan error, 1)
+	go func() { done <- listener.Run(ctx) }()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("run: %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("slack Run without a dialer did not stop after cancellation")
+	}
+	if sink.inboundCount() != 0 {
+		t.Fatalf("inbound = %#v, want none", sink.inboundSnapshot())
+	}
+	if clock.sleeps < 2 {
+		t.Fatalf("backoff sleeps = %d, want at least 2", clock.sleeps)
+	}
+}
+
+// Parity-exempt: the production listener factory must hand the Slack listener
+// a real dialer; a nil one is the exact gap that left Socket Mode inbound dead.
+func TestDefaultListenerFactoryWiresSlackSocketDialer(t *testing.T) {
+	store := NewStore(t.TempDir())
+	manager := NewManager(ManagerOptions{
+		Store:    store,
+		Tokens:   fixedSecretTokens(t, store),
+		Notifier: &refreshTokenNotifier{slackApp: "xapp-1"},
+		Clock:    newFakeClock(),
+	})
+	listener := DefaultListenerFactory(ChannelSlack, manager)
+	slack, ok := listener.(*SlackSocketListener)
+	if !ok || slack == nil {
+		t.Fatalf("factory listener = %#v, want *SlackSocketListener", listener)
+	}
+	if slack.Dialer == nil {
+		t.Fatal("Slack Socket Mode listener has no dialer; a configured app token would back off forever")
+	}
+	if got := slack.AppToken(); got != "xapp-1" {
+		t.Fatalf("app token = %q", got)
 	}
 }

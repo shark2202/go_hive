@@ -22,7 +22,11 @@ type credAdapter interface {
 }
 
 var credAdapterDefault = func() (credAdapter, error) {
-	return credentials.DefaultAdapter(credentials.CatalogNamedSpecs())
+	// Upstream hive-cred resolves through CredentialStoreAdapter.default(),
+	// which upgrades to Aden sync when ADEN_API_KEY is set. Mirror that here so
+	// `hive-cred token` refreshes an expired OAuth2 token through the platform
+	// before printing it; without a key this is the local composite store.
+	return credentials.DefaultAdapterWithAden("", credentials.CatalogNamedSpecs())
 }
 
 type CredRunner struct {
@@ -72,7 +76,7 @@ func (r *CredRunner) Run(argv []string) int {
 	if err != nil {
 		var help *helpRequest
 		if errors.As(err, &help) {
-			fmt.Fprint(r.Stdout, help.spec.helpText())
+			fmt.Fprint(r.Stdout, help.spec.HelpText())
 			return tracker.ExitOK
 		}
 		var usage *usageError
@@ -106,18 +110,6 @@ func (r *CredRunner) reportUsageError(root *commandSpec, usage *usageError, asJS
 	}
 	fmt.Fprintf(r.Stderr, "error: %s\n", cliErr.Message)
 	return cliErr.ExitCode
-}
-
-func findSpecByProg(spec *commandSpec, prog string) *commandSpec {
-	if spec.Prog == prog {
-		return spec
-	}
-	for _, sub := range spec.Subcommands {
-		if found := findSpecByProg(sub, prog); found != nil {
-			return found
-		}
-	}
-	return nil
 }
 
 func (r *CredRunner) execute(args *parsedArgs) (any, error) {

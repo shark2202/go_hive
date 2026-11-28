@@ -1,0 +1,20 @@
+{
+  "channels": {
+    "wxbot": {
+      "enabled": true,
+      "command": [
+        "/Users/mac/hive/go_hive/wxbot_channel/.venv/bin/python",
+        "-m",
+        "wxbot_channel"
+      ],
+      "cwd": "/Users/mac/hive/go_hive/wxbot_channel",
+      "queen_id": "queen_growth",
+      "cred_path": "~/.hive-go/channels/wxbot/credentials.json",
+      "title_prefix": "WeChat",
+      "allow_users": [],
+      "shared_session": false,
+      "max_images": 8,
+      "max_text_chars": 4000
+    }
+  }
+}

@@ -1,0 +1,1 @@
+value golden --check OK: 107 endpoints, 8716 value paths, 46 declared differences, verdict=PASS

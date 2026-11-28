@@ -1,0 +1,319 @@
+{
+  "generated_at": "2026-11-23T20:42:30.299763+08:00",
+  "go_version": "go1.26.11",
+  "goos": "darwin",
+  "goarch": "arm64",
+  "gomaxprocs": 10,
+  "watchdog_budgets_seconds": {
+    "ttft_seconds": 0.5,
+    "inter_event_seconds": 0.5
+  },
+  "cases": [
+    {
+      "case": "ttft",
+      "role": "worker",
+      "server_addr": "127.0.0.1:61633",
+      "watchdog_budgets_seconds": {
+        "ttft_seconds": 0.5,
+        "inter_event_seconds": 0.5
+      },
+      "requests": [
+        {
+          "index": 0,
+          "path": "/v1/chat/completions",
+          "model": "gpt-4o-mini",
+          "stream_requested": true,
+          "message_count": 2,
+          "nudge_seen": false,
+          "received_at": "2026-11-23T20:42:30.302026+08:00",
+          "client_closed_at": "2026-11-23T20:42:30.802372+08:00",
+          "observed_duration_ms": 500.342458,
+          "bytes_written": 0,
+          "completed": false
+        },
+        {
+          "index": 1,
+          "path": "/v1/chat/completions",
+          "model": "gpt-4o-mini",
+          "stream_requested": true,
+          "message_count": 2,
+          "nudge_seen": true,
+          "nudge_excerpt": "20:42 CST] Hello\n\u003csystem-reminder\u003e\nThe previous stream stalled (no tokens before TTFT budget, 1s). Continue from the last tool result already in this conversation. Do NOT repeat tool calls whose results are visible above — reuse them and",
+          "response_text": "recovered",
+          "received_at": "2026-11-23T20:42:30.803896+08:00",
+          "header_at": "2026-11-23T20:42:30.80396+08:00",
+          "first_body_byte_at": "2026-11-23T20:42:30.803989+08:00",
+          "finished_at": "2026-11-23T20:42:30.804361+08:00",
+          "observed_duration_ms": 0.46525,
+          "bytes_written": 697,
+          "completed": true
+        }
+      ],
+      "nudges": [
+        {
+          "reason": "ttft",
+          "elapsed_seconds": 0.50089075,
+          "limit_seconds": 0.5,
+          "nudge_count": 1
+        }
+      ],
+      "turn": {
+        "success": true,
+        "final_text": "",
+        "inner_turns": 1,
+        "duration_ms": 504.33525
+      },
+      "counter_stream_stall_nudged": 1,
+      "wall_clock_ms": 504.33525
+    },
+    {
+      "case": "ttft",
+      "role": "overseer",
+      "server_addr": "127.0.0.1:61636",
+      "watchdog_budgets_seconds": {
+        "ttft_seconds": 0.5,
+        "inter_event_seconds": 0.5
+      },
+      "requests": [
+        {
+          "index": 0,
+          "path": "/v1/chat/completions",
+          "model": "gpt-4o-mini",
+          "stream_requested": true,
+          "message_count": 2,
+          "nudge_seen": false,
+          "received_at": "2026-11-23T20:42:30.806925+08:00",
+          "client_closed_at": "2026-11-23T20:42:31.307054+08:00",
+          "observed_duration_ms": 500.124458,
+          "bytes_written": 0,
+          "completed": false
+        },
+        {
+          "index": 1,
+          "path": "/v1/chat/completions",
+          "model": "gpt-4o-mini",
+          "stream_requested": true,
+          "message_count": 2,
+          "nudge_seen": true,
+          "nudge_excerpt": "20:42 CST] Hello\n\u003csystem-reminder\u003e\nThe previous stream stalled (no tokens before TTFT budget, 1s). Continue from the last tool result already in this conversation. Do NOT repeat tool calls whose results are visible above — reuse them and",
+          "response_text": "recovered",
+          "received_at": "2026-11-23T20:42:31.307633+08:00",
+          "header_at": "2026-11-23T20:42:31.30768+08:00",
+          "first_body_byte_at": "2026-11-23T20:42:31.307682+08:00",
+          "finished_at": "2026-11-23T20:42:31.307728+08:00",
+          "observed_duration_ms": 0.094375,
+          "bytes_written": 495,
+          "completed": true
+        }
+      ],
+      "nudges": [
+        {
+          "reason": "ttft",
+          "elapsed_seconds": 0.500381084,
+          "limit_seconds": 0.5,
+          "nudge_count": 1
+        }
+      ],
+      "turn": {
+        "success": true,
+        "final_text": "recovered",
+        "inner_turns": 1,
+        "duration_ms": 501.375042
+      },
+      "counter_stream_stall_nudged": 1,
+      "wall_clock_ms": 501.375042
+    },
+    {
+      "case": "inactive",
+      "role": "worker",
+      "server_addr": "127.0.0.1:61641",
+      "watchdog_budgets_seconds": {
+        "ttft_seconds": 0.5,
+        "inter_event_seconds": 0.5
+      },
+      "requests": [
+        {
+          "index": 0,
+          "path": "/v1/chat/completions",
+          "model": "gpt-4o-mini",
+          "stream_requested": true,
+          "message_count": 2,
+          "nudge_seen": false,
+          "response_text": "stalled-partial",
+          "received_at": "2026-11-23T20:42:31.30978+08:00",
+          "header_at": "2026-11-23T20:42:31.309809+08:00",
+          "first_body_byte_at": "2026-11-23T20:42:31.309812+08:00",
+          "client_closed_at": "2026-11-23T20:42:31.810067+08:00",
+          "observed_duration_ms": 500.28325,
+          "bytes_written": 171,
+          "completed": false
+        },
+        {
+          "index": 1,
+          "path": "/v1/chat/completions",
+          "model": "gpt-4o-mini",
+          "stream_requested": true,
+          "message_count": 2,
+          "nudge_seen": true,
+          "nudge_excerpt": "20:42 CST] Hello\n\u003csystem-reminder\u003e\nThe previous stream stalled (stream went silent after producing events, 1s). Continue from the last tool result already in this conversation. Do NOT repeat tool calls whose results are visible above — r",
+          "response_text": "recovered",
+          "received_at": "2026-11-23T20:42:31.81071+08:00",
+          "header_at": "2026-11-23T20:42:31.810786+08:00",
+          "first_body_byte_at": "2026-11-23T20:42:31.810788+08:00",
+          "finished_at": "2026-11-23T20:42:31.810875+08:00",
+          "observed_duration_ms": 0.164792,
+          "bytes_written": 697,
+          "completed": true
+        }
+      ],
+      "nudges": [
+        {
+          "reason": "inactive",
+          "elapsed_seconds": 0.500064333,
+          "limit_seconds": 0.5,
+          "nudge_count": 1
+        }
+      ],
+      "turn": {
+        "success": true,
+        "final_text": "",
+        "inner_turns": 1,
+        "duration_ms": 501.68725
+      },
+      "counter_stream_stall_nudged": 1,
+      "wall_clock_ms": 501.68725
+    },
+    {
+      "case": "inactive",
+      "role": "overseer",
+      "server_addr": "127.0.0.1:61644",
+      "watchdog_budgets_seconds": {
+        "ttft_seconds": 0.5,
+        "inter_event_seconds": 0.5
+      },
+      "requests": [
+        {
+          "index": 0,
+          "path": "/v1/chat/completions",
+          "model": "gpt-4o-mini",
+          "stream_requested": true,
+          "message_count": 2,
+          "nudge_seen": false,
+          "response_text": "stalled-partial",
+          "received_at": "2026-11-23T20:42:31.812401+08:00",
+          "header_at": "2026-11-23T20:42:31.812421+08:00",
+          "first_body_byte_at": "2026-11-23T20:42:31.812422+08:00",
+          "client_closed_at": "2026-11-23T20:42:32.313119+08:00",
+          "observed_duration_ms": 500.71325,
+          "bytes_written": 171,
+          "completed": false
+        },
+        {
+          "index": 1,
+          "path": "/v1/chat/completions",
+          "model": "gpt-4o-mini",
+          "stream_requested": true,
+          "message_count": 2,
+          "nudge_seen": true,
+          "nudge_excerpt": "20:42 CST] Hello\n\u003csystem-reminder\u003e\nThe previous stream stalled (stream went silent after producing events, 1s). Continue from the last tool result already in this conversation. Do NOT repeat tool calls whose results are visible above — r",
+          "response_text": "recovered",
+          "received_at": "2026-11-23T20:42:32.313453+08:00",
+          "header_at": "2026-11-23T20:42:32.3135+08:00",
+          "first_body_byte_at": "2026-11-23T20:42:32.313507+08:00",
+          "finished_at": "2026-11-23T20:42:32.313539+08:00",
+          "observed_duration_ms": 0.085625,
+          "bytes_written": 495,
+          "completed": true
+        }
+      ],
+      "nudges": [
+        {
+          "reason": "inactive",
+          "elapsed_seconds": 0.500511625,
+          "limit_seconds": 0.5,
+          "nudge_count": 1
+        }
+      ],
+      "turn": {
+        "success": true,
+        "final_text": "recovered",
+        "inner_turns": 1,
+        "duration_ms": 501.426458
+      },
+      "counter_stream_stall_nudged": 1,
+      "wall_clock_ms": 501.426458
+    },
+    {
+      "case": "healthy",
+      "role": "worker",
+      "server_addr": "127.0.0.1:61647",
+      "watchdog_budgets_seconds": {
+        "ttft_seconds": 0.5,
+        "inter_event_seconds": 0.5
+      },
+      "requests": [
+        {
+          "index": 0,
+          "path": "/v1/chat/completions",
+          "model": "gpt-4o-mini",
+          "stream_requested": true,
+          "message_count": 2,
+          "nudge_seen": false,
+          "response_text": "recovered",
+          "received_at": "2026-11-23T20:42:32.314809+08:00",
+          "header_at": "2026-11-23T20:42:32.31483+08:00",
+          "first_body_byte_at": "2026-11-23T20:42:32.314831+08:00",
+          "finished_at": "2026-11-23T20:42:32.314862+08:00",
+          "observed_duration_ms": 0.052416,
+          "bytes_written": 697,
+          "completed": true
+        }
+      ],
+      "nudges": null,
+      "turn": {
+        "success": true,
+        "final_text": "",
+        "inner_turns": 1,
+        "duration_ms": 0.533875
+      },
+      "counter_stream_stall_nudged": 0,
+      "wall_clock_ms": 0.533875
+    },
+    {
+      "case": "healthy",
+      "role": "overseer",
+      "server_addr": "127.0.0.1:61649",
+      "watchdog_budgets_seconds": {
+        "ttft_seconds": 0.5,
+        "inter_event_seconds": 0.5
+      },
+      "requests": [
+        {
+          "index": 0,
+          "path": "/v1/chat/completions",
+          "model": "gpt-4o-mini",
+          "stream_requested": true,
+          "message_count": 2,
+          "nudge_seen": false,
+          "response_text": "recovered",
+          "received_at": "2026-11-23T20:42:32.316302+08:00",
+          "header_at": "2026-11-23T20:42:32.316319+08:00",
+          "first_body_byte_at": "2026-11-23T20:42:32.316321+08:00",
+          "finished_at": "2026-11-23T20:42:32.316347+08:00",
+          "observed_duration_ms": 0.04525,
+          "bytes_written": 495,
+          "completed": true
+        }
+      ],
+      "nudges": null,
+      "turn": {
+        "success": true,
+        "final_text": "recovered",
+        "inner_turns": 1,
+        "duration_ms": 0.3145
+      },
+      "counter_stream_stall_nudged": 0,
+      "wall_clock_ms": 0.3145
+    }
+  ]
+}

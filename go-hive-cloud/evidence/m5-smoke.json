@@ -1,0 +1,123 @@
+{
+  "harness": "llm-proxy-smoke (real go_hive Anthropic client + real hive-cloud binary + fake local upstream)",
+  "base_url": "http://127.0.0.1:63909",
+  "started_at": "2026-11-23T13:36:02.110312Z",
+  "finished_at": "2026-11-23T13:36:02.461814Z",
+  "ok": true,
+  "checks": [
+    {
+      "name": "messages_nonstream_real_client",
+      "ok": true,
+      "detail": {
+        "content": "hello from fake upstream",
+        "input_tokens": 3,
+        "model": "queen",
+        "output_tokens": 5
+      }
+    },
+    {
+      "name": "upstream_credential_isolation",
+      "ok": true,
+      "detail": {
+        "client_auth_header_used": true,
+        "client_token_in_headers": false,
+        "method": "POST",
+        "model_in_body": true,
+        "path": "/v1/messages"
+      }
+    },
+    {
+      "name": "messages_stream_real_client",
+      "ok": true,
+      "detail": {
+        "content": "hello",
+        "deltas": [
+          "hello"
+        ],
+        "incremental": true,
+        "output_tokens": 1,
+        "stop_reason": "stop"
+      }
+    },
+    {
+      "name": "messages_stream_incremental",
+      "ok": true,
+      "detail": {
+        "content": "hello",
+        "deltas": [
+          "hello"
+        ],
+        "incremental": true,
+        "output_tokens": 1,
+        "stop_reason": "stop"
+      }
+    },
+    {
+      "name": "messages_upstream_429_forwarded",
+      "ok": true,
+      "detail": {
+        "body": "{\"type\":\"error\",\"error\":{\"type\":\"rate_limit_error\",\"message\":\"slow down\"}}",
+        "retry_after": "7",
+        "status": 429
+      }
+    },
+    {
+      "name": "messages_invalid_token_401",
+      "ok": true,
+      "detail": {
+        "body": "{\"error\":{\"type\":\"hive_stream_token_invalid\"}}\n",
+        "status": 401
+      }
+    },
+    {
+      "name": "messages_operator_jwt_accepted",
+      "ok": true,
+      "detail": {
+        "body_bytes": 223,
+        "status": 200
+      }
+    },
+    {
+      "name": "messages_cancel_propagates",
+      "ok": true,
+      "detail": {
+        "upstream_saw_cancel": true
+      }
+    },
+    {
+      "name": "unconfigured_answers_explicit",
+      "ok": true,
+      "detail": {
+        "images_body": "{\"error\":{\"message\":\"credential valid; no images upstream is configured (set --images-upstream-url)\",\"type\":\"llm_upstream_not_configured\"},\"type\":\"error\"}\n",
+        "images_status": 503,
+        "messages_body": "{\"error\":{\"message\":\"credential valid; no LLM upstream is configured (set --llm-upstream-url)\",\"type\":\"llm_upstream_not_configured\"},\"type\":\"error\"}\n",
+        "messages_status": 400
+      }
+    },
+    {
+      "name": "images_pass_through",
+      "ok": true,
+      "detail": {
+        "body": "{\"data\":[{\"b64_json\":\"aGVsbG8=\"}],\"usage\":{\"total_tokens\":7}}",
+        "body_verbatim": true,
+        "status": 200,
+        "upstream_bearer": true
+      }
+    },
+    {
+      "name": "images_upstream_402_forwarded",
+      "ok": true,
+      "detail": {
+        "status": 402
+      }
+    }
+  ],
+  "notes": [
+    "No external network: the upstream is an in-process httptest server.",
+    "Evidence contains statuses, counters and key fingerprints; no token or key plaintext."
+  ],
+  "env": {
+    "images_key_fingerprint": "535cb225c222",
+    "upstream_key_fingerprint": "98b7e5950f44"
+  }
+}

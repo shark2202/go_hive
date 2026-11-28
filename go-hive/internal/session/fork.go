@@ -7,7 +7,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"time"
@@ -122,6 +124,15 @@ func copyEntry(src, dst string) error {
 	if err != nil {
 		return err
 	}
+	// macOS APFS can clone a session's large repo tree copy-on-write instead
+	// of copying every file (node_modules alone can be gigabytes). Fall back to
+	// the portable copy if the platform or filesystem does not support it.
+	// Parity-exempt: local storage fast path; the fork contract is unchanged.
+	if runtime.GOOS == "darwin" {
+		if err := cloneEntry(src, dst, info.IsDir()); err == nil {
+			return nil
+		}
+	}
 	if !info.IsDir() {
 		return atomicfs.CopyFile(src, dst, info.Mode().Perm())
 	}
@@ -136,6 +147,21 @@ func copyEntry(src, dst string) error {
 		if err := copyEntry(filepath.Join(src, entry.Name()), filepath.Join(dst, entry.Name())); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func cloneEntry(src, dst string, dir bool) error {
+	// cp -c uses clonefile(2) on APFS. It copies the directory tree lazily,
+	// preserving the fork's isolation without the multi-gigabyte byte copy.
+	args := []string{"-c"}
+	if dir {
+		args = append(args, "-R")
+	}
+	args = append(args, src, dst)
+	if out, err := exec.Command("cp", args...).CombinedOutput(); err != nil {
+		_ = os.RemoveAll(dst)
+		return fmt.Errorf("clone %s: %w: %s", src, err, strings.TrimSpace(string(out)))
 	}
 	return nil
 }

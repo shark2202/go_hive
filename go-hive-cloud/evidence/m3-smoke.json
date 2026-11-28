@@ -1,0 +1,303 @@
+{
+  "harness": "m3-smoke (streamToken rotation + hive LLM credential validation)",
+  "base_url": "http://127.0.0.1:63885",
+  "base_url_without_previous_secret": "http://127.0.0.1:63886",
+  "started_at": "2026-11-23T13:36:01.375853+00:00",
+  "finished_at": "2026-11-23T13:36:01.596964Z",
+  "ok": true,
+  "checks": [
+    {
+      "name": "rotation_refresh_rotates",
+      "ok": true,
+      "detail": {
+        "new": {
+          "typ": "stream",
+          "user_id": "u_m3",
+          "team_id": "team_m3",
+          "exp": 1795527361
+        },
+        "signed_by_current_secret": true
+      },
+      "error": ""
+    },
+    {
+      "name": "rotation_ttl_24h",
+      "ok": true,
+      "detail": {
+        "ttl_seconds": 86399
+      },
+      "error": ""
+    },
+    {
+      "name": "rotation_preserves_identity",
+      "ok": true,
+      "detail": {
+        "old": {
+          "typ": "stream",
+          "user_id": "u_m3",
+          "team_id": "team_m3",
+          "exp": 1795443659
+        },
+        "new": {
+          "typ": "stream",
+          "user_id": "u_m3",
+          "team_id": "team_m3",
+          "exp": 1795527361
+        }
+      },
+      "error": ""
+    },
+    {
+      "name": "rotation_old_token_still_valid",
+      "ok": true,
+      "detail": {
+        "rotated_without_revoking_old": true
+      },
+      "error": ""
+    },
+    {
+      "name": "old_token_rejected_without_previous_secret",
+      "ok": true,
+      "detail": {
+        "server": "current-secret-only"
+      },
+      "error": ""
+    },
+    {
+      "name": "refresh_expired_401",
+      "ok": true,
+      "detail": {
+        "status": 401,
+        "body": {
+          "error": "hive_stream_token_invalid"
+        }
+      },
+      "error": ""
+    },
+    {
+      "name": "refresh_wrong_signature_401",
+      "ok": true,
+      "detail": {
+        "status": 401,
+        "body": {
+          "error": "hive_stream_token_invalid"
+        }
+      },
+      "error": ""
+    },
+    {
+      "name": "refresh_user_jwt_401",
+      "ok": true,
+      "detail": {
+        "status": 401,
+        "body": {
+          "error": "hive_stream_token_invalid"
+        }
+      },
+      "error": ""
+    },
+    {
+      "name": "refresh_garbage_401",
+      "ok": true,
+      "detail": {
+        "status": 401,
+        "body": {
+          "error": "hive_stream_token_invalid"
+        }
+      },
+      "error": ""
+    },
+    {
+      "name": "refresh_invalid_json_400",
+      "ok": true,
+      "detail": {
+        "status": 400,
+        "body": {
+          "error": "invalid JSON body"
+        }
+      },
+      "error": ""
+    },
+    {
+      "name": "rotation_refresh_loop_saves_hive_credential",
+      "ok": true,
+      "detail": {
+        "credential_id": "hive",
+        "key": "api_key",
+        "saved": true,
+        "current_claims": {
+          "typ": "stream",
+          "user_id": "u_m3",
+          "team_id": "team_m3",
+          "exp": 1795441559
+        },
+        "saved_claims": {
+          "typ": "stream",
+          "user_id": "u_m3",
+          "team_id": "team_m3",
+          "exp": 1795527361
+        }
+      },
+      "error": ""
+    },
+    {
+      "name": "rotation_try_refresh_now",
+      "ok": true,
+      "detail": {
+        "forced": true,
+        "claims": {
+          "typ": "stream",
+          "user_id": "u_m3",
+          "team_id": "team_m3",
+          "exp": 1795527361
+        }
+      },
+      "error": ""
+    },
+    {
+      "name": "llm_valid_credential_accepted",
+      "ok": true,
+      "detail": {
+        "status": 400,
+        "body": {
+          "error": {
+            "message": "credential valid; no LLM upstream is configured (set --llm-upstream-url)",
+            "type": "llm_upstream_not_configured"
+          },
+          "type": "error"
+        }
+      },
+      "error": ""
+    },
+    {
+      "name": "llm_valid_operator_jwt_credential_accepted",
+      "ok": true,
+      "detail": {
+        "status": 400,
+        "body": {
+          "error": {
+            "message": "credential valid; no LLM upstream is configured (set --llm-upstream-url)",
+            "type": "llm_upstream_not_configured"
+          },
+          "type": "error"
+        }
+      },
+      "error": ""
+    },
+    {
+      "name": "llm_expired_401",
+      "ok": true,
+      "detail": {
+        "status": 401,
+        "body": {
+          "error": {
+            "type": "hive_stream_token_invalid"
+          }
+        }
+      },
+      "error": ""
+    },
+    {
+      "name": "llm_garbage_401",
+      "ok": true,
+      "detail": {
+        "status": 401,
+        "body": {
+          "error": {
+            "type": "hive_stream_token_invalid"
+          }
+        }
+      },
+      "error": ""
+    },
+    {
+      "name": "llm_missing_401",
+      "ok": true,
+      "detail": {
+        "status": 401,
+        "body": {
+          "error": {
+            "type": "hive_stream_token_invalid"
+          }
+        }
+      },
+      "error": ""
+    },
+    {
+      "name": "legacy_refresh_unknown_404",
+      "ok": true,
+      "detail": {
+        "status": 404
+      },
+      "error": ""
+    },
+    {
+      "name": "llm_valid_stream_token_keycheck",
+      "ok": true,
+      "detail": {
+        "message": "Hive API key valid",
+        "valid": true,
+        "want_valid": true
+      }
+    },
+    {
+      "name": "llm_current_stream_token_keycheck",
+      "ok": true,
+      "detail": {
+        "message": "Hive API key valid",
+        "valid": true,
+        "want_valid": true
+      }
+    },
+    {
+      "name": "llm_valid_operator_jwt_keycheck",
+      "ok": true,
+      "detail": {
+        "message": "Hive API key valid",
+        "valid": true,
+        "want_valid": true
+      }
+    },
+    {
+      "name": "llm_expired_token_keycheck",
+      "ok": true,
+      "detail": {
+        "message": "Invalid Hive API key",
+        "valid": false,
+        "want_valid": false
+      }
+    },
+    {
+      "name": "llm_wrong_signature_keycheck",
+      "ok": true,
+      "detail": {
+        "message": "Invalid Hive API key",
+        "valid": false,
+        "want_valid": false
+      }
+    },
+    {
+      "name": "llm_garbage_keycheck",
+      "ok": true,
+      "detail": {
+        "message": "Invalid Hive API key",
+        "valid": false,
+        "want_valid": false
+      }
+    },
+    {
+      "name": "hive_credential_store_roundtrip",
+      "ok": true,
+      "detail": {
+        "credential_id": "hive",
+        "key": "api_key",
+        "roundtripped": true,
+        "valid": true
+      }
+    }
+  ],
+  "components": [
+    "streamtoken-smoke (real Python runtime refresh client)",
+    "llm-credential-smoke (real go_hive keycheck + credential store)"
+  ]
+}

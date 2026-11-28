@@ -581,3 +581,67 @@ func TestOverseerCatalogUsesColonySkillHierarchy(t *testing.T) {
 		t.Fatalf("overseer SkillDirs = %#v, want the bundled framework scope among them", worker.Context.SkillDirs)
 	}
 }
+
+// Parity: core/tests/test_skill_overrides.py::TestSkillsManagerOverrides::test_queen_disable_applies_to_colony_ui_skills
+//
+// Colonies have no override store of their own: the owning queen's
+// skills_overrides.json is the single authority, and its entries apply to
+// skills discovered from a colony's dir (colony_ui) too. A disabled colony
+// skill must drop out of both the announced catalog and the read surface, and
+// come back after the store is edited and the runtime reloads.
+func TestWorkerCatalogHonorsQueenDisableForColonySkills(t *testing.T) {
+	root := t.TempDir()
+	colonyDir := filepath.Join(root, "colonies", "demo-colony")
+	queenDir := filepath.Join(root, "queens", "queen_ava")
+	writeSkillFile(t, filepath.Join(colonyDir, "skills"), "shared-skill", "colony skill", "Colony procedure.")
+
+	storePath := filepath.Join(queenDir, "skills_overrides.json")
+	store := skills.LoadSkillOverrideStore(storePath, "queen:queen_ava")
+	disabled := false
+	store.Upsert("shared-skill", &skills.OverrideEntry{
+		Enabled:    &disabled,
+		Provenance: skills.ProvenanceUserUICreated,
+	})
+	if err := store.Save(); err != nil {
+		t.Fatal(err)
+	}
+
+	runtime := NewColonyRuntime(RuntimeOptions{
+		StoragePath: colonyDir,
+		QueenDir:    queenDir,
+		AgentSpec:   agentloop.AgentSpec{ID: "worker"},
+	})
+	worker := runtime.BuildWorker(WorkerBuildOptions{WorkerID: "w1", Task: "do it"})
+	if worker.Context == nil {
+		t.Fatal("worker context is nil")
+	}
+	if strings.Contains(worker.Context.SkillsCatalogPrompt, "<name>shared-skill</name>") {
+		t.Fatalf("worker catalog announced a queen-disabled skill: %q", worker.Context.SkillsCatalogPrompt)
+	}
+	catalog, ok := runtime.Skills()
+	if !ok {
+		t.Fatal("colony Skills() reported no catalog")
+	}
+	for _, skill := range catalog {
+		if skill.Name == "shared-skill" {
+			t.Fatalf("read catalog announced a queen-disabled skill: %#v", skill)
+		}
+	}
+
+	// Re-enabling is picked up by the next rebuild: the watcher fires on
+	// skills_overrides.json changes, and ReloadSkills re-reads the store.
+	enabled := true
+	store.Upsert("shared-skill", &skills.OverrideEntry{
+		Enabled:    &enabled,
+		Provenance: skills.ProvenanceUserUICreated,
+	})
+	if err := store.Save(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := runtime.ReloadSkills(); err != nil {
+		t.Fatalf("ReloadSkills: %v", err)
+	}
+	if got := worker.Context.DynamicSkillsCatalogProvider(); !strings.Contains(got, "<name>shared-skill</name>") {
+		t.Fatalf("worker catalog missing the re-enabled skill after reload: %q", got)
+	}
+}

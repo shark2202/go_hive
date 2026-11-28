@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/shark2202/go_hive/go-hive/internal/cli/toolcatalog"
 	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
 	"github.com/shark2202/go_hive/go-hive/internal/llm"
 )
@@ -240,7 +241,7 @@ func TestHistorySearchDefinitionsMatchPythonContract(t *testing.T) {
 		references[tool.Name] = tool
 	}
 
-	for _, def := range []llm.ToolDef{searchMessagesToolDef(), searchTimelineToolDef()} {
+	for _, def := range []llm.ToolDef{toolcatalog.SearchMessagesToolDef(), toolcatalog.SearchTimelineToolDef()} {
 		reference, ok := references[def.Name]
 		if !ok {
 			t.Fatalf("%s missing from contracts/tool-definitions.json", def.Name)

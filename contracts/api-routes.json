@@ -1,26 +1,26 @@
 {
   "schema": "hive-api-routes/1",
   "description": "Frozen HTTP route tables. The contract reference is the Python hive checkout (reference=python@<commit>); go_hive is the target being aligned (target=go_hive@<commit>). Static extraction; path parameters are compared by shape, original spelling preserved.",
-  "reference_id": "python@4412f401e363f9d1f5f3ecc1d707c5cf27e9c9d3",
-  "target_id": "go_hive@4412f401e363f9d1f5f3ecc1d707c5cf27e9c9d3",
+  "reference_id": "python@d90acd8b4e9da567264ab122532dcfca4843ea10",
+  "target_id": "go_hive@d90acd8b4e9da567264ab122532dcfca4843ea10",
   "reference": {
     "implementation": "python",
     "version": "1.0.15",
-    "commit": "4412f401e363f9d1f5f3ecc1d707c5cf27e9c9d3",
-    "last_core_commit": "265d93d17ab9ad62520ce05b841ecbfc42439ae7",
+    "commit": "d90acd8b4e9da567264ab122532dcfca4843ea10",
+    "last_core_commit": "cb1a2c67a7c42e0a847e6b1da614dd18125a03ae",
     "last_tools_commit": "72eb6d7bb9f833ac221ed17ad6c334f5944d89bb",
     "source_root": "core/framework/server"
   },
   "target": {
     "implementation": "go_hive",
     "version": "1.0.27-go.1",
-    "commit": "4412f401e363f9d1f5f3ecc1d707c5cf27e9c9d3",
+    "commit": "d90acd8b4e9da567264ab122532dcfca4843ea10",
     "source_root": "go_hive/go-hive/internal/server"
   },
-  "generated_at": "2026-11-23T12:30:18+08:00",
+  "generated_at": "2026-11-28T02:43:39+08:00",
   "python": {
     "version": "1.0.15",
-    "commit": "4412f401e363f9d1f5f3ecc1d707c5cf27e9c9d3",
+    "commit": "d90acd8b4e9da567264ab122532dcfca4843ea10",
     "source_root": "core/framework/server",
     "route_count": 222,
     "routes": [
@@ -1439,8 +1439,7 @@
         "path_shape": "/api/sessions/{}/colony",
         "handler": "handle_unload_colony",
         "source": "core/framework/server/routes_sessions.py:3214",
-        "kind": "api",
-        "served_by_alias": "DELETE /api/sessions/{first}/{second}"
+        "kind": "api"
       },
       {
         "method": "POST",
@@ -1808,16 +1807,16 @@
   },
   "go": {
     "version": "1.0.27-go.1",
-    "commit": "4412f401e363f9d1f5f3ecc1d707c5cf27e9c9d3",
+    "commit": "d90acd8b4e9da567264ab122532dcfca4843ea10",
     "source_root": "go_hive/go-hive/internal/server",
-    "route_count": 225,
+    "route_count": 226,
     "routes": [
       {
         "method": "GET",
         "path": "/",
         "path_shape": "<spa>",
         "handler": "app.handleSPA",
-        "source": "go_hive/go-hive/internal/server/app.go:335",
+        "source": "go_hive/go-hive/internal/server/app.go:220",
         "kind": "spa_fallback"
       },
       {
@@ -1825,7 +1824,7 @@
         "path": "/api/agents",
         "path_shape": "/api/agents",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_agents.go:35",
+        "source": "go_hive/go-hive/internal/server/routesagents/routes_agents.go:63",
         "kind": "api"
       },
       {
@@ -1833,7 +1832,7 @@
         "path": "/api/agents/metadata",
         "path_shape": "/api/agents/metadata",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_agents.go:38",
+        "source": "go_hive/go-hive/internal/server/routesagents/routes_agents.go:66",
         "kind": "api"
       },
       {
@@ -1841,7 +1840,7 @@
         "path": "/api/browser/contexts",
         "path_shape": "/api/browser/contexts",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_browser_panel.go:86",
+        "source": "go_hive/go-hive/internal/server/routesbrowser/routes_browser_panel.go:91",
         "kind": "api"
       },
       {
@@ -1849,7 +1848,7 @@
         "path": "/api/browser/contexts/close",
         "path_shape": "/api/browser/contexts/close",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_browser_panel.go:92",
+        "source": "go_hive/go-hive/internal/server/routesbrowser/routes_browser_panel.go:97",
         "kind": "api"
       },
       {
@@ -1857,7 +1856,7 @@
         "path": "/api/browser/status",
         "path_shape": "/api/browser/status",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_app_extra.go:149",
+        "source": "go_hive/go-hive/internal/server/routesapp/routes_app_extra.go:152",
         "kind": "api"
       },
       {
@@ -1865,7 +1864,7 @@
         "path": "/api/browser/status/stream",
         "path_shape": "/api/browser/status/stream",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_app_extra.go:152",
+        "source": "go_hive/go-hive/internal/server/routesapp/routes_app_extra.go:155",
         "kind": "api"
       },
       {
@@ -1873,7 +1872,7 @@
         "path": "/api/browser/tab/reveal",
         "path_shape": "/api/browser/tab/reveal",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_app_extra.go:155",
+        "source": "go_hive/go-hive/internal/server/routesapp/routes_app_extra.go:158",
         "kind": "api"
       },
       {
@@ -1881,7 +1880,7 @@
         "path": "/api/browser/tabs",
         "path_shape": "/api/browser/tabs",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_browser_panel.go:89",
+        "source": "go_hive/go-hive/internal/server/routesbrowser/routes_browser_panel.go:94",
         "kind": "api"
       },
       {
@@ -1913,7 +1912,7 @@
         "path": "/api/colonies/import",
         "path_shape": "/api/colonies/import",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_colonies.go:41",
+        "source": "go_hive/go-hive/internal/server/routes_colonies.go:42",
         "kind": "api"
       },
       {
@@ -1921,7 +1920,7 @@
         "path": "/api/colonies/import/chunk/{upload_id}",
         "path_shape": "/api/colonies/import/chunk/{}",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_colonies.go:47",
+        "source": "go_hive/go-hive/internal/server/routes_colonies.go:48",
         "kind": "api"
       },
       {
@@ -1929,7 +1928,7 @@
         "path": "/api/colonies/import/finalize/{upload_id}",
         "path_shape": "/api/colonies/import/finalize/{}",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_colonies.go:53",
+        "source": "go_hive/go-hive/internal/server/routes_colonies.go:54",
         "kind": "api"
       },
       {
@@ -1937,7 +1936,7 @@
         "path": "/api/colonies/import/init",
         "path_shape": "/api/colonies/import/init",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_colonies.go:44",
+        "source": "go_hive/go-hive/internal/server/routes_colonies.go:45",
         "kind": "api"
       },
       {
@@ -1945,7 +1944,7 @@
         "path": "/api/colonies/import/status/{upload_id}",
         "path_shape": "/api/colonies/import/status/{}",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_colonies.go:50",
+        "source": "go_hive/go-hive/internal/server/routes_colonies.go:51",
         "kind": "api"
       },
       {
@@ -1953,7 +1952,7 @@
         "path": "/api/colonies/import/{upload_id}",
         "path_shape": "/api/colonies/import/{}",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_colonies.go:56",
+        "source": "go_hive/go-hive/internal/server/routes_colonies.go:57",
         "kind": "api"
       },
       {
@@ -1969,7 +1968,7 @@
         "path": "/api/colonies/{colony_id}",
         "path_shape": "/api/colonies/{}",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_colonies.go:62",
+        "source": "go_hive/go-hive/internal/server/routes_colonies.go:63",
         "kind": "api"
       },
       {
@@ -1977,7 +1976,7 @@
         "path": "/api/colonies/{colony_id}/active-session",
         "path_shape": "/api/colonies/{}/active-session",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_sessions.go:141",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:156",
         "kind": "api"
       },
       {
@@ -2017,7 +2016,7 @@
         "path": "/api/colonies/{colony_id}/rename",
         "path_shape": "/api/colonies/{}/rename",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_colonies.go:68",
+        "source": "go_hive/go-hive/internal/server/routes_colonies.go:69",
         "kind": "api"
       },
       {
@@ -2025,7 +2024,7 @@
         "path": "/api/colonies/{colony_id}/reveal",
         "path_shape": "/api/colonies/{}/reveal",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_colonies.go:65",
+        "source": "go_hive/go-hive/internal/server/routes_colonies.go:66",
         "kind": "api"
       },
       {
@@ -2033,7 +2032,7 @@
         "path": "/api/colonies/{colony_id}/scaffold",
         "path_shape": "/api/colonies/{}/scaffold",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_colonies.go:59",
+        "source": "go_hive/go-hive/internal/server/routes_colonies.go:60",
         "kind": "api"
       },
       {
@@ -2041,7 +2040,7 @@
         "path": "/api/colonies/{colony_id}/sessions",
         "path_shape": "/api/colonies/{}/sessions",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_sessions.go:138",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:153",
         "kind": "api"
       },
       {
@@ -2049,7 +2048,7 @@
         "path": "/api/colonies/{colony_id}/worker_profiles",
         "path_shape": "/api/colonies/{}/worker_profiles",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_colonies.go:71",
+        "source": "go_hive/go-hive/internal/server/routes_colonies.go:72",
         "kind": "api"
       },
       {
@@ -2057,7 +2056,7 @@
         "path": "/api/colonies/{colony_id}/worker_profiles",
         "path_shape": "/api/colonies/{}/worker_profiles",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_colonies.go:74",
+        "source": "go_hive/go-hive/internal/server/routes_colonies.go:75",
         "kind": "api"
       },
       {
@@ -2065,7 +2064,7 @@
         "path": "/api/colonies/{colony_id}/worker_profiles/{profile_name}",
         "path_shape": "/api/colonies/{}/worker_profiles/{}",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_colonies.go:77",
+        "source": "go_hive/go-hive/internal/server/routes_colonies.go:78",
         "kind": "api"
       },
       {
@@ -2073,7 +2072,7 @@
         "path": "/api/colony/{colony_id}/notifications",
         "path_shape": "/api/colony/{}/notifications",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_sentinel.go:104",
+        "source": "go_hive/go-hive/internal/server/routes_sentinel.go:117",
         "kind": "api"
       },
       {
@@ -2081,7 +2080,7 @@
         "path": "/api/colony/{colony_id}/notifications",
         "path_shape": "/api/colony/{}/notifications",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_sentinel.go:107",
+        "source": "go_hive/go-hive/internal/server/routes_sentinel.go:120",
         "kind": "api"
       },
       {
@@ -2089,7 +2088,7 @@
         "path": "/api/colony/{colony_id}/notifications/test",
         "path_shape": "/api/colony/{}/notifications/test",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_sentinel.go:110",
+        "source": "go_hive/go-hive/internal/server/routes_sentinel.go:123",
         "kind": "api"
       },
       {
@@ -2113,7 +2112,7 @@
         "path": "/api/config/external-skills",
         "path_shape": "/api/config/external-skills",
         "handler": "handleGetExternalSkills(deps",
-        "source": "go_hive/go-hive/internal/server/routes_config.go:296",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:290",
         "kind": "api"
       },
       {
@@ -2121,7 +2120,7 @@
         "path": "/api/config/external-skills",
         "path_shape": "/api/config/external-skills",
         "handler": "handlePutExternalSkills(deps",
-        "source": "go_hive/go-hive/internal/server/routes_config.go:297",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:291",
         "kind": "api"
       },
       {
@@ -2129,7 +2128,7 @@
         "path": "/api/config/features",
         "path_shape": "/api/config/features",
         "handler": "handleGetFeatures(deps",
-        "source": "go_hive/go-hive/internal/server/routes_config.go:279",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:273",
         "kind": "api"
       },
       {
@@ -2137,7 +2136,7 @@
         "path": "/api/config/features",
         "path_shape": "/api/config/features",
         "handler": "handleUpdateFeatures(deps",
-        "source": "go_hive/go-hive/internal/server/routes_config.go:280",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:274",
         "kind": "api"
       },
       {
@@ -2145,7 +2144,7 @@
         "path": "/api/config/llm",
         "path_shape": "/api/config/llm",
         "handler": "handleGetLLMConfig(deps",
-        "source": "go_hive/go-hive/internal/server/routes_config.go:285",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:279",
         "kind": "api"
       },
       {
@@ -2153,7 +2152,7 @@
         "path": "/api/config/llm",
         "path_shape": "/api/config/llm",
         "handler": "handleUpdateLLMConfig(deps",
-        "source": "go_hive/go-hive/internal/server/routes_config.go:286",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:280",
         "kind": "api"
       },
       {
@@ -2161,7 +2160,7 @@
         "path": "/api/config/llm-sections",
         "path_shape": "/api/config/llm-sections",
         "handler": "handleGetLLMSections(deps",
-        "source": "go_hive/go-hive/internal/server/routes_config.go:283",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:277",
         "kind": "api"
       },
       {
@@ -2169,7 +2168,7 @@
         "path": "/api/config/llm-sections",
         "path_shape": "/api/config/llm-sections",
         "handler": "handlePutLLMSection(deps",
-        "source": "go_hive/go-hive/internal/server/routes_config.go:284",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:278",
         "kind": "api"
       },
       {
@@ -2177,7 +2176,7 @@
         "path": "/api/config/memory",
         "path_shape": "/api/config/memory",
         "handler": "handleGetMemorySettings(deps",
-        "source": "go_hive/go-hive/internal/server/routes_config.go:281",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:275",
         "kind": "api"
       },
       {
@@ -2185,7 +2184,7 @@
         "path": "/api/config/memory",
         "path_shape": "/api/config/memory",
         "handler": "handleUpdateMemorySettings(deps",
-        "source": "go_hive/go-hive/internal/server/routes_config.go:282",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:276",
         "kind": "api"
       },
       {
@@ -2193,7 +2192,7 @@
         "path": "/api/config/models",
         "path_shape": "/api/config/models",
         "handler": "handleGetModels(deps",
-        "source": "go_hive/go-hive/internal/server/routes_config.go:276",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:270",
         "kind": "api"
       },
       {
@@ -2201,7 +2200,7 @@
         "path": "/api/config/profile",
         "path_shape": "/api/config/profile",
         "handler": "handleGetProfile(deps",
-        "source": "go_hive/go-hive/internal/server/routes_config.go:292",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:286",
         "kind": "api"
       },
       {
@@ -2209,7 +2208,7 @@
         "path": "/api/config/profile",
         "path_shape": "/api/config/profile",
         "handler": "handleUpdateProfile(deps",
-        "source": "go_hive/go-hive/internal/server/routes_config.go:293",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:287",
         "kind": "api"
       },
       {
@@ -2217,7 +2216,7 @@
         "path": "/api/config/profile/avatar",
         "path_shape": "/api/config/profile/avatar",
         "handler": "handleGetAvatar(deps",
-        "source": "go_hive/go-hive/internal/server/routes_config.go:295",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:289",
         "kind": "api"
       },
       {
@@ -2225,7 +2224,7 @@
         "path": "/api/config/profile/avatar",
         "path_shape": "/api/config/profile/avatar",
         "handler": "handleUploadAvatar(deps",
-        "source": "go_hive/go-hive/internal/server/routes_config.go:294",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:288",
         "kind": "api"
       },
       {
@@ -2233,7 +2232,7 @@
         "path": "/api/config/provider-library",
         "path_shape": "/api/config/provider-library",
         "handler": "handleGetProviderLibrary(deps",
-        "source": "go_hive/go-hive/internal/server/routes_config.go:287",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:281",
         "kind": "api"
       },
       {
@@ -2241,7 +2240,7 @@
         "path": "/api/config/provider-library",
         "path_shape": "/api/config/provider-library",
         "handler": "handlePutProviderLibrary(deps",
-        "source": "go_hive/go-hive/internal/server/routes_config.go:288",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:282",
         "kind": "api"
       },
       {
@@ -2249,7 +2248,7 @@
         "path": "/api/config/provider-library/apply",
         "path_shape": "/api/config/provider-library/apply",
         "handler": "handleApplyProviderLibrary(deps",
-        "source": "go_hive/go-hive/internal/server/routes_config.go:289",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:283",
         "kind": "api"
       },
       {
@@ -2257,7 +2256,7 @@
         "path": "/api/config/rate-limits",
         "path_shape": "/api/config/rate-limits",
         "handler": "handleGetRateLimits(deps",
-        "source": "go_hive/go-hive/internal/server/routes_config.go:290",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:284",
         "kind": "api"
       },
       {
@@ -2265,7 +2264,7 @@
         "path": "/api/config/rate-limits",
         "path_shape": "/api/config/rate-limits",
         "handler": "handleUpdateRateLimits(deps",
-        "source": "go_hive/go-hive/internal/server/routes_config.go:291",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:285",
         "kind": "api"
       },
       {
@@ -2273,7 +2272,7 @@
         "path": "/api/config/sentinel",
         "path_shape": "/api/config/sentinel",
         "handler": "handleGetSentinel(deps",
-        "source": "go_hive/go-hive/internal/server/routes_config.go:277",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:271",
         "kind": "api"
       },
       {
@@ -2281,7 +2280,7 @@
         "path": "/api/config/sentinel",
         "path_shape": "/api/config/sentinel",
         "handler": "handleUpdateSentinel(deps",
-        "source": "go_hive/go-hive/internal/server/routes_config.go:278",
+        "source": "go_hive/go-hive/internal/server/routes_config.go:272",
         "kind": "api"
       },
       {
@@ -2289,7 +2288,7 @@
         "path": "/api/credentials",
         "path_shape": "/api/credentials",
         "handler": "routes.handleListCredentials",
-        "source": "go_hive/go-hive/internal/server/routes_credentials.go:89",
+        "source": "go_hive/go-hive/internal/server/routes_credentials.go:91",
         "kind": "api"
       },
       {
@@ -2297,7 +2296,7 @@
         "path": "/api/credentials",
         "path_shape": "/api/credentials",
         "handler": "routes.handleSaveCredential",
-        "source": "go_hive/go-hive/internal/server/routes_credentials.go:90",
+        "source": "go_hive/go-hive/internal/server/routes_credentials.go:92",
         "kind": "api"
       },
       {
@@ -2305,7 +2304,7 @@
         "path": "/api/credentials/check-agent",
         "path_shape": "/api/credentials/check-agent",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_agents.go:41",
+        "source": "go_hive/go-hive/internal/server/routesagents/routes_agents.go:69",
         "kind": "api"
       },
       {
@@ -2329,7 +2328,7 @@
         "path": "/api/credentials/oauth-status",
         "path_shape": "/api/credentials/oauth-status",
         "handler": "routes.handleOAuthStatus",
-        "source": "go_hive/go-hive/internal/server/routes_credentials.go:86",
+        "source": "go_hive/go-hive/internal/server/routes_credentials.go:88",
         "kind": "api"
       },
       {
@@ -2337,7 +2336,7 @@
         "path": "/api/credentials/resync",
         "path_shape": "/api/credentials/resync",
         "handler": "routes.handleResync",
-        "source": "go_hive/go-hive/internal/server/routes_credentials.go:87",
+        "source": "go_hive/go-hive/internal/server/routes_credentials.go:89",
         "kind": "api"
       },
       {
@@ -2345,7 +2344,7 @@
         "path": "/api/credentials/specs",
         "path_shape": "/api/credentials/specs",
         "handler": "routes.handleListSpecs",
-        "source": "go_hive/go-hive/internal/server/routes_credentials.go:85",
+        "source": "go_hive/go-hive/internal/server/routes_credentials.go:87",
         "kind": "api"
       },
       {
@@ -2353,7 +2352,7 @@
         "path": "/api/credentials/validate-key",
         "path_shape": "/api/credentials/validate-key",
         "handler": "routes.handleValidateKey",
-        "source": "go_hive/go-hive/internal/server/routes_credentials.go:88",
+        "source": "go_hive/go-hive/internal/server/routes_credentials.go:90",
         "kind": "api"
       },
       {
@@ -2361,7 +2360,7 @@
         "path": "/api/credentials/{credential_id}",
         "path_shape": "/api/credentials/{}",
         "handler": "routes.handleDeleteCredential",
-        "source": "go_hive/go-hive/internal/server/routes_credentials.go:96",
+        "source": "go_hive/go-hive/internal/server/routes_credentials.go:98",
         "kind": "api"
       },
       {
@@ -2369,7 +2368,7 @@
         "path": "/api/credentials/{credential_id}",
         "path_shape": "/api/credentials/{}",
         "handler": "routes.handleGetCredential",
-        "source": "go_hive/go-hive/internal/server/routes_credentials.go:95",
+        "source": "go_hive/go-hive/internal/server/routes_credentials.go:97",
         "kind": "api"
       },
       {
@@ -2385,7 +2384,7 @@
         "path": "/api/crm/claim",
         "path_shape": "/api/crm/claim",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:787",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:786",
         "kind": "api"
       },
       {
@@ -2393,7 +2392,7 @@
         "path": "/api/crm/grid/schema",
         "path_shape": "/api/crm/grid/schema",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:752",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:751",
         "kind": "api"
       },
       {
@@ -2401,7 +2400,7 @@
         "path": "/api/crm/grid/{entity}",
         "path_shape": "/api/crm/grid/{}",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:768",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:767",
         "kind": "api"
       },
       {
@@ -2409,7 +2408,7 @@
         "path": "/api/crm/grid/{entity}/group-counts",
         "path_shape": "/api/crm/grid/{}/group-counts",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:759",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:758",
         "kind": "api"
       },
       {
@@ -2417,7 +2416,7 @@
         "path": "/api/crm/grid/{entity}/query",
         "path_shape": "/api/crm/grid/{}/query",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:755",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:754",
         "kind": "api"
       },
       {
@@ -2425,7 +2424,7 @@
         "path": "/api/crm/grid/{entity}/{id}",
         "path_shape": "/api/crm/grid/{}/{}",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:777",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:776",
         "kind": "api"
       },
       {
@@ -2433,7 +2432,7 @@
         "path": "/api/crm/grid/{entity}/{id}",
         "path_shape": "/api/crm/grid/{}/{}",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:763",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:762",
         "kind": "api"
       },
       {
@@ -2441,7 +2440,7 @@
         "path": "/api/crm/grid/{entity}/{id}",
         "path_shape": "/api/crm/grid/{}/{}",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:772",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:771",
         "kind": "api"
       },
       {
@@ -2449,7 +2448,7 @@
         "path": "/api/crm/grid/{entity}/{id}/stage",
         "path_shape": "/api/crm/grid/{}/{}/stage",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:782",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:781",
         "kind": "api"
       },
       {
@@ -2457,7 +2456,7 @@
         "path": "/api/crm/release",
         "path_shape": "/api/crm/release",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:790",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:789",
         "kind": "api"
       },
       {
@@ -2465,7 +2464,7 @@
         "path": "/api/discover",
         "path_shape": "/api/discover",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_agents.go:32",
+        "source": "go_hive/go-hive/internal/server/routesagents/routes_agents.go:60",
         "kind": "api"
       },
       {
@@ -2481,7 +2480,7 @@
         "path": "/api/global/crm/status",
         "path_shape": "/api/global/crm/status",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:722",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:721",
         "kind": "api"
       },
       {
@@ -2489,7 +2488,7 @@
         "path": "/api/global/data/changes",
         "path_shape": "/api/global/data/changes",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:728",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:727",
         "kind": "api"
       },
       {
@@ -2497,7 +2496,7 @@
         "path": "/api/global/data/foreign-keys",
         "path_shape": "/api/global/data/foreign-keys",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:731",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:730",
         "kind": "api"
       },
       {
@@ -2505,7 +2504,7 @@
         "path": "/api/global/data/tables",
         "path_shape": "/api/global/data/tables",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:725",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:724",
         "kind": "api"
       },
       {
@@ -2513,7 +2512,7 @@
         "path": "/api/global/data/tables/{table}/group-counts",
         "path_shape": "/api/global/data/tables/{}/group-counts",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:740",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:739",
         "kind": "api"
       },
       {
@@ -2521,7 +2520,7 @@
         "path": "/api/global/data/tables/{table}/query",
         "path_shape": "/api/global/data/tables/{}/query",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:737",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:736",
         "kind": "api"
       },
       {
@@ -2529,7 +2528,7 @@
         "path": "/api/global/data/tables/{table}/rows",
         "path_shape": "/api/global/data/tables/{}/rows",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:749",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:748",
         "kind": "api"
       },
       {
@@ -2537,7 +2536,7 @@
         "path": "/api/global/data/tables/{table}/rows",
         "path_shape": "/api/global/data/tables/{}/rows",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:734",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:733",
         "kind": "api"
       },
       {
@@ -2545,7 +2544,7 @@
         "path": "/api/global/data/tables/{table}/rows",
         "path_shape": "/api/global/data/tables/{}/rows",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:746",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:745",
         "kind": "api"
       },
       {
@@ -2553,7 +2552,7 @@
         "path": "/api/global/data/tables/{table}/rows",
         "path_shape": "/api/global/data/tables/{}/rows",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:743",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers_global.go:742",
         "kind": "api"
       },
       {
@@ -2561,7 +2560,7 @@
         "path": "/api/health",
         "path_shape": "/api/health",
         "handler": "app.handleHealth",
-        "source": "go_hive/go-hive/internal/server/app.go:179",
+        "source": "go_hive/go-hive/internal/server/app.go:236",
         "kind": "api"
       },
       {
@@ -2569,7 +2568,7 @@
         "path": "/api/health/resources",
         "path_shape": "/api/health/resources",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_app_extra.go:146",
+        "source": "go_hive/go-hive/internal/server/routesapp/routes_app_extra.go:149",
         "kind": "api"
       },
       {
@@ -2659,7 +2658,7 @@
         "path": "/api/memories",
         "path_shape": "/api/memories",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_memories_extra.go:24",
+        "source": "go_hive/go-hive/internal/server/routes_memories_extra.go:29",
         "kind": "api"
       },
       {
@@ -2667,7 +2666,7 @@
         "path": "/api/memories/file",
         "path_shape": "/api/memories/file",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_memories_extra.go:36",
+        "source": "go_hive/go-hive/internal/server/routes_memories_extra.go:41",
         "kind": "api"
       },
       {
@@ -2675,7 +2674,7 @@
         "path": "/api/memories/file",
         "path_shape": "/api/memories/file",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_memories_extra.go:27",
+        "source": "go_hive/go-hive/internal/server/routes_memories_extra.go:32",
         "kind": "api"
       },
       {
@@ -2683,7 +2682,7 @@
         "path": "/api/memories/file",
         "path_shape": "/api/memories/file",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_memories_extra.go:30",
+        "source": "go_hive/go-hive/internal/server/routes_memories_extra.go:35",
         "kind": "api"
       },
       {
@@ -2691,7 +2690,7 @@
         "path": "/api/memories/file",
         "path_shape": "/api/memories/file",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_memories_extra.go:33",
+        "source": "go_hive/go-hive/internal/server/routes_memories_extra.go:38",
         "kind": "api"
       },
       {
@@ -2699,7 +2698,7 @@
         "path": "/api/memories/history",
         "path_shape": "/api/memories/history",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_memories_extra.go:39",
+        "source": "go_hive/go-hive/internal/server/routes_memories_extra.go:44",
         "kind": "api"
       },
       {
@@ -2707,7 +2706,7 @@
         "path": "/api/memories/restore",
         "path_shape": "/api/memories/restore",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_memories_extra.go:42",
+        "source": "go_hive/go-hive/internal/server/routes_memories_extra.go:47",
         "kind": "api"
       },
       {
@@ -2715,7 +2714,7 @@
         "path": "/api/memories/retired",
         "path_shape": "/api/memories/retired",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_memories_extra.go:45",
+        "source": "go_hive/go-hive/internal/server/routes_memories_extra.go:50",
         "kind": "api"
       },
       {
@@ -2835,7 +2834,7 @@
         "path": "/api/queen/create",
         "path_shape": "/api/queen/create",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_queens.go:1050",
+        "source": "go_hive/go-hive/internal/server/routes_queens.go:1068",
         "kind": "api"
       },
       {
@@ -2843,7 +2842,7 @@
         "path": "/api/queen/initialize-preferences",
         "path_shape": "/api/queen/initialize-preferences",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_queens.go:1053",
+        "source": "go_hive/go-hive/internal/server/routes_queens.go:1071",
         "kind": "api"
       },
       {
@@ -2851,7 +2850,7 @@
         "path": "/api/queen/profiles",
         "path_shape": "/api/queen/profiles",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_queens.go:1044",
+        "source": "go_hive/go-hive/internal/server/routes_queens.go:1062",
         "kind": "api"
       },
       {
@@ -2859,7 +2858,7 @@
         "path": "/api/queen/removed",
         "path_shape": "/api/queen/removed",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_queens.go:1047",
+        "source": "go_hive/go-hive/internal/server/routes_queens.go:1065",
         "kind": "api"
       },
       {
@@ -2867,7 +2866,7 @@
         "path": "/api/queen/{queen_id}/avatar",
         "path_shape": "/api/queen/{}/avatar",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_queens.go:1100",
+        "source": "go_hive/go-hive/internal/server/routes_queens.go:1118",
         "kind": "api"
       },
       {
@@ -2875,7 +2874,7 @@
         "path": "/api/queen/{queen_id}/avatar",
         "path_shape": "/api/queen/{}/avatar",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_queens.go:1097",
+        "source": "go_hive/go-hive/internal/server/routes_queens.go:1115",
         "kind": "api"
       },
       {
@@ -2883,7 +2882,7 @@
         "path": "/api/queen/{queen_id}/avatar",
         "path_shape": "/api/queen/{}/avatar",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_queens.go:1094",
+        "source": "go_hive/go-hive/internal/server/routes_queens.go:1112",
         "kind": "api"
       },
       {
@@ -2891,7 +2890,7 @@
         "path": "/api/queen/{queen_id}/llm",
         "path_shape": "/api/queen/{}/llm",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_queens.go:1079",
+        "source": "go_hive/go-hive/internal/server/routes_queens.go:1097",
         "kind": "api"
       },
       {
@@ -2899,7 +2898,7 @@
         "path": "/api/queen/{queen_id}/llm",
         "path_shape": "/api/queen/{}/llm",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_queens.go:1082",
+        "source": "go_hive/go-hive/internal/server/routes_queens.go:1100",
         "kind": "api"
       },
       {
@@ -2907,7 +2906,7 @@
         "path": "/api/queen/{queen_id}/overview",
         "path_shape": "/api/queen/{}/overview",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_queens.go:1091",
+        "source": "go_hive/go-hive/internal/server/routes_queens.go:1109",
         "kind": "api"
       },
       {
@@ -2915,7 +2914,7 @@
         "path": "/api/queen/{queen_id}/persona",
         "path_shape": "/api/queen/{}/persona",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_queens.go:1085",
+        "source": "go_hive/go-hive/internal/server/routes_queens.go:1103",
         "kind": "api"
       },
       {
@@ -2923,7 +2922,7 @@
         "path": "/api/queen/{queen_id}/persona",
         "path_shape": "/api/queen/{}/persona",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_queens.go:1088",
+        "source": "go_hive/go-hive/internal/server/routes_queens.go:1106",
         "kind": "api"
       },
       {
@@ -2931,7 +2930,7 @@
         "path": "/api/queen/{queen_id}/profile",
         "path_shape": "/api/queen/{}/profile",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_queens.go:1073",
+        "source": "go_hive/go-hive/internal/server/routes_queens.go:1091",
         "kind": "api"
       },
       {
@@ -2939,7 +2938,7 @@
         "path": "/api/queen/{queen_id}/profile",
         "path_shape": "/api/queen/{}/profile",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_queens.go:1076",
+        "source": "go_hive/go-hive/internal/server/routes_queens.go:1094",
         "kind": "api"
       },
       {
@@ -2947,7 +2946,7 @@
         "path": "/api/queen/{queen_id}/remove",
         "path_shape": "/api/queen/{}/remove",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_queens.go:1065",
+        "source": "go_hive/go-hive/internal/server/routes_queens.go:1083",
         "kind": "api"
       },
       {
@@ -2955,7 +2954,7 @@
         "path": "/api/queen/{queen_id}/restore",
         "path_shape": "/api/queen/{}/restore",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_queens.go:1069",
+        "source": "go_hive/go-hive/internal/server/routes_queens.go:1087",
         "kind": "api"
       },
       {
@@ -2963,7 +2962,7 @@
         "path": "/api/queen/{queen_id}/session",
         "path_shape": "/api/queen/{}/session",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_queens.go:1056",
+        "source": "go_hive/go-hive/internal/server/routes_queens.go:1074",
         "kind": "api"
       },
       {
@@ -2971,7 +2970,7 @@
         "path": "/api/queen/{queen_id}/session/new",
         "path_shape": "/api/queen/{}/session/new",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_queens.go:1062",
+        "source": "go_hive/go-hive/internal/server/routes_queens.go:1080",
         "kind": "api"
       },
       {
@@ -2979,7 +2978,7 @@
         "path": "/api/queen/{queen_id}/session/select",
         "path_shape": "/api/queen/{}/session/select",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_queens.go:1059",
+        "source": "go_hive/go-hive/internal/server/routes_queens.go:1077",
         "kind": "api"
       },
       {
@@ -3075,7 +3074,7 @@
         "path": "/api/queen/{queen_id}/soul/proposals/{proposal_id}/probe",
         "path_shape": "/api/queen/{}/soul/proposals/{}/probe",
         "handler": "routes.handleProbeSoulProposal",
-        "source": "go_hive/go-hive/internal/server/routes_soul_probe.go:42",
+        "source": "go_hive/go-hive/internal/server/routes_soul_probe.go:43",
         "kind": "api"
       },
       {
@@ -3131,7 +3130,7 @@
         "path": "/api/sentinel/credentials",
         "path_shape": "/api/sentinel/credentials",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_sentinel.go:113",
+        "source": "go_hive/go-hive/internal/server/routes_sentinel.go:126",
         "kind": "api"
       },
       {
@@ -3139,7 +3138,7 @@
         "path": "/api/sentinel/slack/validate",
         "path_shape": "/api/sentinel/slack/validate",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_sentinel.go:122",
+        "source": "go_hive/go-hive/internal/server/routes_sentinel.go:135",
         "kind": "api"
       },
       {
@@ -3147,7 +3146,7 @@
         "path": "/api/sentinel/telegram/detect-chat",
         "path_shape": "/api/sentinel/telegram/detect-chat",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_sentinel.go:119",
+        "source": "go_hive/go-hive/internal/server/routes_sentinel.go:132",
         "kind": "api"
       },
       {
@@ -3155,7 +3154,7 @@
         "path": "/api/sentinel/telegram/validate",
         "path_shape": "/api/sentinel/telegram/validate",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_sentinel.go:116",
+        "source": "go_hive/go-hive/internal/server/routes_sentinel.go:129",
         "kind": "api"
       },
       {
@@ -3195,7 +3194,7 @@
         "path": "/api/sessions/{first}/{second}",
         "path_shape": "/api/sessions/{}/{}",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_sessions.go:61",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:80",
         "kind": "api",
         "extension": true,
         "annotation": "Go compatibility alias: dispatches DELETE /api/sessions/history/{id} and DELETE /api/sessions/{id}/colony"
@@ -3205,7 +3204,7 @@
         "path": "/api/sessions/{session_id}",
         "path_shape": "/api/sessions/{}",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_sessions.go:78",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:93",
         "kind": "api"
       },
       {
@@ -3213,7 +3212,7 @@
         "path": "/api/sessions/{session_id}",
         "path_shape": "/api/sessions/{}",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_sessions.go:75",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:90",
         "kind": "api"
       },
       {
@@ -3221,7 +3220,7 @@
         "path": "/api/sessions/{session_id}/attachment/{filename}",
         "path_shape": "/api/sessions/{}/attachment/{}",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_sessions.go:90",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:105",
         "kind": "api"
       },
       {
@@ -3237,7 +3236,15 @@
         "path": "/api/sessions/{session_id}/chat",
         "path_shape": "/api/sessions/{}/chat",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/chat_routes.go:34",
+        "source": "go_hive/go-hive/internal/server/chat_routes.go:67",
+        "kind": "api"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/sessions/{session_id}/colony",
+        "path_shape": "/api/sessions/{}/colony",
+        "handler": "func(w http.ResponseWriter",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:74",
         "kind": "api"
       },
       {
@@ -3245,7 +3252,7 @@
         "path": "/api/sessions/{session_id}/colony",
         "path_shape": "/api/sessions/{}/colony",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_sessions.go:114",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:129",
         "kind": "api"
       },
       {
@@ -3253,7 +3260,7 @@
         "path": "/api/sessions/{session_id}/colony/resolve_missed",
         "path_shape": "/api/sessions/{}/colony/resolve_missed",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_sessions.go:120",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:135",
         "kind": "api"
       },
       {
@@ -3261,7 +3268,7 @@
         "path": "/api/sessions/{session_id}/colony/skills",
         "path_shape": "/api/sessions/{}/colony/skills",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_colony_workers.go:652",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers.go:660",
         "kind": "api"
       },
       {
@@ -3269,7 +3276,7 @@
         "path": "/api/sessions/{session_id}/colony/tools",
         "path_shape": "/api/sessions/{}/colony/tools",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_colony_workers.go:655",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers.go:663",
         "kind": "api"
       },
       {
@@ -3285,7 +3292,7 @@
         "path": "/api/sessions/{session_id}/credential-form",
         "path_shape": "/api/sessions/{}/credential-form",
         "handler": "routes.handleCredentialForm",
-        "source": "go_hive/go-hive/internal/server/routes_credentials.go:94",
+        "source": "go_hive/go-hive/internal/server/routes_credentials.go:96",
         "kind": "api"
       },
       {
@@ -3293,7 +3300,7 @@
         "path": "/api/sessions/{session_id}/dismiss-colony-pivot",
         "path_shape": "/api/sessions/{}/dismiss-colony-pivot",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_sessions.go:117",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:132",
         "kind": "api"
       },
       {
@@ -3301,7 +3308,7 @@
         "path": "/api/sessions/{session_id}/events",
         "path_shape": "/api/sessions/{}/events",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/chat_routes.go:37",
+        "source": "go_hive/go-hive/internal/server/chat_routes.go:70",
         "kind": "api"
       },
       {
@@ -3309,7 +3316,7 @@
         "path": "/api/sessions/{session_id}/events/history",
         "path_shape": "/api/sessions/{}/events/history",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_sessions.go:123",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:138",
         "kind": "api"
       },
       {
@@ -3317,7 +3324,7 @@
         "path": "/api/sessions/{session_id}/fork",
         "path_shape": "/api/sessions/{}/fork",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_sessions.go:129",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:144",
         "kind": "api"
       },
       {
@@ -3325,7 +3332,7 @@
         "path": "/api/sessions/{session_id}/live_tools",
         "path_shape": "/api/sessions/{}/live_tools",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_sessions.go:81",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:96",
         "kind": "api"
       },
       {
@@ -3385,7 +3392,7 @@
         "path": "/api/sessions/{session_id}/report-bundle",
         "path_shape": "/api/sessions/{}/report-bundle",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_sessions.go:135",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:150",
         "kind": "api"
       },
       {
@@ -3393,7 +3400,7 @@
         "path": "/api/sessions/{session_id}/reveal",
         "path_shape": "/api/sessions/{}/reveal",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_sessions.go:132",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:147",
         "kind": "api"
       },
       {
@@ -3417,7 +3424,7 @@
         "path": "/api/sessions/{session_id}/snapshot",
         "path_shape": "/api/sessions/{}/snapshot",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_sessions.go:87",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:102",
         "kind": "api"
       },
       {
@@ -3425,7 +3432,7 @@
         "path": "/api/sessions/{session_id}/stats",
         "path_shape": "/api/sessions/{}/stats",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_sessions.go:84",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:99",
         "kind": "api"
       },
       {
@@ -3457,7 +3464,7 @@
         "path": "/api/sessions/{session_id}/title",
         "path_shape": "/api/sessions/{}/title",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_sessions.go:126",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:141",
         "kind": "api"
       },
       {
@@ -3465,7 +3472,7 @@
         "path": "/api/sessions/{session_id}/triggers",
         "path_shape": "/api/sessions/{}/triggers",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_sessions.go:96",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:111",
         "kind": "api"
       },
       {
@@ -3473,7 +3480,7 @@
         "path": "/api/sessions/{session_id}/triggers",
         "path_shape": "/api/sessions/{}/triggers",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_sessions.go:99",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:114",
         "kind": "api"
       },
       {
@@ -3481,7 +3488,7 @@
         "path": "/api/sessions/{session_id}/triggers/{trigger_id}",
         "path_shape": "/api/sessions/{}/triggers/{}",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_sessions.go:102",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:117",
         "kind": "api"
       },
       {
@@ -3489,7 +3496,7 @@
         "path": "/api/sessions/{session_id}/triggers/{trigger_id}/activate",
         "path_shape": "/api/sessions/{}/triggers/{}/activate",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_sessions.go:108",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:123",
         "kind": "api"
       },
       {
@@ -3497,7 +3504,7 @@
         "path": "/api/sessions/{session_id}/triggers/{trigger_id}/deactivate",
         "path_shape": "/api/sessions/{}/triggers/{}/deactivate",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_sessions.go:111",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:126",
         "kind": "api"
       },
       {
@@ -3505,7 +3512,7 @@
         "path": "/api/sessions/{session_id}/triggers/{trigger_id}/run",
         "path_shape": "/api/sessions/{}/triggers/{}/run",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_sessions.go:105",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:120",
         "kind": "api"
       },
       {
@@ -3513,7 +3520,7 @@
         "path": "/api/sessions/{session_id}/upload-attachment",
         "path_shape": "/api/sessions/{}/upload-attachment",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_sessions.go:93",
+        "source": "go_hive/go-hive/internal/server/routes_sessions.go:108",
         "kind": "api"
       },
       {
@@ -3521,7 +3528,7 @@
         "path": "/api/sessions/{session_id}/workers",
         "path_shape": "/api/sessions/{}/workers",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_colony_workers.go:643",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers.go:651",
         "kind": "api"
       },
       {
@@ -3545,7 +3552,7 @@
         "path": "/api/sessions/{session_id}/workers/{worker_id}",
         "path_shape": "/api/sessions/{}/workers/{}",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_colony_workers.go:646",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers.go:654",
         "kind": "api"
       },
       {
@@ -3553,7 +3560,7 @@
         "path": "/api/sessions/{session_id}/workers/{worker_id}/conversation",
         "path_shape": "/api/sessions/{}/workers/{}/conversation",
         "handler": "func(w http.ResponseWriter",
-        "source": "go_hive/go-hive/internal/server/routes_colony_workers.go:649",
+        "source": "go_hive/go-hive/internal/server/routes_colony_workers.go:657",
         "kind": "api"
       },
       {
@@ -3619,7 +3626,7 @@
         "path": "/api/startup-status",
         "path_shape": "/api/startup-status",
         "handler": "app.handleStartupStatus",
-        "source": "go_hive/go-hive/internal/server/app.go:180",
+        "source": "go_hive/go-hive/internal/server/app.go:237",
         "kind": "api"
       }
     ],
@@ -3628,22 +3635,22 @@
   },
   "summary": {
     "reference_routes": 222,
-    "target_routes": 225,
+    "target_routes": 226,
     "python_routes": 222,
-    "go_routes": 225,
-    "missing_in_target": 2,
+    "go_routes": 226,
+    "missing_in_target": 1,
     "missing_in_target_effective": 0,
-    "missing_in_target_served_by_alias": 2,
-    "missing_in_go": 2,
+    "missing_in_target_served_by_alias": 1,
+    "missing_in_go": 1,
     "missing_in_go_effective": 0,
-    "missing_in_go_served_by_alias": 2,
+    "missing_in_go_served_by_alias": 1,
     "extra_in_target": 5,
     "extra_in_target_api": 5,
     "extra_in_target_spa": 0,
     "extra_in_go": 5,
     "extra_in_go_api": 5,
     "extra_in_go_spa": 0,
-    "method_mismatch": 1
+    "method_mismatch": 0
   },
   "missing_in_target": [
     {
@@ -3652,15 +3659,6 @@
       "path_shape": "/api/sessions/history/{}",
       "handler": "handle_delete_history_session",
       "source": "core/framework/server/routes_sessions.py:3207",
-      "kind": "api",
-      "served_by_alias": "DELETE /api/sessions/{first}/{second}"
-    },
-    {
-      "method": "DELETE",
-      "path": "/api/sessions/{session_id}/colony",
-      "path_shape": "/api/sessions/{}/colony",
-      "handler": "handle_unload_colony",
-      "source": "core/framework/server/routes_sessions.py:3214",
       "kind": "api",
       "served_by_alias": "DELETE /api/sessions/{first}/{second}"
     }
@@ -3673,15 +3671,6 @@
       "path_shape": "/api/sessions/history/{}",
       "handler": "handle_delete_history_session",
       "source": "core/framework/server/routes_sessions.py:3207",
-      "kind": "api",
-      "served_by_alias": "DELETE /api/sessions/{first}/{second}"
-    },
-    {
-      "method": "DELETE",
-      "path": "/api/sessions/{session_id}/colony",
-      "path_shape": "/api/sessions/{}/colony",
-      "handler": "handle_unload_colony",
-      "source": "core/framework/server/routes_sessions.py:3214",
       "kind": "api",
       "served_by_alias": "DELETE /api/sessions/{first}/{second}"
     }
@@ -3722,7 +3711,7 @@
       "path": "/api/sessions/{first}/{second}",
       "path_shape": "/api/sessions/{}/{}",
       "handler": "func(w http.ResponseWriter",
-      "source": "go_hive/go-hive/internal/server/routes_sessions.go:61",
+      "source": "go_hive/go-hive/internal/server/routes_sessions.go:80",
       "kind": "api",
       "extension": true,
       "annotation": "Go compatibility alias: dispatches DELETE /api/sessions/history/{id} and DELETE /api/sessions/{id}/colony"
@@ -3738,22 +3727,7 @@
       "annotation": "Go extension: library-wide skill reload; Python exposes per-queen reload only"
     }
   ],
-  "method_mismatch": [
-    {
-      "path_shape": "/api/sessions/{}/colony",
-      "reference_methods": [
-        "DELETE",
-        "POST"
-      ],
-      "target_methods": [
-        "POST"
-      ],
-      "only_reference": [
-        "DELETE"
-      ],
-      "only_target": []
-    }
-  ],
+  "method_mismatch": [],
   "missing_in_go": [
     {
       "method": "DELETE",
@@ -3761,15 +3735,6 @@
       "path_shape": "/api/sessions/history/{}",
       "handler": "handle_delete_history_session",
       "source": "core/framework/server/routes_sessions.py:3207",
-      "kind": "api",
-      "served_by_alias": "DELETE /api/sessions/{first}/{second}"
-    },
-    {
-      "method": "DELETE",
-      "path": "/api/sessions/{session_id}/colony",
-      "path_shape": "/api/sessions/{}/colony",
-      "handler": "handle_unload_colony",
-      "source": "core/framework/server/routes_sessions.py:3214",
       "kind": "api",
       "served_by_alias": "DELETE /api/sessions/{first}/{second}"
     }
@@ -3810,7 +3775,7 @@
       "path": "/api/sessions/{first}/{second}",
       "path_shape": "/api/sessions/{}/{}",
       "handler": "func(w http.ResponseWriter",
-      "source": "go_hive/go-hive/internal/server/routes_sessions.go:61",
+      "source": "go_hive/go-hive/internal/server/routes_sessions.go:80",
       "kind": "api",
       "extension": true,
       "annotation": "Go compatibility alias: dispatches DELETE /api/sessions/history/{id} and DELETE /api/sessions/{id}/colony"

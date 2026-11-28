@@ -181,7 +181,7 @@ func TestSlackErrorEnvelope(t *testing.T) {
 		t.Fatal(err)
 	}
 	object := result.(map[string]any)
-	if object["error"] != "Channel not found" || object["error_code"] != "channel_not_found" {
+	if object["error"] != "Channel not found or bot is not a member" || object["error_code"] != "channel_not_found" {
 		t.Fatalf("result = %v", object)
 	}
 }

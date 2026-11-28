@@ -38,7 +38,27 @@ type Option struct {
 	Cons         []string       `json:"cons"`
 	Confidence   float64        `json:"confidence"`
 
+	// confidenceSet records an explicit "confidence" key (including 0). A
+	// missing key carries the pydantic default 0.5; an explicit 0 stays 0.
+	confidenceSet bool
+
 	Extra map[string]json.RawMessage `json:"-"`
+}
+
+// EffectiveConfidence is the confidence the option carries. decision.py
+// declares confidence with default=0.5, so only a supplied value (or
+// SetConfidence) overrides it.
+func (o Option) EffectiveConfidence() float64 {
+	if !o.confidenceSet && o.Confidence == 0 {
+		return 0.5
+	}
+	return o.Confidence
+}
+
+// SetConfidence records an explicit confidence, including 0.
+func (o *Option) SetConfidence(confidence float64) {
+	o.Confidence = confidence
+	o.confidenceSet = true
 }
 
 func (o Option) MarshalJSON() ([]byte, error) {
@@ -53,6 +73,7 @@ func (o Option) MarshalJSON() ([]byte, error) {
 	if p.Cons == nil {
 		p.Cons = []string{}
 	}
+	p.Confidence = o.EffectiveConfidence()
 	b, err := json.Marshal(p)
 	if err != nil {
 		return nil, err
@@ -67,8 +88,21 @@ func (o *Option) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return err
 	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+	// Pydantic fields without defaults: id, description, action_type.
+	if err := requireFields(raw, "option", "id", "description", "action_type"); err != nil {
+		return err
+	}
+	_, confidencePresent := raw["confidence"]
+	if !confidencePresent {
+		p.Confidence = 0.5
+	}
 	*o = Option(p)
 	o.Extra = extras
+	o.confidenceSet = confidencePresent
 	if o.ActionParams == nil {
 		o.ActionParams = map[string]any{}
 	}
@@ -77,9 +111,6 @@ func (o *Option) UnmarshalJSON(b []byte) error {
 	}
 	if o.Cons == nil {
 		o.Cons = []string{}
-	}
-	if o.Confidence == 0 {
-		o.Confidence = 0.5
 	}
 	return nil
 }
@@ -116,6 +147,17 @@ func (o *Outcome) UnmarshalJSON(b []byte) error {
 	extras, err := unmarshalStruct(b, &p)
 	if err != nil {
 		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+	// Pydantic field without a default: success.
+	if err := requireFields(raw, "outcome", "success"); err != nil {
+		return err
+	}
+	if p.Timestamp.IsZero() {
+		p.Timestamp = NowTimestamp()
 	}
 	*o = Outcome(p)
 	o.Extra = extras
@@ -251,6 +293,9 @@ func (d Decision) MarshalJSON() ([]byte, error) {
 	if p.DecisionType == "" {
 		p.DecisionType = DecisionCustom
 	}
+	if p.Timestamp.IsZero() {
+		p.Timestamp = NowTimestamp()
+	}
 	if p.Options == nil {
 		p.Options = []Option{}
 	}
@@ -283,6 +328,17 @@ func (d *Decision) UnmarshalJSON(b []byte) error {
 	extras, err := unmarshalStruct(b, &p)
 	if err != nil {
 		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+	// Pydantic fields without defaults: id, node_id, intent.
+	if err := requireFields(raw, "decision", "id", "node_id", "intent"); err != nil {
+		return err
+	}
+	if p.Timestamp.IsZero() {
+		p.Timestamp = NowTimestamp()
 	}
 	*d = Decision(p)
 	d.Extra = extras

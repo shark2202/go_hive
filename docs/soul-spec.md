@@ -8,7 +8,7 @@
 
 ## 1. Storage layout
 
-`$HIVE_HOME/agents/queens/<queen_id>/soul/`
+`$HIVE_HOME/queens/<queen_id>/soul/`
 
 | File | Content |
 |---|---|
@@ -17,7 +17,7 @@
 | `log.jsonl` | Append-only: one line per save, `{version, at, author, note, edits[]}`. `author` is `reflection`, `sediment`, or the editing surface |
 | `proposals/<id>.json` | A reflection's proposed edits: `{id, created_at, base_version, edits[], summary, status, applied[], sources[], bootstrap, probes[]}`; an edit is `{op, section, text, old, date, evidence[], reason, expired}` |
 | `probes.json` | Fixed questions for the "try her out" probe: `[{q, anchor}]` |
-| `state.json` | Reflection bookkeeping: `{cursors:{session_id: last_event_at}, last_run, attempts:{day,count,at}}` |
+| `state.json` | Reflection bookkeeping: `{cursors:{session_id: last_event_at}, last_run, attempts:{day,count,at}}`；Go 额外写 `last_error` / `last_error_at`（增量字段，失败可见，不写 `last_run`） |
 | `sediment.json` | **Go-only** bookkeeping for the sediment seam (what it wrote, when); never soul content |
 
 Atomic writes are temp-file + rename, 2-space JSON with `": "`/`", "` spacing and no trailing newline (Python `json.dumps(indent=2)` shape). Sections are a map; item text is trimmed and blank items are dropped on read.
@@ -93,7 +93,7 @@ Configured section order; empty sections omitted; `date` shortened to `M/D`; not
 
 ## 4. The daily reflection
 
-`DailyRunner.Run` (server lifetime): one pass at startup (catches up a day the process was down), then every 10 minutes; passes are sequential, never overlapping. `ReflectionDue`:
+`DailyRunner.Run` (server lifetime): one pass after a two-minute settle delay (upstream `scheduler(first_after_s=120.0)`, catching up a day the process was down), then every 10 minutes; passes are sequential, never overlapping. The model one reflection runs on follows upstream `llm_for`: the `worker_llm` slot when her `model` is `worker` and that slot is configured, else her `queen_llm.<id>` section, else the main `llm`. `ReflectionDue`:
 
 - local hour ≥ `cfg.hour`;
 - `last_run` ≠ today;
@@ -118,11 +118,16 @@ In `review` mode the proposal waits; `auto` applies immediately. Cursors advance
 | `POST /api/queen/{id}/soul/proposals/{pid}/decide` | `{"accept": [indexes] | null}`; `null`/absent = all; non-pending → 409 `This proposal was already <status>`; bad type → 400 `'accept' must be a list of change indexes, or null for all` |
 | `POST /api/queen/{id}/soul/rollback` | `{"version": N}` restores that history version; bad type → 400 `'version' must be a version number` |
 | `POST /api/queen/{id}/soul/reflect` | Manual run; `{"bootstrap": bool}`; already reflecting → 409 `She is reflecting already`; pending proposal → 409 `Decide on the waiting proposal first`; accepted → 202 `{"started": true}` |
-| `POST /api/queen/{id}/soul/proposals/{pid}/probe` | Asks her the `probes.json` questions against the proposal; no pending proposal → 404 `No pending proposal by that id`; no questions → 409; already probing → 409 `Already trying her out` |
+| `POST /api/queen/{id}/soul/proposals/{pid}/probe` | Asks her the `probes.json` questions against the proposal, before and after the edits; a question whose header names a speaker id (`[Ann(12345)]:`) is answered with that speaker's memory files appended as `<recalled_memories>` exactly as live recall brings them (her scope before global, at most 3); no pending proposal → 404 `No pending proposal by that id`; no questions → 409; already probing → 409 `Already trying her out` |
 
 ## 6. Known divergence (registered)
 
-`sediment.go` is **Go-only** (`// Parity-exempt: Go-only sediment seam`): after a *memory* reflection, its durable conclusions are also written into the soul (section `now` or the first configured one, ≤3 conclusions, ≤240 runes each), with `sediment.json` tracking what it wrote so it can drop them again. Upstream only has the daily soul reflection. Storage stays upstream-shaped (`soul.json` + `history/` + `log.jsonl` via `Save`), so the soul routes read it unchanged.
+`sediment.go` is **Go-only** (`// Parity-exempt: Go-only sediment seam`): after a *memory* reflection, its durable conclusions are also offered to the soul (section `now` or the first configured one, ≤3 conclusions, ≤240 runes each). Upstream only has the daily soul reflection. The seam obeys the soul's approval rules like that daily reflection does:
+
+- `mode: auto` — the conclusions are saved at once, `sediment.json` tracks what the seam wrote so it may drop those items again when the section fills (never a human's item).
+- `mode: review` (the default) — nothing is written to the soul; the conclusions become one **pending proposal** (`proposals/<date>-memory-<HHMMSS>.json`, only `add` edits, `sources` = the memory files) that the owner decides through the ordinary decide route. An existing pending proposal blocks the pass entirely, exactly as it blocks the daily reflection, and review mode never evicts: a full section drops the conclusion instead.
+
+Storage stays upstream-shaped (`soul.json` + `history/` + `log.jsonl` via `Save`), so the soul routes read it unchanged.
 
 ## 7. Invariants and checks
 

@@ -3,6 +3,7 @@ import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { Loader2, WifiOff, KeyRound, X, Component, Cloud } from "lucide-react";
 import type { GraphNode, NodeStatus } from "@/components/graph-types";
 import ChatPanel, { type ChatMessage, type ImageContent } from "@/components/ChatPanel";
+import ColonyNameField, { colonySlug, isUsableColonySlug } from "@/components/ColonyNameField";
 import CredentialsModal, {
   type Credential,
   clearCredentialCache,
@@ -301,6 +302,19 @@ export default function ColonyChat() {
     ? { name: linkedQueenProfile.name, role: linkedQueenProfile.title }
     : fallbackQueenInfo;
   const colonyName = colony?.name ?? colonyId ?? "Colony";
+  // The queen profile id (e.g. ``queen_custom_72601``) is the on-disk
+  // identity a colony session lives under:
+  // ``colonies/<colony>/queens/<queen>/sessions``. ``queenProfileId`` is
+  // resolved from the live session / history / colony metadata; ``queenName``
+  // is the older metadata-only field. Neither is a display name, and the
+  // ``default`` sentinel is not a loadable profile.
+  const colonyQueenId =
+    colony?.queenProfileId && colony.queenProfileId !== "default"
+      ? colony.queenProfileId
+      : colony?.queenName && colony.queenName !== "default"
+        ? colony.queenName
+        : null;
+  const isColonyRoute = Boolean(colony?.id && colony?.agentPath);
 
   // Mark colony as visited when navigating to it
   useEffect(() => {
@@ -312,17 +326,53 @@ export default function ColonyChat() {
   // tool emitted COLONY_CREATED and the user clicked the link before
   // the 30s status poll), re-fetch the colony list so agentPath
   // resolves and the session-load effect below can actually run.
-  // Without this the page gets stuck at a blank loading state until
-  // the user manually refreshes the browser.
-  const refreshAttemptedRef = useRef(false);
+  //
+  // This lookup is also what resolves a GHOST route (/colony/<unknown>):
+  // no colony and no agentPath means loadSession never runs, so nothing
+  // ever clears `loading` — the page used to sit on "Connecting to
+  // agent..." forever. We only declare the route missing once this
+  // refresh has SETTLED and the colony is still absent; while it is in
+  // flight the normal connecting state is correct.
+  //
+  // `colonyLookupSettledFor` stores the colony id whose lookup resolved,
+  // so switching routes can't reuse a previous route's verdict.
+  const [colonyLookupSettledFor, setColonyLookupSettledFor] = useState<string | null>(null);
   useEffect(() => {
     if (!colonyId || isNewChat) return;
     if (colony) return; // already in cache
     if (routeState.agentPath) return; // home-page new-chat flow already has the path
-    if (refreshAttemptedRef.current) return; // don't thrash
-    refreshAttemptedRef.current = true;
-    refreshColonies();
+    let cancelled = false;
+    // refresh() resolves after fetchColonies() enqueued the refreshed list;
+    // React 18 batches that with the settle update below, so a colony that
+    // does exist is present in the same render that marks the lookup settled.
+    void Promise.resolve(refreshColonies())
+      .catch(() => {
+        // A failed refresh is still a settled lookup — render not-found
+        // rather than spinning forever.
+      })
+      .then(() => {
+        if (!cancelled) setColonyLookupSettledFor(colonyId);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [colonyId, colony, isNewChat, routeState.agentPath, refreshColonies]);
+
+  // The route names no colony that the lookup could resolve, and no
+  // session can ever boot for it (agentPath would come from the colony).
+  const colonyMissing =
+    !colony &&
+    !isNewChat &&
+    !routeState.agentPath &&
+    colonyLookupSettledFor === colonyId;
+
+  // A lookup for this route is still outstanding (no verdict yet).
+  const colonyLookupPending =
+    Boolean(colonyId) &&
+    !colony &&
+    !isNewChat &&
+    !routeState.agentPath &&
+    colonyLookupSettledFor !== colonyId;
 
   // ── Core state ───────────────────────────────────────────────────────────
 
@@ -466,12 +516,27 @@ export default function ColonyChat() {
   // sessionId/colonyName to ColonyPanel while the user is on B — the Data
   // tab then queries colony B for one of A's tables → "table X doesn't exist".
   const loadSeqRef = useRef(0);
+  // Queen profile id the bound session was opened/resumed under. The
+  // session-gone recovery re-creates the session by id; without this the
+  // backend looks under ``queens/default``, misses a custom queen's
+  // transcript, and silently mints a fresh default-queen session.
+  const boundQueenIdRef = useRef<string | null>(null);
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
   const updateState = useCallback((patch: Partial<AgentState>) => {
     setAgentState((prev) => ({ ...prev, ...patch }));
   }, []);
+
+  // Mirror the unresolved-route verdict into agent state so anything that
+  // reads `loading` stops seeing a connection that can never happen — and so a
+  // fresh out-of-cache lookup (including ghost→ghost navigation) shows the
+  // connecting state while it is legitimately in flight. (The not-found render
+  // branch is the product behavior; this is state hygiene.)
+  useEffect(() => {
+    if (colonyMissing && agentState.loading) updateState({ loading: false });
+    else if (colonyLookupPending && !agentState.loading) updateState({ loading: true });
+  }, [colonyMissing, colonyLookupPending, agentState.loading, updateState]);
 
   const upsertMessage = useCallback(
     (chatMsg: ChatMessage, options?: { reconcileOptimisticUser?: boolean }) => {
@@ -670,6 +735,11 @@ export default function ColonyChat() {
       let liveSession: LiveSession | undefined;
       let isResumedSession = false;
       let coldRestoreId: string | undefined;
+      // The queen directory that actually holds the cold colony transcript.
+      // ``HistorySession.queen_id`` is derived from the on-disk path
+      // (colonies/<c>/queens/<q>/sessions/<id>), so it stays correct even
+      // when metadata's queen_name is stale after a rename.
+      let coldQueenId: string | null = null;
       let prefetchedRestore: SessionRestoreResult | null = null;
 
       // Check for existing live session for this agent.
@@ -718,7 +788,10 @@ export default function ColonyChat() {
             // list_colony_sessions sorts newest-first; pick the first
             // session that actually has messages.
             const newest = sessions.find((s) => s.has_messages);
-            if (newest) coldRestoreId = newest.session_id;
+            if (newest) {
+              coldRestoreId = newest.session_id;
+              coldQueenId = newest.queen_id ?? null;
+            }
           } catch {
             // proceed
           }
@@ -798,13 +871,54 @@ export default function ColonyChat() {
 
         // Create new session (pass coldRestoreId for resume).
         // ``agentPath`` here is the colony slug — pass it as colony_id.
-        liveSession = await sessionsApi.create({
+        // A colony session's transcript lives under
+        // ``colonies/<colony>/queens/<queen>/sessions``: an empty
+        // queenName makes the backend look under ``queens/default``, miss
+        // the custom queen's saved chat, and silently create a fresh
+        // default-queen session. Prefer the cold session's own queen_id
+        // (its directory), then the colony's resolved queen profile.
+        if (isColonyClick && coldRestoreId && !coldQueenId) {
+          // Without the persisted session's queen we cannot promise the
+          // resume will reopen its directory. Refuse to create rather than
+          // mint a fresh default-queen session.
+          throw new Error(
+            `Could not determine the queen that owns this colony's saved chat (session ${coldRestoreId}).`,
+          );
+        }
+        const resumeQueenName = isColonyClick
+          ? coldQueenId === "default"
+            ? undefined // legacy default tree: no queen profile to name
+            : coldQueenId || colonyQueenId || undefined
+          : undefined;
+        const created = await sessionsApi.create({
           colonyId: agentSlug(agentPath),
           queenResumeFrom: coldRestoreId ?? undefined,
+          ...(resumeQueenName ? { queenName: resumeQueenName } : {}),
         });
+        // A colony-bound resume must reopen the persisted session under the
+        // same id. A different id means the backend could not find the
+        // transcript under the requested queen and fell back to a fresh
+        // session — surface that instead of binding a default-queen chat
+        // and pretending the history is gone.
+        if (isColonyClick && coldRestoreId && created.session_id !== coldRestoreId) {
+          throw new Error(
+            `Could not restore this colony's saved chat (session ${coldRestoreId}).`,
+          );
+        }
+        liveSession = created;
       }
 
       const session = liveSession!;
+      // Remember the queen the bound session actually runs under, so a
+      // session-gone resume reopens the same on-disk transcript. The
+      // ``default`` sentinel is not a loadable queen profile.
+      const boundQueenId =
+        session.queen_id && session.queen_id !== "default"
+          ? session.queen_id
+          : coldQueenId && coldQueenId !== "default"
+            ? coldQueenId
+            : null;
+      boundQueenIdRef.current = boundQueenId ?? colonyQueenId ?? null;
       const displayName = formatAgentDisplayName(session.colony_id || agentPath);
       let restoredMessages: ChatMessage[] = [];
       let restoredReplayState: ReplayState | null = null;
@@ -922,7 +1036,7 @@ export default function ColonyChat() {
     } finally {
       loadingRef.current = false;
     }
-  }, [agentPath, isNewChat, routeState.prompt, routeState.initialGoal, updateState]);
+  }, [agentPath, isNewChat, routeState.prompt, routeState.initialGoal, updateState, colonyQueenId, isColonyRoute]);
 
   // Load session on mount or when agent path changes.
   //
@@ -950,6 +1064,7 @@ export default function ColonyChat() {
     setAgentState(defaultAgentState());
     replayStateRef.current = newReplayState();
     queenPhaseRef.current = "independent";
+    boundQueenIdRef.current = null;
     suppressIntroRef.current = false;
     loadingRef.current = false;
     loadSession();
@@ -1117,6 +1232,7 @@ export default function ColonyChat() {
 
         case "execution_paused":
         case "execution_failed":
+        case "payment_required":
         case "client_output_delta":
         case "client_input_received":
         case "client_input_requested":
@@ -1236,6 +1352,27 @@ export default function ColonyChat() {
                 updateGraphNodeStatus(event.node_id, "error");
                 const errMsg = (event.data?.error as string) || "unknown error";
                 appendNodeLog(event.node_id, `${ts} ERROR Execution failed: ${errMsg}`);
+              }
+              markAllNodesAs(["running", "looping"], "pending");
+            }
+          }
+
+          if (event.type === "payment_required") {
+            // The provider billed-gated this turn (402). The turn cannot
+            // continue; clear the streaming/queued UI so the card is the
+            // visible state and the composer isn't stuck "busy". The card
+            // itself is upserted from emittedMessages above.
+            updateState({
+              isStreaming: false,
+              awaitingInput: false,
+              pendingQuestions: null,
+              pendingQuestionSource: null,
+            });
+            if (!isQueen) {
+              if (event.node_id) {
+                updateGraphNodeStatus(event.node_id, "error");
+                const reason = (event.data?.message as string) || "payment required";
+                appendNodeLog(event.node_id, `${ts} ERROR Payment required: ${reason}`);
               }
               markAllNodesAs(["running", "looping"], "pending");
             }
@@ -1825,10 +1962,24 @@ export default function ColonyChat() {
       resumingRef.current = true;
       void (async () => {
         try {
-          await sessionsApi.create({
+          // Re-create the session under the queen it was bound to. Passing
+          // only ``colonyId`` makes the planner resolve the default queen
+          // tree, miss a custom queen's session directory, and mint a
+          // fresh default-queen session.
+          const resumed = await sessionsApi.create({
             colonyId: agentSlug(agentPath),
             queenResumeFrom: goneSessionId,
+            ...(isColonyRoute && boundQueenIdRef.current
+              ? { queenName: boundQueenIdRef.current }
+              : {}),
           });
+          if (resumed.session_id !== goneSessionId) {
+            // The runtime could not reopen the persisted session and
+            // created a different one. Do not rebind the SSE stream to it.
+            throw new Error(
+              `resumed as ${resumed.session_id} instead of ${goneSessionId}`,
+            );
+          }
           // Session is back in the runtime under the same id. Bump the
           // nonce to force useMultiSSE to re-subscribe (sessions map
           // is unchanged, so it wouldn't re-run on its own).
@@ -1839,6 +1990,9 @@ export default function ColonyChat() {
             goneSessionId,
             err,
           );
+          updateState({
+            error: `Could not resume this colony's session (${goneSessionId}).`,
+          });
         } finally {
           resumingRef.current = false;
         }
@@ -2202,8 +2356,8 @@ export default function ColonyChat() {
 
   const handlePivotConfirm = useCallback(async () => {
     if (pivotSubmitting) return;
-    const colony = pivotColonyName.trim();
-    if (!colony) {
+    const colony = colonySlug(pivotColonyName);
+    if (!isUsableColonySlug(colony)) {
       setPivotError("Pick a slug for the new colony first.");
       return;
     }
@@ -2286,7 +2440,11 @@ export default function ColonyChat() {
 
   // ── Render ─────────────────────────────────────────────────────────────
 
-  if (!colony && !isNewChat && !agentState.loading) {
+  // Ghost route: the colony lookup settled without a match, so there is no
+  // agent to connect to. Render not-found instead of leaving the loading
+  // overlay (which nothing would ever clear — loadSession never runs without
+  // an agentPath) on screen forever.
+  if (colonyMissing) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <p className="text-sm text-muted-foreground">{t("Colony not found: {id}", { id: colonyId ?? "" })}</p>
@@ -2469,16 +2627,10 @@ export default function ColonyChat() {
                   {t("Colony name")}{" "}
                   <span className="text-muted-foreground/40">{t("(you choose — slug)")}</span>
                 </label>
-                <input
-                  type="text"
+                <ColonyNameField
                   value={pivotColonyName}
-                  onChange={(e) =>
-                    setPivotColonyName(
-                      e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""),
-                    )
-                  }
+                  onChange={setPivotColonyName}
                   placeholder={t("e.g. uber_eats_research")}
-                  className="w-full rounded-md border border-border/60 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary"
                   autoFocus
                 />
               </div>
@@ -2516,7 +2668,7 @@ export default function ColonyChat() {
               </button>
               <button
                 onClick={handlePivotConfirm}
-                disabled={!pivotColonyName.trim() || pivotSubmitting}
+                disabled={!isUsableColonySlug(colonySlug(pivotColonyName)) || pivotSubmitting}
                 className="px-3 py-1.5 rounded-md text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
               >
                 {pivotSubmitting ? t("Creating…") : t("Create Colony")}

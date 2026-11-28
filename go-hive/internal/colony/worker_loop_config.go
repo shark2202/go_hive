@@ -55,6 +55,18 @@ func BuildWorkerLoopConfig(overrides map[string]any) (agentloop.LoopConfig, erro
 	cfg.ToolCallBudget = DefaultWorkerLoopConfig["tool_call_budget"]
 	cfg.ToolCallHardMultiple = DefaultWorkerLoopConfig["tool_call_hard_multiple"]
 	cfg.ToolCallLifetimeBudget = DefaultWorkerLoopConfig["tool_call_lifetime_budget"]
+	// A26: keep the upstream worker profile's response-text stall guard on.
+	// Python's worker LoopConfig carries stall_detection_threshold=3
+	// (internals/types.py), and the guard runs at 6f *before* the 6h text-only
+	// worker policy: three mutually similar assistant responses fail the turn
+	// with "Node stalled: N similar responses". The Go port used to pin 999,
+	// which disabled that guard for workers and let a repetitive worker run to
+	// the iteration cap instead of failing at parity. The 6h policy
+	// (grace + synthesized failed report) still handles the text-only turns
+	// the n-gram guard does not catch (dissimilar text), which is exactly the
+	// upstream split.
+	cfg.StallDetectionThreshold = agentloop.DefaultStallDetectionThreshold
+
 	// The worker hard stop is the multiple rule's 30*3=90, not the queen's
 	// explicit 50: clear the default's pinned limit so the worker profile keeps
 	// its documented 30/90 budget (audit: worker 30/90, queen 30/50).

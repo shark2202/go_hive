@@ -121,12 +121,21 @@ func csvWrite(_ context.Context, rt *Runtime, input map[string]any) (any, error)
 }
 
 func csvAppend(_ context.Context, rt *Runtime, input map[string]any) (any, error) {
-	path, problem := csvPath(rt, input)
-	if problem != nil {
-		return problem, nil
+	raw := stringArg(input, "path")
+	if raw == "" {
+		return map[string]any{"error": "path is required"}, nil
 	}
+	path, err := rt.ResolveSafePath(raw)
+	if err != nil {
+		return map[string]any{"error": err.Error()}, nil
+	}
+	// Upstream checks existence before the .csv suffix, so a missing non-.csv
+	// path reports "File not found" instead of the extension error.
 	if !fileExists(path) {
-		return map[string]any{"error": fmt.Sprintf("File not found: %s. Use csv_write to create a new file.", stringArg(input, "path"))}, nil
+		return map[string]any{"error": fmt.Sprintf("File not found: %s. Use csv_write to create a new file.", raw)}, nil
+	}
+	if len(raw) < 4 || !hasSuffixFold(raw, ".csv") {
+		return map[string]any{"error": "File must have .csv extension"}, nil
 	}
 	rows := mapRows(input["rows"])
 	if len(rows) == 0 {
@@ -139,11 +148,19 @@ func csvAppend(_ context.Context, rt *Runtime, input map[string]any) (any, error
 	if err := writeCSV(path, table.columns, rows, true); err != nil {
 		return map[string]any{"error": "Failed to append to CSV: " + err.Error()}, nil
 	}
+	// Upstream recounts the file after the write: only non-empty records count,
+	// so an appended row whose keys all fall outside the columns does not raise
+	// total_rows. Re-reading also keeps blank/partial rows consistent with
+	// csv_read and csv_info.
+	updated, err := readCSV(path)
+	if err != nil {
+		return map[string]any{"error": err.Error()}, nil
+	}
 	return map[string]any{
 		"success":       true,
-		"path":          stringArg(input, "path"),
+		"path":          raw,
 		"rows_appended": len(rows),
-		"total_rows":    table.totalRows + len(rows),
+		"total_rows":    updated.totalRows,
 	}, nil
 }
 

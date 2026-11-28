@@ -1,18 +1,18 @@
 {
   "schema_version": 1,
   "module": "github.com/shark2202/go_hive/go-hive",
-  "generated_at_commit": "5154313071a3",
+  "generated_at_commit": "d90acd8b4e9d",
   "generated_from": "architecture/model.yaml + go list -json ./... + internal/server mux.HandleFunc + internal/eventbus event_type.go",
   "stats": {
-    "packages": 88,
-    "package_edges": 237,
+    "packages": 106,
+    "package_edges": 311,
     "capabilities": 12,
-    "capability_edges": 85,
+    "capability_edges": 88,
     "layers": 9,
     "contracts": 34,
-    "http_routes": 225,
+    "http_routes": 226,
     "event_types": 77,
-    "warnings": 2
+    "warnings": 7
   },
   "layers": [
     {
@@ -24,9 +24,10 @@
         "cmd/hive",
         "cmd/hive-browser",
         "cmd/hive-cred",
-        "cmd/hive-longmemeval"
+        "cmd/hive-longmemeval",
+        "hive"
       ],
-      "package_count": 4
+      "package_count": 5
     },
     {
       "id": "harness",
@@ -55,9 +56,14 @@
       "depth": 1,
       "description": "组合根：读配置、构造 home / 工具注册表 / MCP runtime / 会话与 colony 运行时，再把命令路由到下游。",
       "packages": [
-        "internal/cli"
+        "internal/cli",
+        "internal/cli/browsercli",
+        "internal/cli/browsersupervisor",
+        "internal/cli/cliargs",
+        "internal/cli/cliguard",
+        "internal/cli/toolcatalog"
       ],
-      "package_count": 1
+      "package_count": 6
     },
     {
       "id": "transport",
@@ -67,9 +73,13 @@
       "packages": [
         "internal/runtimehealth",
         "internal/server",
+        "internal/server/routesagents",
+        "internal/server/routesapp",
+        "internal/server/routesbrowser",
+        "internal/server/routeutil",
         "internal/server/uiembed"
       ],
-      "package_count": 3
+      "package_count": 7
     },
     {
       "id": "orchestration",
@@ -101,10 +111,9 @@
       "description": "唯一的执行原语 AgentLoop：一次 turn 内的模型调用、工具批处理、压缩、预算与停泊。",
       "packages": [
         "internal/agentloop",
-        "internal/llmjudge",
-        "internal/orchestrator"
+        "internal/llmjudge"
       ],
-      "package_count": 3
+      "package_count": 2
     },
     {
       "id": "capability",
@@ -112,6 +121,7 @@
       "depth": 5,
       "description": "可被循环调用的能力：工具、集成、LLM 传输、记忆、技能、soul、凭据、出站消息。",
       "packages": [
+        "internal/astanalyze",
         "internal/attachments",
         "internal/charts",
         "internal/credentials",
@@ -122,6 +132,7 @@
         "internal/mcpregistry",
         "internal/mcpregistry/nativecli",
         "internal/memory",
+        "internal/nativehttp",
         "internal/pipeline",
         "internal/senders",
         "internal/skills",
@@ -140,14 +151,16 @@
         "internal/tools/integrations/enrichment",
         "internal/tools/integrations/excel",
         "internal/tools/integrations/gworkspace",
+        "internal/tools/integrations/image",
         "internal/tools/integrations/infra",
         "internal/tools/integrations/pdf",
         "internal/tools/integrations/schedchat",
+        "internal/tools/integrations/scrape",
         "internal/tools/integrations/social",
         "internal/tools/integrations/webintel",
         "internal/visionfallback"
       ],
-      "package_count": 34
+      "package_count": 38
     },
     {
       "id": "foundation",
@@ -162,6 +175,7 @@
         "internal/hiveclock",
         "internal/hivehome",
         "internal/logging",
+        "internal/netguard",
         "internal/platform",
         "internal/pyenv",
         "internal/quality",
@@ -172,7 +186,7 @@
         "internal/storage",
         "internal/version"
       ],
-      "package_count": 16
+      "package_count": 17
     },
     {
       "id": "unmapped",
@@ -180,9 +194,13 @@
       "depth": 99,
       "description": "生成器为 model.yaml 尚未登记的包临时创建的层；补齐后应消失。",
       "packages": [
-        "internal/channels"
+        "internal/astgrep",
+        "internal/channels",
+        "internal/lsp",
+        "internal/streamtoken",
+        "internal/testframework"
       ],
-      "package_count": 1
+      "package_count": 5
     }
   ],
   "nodes": [
@@ -355,6 +373,18 @@
       "dependents": 1
     },
     {
+      "id": "pkg:hive",
+      "kind": "technical",
+      "package": "hive",
+      "layer": "entry",
+      "responsibility": "公共 Go SDK facade：给衍生项目提供 loop/colony/session/queen-profile/tool/event/memory/soul/skill/playbook/tracker 的稳定封装，不暴露 internal 实现。",
+      "stability": "evolving",
+      "entrypoint": true,
+      "note": "",
+      "direct_dependencies": 18,
+      "dependents": 0
+    },
+    {
       "id": "pkg:internal/release",
       "kind": "technical",
       "package": "internal/release",
@@ -387,8 +417,68 @@
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 33,
+      "direct_dependencies": 41,
       "dependents": 4
+    },
+    {
+      "id": "pkg:internal/cli/browsercli",
+      "kind": "technical",
+      "package": "internal/cli/browsercli",
+      "layer": "assembly",
+      "responsibility": "Browser CLI 命令族：bridge 客户端、命令解析、ensure/control、help/usage；通过 root adapter 接入 CLI 分发。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 3,
+      "dependents": 1
+    },
+    {
+      "id": "pkg:internal/cli/browsersupervisor",
+      "kind": "technical",
+      "package": "internal/cli/browsersupervisor",
+      "layer": "assembly",
+      "responsibility": "Browser Bridge 生命周期子包：启动/停止、二进制解析、健康检查、进程属性与子进程环境；通过窄 seam 注入控制 keepalive。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 2,
+      "dependents": 2
+    },
+    {
+      "id": "pkg:internal/cli/cliargs",
+      "kind": "technical",
+      "package": "internal/cli/cliargs",
+      "layer": "assembly",
+      "responsibility": "CLI argparse 兼容层：命令/参数/位置参数类型、解析与 help/usage 渲染；不依赖 internal/cli。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 1,
+      "dependents": 2
+    },
+    {
+      "id": "pkg:internal/cli/cliguard",
+      "kind": "technical",
+      "package": "internal/cli/cliguard",
+      "layer": "assembly",
+      "responsibility": "CLI panic 边界：把未捕获 panic 映射为 Python compat 的崩溃头、traceback 与退出码；由 cmd/* 入口复用。",
+      "stability": "stable",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 1,
+      "dependents": 1
+    },
+    {
+      "id": "pkg:internal/cli/toolcatalog",
+      "kind": "technical",
+      "package": "internal/cli/toolcatalog",
+      "layer": "assembly",
+      "responsibility": "CLI 工具目录投影：task/search 工具、flat surface、Tool Library 与 lifecycle 行；不依赖 internal/cli 的运行时装配。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 10,
+      "dependents": 1
     },
     {
       "id": "pkg:internal/runtimehealth",
@@ -411,8 +501,56 @@
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 39,
-      "dependents": 2
+      "direct_dependencies": 43,
+      "dependents": 5
+    },
+    {
+      "id": "pkg:internal/server/routesagents",
+      "kind": "technical",
+      "package": "internal/server/routesagents",
+      "layer": "transport",
+      "responsibility": "Agent 路由子包：discover、delete、metadata 更新与 check-agent；通过回调注入 session 与凭据校验，不依赖父 server 包。",
+      "stability": "stable",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 3,
+      "dependents": 1
+    },
+    {
+      "id": "pkg:internal/server/routesapp",
+      "kind": "technical",
+      "package": "internal/server/routesapp",
+      "layer": "transport",
+      "responsibility": "App-extra HTTP 路由子包：资源健康、browser status/stream 与 tab reveal；通过 Deps 注入资源快照，不依赖父 server 包。",
+      "stability": "stable",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 2,
+      "dependents": 1
+    },
+    {
+      "id": "pkg:internal/server/routesbrowser",
+      "kind": "technical",
+      "package": "internal/server/routesbrowser",
+      "layer": "transport",
+      "responsibility": "Browser panel HTTP 路由子包：contexts/tabs/close 三端点；通过 Deps 注入 bridge URL 与 client，不依赖父 server 包。",
+      "stability": "stable",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 1,
+      "dependents": 1
+    },
+    {
+      "id": "pkg:internal/server/routeutil",
+      "kind": "technical",
+      "package": "internal/server/routeutil",
+      "layer": "transport",
+      "responsibility": "HTTP/JSON 路由共享原语：JSON 写入、请求体解码、Python truthy/int 兼容与内部错误响应。",
+      "stability": "stable",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 0,
+      "dependents": 4
     },
     {
       "id": "pkg:internal/server/uiembed",
@@ -436,7 +574,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 2,
-      "dependents": 3
+      "dependents": 4
     },
     {
       "id": "pkg:internal/claudecode",
@@ -459,8 +597,8 @@
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 14,
-      "dependents": 4
+      "direct_dependencies": 15,
+      "dependents": 6
     },
     {
       "id": "pkg:internal/host",
@@ -472,7 +610,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 7,
-      "dependents": 1
+      "dependents": 2
     },
     {
       "id": "pkg:internal/longmemeval",
@@ -495,8 +633,8 @@
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 1,
-      "dependents": 2
+      "direct_dependencies": 2,
+      "dependents": 3
     },
     {
       "id": "pkg:internal/queen",
@@ -507,8 +645,8 @@
       "stability": "stable",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 0,
-      "dependents": 4
+      "direct_dependencies": 1,
+      "dependents": 5
     },
     {
       "id": "pkg:internal/queenmail",
@@ -544,7 +682,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 3,
-      "dependents": 4
+      "dependents": 5
     },
     {
       "id": "pkg:internal/sessionreport",
@@ -567,8 +705,8 @@
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 3,
-      "dependents": 4
+      "direct_dependencies": 4,
+      "dependents": 5
     },
     {
       "id": "pkg:internal/tracker",
@@ -579,8 +717,8 @@
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 0,
-      "dependents": 4
+      "direct_dependencies": 3,
+      "dependents": 6
     },
     {
       "id": "pkg:internal/triggers",
@@ -604,7 +742,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 11,
-      "dependents": 9
+      "dependents": 10
     },
     {
       "id": "pkg:internal/llmjudge",
@@ -619,16 +757,16 @@
       "dependents": 2
     },
     {
-      "id": "pkg:internal/orchestrator",
+      "id": "pkg:internal/astanalyze",
       "kind": "technical",
-      "package": "internal/orchestrator",
-      "layer": "runtime",
-      "responsibility": "Python 图编排时代遗留的 DataBuffer 原语（权限、幻觉内容校验）。",
-      "stability": "stable",
+      "package": "internal/astanalyze",
+      "layer": "capability",
+      "responsibility": "只读仓库 AST 分析核心（ast_analyze）：逐文件事实、unit/import 图、wave、风险与有界报告；属 post-1.0 Go-only 扩展。",
+      "stability": "evolving",
       "entrypoint": false,
-      "note": "未接线：仓库内无调用方；本 port 以 run_worker 的扇出取代图编排。",
-      "direct_dependencies": 0,
-      "dependents": 0
+      "note": "",
+      "direct_dependencies": 1,
+      "dependents": 1
     },
     {
       "id": "pkg:internal/attachments",
@@ -664,7 +802,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 2,
-      "dependents": 5
+      "dependents": 8
     },
     {
       "id": "pkg:internal/globaldb",
@@ -676,7 +814,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 0,
-      "dependents": 1
+      "dependents": 3
     },
     {
       "id": "pkg:internal/hiveconf",
@@ -688,7 +826,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 2,
-      "dependents": 4
+      "dependents": 5
     },
     {
       "id": "pkg:internal/llm",
@@ -700,7 +838,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 3,
-      "dependents": 18
+      "dependents": 20
     },
     {
       "id": "pkg:internal/maintenance",
@@ -711,7 +849,7 @@
       "stability": "stable",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 2,
+      "direct_dependencies": 3,
       "dependents": 2
     },
     {
@@ -748,7 +886,19 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 4,
-      "dependents": 4
+      "dependents": 6
+    },
+    {
+      "id": "pkg:internal/nativehttp",
+      "kind": "technical",
+      "package": "internal/nativehttp",
+      "layer": "capability",
+      "responsibility": "原生 HTTP 工具面（http_request/download/upload）：请求、响应、下载/上传、原子落盘与会话 cookie；属 post-1.0 Go-only 扩展。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 1,
+      "dependents": 1
     },
     {
       "id": "pkg:internal/pipeline",
@@ -760,7 +910,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 7,
-      "dependents": 1
+      "dependents": 2
     },
     {
       "id": "pkg:internal/senders",
@@ -784,7 +934,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 3,
-      "dependents": 6
+      "dependents": 8
     },
     {
       "id": "pkg:internal/soul",
@@ -796,7 +946,7 @@
       "entrypoint": false,
       "note": "反思的身份读取通过 soul 侧接口 QueenProfileSource（LoadQueenProfile / FormatQueenIdentityPrompt）由装配层 internal/cli 注入 queen 实现；soul 不再 import internal/queen，反向依赖已清零。",
       "direct_dependencies": 1,
-      "dependents": 2
+      "dependents": 3
     },
     {
       "id": "pkg:internal/tools",
@@ -807,8 +957,8 @@
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 2,
-      "dependents": 12
+      "direct_dependencies": 3,
+      "dependents": 14
     },
     {
       "id": "pkg:internal/tools/builtin",
@@ -819,8 +969,8 @@
       "stability": "stable",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 3,
-      "dependents": 1
+      "direct_dependencies": 7,
+      "dependents": 2
     },
     {
       "id": "pkg:internal/tools/integrationkit",
@@ -832,7 +982,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 1,
-      "dependents": 16
+      "dependents": 18
     },
     {
       "id": "pkg:internal/tools/integrations",
@@ -843,8 +993,8 @@
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
-      "direct_dependencies": 19,
-      "dependents": 1
+      "direct_dependencies": 21,
+      "dependents": 2
     },
     {
       "id": "pkg:internal/tools/integrations/ai",
@@ -967,6 +1117,18 @@
       "dependents": 1
     },
     {
+      "id": "pkg:internal/tools/integrations/image",
+      "kind": "technical",
+      "package": "internal/tools/integrations/image",
+      "layer": "capability",
+      "responsibility": "图像生成领域子包：image_generate 目录、artifact/SSRF/reference 处理与 action 实现；只依赖 integrationkit 与 stdlib。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 1,
+      "dependents": 1
+    },
+    {
       "id": "pkg:internal/tools/integrations/infra",
       "kind": "technical",
       "package": "internal/tools/integrations/infra",
@@ -996,6 +1158,18 @@
       "package": "internal/tools/integrations/schedchat",
       "layer": "capability",
       "responsibility": "调度/聊天领域子包（第九个领域子包）：Brevo / Cal.com / Calendly / Discord / Mattermost 的目录、40 个 action 实现与共享 helper；只 import integrationkit。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 1,
+      "dependents": 1
+    },
+    {
+      "id": "pkg:internal/tools/integrations/scrape",
+      "kind": "technical",
+      "package": "internal/tools/integrations/scrape",
+      "layer": "capability",
+      "responsibility": "Web-scrape 领域子包（第十六个领域子包）：web_scrape 工具目录、单 action 实现、无依赖 HTML 词法/抽取栈与 go-rod 浏览器池；只 import integrationkit。",
       "stability": "evolving",
       "entrypoint": false,
       "note": "",
@@ -1060,7 +1234,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 0,
-      "dependents": 15
+      "dependents": 18
     },
     {
       "id": "pkg:internal/envcontract",
@@ -1084,7 +1258,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 0,
-      "dependents": 5
+      "dependents": 6
     },
     {
       "id": "pkg:internal/hiveclock",
@@ -1108,7 +1282,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 0,
-      "dependents": 21
+      "dependents": 26
     },
     {
       "id": "pkg:internal/logging",
@@ -1121,6 +1295,18 @@
       "note": "",
       "direct_dependencies": 1,
       "dependents": 2
+    },
+    {
+      "id": "pkg:internal/netguard",
+      "kind": "technical",
+      "package": "internal/netguard",
+      "layer": "foundation",
+      "responsibility": "出站 URL/IP 安全策略：拒绝回环、私网、链路本地、CGNAT、ULA 与 metadata 地址，并在拨号时校验解析 IP。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 0,
+      "dependents": 1
     },
     {
       "id": "pkg:internal/platform",
@@ -1144,7 +1330,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 0,
-      "dependents": 6
+      "dependents": 9
     },
     {
       "id": "pkg:internal/quality",
@@ -1204,7 +1390,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 0,
-      "dependents": 6
+      "dependents": 8
     },
     {
       "id": "pkg:internal/storage",
@@ -1216,7 +1402,7 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 3,
-      "dependents": 3
+      "dependents": 4
     },
     {
       "id": "pkg:internal/version",
@@ -1228,7 +1414,19 @@
       "entrypoint": false,
       "note": "",
       "direct_dependencies": 0,
-      "dependents": 3
+      "dependents": 4
+    },
+    {
+      "id": "pkg:internal/astgrep",
+      "kind": "technical",
+      "package": "internal/astgrep",
+      "layer": "unmapped",
+      "responsibility": "未在 architecture/model.yaml 中登记（生成器占位）。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 0,
+      "dependents": 2
     },
     {
       "id": "pkg:internal/channels",
@@ -1241,6 +1439,42 @@
       "note": "",
       "direct_dependencies": 0,
       "dependents": 2
+    },
+    {
+      "id": "pkg:internal/lsp",
+      "kind": "technical",
+      "package": "internal/lsp",
+      "layer": "unmapped",
+      "responsibility": "未在 architecture/model.yaml 中登记（生成器占位）。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 0,
+      "dependents": 1
+    },
+    {
+      "id": "pkg:internal/streamtoken",
+      "kind": "technical",
+      "package": "internal/streamtoken",
+      "layer": "unmapped",
+      "responsibility": "未在 architecture/model.yaml 中登记（生成器占位）。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 1,
+      "dependents": 1
+    },
+    {
+      "id": "pkg:internal/testframework",
+      "kind": "technical",
+      "package": "internal/testframework",
+      "layer": "unmapped",
+      "responsibility": "未在 architecture/model.yaml 中登记（生成器占位）。",
+      "stability": "evolving",
+      "entrypoint": false,
+      "note": "",
+      "direct_dependencies": 1,
+      "dependents": 1
     },
     {
       "id": "cap:goal-outcome",
@@ -1436,6 +1670,9 @@
         "internal/tools/builtin",
         "internal/tools/integrations",
         "internal/tools/integrationkit",
+        "internal/nativehttp",
+        "internal/netguard",
+        "internal/astanalyze",
         "internal/mcpregistry",
         "internal/mcpregistry/nativecli",
         "internal/credentials",
@@ -1798,6 +2035,96 @@
       "kind": "depends"
     },
     {
+      "from": "pkg:hive",
+      "to": "pkg:internal/agentloop",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:hive",
+      "to": "pkg:internal/colony",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:hive",
+      "to": "pkg:internal/eventbus",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:hive",
+      "to": "pkg:internal/hiveconf",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:hive",
+      "to": "pkg:internal/hivehome",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:hive",
+      "to": "pkg:internal/host",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:hive",
+      "to": "pkg:internal/llm",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:hive",
+      "to": "pkg:internal/memory",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:hive",
+      "to": "pkg:internal/playbook",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:hive",
+      "to": "pkg:internal/queen",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:hive",
+      "to": "pkg:internal/schemas",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:hive",
+      "to": "pkg:internal/server",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:hive",
+      "to": "pkg:internal/session",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:hive",
+      "to": "pkg:internal/skills",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:hive",
+      "to": "pkg:internal/soul",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:hive",
+      "to": "pkg:internal/tools",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:hive",
+      "to": "pkg:internal/tracker",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:hive",
+      "to": "pkg:internal/version",
+      "kind": "depends"
+    },
+    {
       "from": "pkg:internal/agentloop",
       "to": "pkg:internal/hiveclock",
       "kind": "depends"
@@ -1863,6 +2190,11 @@
       "kind": "depends"
     },
     {
+      "from": "pkg:internal/astanalyze",
+      "to": "pkg:internal/astgrep",
+      "kind": "depends"
+    },
+    {
       "from": "pkg:internal/charts",
       "to": "pkg:internal/hivehome",
       "kind": "depends"
@@ -1899,11 +2231,6 @@
     },
     {
       "from": "pkg:internal/cli",
-      "to": "pkg:internal/arghelp",
-      "kind": "depends"
-    },
-    {
-      "from": "pkg:internal/cli",
       "to": "pkg:internal/atomicfs",
       "kind": "depends"
     },
@@ -1919,6 +2246,31 @@
     },
     {
       "from": "pkg:internal/cli",
+      "to": "pkg:internal/cli/browsercli",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli",
+      "to": "pkg:internal/cli/browsersupervisor",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli",
+      "to": "pkg:internal/cli/cliargs",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli",
+      "to": "pkg:internal/cli/cliguard",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli",
+      "to": "pkg:internal/cli/toolcatalog",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli",
       "to": "pkg:internal/colony",
       "kind": "depends"
     },
@@ -1930,6 +2282,11 @@
     {
       "from": "pkg:internal/cli",
       "to": "pkg:internal/eventbus",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli",
+      "to": "pkg:internal/globaldb",
       "kind": "depends"
     },
     {
@@ -1979,6 +2336,16 @@
     },
     {
       "from": "pkg:internal/cli",
+      "to": "pkg:internal/pipeline",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli",
+      "to": "pkg:internal/pyenv",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli",
       "to": "pkg:internal/queen",
       "kind": "depends"
     },
@@ -2024,6 +2391,11 @@
     },
     {
       "from": "pkg:internal/cli",
+      "to": "pkg:internal/testframework",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli",
       "to": "pkg:internal/tools",
       "kind": "depends"
     },
@@ -2053,6 +2425,91 @@
       "kind": "depends"
     },
     {
+      "from": "pkg:internal/cli/browsercli",
+      "to": "pkg:internal/cli/browsersupervisor",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli/browsercli",
+      "to": "pkg:internal/cli/cliargs",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli/browsercli",
+      "to": "pkg:internal/hivehome",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli/browsersupervisor",
+      "to": "pkg:internal/hivehome",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli/browsersupervisor",
+      "to": "pkg:internal/server",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli/cliargs",
+      "to": "pkg:internal/arghelp",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli/cliguard",
+      "to": "pkg:internal/tracker",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli/toolcatalog",
+      "to": "pkg:internal/colony",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli/toolcatalog",
+      "to": "pkg:internal/hivehome",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli/toolcatalog",
+      "to": "pkg:internal/llm",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli/toolcatalog",
+      "to": "pkg:internal/memory",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli/toolcatalog",
+      "to": "pkg:internal/server",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli/toolcatalog",
+      "to": "pkg:internal/skills",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli/toolcatalog",
+      "to": "pkg:internal/tasks",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli/toolcatalog",
+      "to": "pkg:internal/tools",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli/toolcatalog",
+      "to": "pkg:internal/tools/builtin",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/cli/toolcatalog",
+      "to": "pkg:internal/tools/integrations",
+      "kind": "depends"
+    },
+    {
       "from": "pkg:internal/colony",
       "to": "pkg:internal/agentloop",
       "kind": "depends"
@@ -2060,6 +2517,11 @@
     {
       "from": "pkg:internal/colony",
       "to": "pkg:internal/atomicfs",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/colony",
+      "to": "pkg:internal/credentials",
       "kind": "depends"
     },
     {
@@ -2233,6 +2695,11 @@
       "kind": "depends"
     },
     {
+      "from": "pkg:internal/maintenance",
+      "to": "pkg:internal/pyenv",
+      "kind": "depends"
+    },
+    {
       "from": "pkg:internal/mcpregistry",
       "to": "pkg:internal/arghelp",
       "kind": "depends"
@@ -2293,6 +2760,11 @@
       "kind": "depends"
     },
     {
+      "from": "pkg:internal/nativehttp",
+      "to": "pkg:internal/netguard",
+      "kind": "depends"
+    },
+    {
       "from": "pkg:internal/pipeline",
       "to": "pkg:internal/credentials",
       "kind": "depends"
@@ -2329,7 +2801,17 @@
     },
     {
       "from": "pkg:internal/playbook",
+      "to": "pkg:internal/atomicfs",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/playbook",
       "to": "pkg:internal/pyenv",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/queen",
+      "to": "pkg:internal/atomicfs",
       "kind": "depends"
     },
     {
@@ -2514,11 +2996,6 @@
     },
     {
       "from": "pkg:internal/server",
-      "to": "pkg:internal/resources",
-      "kind": "depends"
-    },
-    {
-      "from": "pkg:internal/server",
       "to": "pkg:internal/runtimehealth",
       "kind": "depends"
     },
@@ -2535,6 +3012,26 @@
     {
       "from": "pkg:internal/server",
       "to": "pkg:internal/sentinel",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server",
+      "to": "pkg:internal/server/routesagents",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server",
+      "to": "pkg:internal/server/routesapp",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server",
+      "to": "pkg:internal/server/routesbrowser",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server",
+      "to": "pkg:internal/server/routeutil",
       "kind": "depends"
     },
     {
@@ -2569,6 +3066,11 @@
     },
     {
       "from": "pkg:internal/server",
+      "to": "pkg:internal/streamtoken",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server",
       "to": "pkg:internal/tasks",
       "kind": "depends"
     },
@@ -2590,6 +3092,36 @@
     {
       "from": "pkg:internal/server",
       "to": "pkg:internal/triggers",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server/routesagents",
+      "to": "pkg:internal/agents",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server/routesagents",
+      "to": "pkg:internal/hivehome",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server/routesagents",
+      "to": "pkg:internal/server/routeutil",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server/routesapp",
+      "to": "pkg:internal/resources",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server/routesapp",
+      "to": "pkg:internal/server/routeutil",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/server/routesbrowser",
+      "to": "pkg:internal/server/routeutil",
       "kind": "depends"
     },
     {
@@ -2643,6 +3175,11 @@
       "kind": "depends"
     },
     {
+      "from": "pkg:internal/streamtoken",
+      "to": "pkg:internal/credentials",
+      "kind": "depends"
+    },
+    {
       "from": "pkg:internal/tasks",
       "to": "pkg:internal/agentloop",
       "kind": "depends"
@@ -2658,6 +3195,21 @@
       "kind": "depends"
     },
     {
+      "from": "pkg:internal/tasks",
+      "to": "pkg:internal/pyenv",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/testframework",
+      "to": "pkg:internal/atomicfs",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tools",
+      "to": "pkg:internal/credentials",
+      "kind": "depends"
+    },
+    {
       "from": "pkg:internal/tools",
       "to": "pkg:internal/hivehome",
       "kind": "depends"
@@ -2669,12 +3221,32 @@
     },
     {
       "from": "pkg:internal/tools/builtin",
+      "to": "pkg:internal/astanalyze",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tools/builtin",
+      "to": "pkg:internal/astgrep",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tools/builtin",
       "to": "pkg:internal/atomicfs",
       "kind": "depends"
     },
     {
       "from": "pkg:internal/tools/builtin",
       "to": "pkg:internal/llm",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tools/builtin",
+      "to": "pkg:internal/lsp",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tools/builtin",
+      "to": "pkg:internal/nativehttp",
       "kind": "depends"
     },
     {
@@ -2759,6 +3331,11 @@
     },
     {
       "from": "pkg:internal/tools/integrations",
+      "to": "pkg:internal/tools/integrations/image",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tools/integrations",
       "to": "pkg:internal/tools/integrations/infra",
       "kind": "depends"
     },
@@ -2770,6 +3347,11 @@
     {
       "from": "pkg:internal/tools/integrations",
       "to": "pkg:internal/tools/integrations/schedchat",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tools/integrations",
+      "to": "pkg:internal/tools/integrations/scrape",
       "kind": "depends"
     },
     {
@@ -2833,6 +3415,11 @@
       "kind": "depends"
     },
     {
+      "from": "pkg:internal/tools/integrations/image",
+      "to": "pkg:internal/tools/integrationkit",
+      "kind": "depends"
+    },
+    {
       "from": "pkg:internal/tools/integrations/infra",
       "to": "pkg:internal/tools/integrationkit",
       "kind": "depends"
@@ -2848,6 +3435,11 @@
       "kind": "depends"
     },
     {
+      "from": "pkg:internal/tools/integrations/scrape",
+      "to": "pkg:internal/tools/integrationkit",
+      "kind": "depends"
+    },
+    {
       "from": "pkg:internal/tools/integrations/social",
       "to": "pkg:internal/tools/integrationkit",
       "kind": "depends"
@@ -2855,6 +3447,21 @@
     {
       "from": "pkg:internal/tools/integrations/webintel",
       "to": "pkg:internal/tools/integrationkit",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tracker",
+      "to": "pkg:internal/globaldb",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tracker",
+      "to": "pkg:internal/schemas",
+      "kind": "depends"
+    },
+    {
+      "from": "pkg:internal/tracker",
+      "to": "pkg:internal/storage",
       "kind": "depends"
     },
     {
@@ -2890,6 +3497,11 @@
     {
       "from": "pkg:internal/agentloop",
       "to": "cap:worker-dispatch",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/astanalyze",
+      "to": "cap:tools-credentials",
       "kind": "realizes"
     },
     {
@@ -3005,6 +3617,16 @@
     {
       "from": "pkg:internal/memory",
       "to": "cap:queen-triage",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/nativehttp",
+      "to": "cap:tools-credentials",
+      "kind": "realizes"
+    },
+    {
+      "from": "pkg:internal/netguard",
+      "to": "cap:tools-credentials",
       "kind": "realizes"
     },
     {
@@ -3488,6 +4110,9 @@
         "internal/tools/builtin",
         "internal/tools/integrations",
         "internal/tools/integrationkit",
+        "internal/nativehttp",
+        "internal/netguard",
+        "internal/astanalyze",
         "internal/mcpregistry",
         "internal/mcpregistry/nativecli",
         "internal/credentials",
@@ -4415,7 +5040,7 @@
       ],
       "definition": "internal/cli/loader.go:serveCommand（hive serve / hive open）",
       "guarantee": "默认绑定 127.0.0.1:8787；支持 --host / --port / --colony(可重复) / --model / --open / --verbose / --debug；启动 HTTP+SSE 并阻塞到信号；退出码 0 正常、非 0 启动失败。",
-      "failure_behavior": "端口占用或监听失败打印错误并返回非 0；非 loopback 且未设 HIVE_DESKTOP_TOKEN 时拒绝启动返回 1；SIGINT/SIGTERM 触发优雅停止。",
+      "failure_behavior": "端口占用或监听失败打印错误并返回非 0；命名非 loopback 且未设 HIVE_DESKTOP_TOKEN 时打印警告；显式 0.0.0.0/:: 通配绑定允许不设 token；SIGINT/SIGTERM 触发优雅停止。",
       "compatibility": "additive",
       "enforcement": [
         "test"
@@ -4527,14 +5152,39 @@
   },
   "warnings": [
     {
+      "code": "reverse_dependency",
+      "severity": "warning",
+      "message": "反向依赖：internal/streamtoken（unmapped）导入了更高层 internal/credentials（capability）"
+    },
+    {
+      "code": "reverse_dependency",
+      "severity": "warning",
+      "message": "反向依赖：internal/testframework（unmapped）导入了更高层 internal/atomicfs（foundation）"
+    },
+    {
+      "code": "unmapped_package",
+      "severity": "warning",
+      "message": "包 internal/astgrep 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
+    },
+    {
       "code": "unmapped_package",
       "severity": "warning",
       "message": "包 internal/channels 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
     },
     {
-      "code": "no_importer",
-      "severity": "info",
-      "message": "包 internal/orchestrator 没有任何内部导入方（可能是未接线代码或纯入口约定）"
+      "code": "unmapped_package",
+      "severity": "warning",
+      "message": "包 internal/lsp 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
+    },
+    {
+      "code": "unmapped_package",
+      "severity": "warning",
+      "message": "包 internal/streamtoken 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
+    },
+    {
+      "code": "unmapped_package",
+      "severity": "warning",
+      "message": "包 internal/testframework 未在 model.yaml 中映射；已用占位层 unmapped 画出，请补充分层与职责"
     }
   ]
 }

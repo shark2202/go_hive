@@ -47,7 +47,7 @@ UNKNOWN_TOOL = "no_such_tool_xyz"
 # Volatile fields: the time server embeds "now", which cannot be equal across
 # two runs minutes apart. Masked before comparing call text.
 TIMESTAMP_RE = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:[+-]\d{2}:\d{2}|Z)?")
-PROTOCOL_VERSION = "2025-06-18"
+PROTOCOL_VERSION = "2025-11-25"
 
 
 def canonical(value) -> str:

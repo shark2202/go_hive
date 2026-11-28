@@ -1,6 +1,12 @@
 package agentloop
 
 // Judge evaluation shared by the loop hook and its llmjudge adapter.
+//
+// This is the generic turn-quality seam inherited from the graph-era agent
+// design. Callers opt in explicitly through ConfigureJudge; the Hive 1.0.15
+// queen and colony production paths do not (queen skip_judge=True, colony
+// worker/overseer loops built with judge=None), so a colony natural stop is
+// accepted without an extra model call or a [Judge feedback] injection.
 
 import (
 	"context"
@@ -36,6 +42,14 @@ const (
 type JudgeVerdict struct {
 	Action   JudgeAction
 	Feedback string
+	// Silent marks a RETRY that came from the "tool calls mean keep working"
+	// short-circuit: upstream's feedback=None. The loop continues without
+	// injecting a [Judge feedback] message, and normalizeJudgeVerdict must not
+	// invent one.
+	Silent bool
+	// Implicit marks a verdict produced by the local output-key gate instead of
+	// a configured judge; the published judge_type is "implicit".
+	Implicit bool
 }
 
 // JudgeRequest carries the evidence a judge evaluates. Criteria is always the
@@ -50,6 +64,12 @@ type JudgeRequest struct {
 	ToolResults         []ToolCallRecord
 	ConversationSummary string
 	Iteration           int
+	// OutputAccumulator, OutputKeys and MissingOutputKeys mirror the context
+	// upstream hands a custom judge (judge_pipeline.judge_turn Level 1).
+	OutputAccumulator map[string]any
+	OutputKeys        []string
+	NullableKeys      []string
+	MissingOutputKeys []string
 }
 
 // Judge evaluates whether a turn satisfies the agent's success criteria.
@@ -89,9 +109,10 @@ func HasSuccessCriteria(spec AgentSpec) bool {
 }
 
 // ConfigureJudge wires the default LLM judge for a spec that declares success
-// criteria. It is the production entry point: a chat session (no criteria) or
-// a nil completer leaves the loop's judge disabled, so the turn costs no extra
-// LLM call. An already configured judge is left untouched.
+// criteria. It is the explicit-caller entry point for the generic judgment
+// seam: a spec with no criteria, skip_judge set, or a nil completer leaves the
+// loop's judge disabled, so the turn costs no extra LLM call. An already
+// configured judge is left untouched.
 //
 // Parity: framework/agent_loop/internals/judge_pipeline.py::judge_turn (Level 2
 // conversation judge) and framework/testing/llm_judge.py::LLMJudge.evaluate
@@ -110,13 +131,20 @@ func (l *AgentLoop) ConfigureJudge(spec AgentSpec, completer llm.Completer, even
 
 // shouldJudge reports whether this iteration owes a judge evaluation.
 // Natural stops always judge; tool failures judge immediately; otherwise the
-// configured JudgeEveryNTurns cadence applies. A nil Judge, SkipJudge, or
-// missing criteria always disables evaluation.
+// configured JudgeEveryNTurns cadence applies. A nil Judge disables the LLM
+// quality gate, but a spec that declares output keys still owes the local
+// implicit gate (upstream judge_pipeline Level 2 runs with no custom judge).
+// SkipJudge and missing criteria with no output keys disable evaluation.
 func (l *AgentLoop) shouldJudge(agentCtx *AgentContext, iteration int, naturalStop, toolFailure bool) bool {
-	if l == nil || l.Judge == nil || agentCtx == nil {
+	if l == nil || agentCtx == nil {
 		return false
 	}
-	if agentCtx.AgentSpec.SkipJudge || !hasSuccessCriteria(agentCtx.AgentSpec) {
+	if agentCtx.AgentSpec.SkipJudge {
+		return false
+	}
+	hasOutputKeys := len(agentCtx.AgentSpec.OutputKeys) > 0
+	hasCriteria := hasSuccessCriteria(agentCtx.AgentSpec)
+	if !hasOutputKeys && (!hasCriteria || l.Judge == nil) {
 		return false
 	}
 	if naturalStop || toolFailure {
@@ -135,8 +163,25 @@ func (l *AgentLoop) shouldJudge(agentCtx *AgentContext, iteration int, naturalSt
 // unavailability feedback, and any other failure is returned so the caller
 // ends the turn, mirroring the upstream re-raise.
 //
+// Before any configured judge runs, a spec that declares output keys passes
+// through upstream's implicit Level 2 gate: a turn that produced tool calls
+// keeps working silently, a natural stop with missing keys gets the
+// "Task incomplete" RETRY feedback, and a fully-nullable spec with nothing set
+// gets the set_output hint. The gate is local — it never spends an LLM call.
+//
+// Parity: framework/agent_loop/internals/judge_pipeline.py::judge_turn
 // Parity: framework/agent_loop/agent_loop.py::_judge_turn
 func (l *AgentLoop) evaluateJudge(ctx context.Context, agentCtx *AgentContext, conv *NodeConversation, completion string, records []ToolCallRecord, iteration int) (JudgeVerdict, error) {
+	accumulator := conv.OutputAccumulator(agentCtx.AgentSpec.OutputKeys)
+	missing := missingOutputKeys(accumulator, agentCtx.AgentSpec.OutputKeys, agentCtx.AgentSpec.NullableOutputKeys)
+	if verdict, ok := implicitOutputKeyVerdict(agentCtx.AgentSpec, accumulator, missing, records, l.Judge); ok {
+		l.bumpBy("judge_"+strings.ToLower(string(verdict.Action)), 1)
+		l.emitJudgeVerdict(agentCtx, verdict, iteration)
+		if l.OnJudgeVerdict != nil {
+			l.OnJudgeVerdict(verdict, iteration)
+		}
+		return verdict, nil
+	}
 	request := JudgeRequest{
 		AgentSpec:           agentCtx.AgentSpec,
 		Criteria:            successCriteria(agentCtx.AgentSpec),
@@ -144,6 +189,10 @@ func (l *AgentLoop) evaluateJudge(ctx context.Context, agentCtx *AgentContext, c
 		ToolResults:         append([]ToolCallRecord(nil), records...),
 		ConversationSummary: conv.ExportSummary(),
 		Iteration:           iteration,
+		OutputAccumulator:   accumulator,
+		OutputKeys:          append([]string(nil), agentCtx.AgentSpec.OutputKeys...),
+		NullableKeys:        append([]string(nil), agentCtx.AgentSpec.NullableOutputKeys...),
+		MissingOutputKeys:   append([]string(nil), missing...),
 	}
 	verdict, err := l.evaluateJudgeWithRetry(ctx, request)
 	if err != nil {
@@ -155,6 +204,85 @@ func (l *AgentLoop) evaluateJudge(ctx context.Context, agentCtx *AgentContext, c
 		l.OnJudgeVerdict(verdict, iteration)
 	}
 	return verdict, nil
+}
+
+// implicitOutputKeyVerdict is upstream judge_pipeline Level 2's local
+// output-key gate. It reports ok=false when the spec declares no output keys or
+// when the keys are satisfied and a configured criteria judge should run next.
+//
+// Order matters and follows upstream exactly:
+//  1. tool results in this turn -> silent RETRY (keep working);
+//  2. missing required keys -> RETRY with the "Task incomplete" feedback;
+//  3. every key nullable and none set -> RETRY with the set_output hint;
+//  4. otherwise ACCEPT when no criteria judge is armed.
+func implicitOutputKeyVerdict(spec AgentSpec, accumulator map[string]any, missing []string, records []ToolCallRecord, judge Judge) (JudgeVerdict, bool) {
+	if len(spec.OutputKeys) == 0 {
+		return JudgeVerdict{}, false
+	}
+	if len(records) > 0 {
+		return JudgeVerdict{Action: JudgeRetry, Silent: true, Implicit: true}, true
+	}
+	if len(missing) > 0 {
+		return JudgeVerdict{
+			Action:   JudgeRetry,
+			Implicit: true,
+			Feedback: "Task incomplete. Required outputs not yet produced: " +
+				pyStringListRepr(missing) +
+				". Follow your system prompt instructions to complete the work.",
+		}, true
+	}
+	allNullable := len(spec.OutputKeys) > 0
+	nullable := make(map[string]struct{}, len(spec.NullableOutputKeys))
+	for _, key := range spec.NullableOutputKeys {
+		nullable[key] = struct{}{}
+	}
+	for _, key := range spec.OutputKeys {
+		if _, ok := nullable[key]; !ok {
+			allNullable = false
+			break
+		}
+	}
+	noneSet := true
+	for _, key := range spec.OutputKeys {
+		if value, ok := accumulator[key]; ok && value != nil {
+			noneSet = false
+			break
+		}
+	}
+	if allNullable && noneSet {
+		return JudgeVerdict{
+			Action:   JudgeRetry,
+			Implicit: true,
+			Feedback: "No output keys have been set yet. Use set_output to set at least one of: " +
+				pyStringListRepr(spec.OutputKeys),
+		}, true
+	}
+	if !hasSuccessCriteria(spec) || judge == nil {
+		return JudgeVerdict{Action: JudgeAccept, Implicit: true}, true
+	}
+	return JudgeVerdict{}, false
+}
+
+// missingOutputKeys returns the declared keys that are still unset, excluding
+// nullable keys. Upstream's _get_missing_output_keys.
+func missingOutputKeys(accumulator map[string]any, outputKeys, nullableKeys []string) []string {
+	if len(outputKeys) == 0 {
+		return nil
+	}
+	skip := make(map[string]struct{}, len(nullableKeys))
+	for _, key := range nullableKeys {
+		skip[key] = struct{}{}
+	}
+	missing := make([]string, 0, len(outputKeys))
+	for _, key := range outputKeys {
+		if _, nullable := skip[key]; nullable {
+			continue
+		}
+		if value, ok := accumulator[key]; !ok || value == nil {
+			missing = append(missing, key)
+		}
+	}
+	return missing
 }
 
 // evaluateJudgeWithRetry mirrors AgentLoop._judge_turn (agent_loop.py:6202-6270):
@@ -351,7 +479,7 @@ func normalizeJudgeVerdict(verdict JudgeVerdict) JudgeVerdict {
 	default:
 		verdict.Action = JudgeRetry
 	}
-	if verdict.Action == JudgeRetry && strings.TrimSpace(verdict.Feedback) == "" {
+	if verdict.Action == JudgeRetry && !verdict.Silent && strings.TrimSpace(verdict.Feedback) == "" {
 		// Parity: framework/agent_loop/internals/judge_pipeline.py::judge_turn
 		// (Level 1: "Custom judge returned RETRY.")
 		verdict.Feedback = "Custom judge returned RETRY."
@@ -375,6 +503,10 @@ func (l *AgentLoop) emitJudgeVerdict(agentCtx *AgentContext, verdict JudgeVerdic
 	if nodeID == "" {
 		nodeID = agentCtx.AgentSpec.ID
 	}
+	judgeType := "custom"
+	if verdict.Implicit {
+		judgeType = "implicit"
+	}
 	// Parity: framework/agent_loop/agent_loop.py::_run_turn_loop publishes the
 	// first 200 characters of the feedback as the event preview.
 	l.JudgeEvents.EmitJudgeVerdict(
@@ -382,7 +514,7 @@ func (l *AgentLoop) emitJudgeVerdict(agentCtx *AgentContext, verdict JudgeVerdic
 		nodeID,
 		string(verdict.Action),
 		truncateRunes(verdict.Feedback, 200),
-		"custom",
+		judgeType,
 		iteration,
 		executionID,
 	)

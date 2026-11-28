@@ -5,6 +5,8 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
 	"time"
 )
@@ -20,6 +22,36 @@ func TestInitCreatesDirectoryStructure(t *testing.T) {
 	} {
 		if _, err := os.Stat(path); err != nil {
 			t.Fatalf("expected %s to exist: %v", path, err)
+		}
+	}
+}
+
+// TestInitUsesPrivatePermissions pins the Go-only hardening recorded as R7:
+// the registry root/cache are 0700 and the JSON files 0600, where Python relies
+// on the process umask. This is the executable evidence for the extension, not
+// a prose claim in the parity report.
+//
+// Parity-exempt: Go-only registry hardening; Python has no permission
+// assertions to mirror (it inherits the process umask).
+func TestInitUsesPrivatePermissions(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows does not expose POSIX permission bits")
+	}
+	base := testBase(t)
+	newRegistryAt(t, base)
+
+	for path, want := range map[string]os.FileMode{
+		base:                                  0o700,
+		filepath.Join(base, "cache"):          0o700,
+		filepath.Join(base, "config.json"):    0o600,
+		filepath.Join(base, "installed.json"): 0o600,
+	} {
+		info, err := os.Stat(path)
+		if err != nil {
+			t.Fatalf("stat %s: %v", path, err)
+		}
+		if got := info.Mode().Perm(); got != want {
+			t.Fatalf("%s mode = %04o, want %04o", path, got, want)
 		}
 	}
 }
@@ -696,6 +728,50 @@ func TestIsIndexStaleNoCache(t *testing.T) {
 	}
 }
 
+// Parity: core/framework/loader/mcp_registry.py::update_index — Python
+// reads this stamp with datetime.fromisoformat and subtracts it from
+// datetime.now(UTC). A naive stamp raises TypeError there, so every write
+// must carry an explicit +00:00 offset (shared HIVE_HOME data safety).
+func TestUpdateIndexWritesTimezoneAwareTimestamp(t *testing.T) {
+	registry := newDefaultRegistry(t)
+	registry.Fetch = func(string, time.Duration) ([]byte, error) {
+		return []byte(`{"servers":{}}`), nil
+	}
+	if _, err := registry.UpdateIndex(); err != nil {
+		t.Fatalf("UpdateIndex: %v", err)
+	}
+	raw, err := os.ReadFile(registry.lastFetchedPath())
+	if err != nil {
+		t.Fatalf("ReadFile last_fetched: %v", err)
+	}
+	var stamp map[string]any
+	if err := json.Unmarshal(raw, &stamp); err != nil {
+		t.Fatalf("Unmarshal last_fetched: %v", err)
+	}
+	text, _ := stamp["timestamp"].(string)
+	if !strings.HasSuffix(text, "+00:00") {
+		t.Fatalf("timestamp %q has no explicit +00:00 offset", text)
+	}
+	if _, err := time.Parse(time.RFC3339Nano, text); err != nil {
+		t.Fatalf("timestamp %q is not RFC3339-parseable: %v", text, err)
+	}
+	if registry.IsIndexStale() {
+		t.Fatalf("freshly written timestamp should not be stale")
+	}
+}
+
+// Parity: core/framework/loader/mcp_registry.py::is_index_stale — a Python
+// writer's isoformat stamp (microseconds + offset) must be readable here.
+func TestIsIndexStaleReadsPythonTimestamp(t *testing.T) {
+	registry := newDefaultRegistry(t)
+	writeJSONAt(t, registry.lastFetchedPath(), map[string]any{
+		"timestamp": time.Now().UTC().Format("2006-01-02T15:04:05.000000+00:00"),
+	})
+	if registry.IsIndexStale() {
+		t.Fatalf("expected fresh index for Python-style timestamp")
+	}
+}
+
 // Parity: core/tests/test_mcp_registry.py::test_is_index_stale_fresh
 func TestIsIndexStaleFresh(t *testing.T) {
 	registry := newDefaultRegistry(t)
@@ -715,6 +791,72 @@ func TestIsIndexStaleExpired(t *testing.T) {
 	})
 	if !registry.IsIndexStale() {
 		t.Fatalf("expected stale after 48h")
+	}
+}
+
+// P0-9: a marker written by an older Go build has no offset. Python's
+// is_index_stale does `datetime.now(UTC) - datetime.fromisoformat(stamp)`,
+// which raises TypeError for the naive value (uncaught) and kills every
+// Python process sharing the HIVE_HOME. Reading it must repair the file to
+// the offset-carrying form without changing the recorded instant.
+// Parity-exempt: Go-only in-place repair of legacy offset-less last_fetched
+// markers; upstream only reads aware stamps and cannot repair them.
+func TestIsIndexStaleRepairsLegacyNaiveTimestamp(t *testing.T) {
+	registry := newDefaultRegistry(t)
+	written := time.Now().UTC().Add(-2 * time.Hour).Truncate(time.Microsecond)
+	writeJSONAt(t, registry.lastFetchedPath(), map[string]any{
+		"timestamp": written.Format("2006-01-02T15:04:05.999999"),
+	})
+	if registry.IsIndexStale() {
+		t.Fatalf("2h-old legacy marker should be fresh with the 24h interval")
+	}
+	raw, err := os.ReadFile(registry.lastFetchedPath())
+	if err != nil {
+		t.Fatalf("ReadFile repaired marker: %v", err)
+	}
+	var envelope map[string]any
+	if err := json.Unmarshal(raw, &envelope); err != nil {
+		t.Fatalf("Unmarshal repaired marker: %v", err)
+	}
+	text, _ := envelope["timestamp"].(string)
+	if !strings.HasSuffix(text, "+00:00") {
+		t.Fatalf("repaired timestamp %q has no explicit +00:00 offset", text)
+	}
+	repaired, err := time.Parse(time.RFC3339Nano, text)
+	if err != nil {
+		t.Fatalf("repaired timestamp %q is not RFC3339-parseable: %v", text, err)
+	}
+	if !repaired.Equal(written) {
+		t.Fatalf("repair changed the instant: got %v, want %v", repaired, written)
+	}
+	// The repair is idempotent: the second check reads the aware stamp.
+	if registry.IsIndexStale() {
+		t.Fatalf("repaired marker should stay fresh")
+	}
+}
+
+// P0-9: repairing the offset must not reset the age. A legacy marker older
+// than the refresh interval stays stale, and the legacy filename is repaired
+// in place so Python's fallback read is safe too.
+// Parity-exempt: Go-only in-place repair of legacy offset-less last_fetched
+// markers; upstream only reads aware stamps and cannot repair them.
+func TestIsIndexStaleLegacyNaiveKeepsAgeSemantics(t *testing.T) {
+	registry := newDefaultRegistry(t)
+	writeJSONAt(t, registry.legacyLastFetchedPath(), map[string]any{
+		"timestamp": time.Now().UTC().Add(-48 * time.Hour).Format("2006-01-02T15:04:05.999999"),
+	})
+	if !registry.IsIndexStale() {
+		t.Fatalf("48h-old legacy marker should be stale")
+	}
+	raw, err := os.ReadFile(registry.legacyLastFetchedPath())
+	if err != nil {
+		t.Fatalf("ReadFile repaired legacy marker: %v", err)
+	}
+	if !strings.Contains(string(raw), "+00:00") {
+		t.Fatalf("legacy marker was not repaired with an offset: %s", raw)
+	}
+	if !registry.IsIndexStale() {
+		t.Fatalf("repaired 48h-old marker should stay stale")
 	}
 }
 
@@ -780,5 +922,77 @@ func TestInitializeRetiresPreviouslySeededBundledServers(t *testing.T) {
 	want := map[string]bool{"chart-tools": true, "jira": true}
 	if len(got) != len(want) || !got["chart-tools"] || !got["jira"] {
 		t.Fatalf("remaining = %v, want %v", got, want)
+	}
+}
+
+// Parity: core/framework/loader/mcp_registry.py::MCPRegistry.list_installed --
+// Python iterates the JSON object's insertion order, so a Hermes/Hive-written
+// file must not be re-sorted by name. Sorting changes which server owns a
+// same-named tool under first-wins registration.
+func TestListInstalledPreservesFileOrder(t *testing.T) {
+	base := testBase(t)
+	if err := os.MkdirAll(base, 0o700); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	raw := `{"servers":{"zeta":{"transport":"http","url":"http://localhost:1"},` +
+		`"alpha":{"transport":"http","url":"http://localhost:2"},` +
+		`"mid":{"transport":"http","url":"http://localhost:3"}}}`
+	if err := os.WriteFile(filepath.Join(base, "installed.json"), []byte(raw), 0o600); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	registry := newRegistryAt(t, base)
+	rows, err := registry.ListInstalled()
+	if err != nil {
+		t.Fatalf("ListInstalled: %v", err)
+	}
+	got := []string{}
+	for _, row := range rows {
+		got = append(got, asString(row["name"]))
+	}
+	want := []string{"zeta", "alpha", "mid"}
+	if strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Fatalf("order = %v, want %v", got, want)
+	}
+}
+
+// Parity: core/framework/loader/mcp_registry.py::MCPRegistry.cli_servers --
+// cli_servers maps over list_installed(), so the CLI list keeps file order too.
+func TestCLIServersPreservesFileOrder(t *testing.T) {
+	base := testBase(t)
+	if err := os.MkdirAll(base, 0o700); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	raw := `{"servers":{"zeta":{"transport":"http","url":"http://localhost:1","mode":"cli"},` +
+		`"alpha":{"transport":"http","url":"http://localhost:2","mode":"cli"}}}`
+	if err := os.WriteFile(filepath.Join(base, "installed.json"), []byte(raw), 0o600); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	registry := newRegistryAt(t, base)
+	rows, err := registry.CLIServers()
+	if err != nil {
+		t.Fatalf("CLIServers: %v", err)
+	}
+	if len(rows) != 2 || asString(rows[0]["name"]) != "zeta" || asString(rows[1]["name"]) != "alpha" {
+		t.Fatalf("rows = %v", rows)
+	}
+}
+
+// Parity: core/framework/loader/mcp_registry.py::MCPRegistry.list_available --
+// list_available iterates the cached index's insertion order.
+func TestListAvailablePreservesIndexOrder(t *testing.T) {
+	registry := newDefaultRegistry(t)
+	raw := `{"servers":{"zeta":{"description":"z"},"alpha":{"description":"a"}}}`
+	if err := os.MkdirAll(registry.CacheDir(), 0o700); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(registry.CacheDir(), "registry_index.json"), []byte(raw), 0o600); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	rows, err := registry.ListAvailable()
+	if err != nil {
+		t.Fatalf("ListAvailable: %v", err)
+	}
+	if len(rows) != 2 || asString(rows[0]["name"]) != "zeta" || asString(rows[1]["name"]) != "alpha" {
+		t.Fatalf("rows = %v", rows)
 	}
 }

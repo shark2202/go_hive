@@ -31,7 +31,7 @@ type LocalCredentialRouteDeps struct {
 	// Home.CredentialsDir(). Nil builds it lazily on first request.
 	Registry LocalCredentialRegistry
 	// PublishCredentialEvent mirrors the main credential routes' event hook.
-	// Nil skips publication (the Go port has no live credential bus yet).
+	// Nil skips publication (embedded hosts that mount this pair alone).
 	PublishCredentialEvent func(connected bool, credentialID, provider string)
 	// ProviderFor maps a credential id to its provider name for the event.
 	ProviderFor func(credentialID string) string
@@ -131,13 +131,20 @@ func (rt *LocalCredentialRoutes) handleSaveLocalCredential(w http.ResponseWriter
 		return
 	}
 
+	var valid any
+	var message any
+	if info.Health != nil {
+		valid = info.Health.Valid
+		message = info.Health.Message
+	}
+
 	rt.publishCredential(true, credentialID)
 	writeJSON(w, http.StatusCreated, map[string]any{
 		"saved":    credentialID + "/" + account,
 		"status":   info.Status,
 		"identity": info.Identity.ToDict(),
-		"valid":    nil,
-		"message":  nil,
+		"valid":    valid,
+		"message":  message,
 	})
 }
 
@@ -176,15 +183,18 @@ func (rt *LocalCredentialRoutes) handleDeleteLocalCredential(w http.ResponseWrit
 	writeJSON(w, http.StatusOK, map[string]any{"deleted": true})
 }
 
-// saveLocalAccount keeps the platform-specific health hook out of the handler:
-// the Go registry has no live checker, so its status is active and the health
-// fields stay null, exactly like a provider without a checker upstream.
+// saveLocalAccount mirrors upstream _save_local_credential: providers with a
+// registered checker are validated before the route reports success. The
+// checker runs inside the registry, matching registry.save_account
+// (run_health_check=True); custom providers without a checker keep the
+// active/null-health shape.
 func saveLocalAccount(
 	registry LocalCredentialRegistry,
 	credentialID, account, primary string,
 	extra map[string]string,
 ) (credentials.LocalAccountInfo, error) {
-	return registry.SaveAccount(credentialID, account, primary, false, extra)
+	runHealthCheck := credentials.HasHealthChecker(credentialID)
+	return registry.SaveAccount(credentialID, account, primary, runHealthCheck, extra)
 }
 
 func (rt *LocalCredentialRoutes) publishCredential(connected bool, credentialID string) {

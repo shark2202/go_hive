@@ -1,0 +1,16 @@
+  PASS  health                       200
+  PASS  dashboard /                  200
+  PASS  spa deep route               200
+  PASS  credentials specs            200
+  PASS  queen profiles               200
+  PASS  prompts                      200
+  PASS  mcp servers                  200
+  PASS  models overview              200
+  PASS  create session               201 (sid=session_20261123_2…)
+  PASS  chat without key             503
+  PASS  unknown session              404
+  PASS  workers list                 200
+  PASS  events SSE                   200
+
+SMOKE: PASS (62047)
+server log: /tmp/hive_smoke.gY7iOa/server.log

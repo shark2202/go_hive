@@ -9,6 +9,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -19,6 +20,7 @@ import (
 	"github.com/shark2202/go_hive/go-hive/internal/agentloop"
 	"github.com/shark2202/go_hive/go-hive/internal/colony"
 	"github.com/shark2202/go_hive/go-hive/internal/eventbus"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
 	"github.com/shark2202/go_hive/go-hive/internal/llm"
 	"github.com/shark2202/go_hive/go-hive/internal/sentinel"
 	"github.com/shark2202/go_hive/go-hive/internal/tasks"
@@ -379,3 +381,109 @@ func TestSentinelGateFollowsColonyBinding(t *testing.T) {
 // Keep the fake LLM's interface assertion local to this package's tests: the
 // classifier override above never calls it, but the runtime still owns one.
 var _ llm.Completer = (*fakeChatLLM)(nil)
+
+// Parity: core/framework/sentinel/manager.py, core/tests/test_sentinel_manager.py::test_cold_restore_when_session_not_live
+//
+// A sentinel reply can target a session the live table no longer holds. The
+// restorer must reopen it with the record's colony and resume target, and under
+// the queen that wrote it (resolved from colony metadata, as the create route
+// does), because a colony-bound resume otherwise looks in the wrong tree.
+func TestSentinelSessionRestorerBuildsResumeParams(t *testing.T) {
+	home := hivehome.Home{Root: t.TempDir()}
+	colonyDir := filepath.Join(home.ColoniesDir(), "colony_resume")
+	if err := os.MkdirAll(colonyDir, 0o755); err != nil {
+		t.Fatalf("mkdir colony: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(colonyDir, "metadata.json"), []byte(`{"queen_name":"queen_growth"}`), 0o600); err != nil {
+		t.Fatalf("write metadata: %v", err)
+	}
+
+	var captured CreateSessionParams
+	restore := NewSentinelSessionRestorer(home, func(params CreateSessionParams) (*Session, error) {
+		captured = params
+		return NewSession("s1", eventbus.NewEventBus()), nil
+	})
+	if restore == nil {
+		t.Fatal("restorer is nil with a create hook")
+	}
+	session, err := restore(context.Background(), "colony_resume", "s1")
+	if err != nil {
+		t.Fatalf("restore: %v", err)
+	}
+	if session == nil {
+		t.Fatal("restore returned no live session")
+	}
+	if captured.ColonyID == nil || *captured.ColonyID != "colony_resume" {
+		t.Fatalf("colony_id = %v", captured.ColonyID)
+	}
+	if captured.QueenResumeFrom == nil || *captured.QueenResumeFrom != "s1" {
+		t.Fatalf("queen_resume_from = %v", captured.QueenResumeFrom)
+	}
+	if captured.QueenName == nil || *captured.QueenName != "queen_growth" {
+		t.Fatalf("queen_name = %v, want the colony's recorded queen", captured.QueenName)
+	}
+	if session.SSEClientCount() != 0 || session.QueenNode() != nil {
+		t.Fatalf("fresh session surface = sse %d node %v", session.SSEClientCount(), session.QueenNode())
+	}
+}
+
+// Parity-exempt: negative regression for the cold-restore wiring gap. The bare
+// server adapter cannot rebuild a session, and its unsupported error is what
+// stops a reply from being reported as delivered when no host factory exists.
+func TestSentinelSessionAdapterWithoutRestorerIsUnsupported(t *testing.T) {
+	adapter := sentinelSessionManager{manager: NewSessionManager()}
+	if _, err := adapter.CreateSession(context.Background(), "c1", "s1"); !errors.Is(err, ErrSentinelColdRestoreUnsupported) {
+		t.Fatalf("err = %v, want ErrSentinelColdRestoreUnsupported", err)
+	}
+	if NewSentinelSessionRestorer(hivehome.Home{Root: t.TempDir()}, nil) != nil {
+		t.Fatal("restorer must be nil without a create hook")
+	}
+}
+
+// Parity-exempt: cold-restore error propagation has no Python unit test; a
+// failed create must stay a failed resume.
+func TestSentinelSessionRestorerPropagatesCreateFailure(t *testing.T) {
+	home := hivehome.Home{Root: t.TempDir()}
+	restore := NewSentinelSessionRestorer(home, func(CreateSessionParams) (*Session, error) {
+		return nil, errors.New("provider unavailable")
+	})
+	if _, err := restore(context.Background(), "c1", "s1"); err == nil {
+		t.Fatal("restore error was swallowed")
+	}
+	empty := NewSentinelSessionRestorer(home, func(CreateSessionParams) (*Session, error) { return nil, nil })
+	if _, err := empty(context.Background(), "c1", "s1"); err == nil {
+		t.Fatal("a nil session must be an error")
+	}
+}
+
+// Parity-exempt: negative regression for the manager-level wiring: with no
+// restorer installed, a cold restore must fail instead of claiming a resume.
+func TestNewSentinelManagerColdRestoreWithoutRestorerFails(t *testing.T) {
+	previous := sentinel.GetSentinelManager()
+	manager := NewSentinelManager(t.TempDir(), NewSessionManager())
+	t.Cleanup(func() {
+		manager.Stop()
+		sentinel.SetSentinelManager(previous)
+	})
+	if session := manager.ColdRestore(context.Background(), &sentinel.EscalationRecord{ColonyID: "c1", SessionID: "s1"}); session != nil {
+		t.Fatalf("cold restore = %#v, want failure without a restorer", session)
+	}
+}
+
+// Parity-exempt: positive half of the same wiring: a restorer passed at
+// construction must be the one ColdRestore uses.
+func TestNewSentinelManagerColdRestoreUsesRestorer(t *testing.T) {
+	previous := sentinel.GetSentinelManager()
+	home := t.TempDir()
+	restore := NewSentinelSessionRestorer(hivehome.Home{Root: home}, func(CreateSessionParams) (*Session, error) {
+		return NewSession("s1", eventbus.NewEventBus()), nil
+	})
+	manager := NewSentinelManager(home, NewSessionManager(), restore)
+	t.Cleanup(func() {
+		manager.Stop()
+		sentinel.SetSentinelManager(previous)
+	})
+	if session := manager.ColdRestore(context.Background(), &sentinel.EscalationRecord{ColonyID: "c1", SessionID: "s1"}); session == nil {
+		t.Fatal("cold restore did not use the restorer passed at construction")
+	}
+}

@@ -108,16 +108,17 @@ func TestSuccessCriterionProgrammaticZeroWeightIsExplicit(t *testing.T) {
 	}
 }
 
-// Parity: framework/schemas/goal.py::SuccessCriterion (id is a required field,
-// so a goal without one never serializes an empty id).
-func TestGoalIDOmittedWhenUnset(t *testing.T) {
+// Parity: framework/schemas/goal.py::Goal/SuccessCriterion/Constraint (id is a
+// required field with no default: Python serializes it as "id":"" when empty
+// and rejects a document that omits it).
+func TestGoalIDsAreAlwaysSerialized(t *testing.T) {
 	criterion := SuccessCriterion{Description: "d", Metric: "llm_judge", Target: ""}
 	encoded, err := json.Marshal(criterion)
 	if err != nil {
 		t.Fatalf("marshal criterion: %v", err)
 	}
-	if strings.Contains(string(encoded), `"id"`) {
-		t.Fatalf("criterion %s carries an id key, want it omitted when unset", encoded)
+	if !strings.Contains(string(encoded), `"id":""`) {
+		t.Fatalf("criterion %s lost the required id key", encoded)
 	}
 
 	criterion.ID = "sc-0"
@@ -130,10 +131,13 @@ func TestGoalIDOmittedWhenUnset(t *testing.T) {
 	}
 
 	// An explicit empty id is a value, not an absence: Python keeps
-	// {"id": ""} verbatim, so the schema round-trips it through Extra.
+	// {"id": ""} verbatim.
 	var explicitEmpty SuccessCriterion
 	if err := json.Unmarshal([]byte(`{"id":"","description":"d","metric":"llm_judge","target":""}`), &explicitEmpty); err != nil {
 		t.Fatalf("unmarshal explicit empty id: %v", err)
+	}
+	if explicitEmpty.Extra != nil {
+		t.Fatalf("criterion extras = %v, want nil (id is a declared field)", explicitEmpty.Extra)
 	}
 	encoded, err = json.Marshal(explicitEmpty)
 	if err != nil {
@@ -148,8 +152,8 @@ func TestGoalIDOmittedWhenUnset(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal goal: %v", err)
 	}
-	if strings.Contains(string(encoded), `"id"`) {
-		t.Fatalf("goal %s carries an id key, want it omitted when unset", encoded)
+	if !strings.Contains(string(encoded), `"id":""`) {
+		t.Fatalf("goal %s lost the required id key", encoded)
 	}
 
 	constraint := Constraint{Description: "c", ConstraintType: "hard"}
@@ -157,8 +161,42 @@ func TestGoalIDOmittedWhenUnset(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal constraint: %v", err)
 	}
-	if strings.Contains(string(encoded), `"id"`) {
-		t.Fatalf("constraint %s carries an id key, want it omitted when unset", encoded)
+	if !strings.Contains(string(encoded), `"id":""`) {
+		t.Fatalf("constraint %s lost the required id key", encoded)
+	}
+}
+
+// Parity: framework/schemas/goal.py (Pydantic rejects a missing required id
+// with "Field required"; a null id fails str_type). This is the negative half
+// of the contract: Go must not accept a document Python refuses.
+func TestGoalIDsAreRequiredOnRead(t *testing.T) {
+	cases := []struct {
+		name  string
+		value func() error
+	}{
+		{"goal missing id", func() error {
+			var goal Goal
+			return json.Unmarshal([]byte(`{"name":"g","description":"d"}`), &goal)
+		}},
+		{"goal null id", func() error {
+			var goal Goal
+			return json.Unmarshal([]byte(`{"id":null,"name":"g","description":"d"}`), &goal)
+		}},
+		{"criterion missing id", func() error {
+			var criterion SuccessCriterion
+			return json.Unmarshal([]byte(`{"description":"d","metric":"llm_judge","target":""}`), &criterion)
+		}},
+		{"constraint missing id", func() error {
+			var constraint Constraint
+			return json.Unmarshal([]byte(`{"description":"c","constraint_type":"hard"}`), &constraint)
+		}},
+	}
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			if err := testCase.value(); err == nil {
+				t.Fatal("unmarshal accepted a document without a required id")
+			}
+		})
 	}
 }
 

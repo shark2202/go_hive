@@ -71,6 +71,11 @@ func (b *fakeBackend) Send(_ context.Context, sessionID, text string, images [][
 	if failure != nil && failure.send != nil {
 		return "", failure.send
 	}
+	if sessionID == "missing_session" {
+		// The Python bridge fixture sends here to observe a typed ChannelError
+		// crossing the process boundary; no other test uses this id.
+		return "", Errorf(KindNoSession, "No session '%s'", sessionID)
+	}
 	return sessionID, nil
 }
 
@@ -432,8 +437,8 @@ func TestHostReportsEnabledWithoutCommandFailed(t *testing.T) {
 		t.Fatalf("nocommand state = %#v", nocommand)
 	}
 	message, _ := nocommand["error"].(string)
-	if !strings.Contains(message, "no command configured") ||
-		!strings.Contains(message, "Python hive.channels entry points need the Python adapter") {
+	if !strings.Contains(message, "no command or entry_point configured") ||
+		!strings.Contains(message, "Python hive.channels plugin") {
 		t.Fatalf("nocommand error = %q", message)
 	}
 	if states["off"]["state"] != "off" {

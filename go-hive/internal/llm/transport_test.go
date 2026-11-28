@@ -280,8 +280,11 @@ func TestHTTPProviderAnthropicTextCompletion(t *testing.T) {
 	if body["model"] != "claude-sonnet-4-5" {
 		t.Errorf("request model = %v", body["model"])
 	}
-	if body["system"] != "You are Hive" {
-		t.Errorf("system = %#v", body["system"])
+	systemBlocks, ok := body["system"].([]any)
+	if !ok || len(systemBlocks) != 1 {
+		t.Errorf("system = %#v, want one cache-marked text block", body["system"])
+	} else if block, _ := systemBlocks[0].(map[string]any); block["text"] != "You are Hive" {
+		t.Errorf("system text = %#v", block["text"])
 	}
 	if transportInt(body["max_tokens"]) != 64 {
 		t.Errorf("max_tokens = %v", body["max_tokens"])

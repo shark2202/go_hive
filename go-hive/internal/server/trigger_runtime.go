@@ -209,18 +209,92 @@ func saveTriggerToAgent(session *Session, triggerID string, def *triggers.Trigge
 	return nil
 }
 
+// RemoveAllTriggers is the session-level trigger teardown unload uses: it
+// announces every available definition with one trigger_removed event (the
+// upstream payload shape), cancels all timers and webhook routes through
+// StopAllTriggers, then clears the available trigger catalog. Nothing else on
+// the session — colony binding, chat runtime, escalation inbox — is touched;
+// the caller detaches the colony. Returns the removed definitions in
+// registration order.
+//
+// Parity: framework/server/session_manager.py::SessionManager.unload_colony
+// Parity: framework/server/session_manager.py::SessionManager._emit_trigger_events
+func (s *Session) RemoveAllTriggers() []triggers.TriggerDefinition {
+	if s == nil {
+		return nil
+	}
+	defs := s.AvailableTriggers()
+	// unload_colony clears the live timer/webhook/active state before it emits,
+	// and _emit_trigger_events renders the countdown from the session's
+	// next-fire map. This port's StopAllTriggers drops that map, so snapshot it
+	// (and the fire stats) first.
+	nextFire := s.TriggerNextFire()
+	fireStats := s.TriggerFireStats()
+	s.StopAllTriggers()
+	s.publishTriggersRemoved(defs, nextFire, fireStats)
+	s.clearAvailableTriggers()
+	return defs
+}
+
+// publishTriggersRemoved emits one trigger_removed per definition using the
+// Python payload — trigger_id, trigger_type, trigger_config, name — with the
+// live countdown (next_fire_in / next_fire_at) and fire badge (fire_count /
+// last_fired_at) merged into trigger_config when recorded. A nil bus is a
+// no-op, as in the other trigger emitters.
+//
+// Parity: framework/server/session_manager.py::SessionManager._emit_trigger_events
+func (s *Session) publishTriggersRemoved(defs []triggers.TriggerDefinition, nextFire map[string]float64, fireStats map[string]triggers.TriggerFireStat) {
+	if s == nil || s.EventBus == nil {
+		return
+	}
+	nowMonotonic := s.NowMonotonic()
+	nowWall := s.NowWall()
+	for _, def := range defs {
+		configOut := copyTriggerConfig(def.TriggerConfig)
+		if monotonic, ok := nextFire[def.ID]; ok {
+			remaining := math.Max(0, monotonic-nowMonotonic)
+			configOut["next_fire_in"] = remaining
+			configOut["next_fire_at"] = int64((nowWall + remaining) * 1000)
+		}
+		if stat, ok := fireStats[def.ID]; ok {
+			configOut["fire_count"] = stat.FireCount
+			if stat.LastFiredAt != nil {
+				configOut["last_fired_at"] = *stat.LastFiredAt
+			}
+		}
+		event := eventbus.NewAgentEvent(eventbus.EventTriggerRemoved, "queen")
+		event.Data = map[string]any{
+			"trigger_id":     def.ID,
+			"trigger_type":   def.TriggerType,
+			"trigger_config": configOut,
+			"name":           triggerName(def),
+		}
+		s.EventBus.Publish(event)
+	}
+}
+
 // RestoreSessionTriggers rebuilds a session's trigger runtime from the
-// colony's triggers.json. Every persisted definition is hydrated; the ones
-// flagged enabled get their timer (or webhook route) started again, so a
-// trigger survives a server restart without the user re-activating it. Missed
-// timer ticks are stamped instead of replayed — a colony must not auto-start
-// work just because the process was down. Returns (loaded, started).
+// colony's triggers.json. The persisted catalog replaces whatever the session
+// already held: the previous definitions and their live timers/webhook routes
+// are dropped first, so a colony swap (unload A, load B) cannot inherit A's
+// triggers and an empty/missing file leaves an empty catalog. Every persisted
+// definition is hydrated; the ones flagged enabled get their timer (or webhook
+// route) started again, so a trigger survives a server restart without the
+// user re-activating it. Missed timer ticks are stamped instead of replayed —
+// a colony must not auto-start work just because the process was down. Returns
+// (loaded, started).
 //
 // Parity: framework/server/session_manager.py::load_colony
 func RestoreSessionTriggers(session *Session) (int, int) {
 	if session == nil || session.WorkerPath == "" {
 		return 0, 0
 	}
+	// Replace, not merge: the trigger catalog belongs to whichever colony is
+	// bound. StopAllTriggers releases the previous binding's timers and webhook
+	// subscriptions together with its active/next-fire sets.
+	session.StopAllTriggers()
+	session.clearAvailableTriggers()
+
 	entries := triggers.ReadAgentTriggersJSON(session.WorkerPath)
 	if len(entries) == 0 {
 		return 0, 0

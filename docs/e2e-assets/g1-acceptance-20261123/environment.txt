@@ -1,0 +1,23 @@
+# G1 acceptance environment freeze
+generated_at_local: 2026-11-23T22:55:44+0800
+worktree: /Users/mac/hive/.wt/w91-g1-acceptance
+branch: w91/g1-acceptance
+head: 42f2b93215edddcd3f7f9ef5ca246162753e6d7b
+head_subject: reports: slot 20261123-22 索引更新
+head_committed_at: 2026-11-23 22:02:37 +0800
+working_tree_status_porcelain:
+ M go_hive/contracts/config-keys.json
+ M go_hive/contracts/env-vars.json
+ M go_hive/docs/api-ws-golden.md
+ M go_hive/docs/configuration.html
+ M go_hive/docs/env-config-contract-diff.md
+?? go_hive/docs/e2e-assets/g1-acceptance-20261123/
+last_full_ci_code_point: cea04d9e9ba2f2b011d38dc99479f2e9a5af7499
+last_full_ci_relationship: ancestor of HEAD
+diff_cea04d9e_HEAD:
+M	go_hive/docs/reports/INDEX.md
+A	go_hive/docs/reports/slot-20261123-22.md
+go: go version go1.26.11 darwin/arm64
+uv: uv 0.12.18 (01cb90c1a 2026-09-22 aarch64-apple-darwin)
+python: Python 3.11.16
+macos: macOS 26.7.1 arm64

@@ -37,6 +37,12 @@
         "label": "G2 支持矩阵与无损替换声明",
         "hours": 2,
         "done": true
+      },
+      {
+        "id": "remove-colony-template-tools",
+        "label": "删除未接线的 colony_template_*（Python + Go + 测试 + scoping docstring）；2026-11-26 已标记 deprecated",
+        "hours": 1,
+        "done": false
       }
     ],
     "G3": [
@@ -151,10 +157,10 @@
       },
       {
         "id": "cron-seconds",
-        "label": "croniter 6 字段/秒级 cron（Python 可调度、Go 现拒绝）",
+        "label": "croniter 6 字段/秒级 cron 与扩展语法（names/macros/L/#/?/跨夜区间/年份）",
         "hours": 3,
         "done": true,
-        "note": "merged"
+        "note": "2026-11-25 merged: 9a9efbe8f; 126 表达式/4,911 步双跑；W 等 croniter 6.0.0 本身不接受的 Quartz 语法两侧拒绝"
       },
       {
         "id": "cli-usage-error-shape",
@@ -220,7 +226,7 @@
         "label": "server/streamtoken_refresh.py（云端 streamToken 轮换）归属：实现或登记 out_of_scope(cloud)",
         "hours": 2,
         "done": true,
-        "note": "done: merge e3c4517d（out_of_scope(cloud) + CURATED）"
+        "note": "done: w168 已从 out_of_scope(cloud) 升级为 internal/streamtoken（C12 ported）；fake endpoint 测试，真实 cloud E2E 未跑"
       },
       {
         "id": "browser-audit-d02-refresh",
@@ -443,6 +449,13 @@
         "hours": 4,
         "done": true,
         "note": "证据 go_hive/docs/unported-triage.md；routes_queens_tools.go:380-384 曾自述 \"That versioned healing table has no Go port yet\"。幂等性按 sidecar saved_on_version。 | DONE 2026-11-22 lane ga-migration（worktree .wt/ga-migration）：_CATEGORY_ADDITIONS/_parse_version/infer_category_additions/grant_role_default_additions 移植（internal/tools/category_additions.go），tools_ga_migration 启动迁移（internal/server/tools_ga_migration.go；create_app 等价位在 internal/cli/loader.go runGAToolMigration，storage 迁移之后、会话装配之前），load_queen_tools_config 侧车读取同步愈合（routes_queens_tools.go）；go test ./internal/{tools,server,cli,queen} 绿、merge_postcheck 四关过、parity/refs 0 missing；C12 218/27/9/19。"
+      },
+      {
+        "id": "pipeline-production-reachability",
+        "label": "pipeline / ColonyRuntime.Trigger 生产可达性：判定为 API surface + out_of_scope，补调用图证据与守卫测试",
+        "hours": 2,
+        "done": true,
+        "note": "DONE 2026-11-26 lane w182：上游 ColonyRuntime.trigger 仅由 trigger_and_wait（colony_runtime.py:2425）与 _timer_loop（:2904）调用，register_trigger（:2823）全仓 0 调用方，session colony 显式 pipeline_stages: []（session_manager.py:1777）；生产触发器走 queen 注入（routes_sessions.py:1527/1557、queen_lifecycle_tools.py:810/886），Go handleRunTrigger/StartTriggerTimer 同形。不接线（避免 spawn-vs-inject 语义变化）；docs/pipeline.md §7 + alignment-differences A40；守卫 internal/pipeline/reachability_test.go。"
       }
     ]
   }

@@ -144,6 +144,12 @@ type RestSpec struct {
 	// Pagination follows the provider's cursor across pages and merges the
 	// result lists. Nil means the action returns exactly one page.
 	Pagination *PaginationSpec
+	// Shape rewrites a successful provider body into the upstream tool's
+	// response envelope (for example GitHub's {"success":true,"data":...}).
+	// When set it replaces Unwrap/ListKey/FirstOf for the final result; error
+	// values are never shaped. Nil means the wire body is returned as-is, so
+	// provider-raw behavior is only possible when a spec omits the hook.
+	Shape func(parsed any, input map[string]any) any
 }
 
 // DefaultMaxPages caps a declarative pagination walk when the spec does not

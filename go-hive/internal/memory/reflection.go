@@ -98,6 +98,10 @@ var ReflectionTools = []llm.ToolDef{
 					"type":        "string",
 					"description": "Memory scope: 'global' or 'queen'. Defaults to 'global'.",
 				},
+				"reason": map[string]any{
+					"type":        "string",
+					"description": "Why it goes, e.g. 'merged into user-diet.md' or 'the user said it no longer holds'.",
+				},
 			},
 			"required":             []string{"filename"},
 			"additionalProperties": false,
@@ -231,6 +235,11 @@ type toolOptions struct {
 	// the files, so a rewrite does not re-confirm what they say
 	// (upstream confirms=False).
 	reorganised bool
+	// now is the reflection's clock: a replay of a conversation that ended
+	// at that instant confirms and logs the writes as of it, as upstream's
+	// reflect_on_messages(now=...) does. The zero value keeps time.Now, the
+	// live reflection's wall clock.
+	now time.Time
 }
 
 // ExecuteTool runs one reflection memory tool. Writes and deletions go
@@ -324,6 +333,7 @@ func executeTool(name string, args map[string]any, dirs []ScopeDir, queenID stri
 		if _, writeErr := Write(scopeDir, filename, content, WriteOptions{
 			Author:      "reflection",
 			Reorganised: opts.reorganised,
+			Now:         opts.now,
 		}); writeErr != nil {
 			return "ERROR: " + writeErr.Error()
 		}
@@ -343,7 +353,7 @@ func executeTool(name string, args map[string]any, dirs []ScopeDir, queenID stri
 		if _, statErr := os.Stat(path); statErr != nil {
 			return "ERROR: File not found in " + scope + ": " + filename
 		}
-		if retireErr := Retire(scopeDir, filename, "reflection", stringArg(args, "reason"), time.Time{}); retireErr != nil {
+		if retireErr := Retire(scopeDir, filename, "reflection", stringArg(args, "reason"), opts.now); retireErr != nil {
 			return "ERROR: " + retireErr.Error()
 		}
 		return "Deleted " + scope + ":" + filename + "."
@@ -454,7 +464,8 @@ var ReflectionTokenBudget = func() int { return 8192 }
 
 // ReflectionLoop runs one reflection conversation loop. Short reflections use
 // it directly; the long housekeeping passes toolOptions{reorganised: true} via
-// reflectionLoopWithOptions.
+// reflectionLoopWithOptions. A replay that needs a controlled clock uses
+// ReflectionLoopAt.
 func ReflectionLoop(
 	ctx context.Context,
 	completer llm.Completer,
@@ -466,6 +477,27 @@ func ReflectionLoop(
 	queenID string,
 ) LoopResult {
 	return reflectionLoopWithOptions(ctx, completer, system, userMsg, dirs, maxTurns, maxTokens, queenID, toolOptions{})
+}
+
+// ReflectionLoopAt is ReflectionLoop with the reflection's clock pinned to now:
+// a replay of a conversation that ended at that instant confirms its memory
+// writes as of that day and logs them at that time, as upstream's
+// reflect_on_messages(now=...) does for the benchmark's seeded history. A zero
+// now keeps time.Now, so a live reflection reports the wall clock.
+//
+// Parity: framework/agents/queen/reflection_agent.py::reflect_on_messages
+func ReflectionLoopAt(
+	ctx context.Context,
+	completer llm.Completer,
+	system string,
+	userMsg string,
+	dirs []ScopeDir,
+	maxTurns int,
+	maxTokens int,
+	queenID string,
+	now time.Time,
+) LoopResult {
+	return reflectionLoopWithOptions(ctx, completer, system, userMsg, dirs, maxTurns, maxTokens, queenID, toolOptions{now: now})
 }
 
 func reflectionLoopWithOptions(
@@ -608,7 +640,13 @@ func BuildUnifiedShortReflectSystem(queenID string) string {
 		"  section — it is managed by the settings UI. Never describe the assistant,\n" +
 		"  queen, or agent as the identity in this file. Add/update other sections\n" +
 		"  below it.\n" +
-		"- Do NOT exceed " + itoa(MaxFileSizeBytes) + " bytes per file or " + itoa(MaxFiles) + " total files per scope.\n"
+		"- Do NOT exceed " + itoa(MaxFileSizeBytes) + " bytes per file or " + itoa(MaxFiles) + " total files per scope.\n" +
+		"- The `author`, `learned` and `confirmed` lines are kept by the system: leave them out. A file\n" +
+		"  marked `author: owner` was written by the user and can't be changed; when you learn something\n" +
+		"  that differs from it, write it to another file.\n" +
+		"- Writing a file you didn't change confirms it as of this conversation, so only write what this\n" +
+		"  conversation supports. A deleted file is kept in a history the user can restore from: give the\n" +
+		"  reason.\n"
 }
 
 func BuildUnifiedLongReflectSystem(queenID string) string {
@@ -641,7 +679,10 @@ func BuildUnifiedLongReflectSystem(queenID string) string {
 		"- Prefer merging over deleting when the memories contain complementary signal.\n" +
 		"- Remove memories that are stale, superseded, or misplaced.\n" +
 		"- Keep the total collection lean and high-signal.\n" +
-		"- Do NOT invent new information — only reorganise what exists.\n"
+		"- Do NOT invent new information — only reorganise what exists.\n" +
+		"- Files marked `author: owner` were written by the user: leave them as they are. Leave the\n" +
+		"  `author`, `learned` and `confirmed` lines out; the system keeps them.\n" +
+		"- When you merge files, give each deleted one the reason (e.g. \"merged into user-diet.md\").\n"
 }
 
 func ReflectionTimestamp() string {
@@ -920,12 +961,18 @@ func DefaultReflectionConfig() ReflectionConfig {
 // stall a session teardown.
 const ReflectionCloseGrace = 2 * time.Second
 
+// reflectionCancelDrain bounds the wait after the shutdown budget cancelled
+// over-budget reflection work: a model call that honors its context returns at
+// once, and this bound only stops a call that ignores cancellation from holding
+// a teardown open. Nothing writes after it: the goroutine keeps its own
+// lifetime and the runtime no longer reads its result.
+const reflectionCancelDrain = time.Second
+
 // ReflectionScheduler triggers the memory reflection loops from queen turn
-// events. Work runs in the background, tracked by a WaitGroup so Close can
-// drain it. The scheduler owns the context the loops run on: a reflection
-// must outlive the turn that triggered it, otherwise a turn or session
-// context cancelled right after the turn aborts it half-way through a memory
-// write.
+// events. Work runs in the background, tracked so Shutdown/Close can drain it.
+// The scheduler owns the context the loops run on: a reflection must outlive the
+// turn that triggered it, otherwise a turn or session context cancelled right
+// after the turn aborts it half-way through a memory write.
 //
 // Parity: core/framework/agents/queen/reflection_agent.py::subscribe_reflection_triggers
 type ReflectionScheduler struct {
@@ -950,10 +997,19 @@ type ReflectionScheduler struct {
 	reflections int
 	running     bool
 	closed      bool
-	ctx         context.Context
-	cancel      context.CancelFunc
-	wg          sync.WaitGroup
-	closeOnce   sync.Once
+	// pending counts the tracked reflection goroutines; idle is non-nil while
+	// any is running and closes when the count returns to zero. Waiting on a
+	// closed channel instead of a WaitGroup lets the teardown stop waiting the
+	// moment its budget is spent, without spawning a waiter goroutine that
+	// would outlive it.
+	pending int
+	idle    chan struct{}
+	ctx     context.Context
+	cancel  context.CancelFunc
+	// shutdownDrained records whether the tracked work was gone when Shutdown
+	// returned; a second caller reads it instead of running teardown twice.
+	shutdownDrained bool
+	closeOnce       sync.Once
 }
 
 func (s *ReflectionScheduler) config() ReflectionConfig {
@@ -1001,17 +1057,37 @@ func (s *ReflectionScheduler) spawn(work func()) {
 	go work()
 }
 
+// trackLocked registers one reflection goroutine. The caller holds s.mu, so the
+// counter is already up before the goroutine can settle and Shutdown can never
+// observe an idle scheduler while work is about to start.
+func (s *ReflectionScheduler) trackLocked() {
+	if s.pending == 0 {
+		s.idle = make(chan struct{})
+	}
+	s.pending++
+}
+
+// settle is the other half of trackLocked: it clears the running flag and, when
+// the last goroutine finishes, closes the idle channel the teardown waits on.
+func (s *ReflectionScheduler) settle() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.running = false
+	if s.pending > 0 {
+		s.pending--
+	}
+	if s.pending == 0 && s.idle != nil {
+		close(s.idle)
+		s.idle = nil
+	}
+}
+
 // launch runs one reflection unit in the background. The caller has already
-// registered it with the WaitGroup under s.mu, so Close can never race with
-// the Add; the running flag is cleared when the unit finishes.
+// registered it with trackLocked under s.mu, so Shutdown can never race with
+// the registration.
 func (s *ReflectionScheduler) launch(ctx context.Context, work func()) {
 	s.spawn(func() {
-		defer s.wg.Done()
-		defer func() {
-			s.mu.Lock()
-			s.running = false
-			s.mu.Unlock()
-		}()
+		defer s.settle()
 		work()
 	})
 }
@@ -1101,7 +1177,7 @@ func (s *ReflectionScheduler) OnTurnDone(ctx context.Context, streamID, parkReas
 	isLong := reflections%cfg.LongEvery == 0
 	s.running = true
 	runCtx := s.lifetime()
-	s.wg.Add(1)
+	s.trackLocked()
 	s.mu.Unlock()
 
 	s.launch(runCtx, func() {
@@ -1123,7 +1199,7 @@ func (s *ReflectionScheduler) OnCompaction(ctx context.Context, streamID string)
 	}
 	s.running = true
 	runCtx := s.lifetime()
-	s.wg.Add(1)
+	s.trackLocked()
 	s.mu.Unlock()
 
 	s.launch(runCtx, func() {
@@ -1131,9 +1207,59 @@ func (s *ReflectionScheduler) OnCompaction(ctx context.Context, streamID string)
 	})
 }
 
-// Close is the teardown path: stop accepting triggers, wait up to grace for
-// an in-flight reflection to finish, then run one final short reflection so
-// the turns since the last pass are persisted before the session disappears.
+// Shutdown is the teardown path, bounded by ctx instead of a fixed grace: stop
+// accepting triggers, wait for the in-flight reflection until ctx is done,
+// cancel what is left so a ctx-aware model call returns at once, then run one
+// final short reflection while the same budget still has room. It reports
+// whether the tracked work is gone when it returns (false only when a pass
+// ignored cancellation past the drain bound).
+//
+// Upstream spawns the shutdown reflection fire-and-forget and cancels whatever
+// is still running once the server's shutdown grace is spent
+// (session_manager.finish_background_tasks); this is that budget, spent by one
+// session instead of the whole process.
+//
+// Parity: framework/server/session_manager.py::finish_background_tasks
+func (s *ReflectionScheduler) Shutdown(ctx context.Context) bool {
+	if s == nil {
+		return true
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	s.closeOnce.Do(func() {
+		s.mu.Lock()
+		s.closed = true
+		s.mu.Unlock()
+
+		inBudget := s.waitIdle(ctx)
+		drained := inBudget
+		if !inBudget {
+			// Over budget: abort the in-flight model calls, then let their
+			// goroutines observe the cancellation before teardown returns.
+			s.cancelLifetime()
+			drainCtx, stop := context.WithTimeout(context.Background(), reflectionCancelDrain)
+			drained = s.waitIdle(drainCtx)
+			stop()
+		}
+		// The final pass runs only when nothing is still writing and the shared
+		// budget has room: a reflection that outlived it was just cancelled, and
+		// its replacement would have no time to write either.
+		if inBudget && s.canReflect() {
+			s.runWithErrorCapture(ctx, s.shortPass, "shutdown reflection")
+		}
+		s.cancelLifetime()
+		s.mu.Lock()
+		s.shutdownDrained = drained
+		s.mu.Unlock()
+	})
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.shutdownDrained
+}
+
+// Close is Shutdown with its own grace budget, for callers that do not carry
+// one; the chat runtime passes its shutdown context through Shutdown instead.
 //
 // Parity: framework/server/session_manager.py::SessionManager.stop_session
 func (s *ReflectionScheduler) Close(grace time.Duration) {
@@ -1143,39 +1269,36 @@ func (s *ReflectionScheduler) Close(grace time.Duration) {
 	if grace <= 0 {
 		grace = ReflectionCloseGrace
 	}
-	s.closeOnce.Do(func() {
-		s.mu.Lock()
-		s.closed = true
-		cancel := s.cancel
-		s.mu.Unlock()
-
-		// Run the final pass only when nothing is still writing: a reflection
-		// that outlived the grace window must not overlap another one.
-		drained := s.waitForIdle(grace)
-		if drained && s.canReflect() {
-			ctx, stop := context.WithTimeout(context.Background(), grace)
-			s.runWithErrorCapture(ctx, s.shortPass, "shutdown reflection")
-			stop()
-		}
-		if cancel != nil {
-			cancel()
-		}
-	})
+	ctx, stop := context.WithTimeout(context.Background(), grace)
+	defer stop()
+	s.Shutdown(ctx)
 }
 
-// waitForIdle waits for tracked reflection work, giving up after grace so a
-// stuck model cannot hold a teardown open indefinitely.
-func (s *ReflectionScheduler) waitForIdle(grace time.Duration) bool {
-	done := make(chan struct{})
-	go func() {
-		s.wg.Wait()
-		close(done)
-	}()
-	select {
-	case <-done:
+// waitIdle waits for the tracked reflection goroutines, giving up when ctx is
+// done. It never spawns a waiter goroutine: the idle channel closes when the
+// last reflection settles, so a spent budget leaves nothing behind.
+func (s *ReflectionScheduler) waitIdle(ctx context.Context) bool {
+	s.mu.Lock()
+	idle := s.idle
+	s.mu.Unlock()
+	if idle == nil {
 		return true
-	case <-time.After(grace):
+	}
+	select {
+	case <-idle:
+		return true
+	case <-ctx.Done():
 		return false
+	}
+}
+
+// cancelLifetime aborts the scheduler-owned context the reflections run on.
+func (s *ReflectionScheduler) cancelLifetime() {
+	s.mu.Lock()
+	cancel := s.cancel
+	s.mu.Unlock()
+	if cancel != nil {
+		cancel()
 	}
 }
 

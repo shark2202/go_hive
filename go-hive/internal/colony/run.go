@@ -392,6 +392,13 @@ func workerOutcome(worker *Worker) WorkerOutcome {
 		}
 	}
 	if outcome.ReportStatus == "" {
+		// The terminal result carries the report vocabulary too (including a
+		// runtime-synthesized `partial` for a worker that exited without
+		// report_to_parent, P0-1); fall back to the status mapping only when
+		// both are empty.
+		outcome.ReportStatus = workerResult.ReportStatus
+	}
+	if outcome.ReportStatus == "" {
 		switch status {
 		case WorkerCompleted:
 			outcome.ReportStatus = "success"
@@ -402,6 +409,12 @@ func workerOutcome(worker *Worker) WorkerOutcome {
 		default:
 			outcome.ReportStatus = string(status)
 		}
+	}
+	if outcome.Summary == "" {
+		outcome.Summary = workerResult.Summary
+	}
+	if len(outcome.Data) == 0 && len(workerResult.Data) > 0 {
+		outcome.Data = workerResult.Data
 	}
 	if outcome.Summary == "" {
 		if text, ok := workerResult.Output["text"].(string); ok {

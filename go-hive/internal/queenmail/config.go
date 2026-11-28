@@ -6,10 +6,17 @@
 package queenmail
 
 import (
+	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"math"
+	"os"
+	"sort"
 	"strings"
+
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
 )
 
 const (
@@ -94,6 +101,13 @@ type Config struct {
 	MaxDepth         int
 	MaxParallelTurns int
 	ClaudeCode       map[string]ClaudeQueen
+	// claudeCodeOrder is the queen_mail.claude_code key order read from the
+	// JSON source. Go maps lose insertion order, while upstream's
+	// config.claude_code is an ordered dict: correspondents() and the
+	// dashboard list render her entries in the order the user wrote them.
+	// ConfigFromHive cannot recover it and falls back to sorted keys;
+	// ConfigFromJSON/LoadConfig preserve it.
+	claudeCodeOrder []string
 }
 
 // DefaultConfig is queen_mail's "off" configuration.
@@ -144,7 +158,183 @@ func ConfigFromHive(hive map[string]any) Config {
 			config.ClaudeCode[queenID] = ClaudeQueenFromEntry(queenID, entry)
 		}
 	}
+	// A map has no insertion order: use sorted keys so a caller that only has
+	// the decoded section still renders deterministically. LoadConfig replaces
+	// this with the source order.
+	config.claudeCodeOrder = sortedClaudeIDs(config.ClaudeCode)
 	return config
+}
+
+// ConfigFromJSON reads configuration.json bytes and preserves the
+// queen_mail.claude_code key order, which get_queen_mail_config keeps in its
+// ordered dict. It applies the same tolerance as hiveconf.Load: a BOM is
+// stripped, a non-object or trailing-data document reads as the default
+// configuration.
+//
+// Parity: framework/config.py::get_queen_mail_config (dict insertion order)
+func ConfigFromJSON(raw []byte) Config {
+	raw = bytes.TrimPrefix(raw, []byte{0xEF, 0xBB, 0xBF})
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	decoder.UseNumber()
+	var hive map[string]any
+	if err := decoder.Decode(&hive); err != nil || hive == nil {
+		return DefaultConfig()
+	}
+	if err := decoder.Decode(new(any)); !errors.Is(err, io.EOF) {
+		return DefaultConfig()
+	}
+	config := ConfigFromHive(hive)
+	config.setClaudeCodeOrder(orderedKeysAtPath(raw, "queen_mail", "claude_code"))
+	return config
+}
+
+// LoadConfig reads <HIVE_HOME>/configuration.json with source order intact.
+func LoadConfig(home hivehome.Home) Config {
+	data, err := os.ReadFile(home.ConfigurationFile())
+	if err != nil {
+		return DefaultConfig()
+	}
+	return ConfigFromJSON(data)
+}
+
+// ClaudeQueens returns the Claude Code queens in configuration order. Entries
+// the order cannot name (a programmatically built Config) are appended by id
+// so no configured queen drops out.
+func (c Config) ClaudeQueens() []ClaudeQueen {
+	if len(c.ClaudeCode) == 0 {
+		return nil
+	}
+	out := make([]ClaudeQueen, 0, len(c.ClaudeCode))
+	seen := make(map[string]struct{}, len(c.ClaudeCode))
+	for _, id := range c.claudeCodeOrder {
+		queen, ok := c.ClaudeCode[id]
+		if !ok {
+			continue
+		}
+		if _, duplicate := seen[id]; duplicate {
+			continue
+		}
+		seen[id] = struct{}{}
+		out = append(out, queen)
+	}
+	for _, id := range sortedClaudeIDs(c.ClaudeCode) {
+		if _, done := seen[id]; done {
+			continue
+		}
+		out = append(out, c.ClaudeCode[id])
+	}
+	return out
+}
+
+// setClaudeCodeOrder installs the source order, keeping only configured ids
+// and appending any map entries the source order did not name.
+func (c *Config) setClaudeCodeOrder(order []string) {
+	if c == nil {
+		return
+	}
+	out := make([]string, 0, len(c.ClaudeCode))
+	seen := make(map[string]struct{}, len(c.ClaudeCode))
+	for _, id := range order {
+		if _, present := c.ClaudeCode[id]; !present {
+			continue
+		}
+		if _, duplicate := seen[id]; duplicate {
+			continue
+		}
+		seen[id] = struct{}{}
+		out = append(out, id)
+	}
+	for _, id := range sortedClaudeIDs(c.ClaudeCode) {
+		if _, done := seen[id]; done {
+			continue
+		}
+		out = append(out, id)
+	}
+	c.claudeCodeOrder = out
+}
+
+func sortedClaudeIDs(configured map[string]ClaudeQueen) []string {
+	ids := make([]string, 0, len(configured))
+	for id := range configured {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	return ids
+}
+
+// orderedKeysAtPath walks the raw JSON document down path and returns the
+// final object's keys in source order. A missing/malformed path yields nil.
+func orderedKeysAtPath(raw []byte, path ...string) []string {
+	current := raw
+	for _, key := range path {
+		current = rawObjectMember(current, key)
+		if len(current) == 0 {
+			return nil
+		}
+	}
+	return orderedObjectKeys(current)
+}
+
+// rawObjectMember returns one JSON object member's raw value without decoding
+// the object into a map (which would lose its order).
+func rawObjectMember(raw []byte, key string) json.RawMessage {
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	token, err := decoder.Token()
+	if err != nil {
+		return nil
+	}
+	delim, ok := token.(json.Delim)
+	if !ok || delim != '{' {
+		return nil
+	}
+	for decoder.More() {
+		keyToken, err := decoder.Token()
+		if err != nil {
+			return nil
+		}
+		name, ok := keyToken.(string)
+		if !ok {
+			return nil
+		}
+		var value json.RawMessage
+		if err := decoder.Decode(&value); err != nil {
+			return nil
+		}
+		if name == key {
+			return value
+		}
+	}
+	return nil
+}
+
+// orderedObjectKeys lists one JSON object's keys in source order.
+func orderedObjectKeys(raw []byte) []string {
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	token, err := decoder.Token()
+	if err != nil {
+		return nil
+	}
+	delim, ok := token.(json.Delim)
+	if !ok || delim != '{' {
+		return nil
+	}
+	keys := []string{}
+	for decoder.More() {
+		keyToken, err := decoder.Token()
+		if err != nil {
+			return keys
+		}
+		key, ok := keyToken.(string)
+		if !ok {
+			return keys
+		}
+		var value json.RawMessage
+		if err := decoder.Decode(&value); err != nil {
+			return keys
+		}
+		keys = append(keys, key)
+	}
+	return keys
 }
 
 // ClaudeQueenFromEntry reads one queen_mail.claude_code entry, with upstream's

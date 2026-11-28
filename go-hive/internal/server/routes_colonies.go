@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -366,6 +367,16 @@ func handleRenameColony(w http.ResponseWriter, r *http.Request, deps ColonyRoute
 
 	stopSessionsUnderPaths(deps, oldColonyDir, oldAgentDir)
 
+	// Capture every document that still names the old colony before the move,
+	// so a malformed one fails the request while the colony is intact.
+	repoints, err := preflightColonyRenameRepoints(deps.Home, oldName, newName)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{
+			"error": "failed to preflight colony rename: " + err.Error(),
+		})
+		return
+	}
+
 	if err := os.Rename(oldColonyDir, newColonyDir); err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{
 			"error": "failed to rename colony directory: " + err.Error(),
@@ -380,6 +391,13 @@ func handleRenameColony(w http.ResponseWriter, r *http.Request, deps ColonyRoute
 			})
 			return
 		}
+	}
+	if err := applyColonyRenameRepoints(repoints); err != nil {
+		log.Printf("colony rename %s -> %s: failed to repoint references: %v", oldName, newName, err)
+		writeJSON(w, http.StatusInternalServerError, map[string]any{
+			"error": "failed to repoint colony references after rename: " + err.Error(),
+		})
+		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"renamed": true, "old_name": oldName, "new_name": newName})
 }
@@ -469,9 +487,10 @@ func ensureMinimalColony(home hivehome.Home, colonyID, queenName string) error {
 			return err
 		}
 	}
-	// A scaffolded colony is complete on disk: skills/, runs/ and an empty
-	// triggers.json exist before any session opens it.
-	return ensureColonyScaffold(colonyDir)
+	// Parity: _ensure_minimal_colony writes metadata.json + worker.json only.
+	// skills/, runs/ and triggers.json are created when a real session opens
+	// the colony, never by the scaffold.
+	return nil
 }
 
 // humanizeSlug mirrors framework/utils/text.py::humanize_slug, including

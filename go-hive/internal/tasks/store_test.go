@@ -3,6 +3,7 @@ package tasks
 // Parity: framework/tasks/tests/test_store.py
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"sync"
@@ -834,5 +835,106 @@ func TestTaskCreateWithGoalOverwritesSeededGoal(t *testing.T) {
 	meta := store.GetMeta(storeTestSession)
 	if meta == nil || meta.Goal == nil || *meta.Goal != "Refined by worker" {
 		t.Fatalf("meta = %v", meta)
+	}
+}
+
+// Parity: core/framework/tasks/tools/session_tools.py::_make_update_executor —
+// an invalid TaskStatus raises before the store is touched. The tool layer
+// rejects it first; this store guard is the defence for internal callers that
+// bypass the tool layer: drop only the invalid status patch, keep the valid
+// fields, and never write a document pydantic would read as corrupt.
+func TestUpdateDropsInvalidStatusButKeepsOtherFields(t *testing.T) {
+	store, _ := newStoreFixture(t)
+	rec := mustCreate(t, store, storeTestSession, CreateTaskSpec{Subject: "original"})
+
+	subject := "renamed"
+	bogus := TaskStatus("bogus")
+	updated, fields := store.UpdateTask(storeTestSession, rec.ID, UpdateTaskOptions{
+		Subject: &subject,
+		Status:  &bogus,
+	})
+	if updated == nil {
+		t.Fatal("UpdateTask returned nil for a valid subject patch")
+	}
+	if updated.Subject != subject {
+		t.Fatalf("subject = %q, want %q", updated.Subject, subject)
+	}
+	if updated.Status != TaskStatusPending {
+		t.Fatalf("status = %q, want pending", updated.Status)
+	}
+	if containsString(fields, "status") {
+		t.Fatalf("fields = %v, status must not be reported as changed", fields)
+	}
+	if !containsString(fields, "subject") {
+		t.Fatalf("fields = %v, want subject", fields)
+	}
+
+	// The document stays readable and every persisted status is valid.
+	doc := store.readDoc(storeTestSession)
+	if doc == nil {
+		t.Fatal("tasks.json unreadable after the rejected status patch")
+	}
+	for _, r := range doc.Tasks {
+		if !ValidTaskStatus(string(r.Status)) {
+			t.Fatalf("task #%d persisted invalid status %q", r.ID, r.Status)
+		}
+	}
+
+	// A subsequent valid status still writes — the guard only drops the
+	// invalid value.
+	completed := TaskStatusCompleted
+	updated, fields = store.UpdateTask(storeTestSession, rec.ID, UpdateTaskOptions{Status: &completed})
+	if updated == nil || updated.Status != TaskStatusCompleted {
+		t.Fatalf("valid status update = %#v", updated)
+	}
+	if !containsString(fields, "status") {
+		t.Fatalf("fields = %v, want status", fields)
+	}
+	if got := store.GetTask(storeTestSession, rec.ID); got == nil || got.Status != TaskStatusCompleted {
+		t.Fatalf("reloaded = %#v, want completed", got)
+	}
+}
+
+// Parity: core/framework/tasks/store.py::_read_doc_sync — TaskListDocument.
+// model_validate_json rejects an unknown TaskStatus, the reader logs the file
+// as corrupt and returns None, and every task in the list disappears. P0-10
+// prevents new invalid values at write time; this pins the legacy-file read
+// semantics so Go and Python agree on an already-corrupt document instead of
+// Go silently listing a record Python cannot deserialize.
+func TestReadDocTreatsLegacyInvalidStatusAsCorrupt(t *testing.T) {
+	store, _ := newStoreFixture(t)
+	rec := mustCreate(t, store, storeTestSession, CreateTaskSpec{Subject: "legacy"})
+
+	path, err := store.DocPath(storeTestSession)
+	if err != nil {
+		t.Fatalf("DocPath: %v", err)
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read tasks.json: %v", err)
+	}
+	var doc map[string]any
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		t.Fatalf("decode tasks.json: %v", err)
+	}
+	tasks, _ := doc["tasks"].([]any)
+	if len(tasks) != 1 {
+		t.Fatalf("tasks = %#v", doc["tasks"])
+	}
+	record, _ := tasks[0].(map[string]any)
+	record["status"] = "bogus"
+	patched, err := json.Marshal(doc)
+	if err != nil {
+		t.Fatalf("encode tasks.json: %v", err)
+	}
+	if err := os.WriteFile(path, patched, 0o600); err != nil {
+		t.Fatalf("write tasks.json: %v", err)
+	}
+
+	if got := store.GetTask(storeTestSession, rec.ID); got != nil {
+		t.Fatalf("GetTask returned %#v for a Python-corrupt document", got)
+	}
+	if rows := store.ListTasks(storeTestSession); len(rows) != 0 {
+		t.Fatalf("ListTasks = %#v, want empty (corrupt document)", rows)
 	}
 }

@@ -395,6 +395,39 @@ describe("sseEventToChatMessage", () => {
     expect(sseEventToChatMessage(event, "t")).toBeNull();
   });
 
+  it("converts payment_required to an upgrade card message", () => {
+    const event = makeEvent({
+      type: "payment_required",
+      stream_id: "queen",
+      execution_id: "abc",
+      data: { message: "quota exceeded", upstream_status: 402 },
+    });
+    const result = sseEventToChatMessage(event, "t");
+    expect(result).not.toBeNull();
+    expect(result!.type).toBe("payment_required");
+    // Stable id keyed on the execution: live SSE and disk replay upsert
+    // the same card instead of stacking duplicates.
+    expect(result!.id).toBe("payment-required-abc");
+    expect(JSON.parse(result!.content)).toEqual({
+      message: "quota exceeded",
+      upstream_status: 402,
+    });
+  });
+
+  it("defaults payment_required's message and status when the payload omits them", () => {
+    const event = makeEvent({
+      type: "payment_required",
+      execution_id: "abc",
+      data: {},
+    });
+    const result = sseEventToChatMessage(event, "t");
+    expect(result!.type).toBe("payment_required");
+    expect(JSON.parse(result!.content)).toEqual({
+      message: "The LLM provider returned payment required.",
+      upstream_status: null,
+    });
+  });
+
   it("uses agentDisplayName instead of node_id when provided", () => {
     const event = makeEvent({
       type: "client_output_delta",

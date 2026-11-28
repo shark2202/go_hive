@@ -122,12 +122,11 @@ func pdfReadOne(ctx context.Context, rt *Runtime, ref string, opts pdfOptions) a
 		name = filepath.Base(path)
 	}
 
-	doc, err := pdfOpen(data)
+	doc, err := pdfOpenPassword(data, opts.password)
 	if err != nil {
 		if errors.Is(err, errPDFEncrypted) {
-			out := pdfTerminalYield(displayPath, "pdf_encrypted", "")
-			out["error"] = "Cannot read encrypted PDF: password decryption is not supported by the Go port. " +
-				"Decrypt it first (for example qpdf --decrypt file.pdf out.pdf) and retry."
+			out := pdfTerminalYield(displayPath, "pdf_encrypted",
+				"Cannot read encrypted PDF: wrong password or no password supplied.")
 			return out
 		}
 		return pdfOpenFailure(displayPath, err)
@@ -171,16 +170,18 @@ func pdfReadOne(ctx context.Context, rt *Runtime, ref string, opts pdfOptions) a
 	if !anyText {
 		// Every requested page is image-only. Returning empty content would be
 		// indistinguishable from a broken parser, so make the scan explicit.
+		// Guidance is attach_file/vision first (upstream pdf_read_tool.py:399-403);
+		// OCR and page rendering stay a non-vision fallback in terminal_hint.
 		return map[string]any{
 			"error": "pdf_scanned_no_text: this PDF has no extractable text layer (scanned or image-only). " +
-				"Render the pages and use OCR or a vision-capable model.",
+				"Attach the original PDF with attach_file and let a vision-capable model read the pages; OCR is only a non-vision fallback.",
 			"needs_vision":       true,
 			"needs_vision_pages": needsVisionPages,
 			"path":               displayPath,
 			"name":               name,
 			"total_pages":        len(pages),
 			"pages_extracted":    len(indices),
-			"next_step":          "Attach the original PDF to a vision-capable model, or run OCR (for example pdftoppm + tesseract).",
+			"next_step":          pdfScannedNextStep,
 			"terminal_hint":      terminalHint,
 		}
 	}
@@ -197,7 +198,7 @@ func pdfReadOne(ctx context.Context, rt *Runtime, ref string, opts pdfOptions) a
 	}
 	if len(needsVisionPages) > 0 {
 		result["needs_vision_pages"] = needsVisionPages
-		result["next_step"] = "Pages with little or no text were flagged needs_vision. Attach the original PDF to a vision-capable model for those pages."
+		result["next_step"] = "Pages with little or no text were flagged needs_vision. " + pdfScannedNextStep
 		result["terminal_hint"] = terminalHint
 	}
 	if truncated {

@@ -81,6 +81,9 @@ func TestWorkerTierSearchToolsLoadsDeferredTool(t *testing.T) {
 	ctx := workerTierTestContext(state, completer)
 	conv := NewNodeConversation("You are a worker.")
 	loop := NewAgentLoop(DefaultLoopConfig(), executor)
+	// Isolate the tier assertions from the independent response-stall guard:
+	// this script deliberately yields the same terminal text more than once.
+	loop.Config.StallDetectionThreshold = 999
 
 	result, err := loop.ExecuteTurn(context.Background(), ctx, conv, availableToolDefs(state))
 	if err != nil {
@@ -123,6 +126,9 @@ func TestWorkerTierBlocksUnloadedSearchableTool(t *testing.T) {
 	ctx := workerTierTestContext(state, completer)
 	conv := NewNodeConversation("You are a worker.")
 	loop := NewAgentLoop(DefaultLoopConfig(), executor)
+	// Isolate the tier assertions from the independent response-stall guard:
+	// this script deliberately yields the same terminal text more than once.
+	loop.Config.StallDetectionThreshold = 999
 
 	if _, err := loop.ExecuteTurn(context.Background(), ctx, conv, availableToolDefs(state)); err != nil {
 		t.Fatalf("ExecuteTurn: %v", err)

@@ -391,7 +391,9 @@ func (s *ConcurrentStorage) saveRunSync(run *schemas.Run) error {
 	if err := os.MkdirAll(runsDir, 0o755); err != nil {
 		return err
 	}
-	return atomicfs.WriteJSON(filepath.Join(runsDir, run.ID+".json"), run, 0o644)
+	// Python writes run documents through framework/utils/io.py::atomic_write,
+	// whose mkstemp temp starts at 0600; keep the run file owner-only.
+	return atomicfs.WriteJSON(filepath.Join(runsDir, run.ID+".json"), run, 0o600)
 }
 
 func (s *ConcurrentStorage) loadRunSync(runID string) (*schemas.Run, error) {

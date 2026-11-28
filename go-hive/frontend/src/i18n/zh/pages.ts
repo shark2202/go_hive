@@ -237,6 +237,9 @@ export const pagesZh: Record<string, string> = {
   "Creating…": "创建中…",
   "Create Colony": "创建蜂群",
   "Failed to create colony": "创建蜂群失败",
+  "Will be created as “{slug}”": "将以“{slug}”创建",
+  "Colony names allow lowercase letters, digits and underscores only — put Chinese in the goal instead.":
+    "蜂群名只能使用小写字母、数字和下划线；中文请写在目标或交接里。",
 
   // ── Colony chat ─────────────────────────────────────────────────────────
   "Colony not found: {id}": "未找到蜂群：{id}",

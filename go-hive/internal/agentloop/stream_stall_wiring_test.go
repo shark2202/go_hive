@@ -10,8 +10,9 @@ import (
 	"github.com/shark2202/go_hive/go-hive/internal/llm"
 )
 
-// streamStallResult builds the typed watchdog verdict the streaming completer
-// returns when a stream trips (internal/server/chat_stream.go).
+// streamStallResult builds the typed watchdog verdict a streaming completer
+// returns when a stream trips (agentloop.StreamingCompleter, or the chat
+// queen's internal/server/chat_stream.go adapter).
 func streamStallResult(reason string) error {
 	return &llm.StreamStalledError{Reason: reason, ElapsedSeconds: 121, LimitSeconds: 120}
 }

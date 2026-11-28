@@ -23,6 +23,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
+	"time"
 
 	"github.com/shark2202/go_hive/go-hive/internal/agentloop"
 )
@@ -65,19 +67,31 @@ func restoreWorkerConversation(store agentloop.ConversationStore) (*agentloop.No
 // writeWorkerMeta records the spawn breadcrumb resume needs: the original task
 // and profile are not otherwise recoverable from parts alone, and the colony
 // id is the cross-colony guard.
+//
+// The lineage half (queen_session_id / queen_name / spawned_at / worker_seq) is
+// what the server's colony worker walk reads once the runtime is gone: it
+// attributes a worker directory to the queen session that spawned it, renders a
+// stable started_at instead of the directory mtime, and keeps the playbook
+// dispatch ordinal the UI badges. Written once at spawn; never updated.
+//
+// Parity: framework/host/colony_runtime.py::ColonyRuntime.spawn (meta.json)
 func (r *ColonyRuntime) writeWorkerMeta(worker *Worker) {
 	if r == nil || worker == nil || worker.ID == "" {
 		return
 	}
 	meta := map[string]any{
-		"worker_id":    worker.ID,
-		"colony_id":    r.streamID,
-		"task":         worker.Task,
-		"profile_name": worker.ProfileName,
-		"goal":         worker.Goal,
-		"batch_id":     worker.BatchID,
-		"batch_index":  worker.BatchIndex,
-		"batch_size":   worker.BatchSize,
+		"worker_id":        worker.ID,
+		"queen_session_id": r.streamID,
+		"queen_name":       nullableString(r.queenName),
+		"colony_id":        r.streamID,
+		"spawned_at":       float64(time.Now().UnixNano()) / 1e9,
+		"task":             worker.Task,
+		"profile_name":     worker.ProfileName,
+		"goal":             nullableString(worker.Goal),
+		"batch_id":         nullableString(worker.BatchID),
+		"batch_index":      worker.BatchIndex,
+		"batch_size":       worker.BatchSize,
+		"worker_seq":       worker.WorkerSeq,
 	}
 	path := filepath.Join(r.workerStorage(worker.ID), workerMetaFile)
 	writeJSONFile(path, meta)
@@ -85,6 +99,16 @@ func (r *ColonyRuntime) writeWorkerMeta(worker *Worker) {
 	// queued before its goroutine can start, then running/terminal as it moves.
 	// A fresh id must not inherit the previous process's resume bookkeeping.
 	r.resetWorkerRunState(worker, string(WorkerQueued))
+}
+
+// nullableString renders an empty string as JSON null. Upstream writes
+// `self._queen_id` straight through, so a colony with no recorded queen leaves
+// queen_name null rather than "".
+func nullableString(value string) any {
+	if strings.TrimSpace(value) == "" {
+		return nil
+	}
+	return value
 }
 
 // readWorkerMeta returns the spawn breadcrumb, or an empty map when it is
@@ -119,6 +143,7 @@ func (r *ColonyRuntime) persistWorkerResult(worker *Worker, payload map[string]a
 		"duration_seconds": result.DurationSeconds,
 		"tool_calls_used":  result.ToolCallsUsed,
 		"budget_limited":   result.BudgetLimited,
+		"tokens_used":      result.TokensUsed,
 	}
 	writeJSONFile(filepath.Join(r.workerStorage(worker.ID), workerResultFile), snapshot)
 }

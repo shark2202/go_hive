@@ -5,6 +5,7 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -195,5 +196,54 @@ func TestForkQueenSessionWithHandoffRequiresHandoff(t *testing.T) {
 	}
 	if fixture.old.SupersededBy != "" {
 		t.Fatalf("old session retired on a refused fork: %q", fixture.old.SupersededBy)
+	}
+}
+
+// TestForkQueenSessionWithHandoffRejectsChannelSession pins the chat-channel
+// gate: a channel-owned thread is one long conversation and must never be
+// forked away by task_create(new_session=true). The refusal lands before the
+// fork mints an id, creates a dir, seeds tasks or starts a session.
+// Parity: core/framework/server/tests/test_channel_session_fork.py
+func TestForkQueenSessionWithHandoffRejectsChannelSession(t *testing.T) {
+	fixture := newHandoffForkFixture(t)
+	fixture.old.SetChannel("onebot")
+	deps := fixture.deps()
+	deps.GenerateSessionID = func(_ time.Time) (string, error) { return "new-session", nil }
+
+	_, err := ForkQueenSessionWithHandoff(
+		fixture.old,
+		deps,
+		"Check the evaluation numbers",
+		[]map[string]any{{"subject": "Check the evaluation numbers"}},
+		"",
+	)
+	if err == nil {
+		t.Fatal("channel session was forked; want a 409 refusal")
+	}
+	var forkErr *ForkSessionError
+	if !errors.As(err, &forkErr) {
+		t.Fatalf("err = %T (%v), want *ForkSessionError", err, err)
+	}
+	if forkErr.Status != 409 {
+		t.Fatalf("status = %d, want 409", forkErr.Status)
+	}
+	const wantMessage = "This conversation comes from the onebot chat channel and stays in this session: " +
+		"a new one would leave behind everything said here. Create the plan in this session " +
+		"(task_create without new_session)."
+	if forkErr.Message != wantMessage {
+		t.Fatalf("message = %q, want %q", forkErr.Message, wantMessage)
+	}
+	if !strings.Contains(forkErr.Message, "onebot chat channel and stays in this session") {
+		t.Fatalf("message missing channel refusal text: %q", forkErr.Message)
+	}
+	if len(fixture.forkedIDs) != 0 {
+		t.Fatalf("factory called for a channel session: %v", fixture.forkedIDs)
+	}
+	if fixture.old.SupersededBy != "" {
+		t.Fatalf("old session retired on a refused fork: %q", fixture.old.SupersededBy)
+	}
+	newDir := fixture.home.QueenSessionDir("default", "new-session")
+	if pathExists(newDir) {
+		t.Fatalf("refused fork created the successor dir anyway: %s", newDir)
 	}
 }

@@ -141,8 +141,10 @@ func TestWorkerRunExecutesGoalCriteriaIntoResultAndReport(t *testing.T) {
 }
 
 // Parity: framework/agent_loop/agent_loop.py::_build_initial_message (the
-// goal context is model-visible; see also ColonyRuntime._build_worker).
-func TestWorkerSystemPromptCarriesGoalConstraintsAndContext(t *testing.T) {
+// goal context is model-visible on the worker's first user turn; upstream never
+// puts it in the system prompt — see also ColonyRuntime._build_worker's
+// goal_context wiring).
+func TestWorkerGoalContextRidesTheInitialUserMessage(t *testing.T) {
 	goalContext := schemas.NewOrderedMap()
 	goalContext.Set("audience", "CFO")
 	goal := &schemas.Goal{
@@ -164,67 +166,14 @@ func TestWorkerSystemPromptCarriesGoalConstraintsAndContext(t *testing.T) {
 	if !ok {
 		t.Fatal("no LLM call recorded")
 	}
-	prompt := request.System
-	for _, want := range []string{"[MUST] Cite every source", "[SHOULD] Keep it under 500 words", "audience: CFO"} {
-		if !strings.Contains(prompt, want) {
-			t.Fatalf("system prompt missing %q:\n%s", want, prompt)
+	if strings.Contains(request.System, "[MUST] Cite every source") {
+		t.Fatalf("goal constraints leaked into the system prompt:\n%s", request.System)
+	}
+	firstUser := firstUserText(request.Messages)
+	for _, want := range []string{"\n\nGoal: ", "[MUST] Cite every source", "[SHOULD] Keep it under 500 words", "audience: CFO"} {
+		if !strings.Contains(firstUser, want) {
+			t.Fatalf("initial user message missing %q:\n%s", want, firstUser)
 		}
-	}
-}
-
-// Parity-exempt: upstream injects judge feedback but keeps no structured
-// retry signal; the improvement ledger is the Go-side consumer this adds.
-func TestWorkerJudgeRetryRecordsImprovementSignal(t *testing.T) {
-	criteria := "the worker delivers a final answer"
-	spec := testAgentSpec()
-	spec.SuccessCriteria = &criteria
-	goal := &schemas.Goal{
-		ID: "judge-goal",
-		SuccessCriteria: []schemas.SuccessCriterion{
-			{ID: "answer", Description: "the final answer is delivered", Metric: agentloop.GoalMetricLLMJudge, Weight: 1},
-		},
-	}
-	provider := newScriptedLLM(
-		// A judged worker turn must be a work turn (a tool call); a text-only
-		// turn is a stall and never reaches the judge.
-		toolResponse("t1", "task_list", `{}`),
-		textResponse(`{"passes": false, "explanation": "missing citations"}`),
-		toolResponse("t2", "task_list", `{}`),
-		textResponse(`{"passes": true, "explanation": "criteria met"}`),
-		// Goal-criteria execution asks the judge about the single criterion.
-		textResponse(`{"passes": true, "explanation": "delivered"}`),
-	)
-	runtime := newGoalRuntime(t, spec, goal, provider, nil, "")
-
-	if _, err := runtime.RunBatch(context.Background(), []BatchTask{{Task: "answer it"}}, RunSpawnOptions{}); err != nil {
-		t.Fatalf("RunBatch: %v", err)
-	}
-
-	var retry *ImprovementSignal
-	for _, signal := range runtime.ImprovementSignals() {
-		if signal.Kind == string(ImprovementKindJudgeRetry) {
-			copied := signal
-			retry = &copied
-			break
-		}
-	}
-	if retry == nil {
-		t.Fatalf("no judge_retry signal recorded: %#v", runtime.ImprovementSignals())
-	}
-	if !strings.Contains(retry.Feedback, "missing citations") {
-		t.Fatalf("retry feedback = %q, want the judge critique", retry.Feedback)
-	}
-	if retry.Iteration != 0 {
-		t.Fatalf("retry iteration = %d, want the first iteration", retry.Iteration)
-	}
-
-	// The llm_judge criterion itself executed: the goal verdict is recorded.
-	evaluation := runtime.GetWorker(runtime.ListWorkers()[0].WorkerID).Result().GoalEvaluation
-	if evaluation == nil || len(evaluation.Criteria) != 1 {
-		t.Fatalf("goal evaluation = %#v, want the llm_judge criterion executed", evaluation)
-	}
-	if evaluation.Criteria[0].Metric != agentloop.GoalMetricLLMJudge || !evaluation.Criteria[0].Met {
-		t.Fatalf("criterion = %#v, want a met llm_judge criterion", evaluation.Criteria[0])
 	}
 }
 

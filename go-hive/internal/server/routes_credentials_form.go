@@ -51,7 +51,12 @@ func (rt *CredentialRoutes) handleCredentialForm(w http.ResponseWriter, r *http.
 		return
 	}
 
-	body, ok := credentialRequestBody(r)
+	value, err := decodeJSONValue(r)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "Invalid JSON body"})
+		return
+	}
+	body, ok := value.(map[string]any)
 	if !ok {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "Invalid JSON body"})
 		return

@@ -83,9 +83,15 @@ func handleQueenContext(w http.ResponseWriter, r *http.Request, deps ExecutionRo
 		return
 	}
 	decoded, err := decodeJSONValue(r)
+	if err != nil {
+		// Upstream leaves request.json() uncaught here: a malformed body is a
+		// 500 from the error middleware, not a 400 validation response.
+		writeJSONBodyFailure(w, err, http.StatusInternalServerError, internalServerError)
+		return
+	}
 	body, objectOK := decoded.(map[string]any)
-	if err != nil || !objectOK {
-		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "Invalid JSON body"})
+	if !objectOK {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": internalServerError})
 		return
 	}
 	rawMessage, present := body["message"]
@@ -205,9 +211,15 @@ func handleCancelQueen(w http.ResponseWriter, r *http.Request, deps ExecutionRou
 func handleRecordUserMessage(w http.ResponseWriter, r *http.Request, deps ExecutionRouteDeps) {
 	sessionID := r.PathValue("session_id")
 	decoded, err := decodeJSONValue(r)
+	if err != nil {
+		// Upstream leaves request.json() uncaught here: a malformed body is a
+		// 500 from the error middleware, not a 400 validation response.
+		writeJSONBodyFailure(w, err, http.StatusInternalServerError, internalServerError)
+		return
+	}
 	body, objectOK := decoded.(map[string]any)
-	if err != nil || !objectOK {
-		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "Invalid JSON body"})
+	if !objectOK {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": internalServerError})
 		return
 	}
 	rawMessage, present := body["message"]
@@ -410,11 +422,19 @@ func handleMarkColonySpawned(w http.ResponseWriter, r *http.Request, deps Execut
 	}
 	body := map[string]any{}
 	if r.ContentLength != 0 {
-		if decoded, err := decodeJSONValue(r); err == nil {
-			if object, ok := decoded.(map[string]any); ok {
-				body = object
-			}
+		decoded, err := decodeJSONValue(r)
+		if err != nil {
+			// Upstream's bare `await request.json()` raises on malformed JSON
+			// and the error middleware answers 500; oversize is 413.
+			writeJSONBodyFailure(w, err, http.StatusInternalServerError, internalServerError)
+			return
 		}
+		object, ok := decoded.(map[string]any)
+		if !ok {
+			writeJSON(w, http.StatusInternalServerError, map[string]any{"error": internalServerError})
+			return
+		}
+		body = object
 	}
 	colonyID := strings.TrimSpace(pythonString(body["colony_id"]))
 	if colonyID == "" {
@@ -608,6 +628,33 @@ func forkQueenSessionForSplit(session *Session, deps ExecutionRouteDeps) (map[st
 type compactionSummary struct {
 	Messages int
 	Chars    int
+	// Text is the summary body. The colony fork carries it into its
+	// colony_fork_marker preview; the compact-and-fork route ignores it.
+	Text string
+}
+
+// readCompactionMessages loads a conversations dir as messages for compaction.
+// Python's Message.from_storage_dict raises on malformed parts and the caller
+// skips them; the Go reader is lenient, so screen the required fields here
+// instead of compacting a half-built message.
+func readCompactionMessages(convsDir string) ([]agentloop.Message, error) {
+	parts, err := agentloop.NewFileConversationStore(convsDir).ReadParts()
+	if err != nil {
+		return nil, err
+	}
+	messages := make([]agentloop.Message, 0, len(parts))
+	for _, part := range parts {
+		if _, ok := part["role"].(string); !ok {
+			log.Printf("compact_in_place: skipping malformed part %v", part)
+			continue
+		}
+		if _, ok := part["content"].(string); !ok {
+			log.Printf("compact_in_place: skipping malformed part %v", part)
+			continue
+		}
+		messages = append(messages, agentloop.MessageFromStorageDict(part))
+	}
+	return messages, nil
 }
 
 // compactQueenConversationInto mirrors _compact_queen_conversation_in_place
@@ -618,24 +665,9 @@ func compactQueenConversationInto(queenDir, destDir string, completer llm.Comple
 	if !entryIsDir(sourceConvs) {
 		return nil, nil
 	}
-	parts, err := agentloop.NewFileConversationStore(sourceConvs).ReadParts()
+	messages, err := readCompactionMessages(sourceConvs)
 	if err != nil {
 		return nil, err
-	}
-	messages := make([]agentloop.Message, 0, len(parts))
-	for _, part := range parts {
-		// Python's Message.from_storage_dict raises on malformed parts and the
-		// caller skips them; the Go reader is lenient, so screen the required
-		// fields here instead of compacting a half-built message.
-		if _, ok := part["role"].(string); !ok {
-			log.Printf("compact_in_place: skipping malformed part %v", part)
-			continue
-		}
-		if _, ok := part["content"].(string); !ok {
-			log.Printf("compact_in_place: skipping malformed part %v", part)
-			continue
-		}
-		messages = append(messages, agentloop.MessageFromStorageDict(part))
 	}
 	if len(messages) == 0 {
 		return nil, nil
@@ -669,5 +701,5 @@ func compactQueenConversationInto(queenDir, destDir string, completer llm.Comple
 	}); err != nil {
 		return nil, err
 	}
-	return &compactionSummary{Messages: len(messages), Chars: utf8.RuneCountInString(summary)}, nil
+	return &compactionSummary{Messages: len(messages), Chars: utf8.RuneCountInString(summary), Text: summary}, nil
 }

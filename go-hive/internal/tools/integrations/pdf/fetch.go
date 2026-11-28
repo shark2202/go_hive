@@ -174,12 +174,22 @@ func pdfOpenFailure(path string, err error) map[string]any {
 	return pdfTerminalYield(path, "pdf_open_failed", "Failed to open PDF: "+err.Error())
 }
 
+// pdfScannedNextStep is the model-facing guidance for pages with no text
+// layer. Upstream pdf_read_tool (pdf_read_tool.py:399-403) routes scanned
+// PDFs through attach_file so a vision model reads the pages natively; OCR
+// stays a non-vision fallback only, carried here by terminal_hint.
+//
+// Guidance parity is not extraction parity: the Go parser is not pdfplumber,
+// so byte-level text equivalence remains a separate, still-open evidence gap.
+const pdfScannedNextStep = "Call attach_file on the original PDF so a vision-capable model reads the pages directly — no OCR or image rendering needed. " +
+	"For non-vision models, use the terminal_hint fallback (pdfimages + tesseract)."
+
 func pdfNextStep(reason, path string) string {
 	switch reason {
 	case "pdf_encrypted":
 		return "qpdf --decrypt --password=<pw> '" + path + "' /tmp/decrypted.pdf, then call pdf_read again on /tmp/decrypted.pdf"
 	case "pdf_scanned_no_text":
-		return "Attach the original PDF to a vision-capable model, or run pdftoppm + tesseract."
+		return pdfScannedNextStep
 	default:
 		return "pdfinfo '" + path + "'"
 	}

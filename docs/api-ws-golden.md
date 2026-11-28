@@ -29,7 +29,7 @@ canonical 响应值，逐条比对后写入 golden；差异只有三类——已
 | --- | --- | --- |
 | SSE canonical 帧 | reference 113 / target 148 | 同一剧本：创建 → 开场回合 → 普通消息 → ask_user → 回答 → 重连 replay → DELETE |
 | SSE 比较帧（去文档化变换后） | live 34/34、replay 17/17、history 42/42、stop 18/17 | 变换：丢弃 Go-only 每回合信封 36 帧 + 异步 title 位置不参与顺序 |
-| REST 端点 | 107/107（105 形状/语义全等 + 2 端点级已声明差异，0 FAIL） | 66 成功路径 + 41 失败路径；第一批 17 端点 + 第二批 60 条 + 第三批 30 条探针 |
+| REST 端点 | 107/107（全部 PASS；46 条值级已声明差异，0 端点级，0 FAIL） | 66 成功路径 + 41 失败路径；第一批 17 端点 + 第二批 60 条 + 第三批 30 条探针 |
 | REST 值路径 | 8716 条 | 0 未声明差异；46 条已声明差异（0 端点级折叠；`session_live_tools` 逐值对照） |
 | REST 显式跳过 | 11 条 | SSE 流 / 进程内部读数 / colony 运行时缺口 / SPA fallback；见 `index.json.skipped` 与 §6.6 |
 | 未知路径 fallback | 3 路径 × 2 侧 | Python SPA 200 HTML / Go 404；仅证据，不计入比较（§6.4） |
@@ -127,15 +127,21 @@ JSON 字节（`Marshal(cost_usd) == "0.0042"`）。
 - 残留（已在 §6.3 声明）：registry 侧 diagnostic 的 MCP 宇宙计数 33 vs 28（excel_* 6 个
   Go 原生实现 - csv_sql 1 个未移植；浏览器工具面已随 §4.7 跟随桥开关，不再计入）。
 
-### 4.6 会话开场 `node_loop_started.max_iterations`（值级 → 已修）
+### 4.6 会话开场与每回合 `node_loop_started.max_iterations`（值级 → 已修）
 
-Go 的开场块是上游永久 queen loop 的逐帧移植，此前报 Go 每回合 loop 的配置上限（50）。现在
-`sessionStartMaxIterations` 直接报上游永久 loop 的 bound：默认 `999999`，设置 `HIVE_MAX_ITER`
-时取该 cap（与 `queen_orchestrator.py::_queen_loop` 同口径）。Go 每回合 loop 自己的
-`node_loop_started` 帧仍报实际配置值（50）——那些帧属于 §5 的有意每回合信封，不进比较。
+Go 的开场块是上游永久 queen loop 的逐帧移植，只在会话开始（第一个 client input 之前）发一帧
+`node_loop_started`；每个后续回合由 chat runtime 的每回合 loop 各发一帧同名事件。此前开场帧报
+Go 每回合 loop 的配置上限（50），per-turn 帧也带同一个 50。w96（`22a77a52`，merge `34a274cc`）
+起 `chatLoopConfig` 改用 `agentloop.QueenLoopConfig()`：开场帧由 `sessionStartMaxIterations` 报
+上游永久 loop 的 bound，per-turn 帧由每回合 loop 的 `MaxIterations` 报 queen profile 的 bound；
+两者默认都是 `999999`，设置 `HIVE_MAX_ITER` 时同取该 cap（与
+`queen_orchestrator.py::_queen_loop` 同口径）。per-turn 帧仍属 §5 的有意每回合信封，随信封整体
+剔除、不参与帧级比较；它们的值现在也是 999999，不再是旧的 50。
 REST 值账本 `events[2].data.max_iterations` 由 999999/50 转为两侧 999999；SSE 帧级 golden
-的开场帧同步更新，per-turn 帧保持 50。回归：
-`session_start_events_test.go::TestSessionStartMaxIterationsFollowsQueenLoopBound`，
+的开场帧同步更新。冻结的 `contracts/sse-frames/target/live.json` 仍是 w96 前的 50（该批次未重刷，
+per-turn 帧在比较时整体剔除），下次 `--refresh` 会同步为 999999。回归：
+`session_start_events_test.go::TestSessionStartMaxIterationsFollowsQueenLoopBound`、
+`loop_config_profiles_test.go::TestQueenLoopProfilesMatchUpstreamBudgets`，
 `TestSessionAddWritesOpeningEvents` 收紧为断言 999999。
 
 ### 4.7 浏览器工具面跟随桥开关（registry 计数 → 已修）
@@ -156,7 +162,7 @@ SSE（`contracts/sse-frames/diff.json.exceptions`，9 条）与 REST
 
 | 类别 | 例外 | 归因 |
 | --- | --- | --- |
-| 有意结构（应当保留） | `node_loop_iteration/llm_turn_complete/client_output_delta.iteration` 会话累计 vs 每回合；`node_loop_completed.iterations`、`execution_*` 的 `input`/`output`（随信封整体剔除） | Python 是永久 loop、Go 是每回合 bounded loop（`sse-payload-parity.md` §4.1/§4.2 既有结论）。快照 `is_executing` 与前端 spinner 依赖该信封，**不硬改**；开场 `node_loop_started.max_iterations` 已独立修复（§4.6），per-turn 帧保持每回合 cap |
+| 有意结构（应当保留） | `node_loop_iteration/llm_turn_complete/client_output_delta.iteration` 会话累计 vs 每回合；`node_loop_completed.iterations`、`execution_*` 的 `input`/`output`（随信封整体剔除） | Python 是永久 loop、Go 是每回合 bounded loop（`sse-payload-parity.md` §4.1/§4.2 既有结论）。快照 `is_executing` 与前端 spinner 依赖该信封，**不硬改**；开场与 per-turn `node_loop_started.max_iterations` 均已按各自 loop 的 bound 修复（§4.6；现同为 999999），per-turn 帧仍随信封整体剔除 |
 | 值级（提示词 / 语料车道） | `llm_turn_complete.model`（litellm 前缀 `openai/…`）；`context_usage_updated` 的 `usage_ratio/usage_pct/estimated_tokens/message_count/breakdown.*`；REST 侧同路径 + `queen_tools` 24 条工具描述 | 系统提示词与工具描述文本仍在对齐（prompt / tool-description 车道）。字段集合、类型、发射点、枚举值不受影响 |
 | 值级（开场结构） | `context_usage_updated.message_count` 开场 1 vs 0 | 开场块消息结构与提示词车道同源；后续读数已一致（§4.1 钉住 7/7/8） |
 | 运行期内部 | REST `session_stats.event_bus.subscriptions`（9 vs 3，逐次运行可变）；`health.resources.*`（比较时忽略） | 进程内读数，不属 HTTP 契约 |
@@ -351,7 +357,7 @@ Go-only 路由（5 条）无 Python 对端，已在 `contracts/api-routes.json` 
 
 ### 6.6 结果
 
-- 107/107（105 全等 + 2 端点级已声明差异），8716 条值路径，46 条已声明差异（0 端点级折叠），0 未声明。
+- 107/107（全部 PASS），8716 条值路径，46 条已声明差异（0 端点级折叠），0 未声明。
 - 本车道把值级面从 77 端点 / 8678 路径扩到 107 端点 / 8716 路径（+30 探针 / +38 条值路径；
   10 条成功空态 + 20 条失败/空对象，全部 PASS），并给出 11 条显式跳过（§6.5）。
 - 四条已知值级残差逐项实测：
@@ -359,7 +365,7 @@ Go-only 路由（5 条）无 Python 对端，已在 `contracts/api-routes.json` 
     定义改为跟随桥开关（§4.7），剩余 33 vs 28 = excel_* 6 - csv_sql 1（§6.3 已声明）。
   - `system_prefix_sha`：REST 与 SSE 两侧均 `692b774c98c7`（16/16 SSE 帧），逐字相等；例外退役。
   - `node_loop_started.max_iterations`：开场帧 999999 vs 50 → 两侧 999999（§4.6）；per-turn
-    Go-only 信封仍为 50，随信封整体剔除。
+    Go-only 信封在 w96 后同为 999999（此前 50），仍随信封整体剔除。
   - `node_loop_completed.iterations`：Go-only 每回合帧（3 个 live / 3 个 history，值 1），Python
     永久 loop 不发；保留为有意结构例外（§5），REST 值账本不覆盖该 Go-only 面。
 - 本批把 `session_live_tools` 从端点级折叠（418 条）转为逐值对照：433 条路径全部参与比较，

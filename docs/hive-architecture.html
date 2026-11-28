@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hive 设计与实现 · 一个原语、三个角色、四块基底</title>
+<style>
+:root{--bg:#0b0f14;--panel:#121923;--panel2:#0f1620;--line:#233041;--text:#e6edf3;--muted:#8b9bb0;--accent:#f0b429;--accent2:#58a6ff;--ok:#3fb950;--warn:#d29922;--bad:#f85149;--code:#0a0e13}
+*{box-sizing:border-box} body{margin:0;background:linear-gradient(180deg,#0b0f14,#0d131b 55%,#0b0f14);color:var(--text);font:14.5px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;overflow-wrap:anywhere}
+a{color:var(--accent2);text-decoration:none} a:hover{text-decoration:underline}
+.wrap{max-width:1280px;margin:0 auto;padding:44px 26px 80px}
+header{border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:28px}
+.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+h1{font-size:30px;line-height:1.25;margin:10px 0 10px;letter-spacing:-.02em} h1 span{color:var(--accent)}
+.lede{color:var(--muted);max-width:1100px;font-size:15px} .meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:15px;color:var(--muted);font-size:12.5px} .meta b{color:var(--text)}
+section{margin:38px 0} h2{font-size:22px;margin:0 0 8px} h2 .num{color:var(--accent);font-size:14px;margin-right:8px} h3{font-size:15.5px;margin:22px 0 8px;color:#cfdae6}
+p{color:#c6d2df;margin:8px 0} .sub{color:var(--muted);font-size:12.5px}
+.grid{display:grid;gap:12px} .g5{grid-template-columns:repeat(5,minmax(0,1fr))} .g2{grid-template-columns:repeat(2,minmax(0,1fr))} .grid>*{min-width:0}
+@media(max-width:1000px){.g5{grid-template-columns:repeat(2,minmax(0,1fr))}} @media(max-width:560px){.g5{grid-template-columns:1fr}.g2{grid-template-columns:1fr}.wrap{padding:30px 16px 60px}h1{font-size:24px}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:15px;min-width:0} .card .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700} .card .v{font-size:20px;font-weight:800;margin-top:5px;letter-spacing:-.01em} .card .d{color:var(--muted);font-size:12px;margin-top:5px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:14px 0;background:var(--panel2);max-width:100%}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed} th,td{border-bottom:1px solid var(--line);padding:9px 10px;vertical-align:top;text-align:left;overflow-wrap:anywhere;word-break:break-word} th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;background:#0d141d;position:sticky;top:0;z-index:1} tr:hover td{background:#121a25} tr:last-child td{border-bottom:0}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--code);border:1px solid #1e2937;border-radius:5px;padding:1px 4px;color:#d7e3f0;overflow-wrap:anywhere}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#cfe0f2;max-width:100%}
+.pill{display:inline-flex;align-items:center;font-size:11px;border-radius:999px;padding:2px 8px;border:1px solid var(--line);color:var(--muted);white-space:normal} .pill.ok{color:var(--ok);border-color:#1d3b26;background:#0f1a13} .pill.warn{color:var(--warn);border-color:#3d3013;background:#1a150a} .pill.bad{color:var(--bad);border-color:#3d1d1d;background:#1a0f0f} .pill.info{color:var(--accent2);border-color:#17324d;background:#0d1622}
+.callout{border-left:3px solid var(--accent);background:#161207;padding:11px 14px;border-radius:0 9px 9px 0;margin:14px 0;color:#e8d9b4;overflow-wrap:anywhere} .callout.bad{border-color:var(--bad);background:#1a0f0f;color:#f2c7c7} .callout.info{border-color:var(--accent2);background:#0d1622;color:#cfe3ff}
+.toc{display:flex;flex-wrap:wrap;gap:7px;margin-top:18px} .toc a{font-size:12px;border:1px solid var(--line);background:var(--panel);padding:5px 9px;border-radius:999px;color:var(--muted)} .toc a:hover{color:var(--text);text-decoration:none}
+ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin-top:44px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:12px}
+figure.diagram{background:var(--code);border:1px solid var(--line);border-radius:12px;padding:14px;overflow-x:auto;margin:16px 0;max-width:100%}
+figure.diagram figcaption{color:var(--muted);font-size:12px;margin-top:8px}
+@media(max-width:560px){table{font-size:12px}th,td{padding:7px 6px}}
+@media(max-width:760px){.tablewrap table{min-width:980px}}
+@media(max-width:560px){.toc a{padding:8px 12px;font-size:13px;min-height:44px;display:inline-flex;align-items:center}}
+</style></head><body><div class="wrap">
+<header><div class="eyebrow">Hive · Architecture Dossier</div><h1>Hive 设计与实现：<span>一个原语 · 三个角色 · 四块基底</span></h1>
+<p class="lede">Hive 不是 DAG/工作流引擎，也不是“很多 agent 的聊天群”。它只有一个执行原语 <b>AgentLoop</b>；Queen 是它，Worker 是它的克隆，Colony 是这些 loop 的部署单位。本文从设计原则、角色、一次 turn、共享基底、长期层，到 Python 参考实现与 Go 移植，给出一张可落盘的架构地图。</p>
+<div class="meta"><span>生成：<b>2026-11-23 22:55 CST</b></span><span>基线：<b>42f2b932</b></span><span>范围：<b>Python Hive 1.0.15 参考实现 + go_hive 纯 Go 移植</b></span><span>产物：<b>HTML + JSON</b></span></div>
+<div class="toc"><a href="#s00">总览</a><a href="#s01">设计原则</a><a href="#s02">角色</a><a href="#s03">一次 turn</a><a href="#s04">共享基底</a><a href="#s05">Memory / Soul / Skills</a><a href="#s06">质量与自治</a><a href="#s07">Python 实现</a><a href="#s08">Go 移植</a><a href="#s09">tradeoff</a><a href="#s10">故障边界</a><a href="#s11">证据与维护</a></div></header>
+
+<section id="s00"><h2><span class="num">00</span>总览：一根脊椎</h2>
+<div class="grid g5">
+<div class="card"><div class="k">执行原语</div><div class="v">1</div><div class="d">AgentLoop：Queen 与 Worker 共用</div></div>
+<div class="card"><div class="k">角色</div><div class="v">3</div><div class="d">Queen / Worker / Colony</div></div>
+<div class="card"><div class="k">共享基底</div><div class="v">4</div><div class="d">Tracker / Tasks / EventBus / ReminderHub</div></div>
+<div class="card"><div class="k">长期层</div><div class="v">3</div><div class="d">Memory / Soul / Skills</div></div>
+<div class="card"><div class="k">质量/自治</div><div class="v">4</div><div class="d">Judge / Stall / Sentinel / Park</div></div>
+</div>
+<div class="callout info"><b>先记住一句话：</b>Hive 的设计是“一个原语，多个设置”。Queen 不是另一种程序，Worker 也不是另一种程序；它们是同一个 loop 在不同 prompt、工具子集、预算和组织位置下的实例。Colony 不画图，它提供一个目录和四块共享基底，让 loop 在运行时生长。</div>
+<figure class="diagram"><pre>Colony（一个目录 = 一个部署单位）
+  Queen（1 个持久 AgentLoop）
+    ├─ 对话 / 计划 / tracker / memory / soul
+    ├─ run_worker ──────────────►  Worker clones（N 个短命 loop）
+    │                                ├─ 一个任务、无记忆、无 escalation
+    │                                ├─ tracker_upsert（写行）
+    │                                └─ report_to_parent(success|partial|failed)
+    └─ [WORKER_REPORT] ◄──────── event bus
+  共享基底：tracker.db · task plan · event bus · reminder hub
+  长期层：memory（事实）· soul（自我）· skills（方法）
+  质量/自治：judge · stall check · Sentinel · park/idle</pre><figcaption>组织图：Queen 持有对话与判断；Worker 是可替换的执行单元；Colony 是目录 + 共享基底；Memory/Soul 只属于 Queen。</figcaption></figure>
+</section>
+
+<section id="s01"><h2><span class="num">01</span>设计原则：为什么长这样</h2>
+<p class="sub">这八条不是口号，而是代码里能观察到的约束。它们也解释了为什么 Hive 没有 workflow DSL、没有 worker 间消息总线、没有向量数据库。</p>
+<div class="tablewrap"><table><thead><tr><th style="width:4%">#</th><th style="width:16%">原则</th><th style="width:34%">是什么</th><th style="width:46%">为什么</th></tr></thead><tbody><tr><td><b>1</b></td><td><b>一个执行原语</b></td><td>AgentLoop 是唯一的执行状态机；Queen 是它，Worker 是它的克隆。</td><td>Worker 不需要第二套运行时。预算、工具执行、事件、持久化、提醒都在同一条 loop 语义里，行为可比较、可测试。</td></tr><tr><td><b>2</b></td><td><b>运行时组织，不预设图</b></td><td>Colony 不维护 DAG、边、节点或 data buffer；Queen 先做，发现需要并行才 spawn。</td><td>真实业务流程的形状常常在开工前未知。先画图会把组织僵化在一次猜测上；Hive 把拓扑留到运行时。</td></tr><tr><td><b>3</b></td><td><b>先打样，再系统化</b></td><td>execute first, then systematize：先跑通一条路径，再固化成 skill + playbook。</td><td>避免为了“平台化”先造抽象；只有被证明有效的路径才值得变成可复用程序。</td></tr><tr><td><b>4</b></td><td><b>状态在文件/数据库里</b></td><td>会话、计划、tracker、memory、soul、skills 都落盘；进程只持有执行中的临时状态。</td><td>可审计、可迁移、可跨语言复刻，也能在进程崩溃或长时间停车后恢复。</td></tr><tr><td><b>5</b></td><td><b>角色能力故意不对称</b></td><td>Queen 拥有对话、计划、记忆和人的回路；Worker 没有记忆、没有人设、没有 escalation。</td><td>Worker 要短命、可替换、失败快；需要判断和等人时交回 Queen，避免每个 worker 都变成一个小组织。</td></tr><tr><td><b>6</b></td><td><b>信号与账本分离</b></td><td>EventBus 是神经，Tracker 是账本；事件可以重放/丢弃，tracker 行是业务真相。</td><td>把实时通知和持久事实混在一起，故障恢复时就不知道信谁。</td></tr><tr><td><b>7</b></td><td><b>失败快、可恢复</b></td><td>Worker 有 grace iteration 和 report_to_parent；Queen 提问会 park 落盘；写盘走原子 rename。</td><td>长任务一定会遇到失败和等待；设计目标是“失败可见、状态可恢复”，不是“永不失败”。</td></tr><tr><td><b>8</b></td><td><b>双实现、行为对等</b></td><td>Python 1.0.15 是参考实现；Go 是移植，文件格式、prompt、错误文案尽量逐字一致。</td><td>同一棵 HIVE_HOME 应能被两边读取；`// Parity:` 测试把“像”变成可审计的映射。</td></tr></tbody></table></div>
+<div class="callout"><b>非目标：</b>不是通用 BPMN/DAG 引擎；不是“全自动无人组织”；不是用向量库替代可读文件；不是为了跨平台而引入 cgo。把这些非目标记住，很多“为什么没有 X”就有答案。</div>
+</section>
+
+<section id="s02"><h2><span class="num">02</span>三个角色：Queen / Worker / Colony</h2>
+<p class="sub">角色不是三个进程，而是同一个 loop 的三种组织位置。Queen 是持久的主管，Worker 是短命的克隆，Colony 是容纳它们的目录与共享基底。</p>
+<div class="tablewrap"><table><thead><tr><th style="width:10%">角色</th><th style="width:24%">是什么</th><th style="width:26%">拥有什么</th><th style="width:24%">故意没有什么</th><th style="width:16%">代码锚点</th></tr></thead><tbody><tr><td><b>Queen</b></td><td>有身份的主管，也是 colony 唯一对外对话面。</td><td>对话、持久计划、tracker 读写、需要人拍板的问题、memory/soul、12 个生命周期工具。</td><td>不直接替 worker 执行所有任务；不把 colony 拓扑写死。</td><td><code>core/framework/agent_loop/agent_loop.py · agents/queen/queen_profiles.py · tools/queen_lifecycle_tools.py</code></td></tr><tr><td><b>Worker</b></td><td>Queen loop 的克隆，注入一个任务和 worker prompt。</td><td>一个任务、一个工作区、一个 report_to_parent；可写 tracker 行、可加载 colony skills。</td><td>无记忆、无人设、无 escalation、不能派发自己的 worker；终止必须汇报 success/partial/failed。</td><td><code>core/framework/host/worker.py · agents/queen/worker_definition.py</code></td></tr><tr><td><b>Colony</b></td><td>一个目录 = 一个部署单位，也是一台“多 loop 组织”。</td><td>共享 tracker.db、任务计划、event bus、reminder hub、skills、triggers、worker 绑定。</td><td>没有图、没有边、没有节点、没有 data buffer；worker 之间不直接通信。</td><td><code>core/framework/host/colony_runtime.py · colony_binding.py · tracker_db.py</code></td></tr></tbody></table></div>
+<div class="callout info"><b>关键不对称：</b>Queen 拥有“人的回路”（提问、park、Sentinel、memory/soul）；Worker 故意没有这些。Worker 的终止动作是 `report_to_parent`，不是继续扩展组织。Fan-out 属于 Queen，不属于 Worker。</div>
+</section>
+
+<section id="s03"><h2><span class="num">03</span>一次 turn 是怎么走的</h2>
+<p class="sub">同一个 AgentLoop，在 Queen 和 Worker 上走同一条主链；差别在 prompt、工具子集、预算和“停车后谁来接”。</p>
+<figure class="diagram"><pre>用户消息
+  → Session / ChatRuntime（恢复 state、parts、colony binding）
+  → Queen AgentLoop
+  → 静态前缀：identity → soul → phase prompt
+  → ReminderHub：在当前 point 注入 source 产出
+  → LLM
+  → tool calls（file / terminal / browser / tracker / run_worker …）
+  → EventBus + transcript/state 落盘
+  → STOP / park / IDLE_TICK / STREAM_STALLED
+  → 人回复 / Sentinel / worker report → resume</pre><figcaption>主链：输入 → 静态前缀 → 提醒注入 → 模型 → 工具 → 事件/落盘 → 停车或继续。</figcaption></figure>
+<div class="tablewrap"><table><thead><tr><th style="width:13%">步骤</th><th style="width:39%">发生什么</th><th style="width:24%">写到哪里</th><th style="width:24%">失败边界</th></tr></thead><tbody><tr><td><b>1. 接收</b></td><td>用户消息进入 session；冷会话从 parts/state 恢复，colony 会话绑定 colony。</td><td>session state、conversation parts、binding</td><td>未知会话 404；colony_spawned 的 DM 会话被锁，必须新开。</td></tr><tr><td><b>2. 组装静态前缀</b></td><td>identity → soul → phase base prompt；soul 只在启用且非空时渲染。</td><td>queen profile、soul.json、phase</td><td>soul 关闭/损坏读作空；identity 永远优先于 soul。</td></tr><tr><td><b>3. 注入提醒</b></td><td>ReminderHub 在当前 point 收集 source 产出；合并成一个 `&lt;system-reminder&gt;`。</td><td>tasks、memory manifest、skills catalog、worker/tracker snapshot</td><td>单个 source 失败不应阻塞主对话；注入内容未变不重复。</td></tr><tr><td><b>4. 模型</b></td><td>LLM 读取 prompt + 工具 schema，返回文本或 tool calls。</td><td>Completion（内容、tool calls、usage）</td><td>流卡住由 stream stall 看门狗处理；模型失败走 loop 的错误/停车路径。</td></tr><tr><td><b>5. 工具批</b></td><td>执行 tool calls，结果回填；工具预算、超时、沙箱边界在这里生效。</td><td>tool results、tracker 行、文件、浏览器状态</td><td>工具错误作为结果回给模型；结构性失败要修，不可修要停。</td></tr><tr><td><b>6. 事件与落盘</b></td><td>发布事件；transcript、state、checkpoint、memory 反思按策略写盘。</td><td>events.jsonl、state.json、parts、memory log</td><td>EventBus 不是账本；写盘失败必须暴露，不能静默假装成功。</td></tr><tr><td><b>7. 停车或继续</b></td><td>text-only 回合可 STOP；提问则 park；静默由 idle nudge；无人值守由 Sentinel。</td><td>park reason、idle state、Sentinel 决策</td><td>park 要能等数天；没有 Sentinel 时，问题会一直等人。</td></tr></tbody></table></div>
+<div class="callout"><b>注意：</b>EventBus 发布成功不等于业务成功；真正的验收在 tracker/SQL。一次 turn 的“完成”是状态机事件，不是模型说“done”。</div>
+</section>
+
+<section id="s04"><h2><span class="num">04</span>四块共享基底：神经、账本、意图、注意力</h2>
+<p class="sub">Colony 里所有 loop 共享这四块，但它们回答的问题不同。把它们混在一起，是理解 Hive 最常见的错误。</p>
+<div class="tablewrap"><table><thead><tr><th style="width:10%">基底</th><th style="width:24%">回答什么问题</th><th style="width:24%">谁写 / 谁读</th><th style="width:28%">失败边界</th><th style="width:14%">代码锚点</th></tr></thead><tbody><tr><td><b>Tracker</b></td><td>什么做了、什么没做；一行一个工作单元。</td><td>Worker 写行；Queen 用 SQL 验收/读取。</td><td>缺 binding 时工具拒绝执行，不猜路径；避免两个 colony 写错账本。</td><td><code>core/framework/host/tracker_db.py · go_hive/go-hive/internal/tracker</code></td></tr><tr><td><b>Task plan</b></td><td>接下来要做什么；持久任务表，跨 compaction 存活。</td><td>Queen/agent 的任务工具；worker 有私有 task store。</td><td>计划漂移要由 reminder 拉回；task 工具不是 tracker 的替代品。</td><td><code>core/framework/tasks · go_hive/go-hive/internal/tasks</code></td></tr><tr><td><b>EventBus</b></td><td>发生了什么；实时信号、worker 报告、UI 流。</td><td>AgentLoop/worker/colony 发布；handler、SSE、events.jsonl 消费。</td><td>事件不是账本；丢失不能作为业务真相丢失的理由，tracker 仍要能查。</td><td><code>core/framework/host/event_bus.py · go_hive/go-hive/internal/eventbus</code></td></tr><tr><td><b>ReminderHub</b></td><td>现在该把什么注意力拉回来；在生命周期点注入 source 的产出。</td><td>各 reminder source 按角色/phase 注册；hub 合并成 system-reminder。</td><td>结构注册不等于功能注入；需要真实链路测试，尤其是 worker/overseer。</td><td><code>core/framework/agent_loop/reminders.py · go_hive/go-hive/internal/agentloop/*reminder*</code></td></tr></tbody></table></div>
+<div class="callout bad"><b>不要把 EventBus 当账本：</b>事件是“发生了什么”的实时信号，可以重放、可以丢；tracker 行才是“什么做了、什么没做”的唯一真相。恢复时先查 tracker，再看事件。</div>
+</section>
+
+<section id="s05"><h2><span class="num">05</span>长期层：Memory / Soul / Skills</h2>
+<p class="sub">这三层让 Queen 跨会话保持连续，但它们都不是模型权重：都是文件 + prompt 注入。Worker 完全不参与。</p>
+<div class="tablewrap"><table><thead><tr><th style="width:9%">层</th><th style="width:22%">是什么</th><th style="width:30%">怎么实现</th><th style="width:27%">边界</th><th style="width:12%">代码锚点</th></tr></thead><tbody><tr><td><b>Memory</b></td><td>跨会话的事实层：纯 `.md` 文件，按 global/colony/queen/worker 分作用域。</td><td>反思写入；recall 以 `&lt;system-reminder&gt;` 注入；index/wait/background 三模式；每作用域 200 文件、单文件 4 KB。</td><td>不是向量库；只有 global + 本 queen 自动召回；worker 不参与。</td><td><code>core/framework/agents/queen/queen_memory_v2.py · go_hive/go-hive/internal/memory</code></td></tr><tr><td><b>Soul</b></td><td>Queen 对自己的第一人称叙事，注入静态 system prompt 的 `&lt;soul&gt;`。</td><td>每天从聊天反思；默认 review，提案需批准；evidence 必须逐字来自读过的对话；有 history/rollback。</td><td>identity 在 soul 之前；soul 不能覆盖身份。Go-only sediment 会把 memory 结论写进 soul，绕过 review。</td><td><code>core/framework/agents/queen/soul.py · soul_reflection.py · go_hive/go-hive/internal/soul</code></td></tr><tr><td><b>Skills</b></td><td>打样后固化的方法：`SKILL.md` + 作用域发现 + 信任/覆写。</td><td>Queen 先做 pilot，再 `write_skill`；worker 可加载 colony skills；热重载。</td><td>skill 不是任务状态；tracker 才是断点，playbook 重跑靠 tracker 续跑。</td><td><code>core/framework/skills · go_hive/go-hive/internal/skills</code></td></tr></tbody></table></div>
+<div class="callout info"><b>一句话区分：</b>Memory 是“事实”，Soul 是“自我叙事”，Skills 是“方法”。Memory 可以被 owner 编辑/删除/恢复；Soul 默认 review，有 evidence 和 history；Skills 是打样后固化的程序性知识。</div>
+<p class="sub">深挖：<a href="memory-and-soul.html">Memory &amp; Soul</a>（存储/召回/反思/故障） · <a href="skill-discovery.html">Skill Discovery</a>（扫描面）。</p>
+</section>
+
+<section id="s06"><h2><span class="num">06</span>质量与自治：Judge / Stall / Sentinel / Park</h2>
+<p class="sub">这些机制不增加“智能”，它们负责在合适的时候说“不对”“还没做”“该找人了”。</p>
+<div class="tablewrap"><table><thead><tr><th style="width:10%">机制</th><th style="width:28%">做什么</th><th style="width:20%">何时</th><th style="width:28%">失败边界</th><th style="width:14%">代码锚点</th></tr></thead><tbody><tr><td><b>Judge</b></td><td>成功标准判定：ACCEPT / RETRY / ESCALATE。</td><td>worker/agent 输出后，按 judge cadence。</td><td>judge 槽不可用时不能伪造通过；按配置/调用方策略降级。</td><td><code>core/framework/server/judge.py · internals/judge_pipeline.py</code></td></tr><tr><td><b>Stall check</b></td><td>抓“说了没做”：Queen 声称完成但实际没有工具/状态支持时提醒一次。</td><td>用户消息回合；每条用户消息最多一次。</td><td>这是提醒，不是自动改状态；真正验收仍看 tracker/SQL。</td><td><code>core/framework/server/stall_check.py</code></td></tr><tr><td><b>Sentinel</b></td><td>colony 无人值守时的 supervisor：continue / needs_human / done。</td><td>park/idle 后，按 colony 开关和间隔。</td><td>没有配置通道时只能停在本地；升级通道是另一条投递链。</td><td><code>core/framework/sentinel · go_hive/go-hive/internal/sentinel</code></td></tr><tr><td><b>Park / idle</b></td><td>提问即停车，状态落盘；静默时 idle nudge 推一下；流卡住时 stream stall 重跑同一 inner turn。</td><td>STOP / IDLE_TICK / STREAM_STALLED。</td><td>park 是持久等待，不是 sleep；没有唤醒源就永远等人。</td><td><code>core/framework/agent_loop/idle_nudge.py · stream_stall.py</code></td></tr></tbody></table></div>
+<div class="callout"><b>Park 不是 sleep：</b>park 会把状态落盘，可以等数天；唤醒来自用户回复、trigger、Sentinel 或 worker report。没有唤醒源，park 就是永久等待。</div>
+</section>
+
+<section id="s07"><h2><span class="num">07</span>Python 参考实现：代码地图</h2>
+<p class="sub">上游 Python 1.0.15 是设计真值。下表不是全部文件，而是“读架构时先看哪里”。</p>
+<div class="tablewrap"><table><thead><tr><th style="width:14%">层</th><th style="width:48%">路径</th><th style="width:38%">职责</th></tr></thead><tbody><tr><td><b>执行原语</b></td><td><code>core/framework/agent_loop/agent_loop.py</code></td><td>AgentLoop：模型/工具/压缩/park/judge/reminder 的接线中心</td></tr><tr><td><b>提醒</b></td><td><code>core/framework/agent_loop/reminders.py + *_reminder.py</code></td><td>ReminderHub、ReminderSource、ReminderPoint；15 个 source 分散实现</td></tr><tr><td><b>Queen</b></td><td><code>core/framework/agents/queen/queen_profiles.py + queen_defaults/*.yaml</code></td><td>13 份人设；profile 注入 system prompt</td></tr><tr><td><b>Worker</b></td><td><code>core/framework/host/worker.py + agents/queen/worker_definition.py</code></td><td>ephemeral/persistent 两种模式；worker.json 运行时身份</td></tr><tr><td><b>Colony</b></td><td><code>core/framework/host/colony_runtime.py + colony_binding.py + tracker_db.py</code></td><td>spawn clones；无图；不可变 binding；共享账本</td></tr><tr><td><b>基底</b></td><td><code>core/framework/host/event_bus.py + tasks/ + tracker/</code></td><td>事件、任务、tracker；信号与账本分离</td></tr><tr><td><b>Memory / Soul</b></td><td><code>core/framework/agents/queen/queen_memory_v2.py + soul.py + soul_reflection.py</code></td><td>文件记忆、召回、每日自我反思</td></tr><tr><td><b>质量 / 服务</b></td><td><code>core/framework/server/judge.py + stall_check.py + session_manager.py</code></td><td>judge、stall、会话生命周期、HTTP/SSE</td></tr></tbody></table></div>
+<div class="callout info"><b>读法：</b>先读 <code>agent_loop.py</code> 的 loop 状态机，再读 <code>reminders.py</code> 和 <code>host/colony_runtime.py</code>；最后用 <code>queen_memory_v2.py</code>/<code>soul.py</code> 看长期层。<code>12-design.md</code> 是 Go 侧的模块边界说明。</div>
+</section>
+
+<section id="s08"><h2><span class="num">08</span>Go 移植：不是重写设计，是对等实现</h2>
+<p class="sub">Go 侧的目标是“同一棵 HIVE_HOME 两边可读、同一行为两边可测”。外部行为优先于 Go 惯用法；核心处严格，边界处宽松。</p>
+<div class="tablewrap"><table><thead><tr><th style="width:14%">层</th><th style="width:38%">Go 包</th><th style="width:48%">对应/说明</th></tr></thead><tbody><tr><td><b>执行原语</b></td><td><code>go_hive/go-hive/internal/agentloop</code></td><td>AgentLoop/LoopConfig/park/reminder/judge 接线；Go 侧唯一执行原语</td></tr><tr><td><b>Colony / Worker</b></td><td><code>go_hive/go-hive/internal/colony</code></td><td>ColonyRuntime、worker spawn、overseer、playbook、binding</td></tr><tr><td><b>Memory / Soul</b></td><td><code>go_hive/go-hive/internal/memory · internal/soul</code></td><td>文件记忆、反思、召回、timeline；soul 反思/sediment</td></tr><tr><td><b>事件</b></td><td><code>go_hive/go-hive/internal/eventbus</code></td><td>进程内 pub/sub；事件类型、持久化、handler 扇出</td></tr><tr><td><b>账本 / 计划</b></td><td><code>go_hive/go-hive/internal/tracker · internal/tasks</code></td><td>SQLite tracker、任务表、工具</td></tr><tr><td><b>服务 / CLI</b></td><td><code>go_hive/go-hive/internal/server · cmd/hive</code></td><td>HTTP/SSE、ChatRuntime、CLI、embedded UI</td></tr><tr><td><b>LLM / 工具</b></td><td><code>go_hive/go-hive/internal/llm · internal/tools</code></td><td>provider 纯逻辑/传输、工具注册与执行</td></tr></tbody></table></div>
+<h3>Go 侧四条实现约束</h3>
+<ul>
+<li><b>纯 Go / 无 cgo：</b>六个平台可交叉编译；SQLite 用 <code>modernc.org/sqlite</code>，不依赖系统库。</li>
+<li><b>单写者 + 原子写：</b>文件走同目录 temp + fsync + rename；SQLite 连接池单写者，换可预测的 WAL 行为。</li>
+<li><b>宽松读、严格写：</b>损坏的缓存/索引读作空或跳过，不因缓存丢主数据；写出去的数据必须满足 schema。</li>
+<li><b>Parity 是门禁：</b>每个测试用 <code>// Parity:</code> 指向 Python 测试；没有对应物时用 <code>// Parity-exempt:</code> 写明理由。</li>
+</ul>
+<div class="callout"><b>边界：</b>Go 不是逐行翻译。Python 的 duck typing/dict 保序/str() 语义会用 Go 结构体、有序 map、兼容助手显式实现；差异必须可观测、可测试。</div>
+</section>
+
+<section id="s09"><h2><span class="num">09</span>设计 trade-off：为什么不是另一种架构</h2>
+<p class="sub">每个“没有”都有代价。下表把收益和代价放在一起，避免只讲优点。</p>
+<div class="tablewrap"><table><thead><tr><th style="width:18%">选择</th><th style="width:42%">得到什么</th><th style="width:40%">付出什么</th></tr></thead><tbody><tr><td><b>不预设 DAG</b></td><td>组织可以按真实流程生长；Queen 先打样，再决定 fan-out。</td><td>协调是隐式的：没有静态边可检查，必须靠 tracker/任务/事件和真实 E2E。</td></tr><tr><td><b>Worker 无记忆/无 escalation</b></td><td>worker 短命、可替换、失败快；不会把错误人设/记忆扩散到所有执行单元。</td><td>worker 没有跨任务连续性；上下文必须由 Queen 在任务里重新给。</td></tr><tr><td><b>文件式 memory</b></td><td>可读、可审计、可迁移、可跨语言复刻；不需要向量库。</td><td>没有语义检索；陈旧/错误事实会占位，质量靠反思和 owner 审计。</td></tr><tr><td><b>EventBus 只做信号</b></td><td>解耦实时消费者；UI/worker/reminder 可以各自订阅。</td><td>不能把事件当账本；业务真相必须落到 tracker/SQL。</td></tr><tr><td><b>prompt + 工具驱动</b></td><td>行为灵活，新增能力主要是加 prompt/工具，不是改状态机。</td><td>行为依赖模型；结构测试不能代替真实模型 E2E。</td></tr><tr><td><b>Python 参考 + Go 移植</b></td><td>同一棵 HIVE_HOME 两边可读；行为有可审计的 parity 映射。</td><td>Go 受纯 Go/离线/无 cgo 约束；某些 Python 语义要手写兼容助手。</td></tr></tbody></table></div>
+</section>
+
+<section id="s10"><h2><span class="num">10</span>故障边界：出问题时信谁</h2>
+<p class="sub">架构的可靠性不取决于“永不失败”，而取决于失败时状态是否可见、是否可恢复。</p>
+<div class="tablewrap"><table><thead><tr><th style="width:16%">故障</th><th style="width:48%">机制</th><th style="width:36%">边界/恢复</th></tr></thead><tbody><tr><td><b>Worker 失败</b></td><td>Worker 有 grace iteration；即使预算耗尽，最后仍放开 report_to_parent/task_update/tracker_upsert 收尾。</td><td>report 三态：success / partial / failed；Queen 不用猜。</td></tr><tr><td><b>Queen 提问</b></td><td>提问即 park，状态落盘，可等数天；用户回复后恢复。</td><td>没有 Sentinel/唤醒源时，问题会一直等人。</td></tr><tr><td><b>Colony 绑定缺失</b></td><td>tracker 工具拒绝执行，要求显式 colony_id 或 tracker_db_path。</td><td>绝不猜路径；避免写错账本。</td></tr><tr><td><b>事件丢失</b></td><td>事件不是账本；tracker/state 才是恢复依据。</td><td>关键业务结果必须落行，不能只发事件。</td></tr><tr><td><b>上下文压缩</b></td><td>压缩会丢旧消息；memory 不参与摘要，压缩后 long reflection 尝试沉淀。</td><td>反思失败时可能丢学习；需要 pending/retry 设计。</td></tr><tr><td><b>Memory/Soul 漂移</b></td><td>memory 有 owner guard/log/restore；soul 有 review/evidence/history。</td><td>auto/sediment 会绕过人工 review；见 memory-and-soul 的故障分析。</td></tr><tr><td><b>Go 行为漂移</b></td><td>`// Parity:` 注解 + parity 门禁 + 双跑。</td><td>结构注册通过不等于真实链路通过。</td></tr></tbody></table></div>
+<div class="callout bad"><b>最容易被忽略的边界：</b>结构注册（source/tool 已注册）不等于功能链路（真的注入/真的执行）。验证必须走到真实模型或真实 worker，而不是只数注册表。</div>
+</section>
+
+<section id="s11"><h2><span class="num">11</span>证据、相关文档与维护</h2>
+<h3>相关文档</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:20%">文档</th><th style="width:44%">路径</th><th style="width:36%">内容</th></tr></thead><tbody><tr><td><a href="hive-core-designs.html">核心机制调研</a></td><td><code>go_hive/docs/hive-core-designs.html</code></td><td>Queen/Worker/Colony/Reminder/Memory/Judge 的代码锚点</td></tr><tr><td><a href="hive-package-atlas.html">包结构与架构地图</a></td><td><code>go_hive/docs/hive-package-atlas.html</code></td><td>core/framework 的包、依赖、SCC</td></tr><tr><td><a href="package-parity-matrix.html">源码包对照矩阵</a></td><td><code>go_hive/docs/package-parity-matrix.html</code></td><td>core/framework 包 → Go internal 包：对应物、接线、登记行为与判定</td></tr><tr><td><a href="memory-and-soul.html">Memory &amp; Soul</a></td><td><code>go_hive/docs/memory-and-soul.html</code></td><td>记忆/召回/反思/soul 的深挖</td></tr><tr><td><a href="reminders-and-nudges.html">Reminders &amp; Nudges</a></td><td><code>go_hive/docs/reminders-and-nudges.html</code></td><td>15 source、9 point、链路与矩阵</td></tr><tr><td><a href="event-bus.html">Event Bus</a></td><td><code>go_hive/docs/event-bus.html</code></td><td>事件类型、发布管线、消费方</td></tr><tr><td><a href="loop-vocabulary.html">术语表</a></td><td><code>go_hive/docs/loop-vocabulary.html</code></td><td>park/nudge/stall/Sentinel 的边界</td></tr><tr><td><a href="module-interfaces.html">模块接口与不变量</a></td><td><code>go_hive/docs/module-interfaces.html</code></td><td>进程边界、存储契约</td></tr><tr><td><a href="support-matrix.md">支持矩阵</a></td><td><code>go_hive/docs/support-matrix.md</code></td><td>当前能力状态与未验证项</td></tr></tbody></table></div>
+<h3>生成与检查</h3>
+<ul>
+<li>生成器：<code>go_hive/scripts/gen_hive_architecture.py</code></li>
+<li>产物：<code>go_hive/docs/hive-architecture.html</code>、<code>go_hive/docs/hive-architecture.json</code></li>
+<li>防漂移：<code>uv run python go_hive/scripts/gen_hive_architecture.py --check</code>；比对 HTML/JSON 字节，并检查 10 个代码/文档锚点。</li>
+<li>只改生成器，不手改 HTML；改架构行为时同步更新本页、<code>hive-core-designs.html</code> 与 <code>module-interfaces.html</code>。</li>
+</ul>
+<div class="callout info"><b>范围说明：</b>本文讲“设计与实现骨架”，不替代深挖页。Reminder 的 15 source、Memory/Soul 的故障路径、EventBus 的 77 类型、Go 的当前缺口，分别以对应专页和 <code>support-matrix.md</code> 为准。</div>
+</section>
+
+<footer>Hive architecture dossier · 生成物，勿手改 · 基线 42f2b932 · 相关：<a href="hive-core-designs.html">核心机制</a> · <a href="hive-package-atlas.html">包地图</a> · <a href="package-parity-matrix.html">源码包对照</a> · <a href="memory-and-soul.html">Memory &amp; Soul</a> · <a href="reminders-and-nudges.html">Reminders</a> · <a href="event-bus.html">Event Bus</a> · <a href="module-interfaces.html">模块接口</a></footer>
+</div></body></html>

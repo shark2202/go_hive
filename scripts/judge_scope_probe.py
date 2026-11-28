@@ -256,14 +256,21 @@ def claim_go_set_output_unwired(root: Path) -> list[str]:
 
 def claim_go_judge_wired(root: Path) -> list[str]:
     problems: list[str] = []
+    text = strip_comments((root / "go_hive/go-hive/internal/agentloop/judge.go").read_text(encoding="utf-8"))
+    if "func (l *AgentLoop) ConfigureJudge(" not in text:
+        problems.append("通用 judge API 缺失：ConfigureJudge 定义不在 judge.go")
+    if "NewLLMJudgeAdapterFromCompleter(completer)" not in text:
+        problems.append("通用 judge API 缺失：默认 LLM judge 适配器未接线")
+    total, hits = _scan_go(root, r"\.ConfigureJudge\(")
+    if total:
+        problems.append(f"生产路径仍有 {total} 处 ConfigureJudge 调用（登记为 0，queen/colony 不激活 judge）：{hits[:5]}")
     for pattern, minimum, what in (
-        (r"\.ConfigureJudge\(", 3, "ConfigureJudge 调用点"),
         (r"\.shouldJudge\(", 2, "shouldJudge 调用点"),
         (r"\.evaluateJudge\(", 2, "evaluateJudge 调用点"),
     ):
-        total, hits = _scan_go(root, pattern)
-        if total < minimum:
-            problems.append(f"{what} 只剩 {total} 处（登记 ≥{minimum}）：{hits}")
+        count, hits = _scan_go(root, pattern)
+        if count < minimum:
+            problems.append(f"{what} 只剩 {count} 处（登记 ≥{minimum}）：{hits}")
     return problems
 
 
@@ -272,7 +279,7 @@ def claim_go_judge_gated(root: Path) -> list[str]:
     problems: list[str] = []
     if "spec.SkipJudge || !hasSuccessCriteria(spec)" not in text:
         problems.append("ConfigureJudge 不再按 skip_judge/无 criteria 关掉 judge")
-    if "agentCtx.AgentSpec.SkipJudge || !hasSuccessCriteria(agentCtx.AgentSpec)" not in text:
+    if "agentCtx.AgentSpec.SkipJudge" not in text or "hasSuccessCriteria(agentCtx.AgentSpec)" not in text:
         problems.append("shouldJudge 不再按 skip_judge/无 criteria 关掉判定")
     return problems
 
@@ -326,7 +333,7 @@ CLAIMS: tuple[Claim, ...] = (
     Claim("go-no-graph-host", "Go 无 graph 运行时类型、internal/orchestrator 无人 import", claim_go_no_graph_host),
     Claim("go-no-output-accumulator", "Go 无 OutputAccumulator、无 output-key 缺失门", claim_go_no_output_accumulator),
     Claim("go-set-output-unwired", "set_output 构建器/处理器仅定义、无调用方", claim_go_set_output_unwired),
-    Claim("go-judge-wired", "judge 由生产代码接线（ConfigureJudge/shouldJudge/evaluateJudge）", claim_go_judge_wired),
+    Claim("go-judge-wired", "通用 judge API 保留；queen/colony 生产路径不调用 ConfigureJudge", claim_go_judge_wired),
     Claim("go-judge-gated", "judge 受 skip_judge 与 criteria 双重门控", claim_go_judge_gated),
     Claim("go-implicit-verdict-event", "skip_judge 会话仍发 judge_verdict(implicit)", claim_go_implicit_verdict_event),
     Claim("go-iteration-feedback-is-grace", "迭代预算反馈是 grace 收尾，无 urgency 文案", claim_go_iteration_feedback_is_grace),

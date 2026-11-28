@@ -1,7 +1,7 @@
-# govulncheck stdlib CVE：go.mod 升版预实现（待批 · 未合并）
+# govulncheck stdlib CVE：go.mod 升版记录（已批准 · 已落地）
 
-> 本页是 `pending-decisions.md` §D1 **选项 A**（升 `go.mod` 到 go1.26.11）的**待批预实现**。
-> 改动已在独立工作树完成并全量复验，**未合并、未推送**。批准后按 §7 合并即可。
+> 本页是 `pending-decisions.md` §D1 **选项 A**（升 `go.mod` 到 go1.26.11）的**已批准落地记录**。
+> 改动已合并进 `main` 并通过全量复验；本页保留批准时的工作树证据与操作记录。
 > 项目纪律：`go.mod` 属依赖变更，必须显式批准后才能进 `main`。
 
 - 基线：`main` `f0a1899e`；工作树 `.wt/prep-govuln`，分支 `prep-govuln`

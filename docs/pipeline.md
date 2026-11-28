@@ -3,13 +3,16 @@
 > 上游参考：`core/framework/pipeline/`（`stage.py` / `runner.py` / `registry.py` / `stages/*.py`）
 > Go 实现：`go_hive/go-hive/internal/pipeline/` + `go_hive/go-hive/internal/colony/trigger.go`
 > 配置键：`configuration.json` → `pipeline.stages`（`contracts/config-keys.json` 第 135 键，状态 `aligned`）
+> 生产可达性：**partial（机制/API surface）+ out_of_scope（生产触发路径）**。`Trigger` 没有生产调用方，
+> 上游同样没有；生产触发器走 queen 事件注入。调用图与证据见 §7。
 
 ## 1. 机制
 
-`pipeline` 是 **trigger 入口的中间件**：colony runtime 每收到一次 `Trigger`，在 spawn worker
+`pipeline` 是 **trigger 入口的中间件**：API 调用方每调用一次 `ColonyRuntime.Trigger`，在 spawn worker
 之前把请求依次交给按 `order` 升序排列的 stage。机制本身是 opt-in 的——没有配置
 `pipeline.stages` 就得到一个空管线，`Trigger` 直接 spawn，与上游 `PipelineRunner([])`
-的行为一致。
+的行为一致。注意：这是公开 runtime API 的形状，不是 server 的生产触发器路径；生产触发
+（手动/定时）注入 queen 节点，两侧都不经过 `Trigger`（§7）。
 
 三个核心类型（`internal/pipeline`）：
 
@@ -103,6 +106,7 @@
 | `RuntimeOptions.PipelineStages` 非空 | 注入 stage 优先，完全不读配置（上游 `pipeline_stages=[...]`） |
 | `Trigger` 时管线拒绝 | 返回 `*pipeline.RejectedError`，不 spawn worker |
 | `Trigger` 带 `IdempotencyKey` | 先查缓存（TTL 300s、上限 10000 键、插入序淘汰）再跑管线；命中直接返回原 worker id |
+| 生产中手动/定时触发 | **不调用 `Trigger`**：`handleRunTrigger` / `StartTriggerTimer` 把 trigger event 注入 queen 节点（§7） |
 
 `Trigger` 的其余语义与上游 `ColonyRuntime.trigger` 对齐：未启动返回
 `ColonyRuntime is not running`；任务文本取 `input_data["task"]`，没有则用 Python 风格的
@@ -123,9 +127,10 @@
 | `stages/rate_limit.py` | `internal/pipeline/stage_rate_limit.go` | 等价（滑动窗口、桶 key、拒绝消息） |
 | `stages/cost_guard.py` | `internal/pipeline/stage_cost_guard.go` | 等价（无估计放行、预算判断、消息格式） |
 | `host/colony_runtime.py::_load_pipeline_from_config` / `__init__` 注入 | `internal/colony/trigger.go::loadPipelineFromConfig` + `NewColonyRuntime` | 等价 |
-| `host/colony_runtime.py::trigger` | `internal/colony/trigger.go::Trigger` | 等价（管线 → task 提取 → spawn → 幂等回填） |
+| `host/colony_runtime.py::trigger` | `internal/colony/trigger.go::Trigger` | **partial**：机制等价（管线 → task 提取 → spawn → 幂等回填）；生产可达性 **out_of_scope**——上游 `trigger` 仅由 `trigger_and_wait`/未注册的 colony timer 调用，server 走 queen 注入（§7） |
+| `host/colony_runtime.py::trigger_and_wait` | 未移植（无 `TriggerAndWait`） | out_of_scope：上游无生产调用方，仅 embedding API；Go 未新增无调用方的 API（§7） |
 | `host/colony_runtime.py::initialize_all` + `_apply_pipeline_results` | `initializePipeline` + `applyPipelineOutputs`（`internal/colony/trigger.go`） | 子集：见 §6 |
-| `pipeline/stages` 作为 `configuration.json` 键 | `pipeline.stages`（`contracts/config-keys.json`，`aligned`） | 两侧读取点均有契约锚点与测试 |
+| `pipeline/stages` 作为 `configuration.json` 键 | `pipeline.stages`（`contracts/config-keys.json`，`aligned`） | 两侧读取点均有契约锚点与测试；`aligned` 只指读取/解析面，不代表 `Trigger` 的生产可达性（§7） |
 
 ## 5. 测试与门禁
 
@@ -133,6 +138,7 @@
 cd go_hive/go-hive
 go build ./...
 go test -count=1 ./internal/pipeline/ ./internal/colony/ ./internal/server/
+go test -count=1 ./internal/pipeline/ -run 'TestTriggerPipelineHasNoProductionCaller|TestPipelineReachabilityStatusDocumented'
 bash ../scripts/check_parity.sh .
 bash ../scripts/check_parity_targets.sh
 python3 ../scripts/check_env_config_contract.py --strict
@@ -155,7 +161,66 @@ make arch-check
   （`internal/cli`）已经成型，pipeline 不替换它；`accounts_prompt` 未生成，
   Go 的 queens 凭据块由 `queen.CredentialsSummaryBlock` 组装。
 - 未移植：`skill_registry` 的上游文件监听（`start_watching`）；`TriggerAndWait` /
-  定时 trigger 自动 spawn 的旧路径（Go 的定时 trigger 走 queen 事件注入）。
+  `register_trigger` + colony `_start_timers`/`_timer_loop` 定时自动 spawn 的旧路径
+  （Go 的定时 trigger 走 queen 事件注入）。这些在上游也没有生产调用方，见 §7；不新增
+  无生产调用方的 API。
 - 说明：`llm_provider` 的默认解析是 `get_preferred_model` + `get_api_keys` 的 Go 子集；
   Antigravity 订阅、凭据库与 provider 环境变量兜底在 `internal/server` 的
   `MainSlotProvider` 中，未在 pipeline 内重复。
+
+## 7. 生产可达性（out_of_scope）
+
+**结论：`internal/pipeline` 的逐请求中间件（`Runner.Run`）与 `ColonyRuntime.Trigger` 没有生产调用方；上游也没有。**
+这是 API-surface parity，不是 server 的触发器路径。把 `Trigger` 接进 `handleRunTrigger` 会改变语义
+（spawn worker vs. 向 queen 注入 trigger event），因此不接线。
+
+**上游调用图（本检出，2026-11-26）**
+
+- `ColonyRuntime.trigger`：`core/framework/host/colony_runtime.py:2376`。
+- 仅有的两处调用：`trigger_and_wait` 内部 `core/framework/host/colony_runtime.py:2425`/`:2432`，
+  以及 colony 定时器 `_timer_loop` 的 `core/framework/host/colony_runtime.py:2904`。
+- `_timer_loop` 只由 `_start_timers`（`:2860`–`:2875`）为 `self._triggers` 里的 timer 启动；
+  该字典只由 `register_trigger`（`:2823`）填充，而 `register_trigger` 在整个检出中 **0 个调用方**
+  （`grep -rn "register_trigger" --include=*.py .` 仅命中定义与 `unregister_trigger`）。
+  因此 colony 定时器在生产中不会启动，`trigger` 也不会被定时器调用。
+- 生产 session 的 colony 由 `SessionManager` 构造并显式传 `pipeline_stages: []`
+  （`core/framework/server/session_manager.py:1777`，注释：queen pipeline runs in
+  queen_orchestrator, not here），所以生产 colony runtime 的管线为空。
+
+**上游生产触发器路径（不经过 `ColonyRuntime.trigger`）**
+
+- 手动触发：`handle_run_trigger`（`core/framework/server/routes_sessions.py:1527`）→
+  `queen_node.inject_trigger`（`:1557`）。
+- 定时触发：`_start_trigger_timer`（`core/framework/tools/queen_lifecycle_tools.py:810`）→
+  `queen_node.inject_trigger`（`:886`）。
+- 图时代：`AgentHost.trigger`（`core/framework/host/agent_host.py:918`）确实跑 pipeline，
+  `AgentLoader.trigger`（`core/framework/loader/agent_loader.py:1894`）是它的包装；但
+  `routes_sessions.py:1091` 明确 “legacy graph-runtime entry points were removed with
+  colony_runtime”，且生产 server 不构造 `AgentLoader`（`core/framework/server` 内无
+  `AgentLoader(` 调用）。因此 pipeline 的 trigger 路径只属于图时代/嵌入 API，不属于
+  Go 支持的 colony server 路径。
+
+**Go 侧对应**
+
+- 生产触发器与上游同形：`handleRunTrigger`（`internal/server/routes_session_triggers.go:367`）→
+  `injectTrigger`（`:398`）；`StartTriggerTimer`（`internal/server/trigger_runtime.go:512`）→
+  `injectTrigger`（`:617`）。
+- `internal/host` 只暴露 `Spawn`/`Run`（`internal/host/host.go:211`/`:227`），没有 `Trigger`；
+  `internal/cli/loader_colony_host.go:69` 构造 Host 时也没有 trigger 接线。
+- `ColonyRuntime.Trigger`（`internal/colony/trigger.go:61`）只在 `internal/colony/trigger_test.go`
+  等测试中被调用；全仓非测试 `.Trigger(` 调用为 0。
+- Go 的 `serve --colony` 在 `NewColonyRuntime` 读取 `configuration.json` 的 `pipeline.stages`
+  （`internal/colony/runtime.go:348`）并在 `Start` 初始化/应用（`:640`）；这是包级 helper/启动面，
+  不是 `Trigger` 的逐请求路径。上游 session colony 显式传空管线（`session_manager.py:1777`），
+  这个启动面差异登记在 `docs/alignment-differences.md` A40。
+- 守卫测试：`internal/pipeline/reachability_test.go` 在出现生产 `.Trigger(...)` 调用、
+  `triggerPipeline.Run` 外溢或文档删除 §7 标记时失败。
+
+**为什么不接线**
+
+1. 上游没有生产调用方，接线会发明一条上游不存在的路径。
+2. `handleRunTrigger` 的既有语义是“把 trigger event 注入 queen 节点”
+   （`internal/server/routes_session_triggers.go:392`–`:398`）；改成 `ColonyRuntime.Trigger`
+   会 spawn 一个 worker，改变 session/queen 行为。
+3. 没有安全的 Go producer：`internal/host` 没有 timer/API 触发面；新增 colony timer 需要先移植
+   `register_trigger`/`_start_timers`，属于新功能而非 parity 接线。

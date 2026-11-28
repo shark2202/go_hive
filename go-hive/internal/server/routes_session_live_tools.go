@@ -123,6 +123,9 @@ func handleSessionLiveTools(w http.ResponseWriter, r *http.Request, deps Session
 		}
 	}
 
+	// The executor is always the session's chat runtime: Hive 1.0.15 starts a
+	// colony runtime without attaching a live overseer. Report the phase-state
+	// surface the model actually receives; never mix in another loop's tools.
 	toolKind := func(name string) string {
 		if _, ok := mcpNames[name]; ok {
 			return "mcp"

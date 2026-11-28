@@ -8,6 +8,8 @@ package cli
 import (
 	"context"
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -237,5 +239,54 @@ func TestQueenTrackerToolsUseTheBoundColonyPerCall(t *testing.T) {
 		if len(row) != 1 || row[0] != "only-here" {
 			t.Fatalf("%s row = %+v", tc.binding.Name, row)
 		}
+	}
+}
+
+// Parity: core/framework/tools/tracker_tools.py — the global branch is checked
+// before _require_binding, so the queen can reach the team cloud DB from a
+// plain DM session (no colony binding) instead of getting the colony-context
+// refusal. The unavailable-signin path stays a real cloud error, never a
+// fabricated local tracker.
+func TestQueenTrackerGlobalScopeSkipsColonyBinding(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/global-db/sql" {
+			t.Errorf("path = %s, want /v1/global-db/sql", r.URL.Path)
+		}
+		if got := r.Header.Get("Authorization"); got != "jwt test-jwt" {
+			t.Errorf("Authorization = %q, want jwt test-jwt", got)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"columns":["n"],"rows":[{"n":7}],"rowCount":1}`))
+	}))
+	defer server.Close()
+	t.Setenv("HIVE_CLOUD_BASE", server.URL)
+	t.Setenv("HIVE_CLOUD_JWT", "test-jwt")
+
+	root := testTempDir(t)
+	catalogue := newSessionToolCatalogue(root, builtin.New(root), hivehome.Home{Root: root})
+
+	// Colony scope without a binding keeps its explicit refusal ...
+	colony := trackerExecute(t, catalogue, context.Background(), "tracker_sql", map[string]any{"sql": "SELECT 1"})
+	if colony["success"] != false {
+		t.Fatalf("colony scope without a binding succeeded: %+v", colony)
+	}
+	if msg, _ := colony["error"].(string); !strings.Contains(msg, "no colony context") {
+		t.Fatalf("colony error = %q, want the no-colony-context guidance", msg)
+	}
+
+	// ... while scope='global' reaches the signed-in cloud DB.
+	global := trackerExecute(t, catalogue, context.Background(), "tracker_sql", map[string]any{
+		"sql": "SELECT n FROM team_table", "scope": "global",
+	})
+	if global["success"] != true {
+		t.Fatalf("global scope without a colony binding: %+v", global)
+	}
+	rows, _ := global["rows"].([]any)
+	if len(rows) != 1 {
+		t.Fatalf("rows = %+v, want one cloud row", rows)
+	}
+	row, _ := rows[0].([]any)
+	if len(row) != 1 || row[0] != float64(7) {
+		t.Fatalf("row = %+v, want [7]", row)
 	}
 }

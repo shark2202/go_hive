@@ -1,0 +1,147 @@
+{
+  "schema": "hive.computer-use-port-assessment/v1",
+  "as_of": "2026-11-23",
+  "go_baseline": "go_hive main @ d2093cba (assessment snapshot)",
+  "source": {
+    "url": "https://github.com/can1357/oh-my-pi/blob/main/docs/computer-use.md",
+    "raw": "https://raw.githubusercontent.com/can1357/oh-my-pi/main/docs/computer-use.md"
+  },
+  "verdict": "possible_but_not_now_new_feature_needs_native_sidecar",
+  "api_surface": [
+    {
+      "area": "窗口与显示器",
+      "api": "windows(app?, title?) / window(idOrFilter) / focusedWindow() / display(active|all|id)",
+      "notes": "枚举、选择、等待目标窗口或显示器；窗口句柄带 id/app/title/pid/bounds。"
+    },
+    {
+      "area": "截图",
+      "api": "screenshot({silent?}) / zoom({x,y,width,height})",
+      "notes": "全窗口或显示器截图；坐标基于最近一次全量截图；区域放大不替换点击帧。"
+    },
+    {
+      "area": "原生输入",
+      "api": "click / doubleClick / drag / holdMouse / type / press / holdKeys",
+      "notes": "按键、鼠标、按住、拖拽；坐标输入必须先有截图。"
+    },
+    {
+      "area": "AX 无障碍",
+      "api": "ax() / find() / ref() / elementAt(x,y) / focusedElement()",
+      "notes": "读取 OS Accessibility/AX 树，按角色/标题/描述定位元素；引用有 stale-ref 语义。"
+    },
+    {
+      "area": "元素动作",
+      "api": "el.click() / el.type() / el.press() / el.setValue() / el.perform()",
+      "notes": "优先语义动作，不依赖截图；支持后台与 takeover 两种投递路径。"
+    },
+    {
+      "area": "菜单",
+      "api": "win.menu.items() / win.menu.select([...])",
+      "notes": "按标题选择菜单路径；不猜快捷键。"
+    },
+    {
+      "area": "剪贴板",
+      "api": "computer.clipboard.read() / write()",
+      "notes": "读写系统剪贴板。"
+    },
+    {
+      "area": "应用",
+      "api": "computer.apps.list() / open(idOrNameOrPath, {activate?, reveal?})",
+      "notes": "枚举/打开应用；部分能力仅 macOS。"
+    },
+    {
+      "area": "批量脚本",
+      "api": "computer.run(fnOrCode, {args?, read_only?, timeout?})",
+      "notes": "同一 worker session 内运行多步操作；返回结构化值，截图作为 Eval 图像。"
+    },
+    {
+      "area": "能力探测",
+      "api": "computer.capabilities()",
+      "notes": "报告 capture/input/AX/permission/screenLocked/displayAsleep 等能力。"
+    },
+    {
+      "area": "安全控制",
+      "api": "control.acquire() / release() / state()",
+      "notes": "请求显式前台控制；需要人工确认或策略批准。"
+    },
+    {
+      "area": "等待",
+      "api": "wait(fn, {timeout?, interval?})",
+      "notes": "等待窗口/元素/条件出现。"
+    }
+  ],
+  "platforms": [
+    {
+      "platform": "macOS x64/arm64",
+      "backend": "ScreenCaptureKit（14+）/ CoreGraphics（12/13）+ native AX + input",
+      "constraints": "需要 Screen Recording + Accessibility；由启动 omp 的终端/IDE 授权；部分 apps.open 能力仅 macOS。"
+    },
+    {
+      "platform": "Linux X11 x64/arm64",
+      "backend": "X11 capture/input + AT-SPI",
+      "constraints": "需要可读 display、RandR/XTEST；后台输入依赖 XI2、/dev/uinput、udev/libinput 与 toolkit/window manager。"
+    },
+    {
+      "platform": "Linux Wayland x64/arm64",
+      "backend": "RemoteDesktop portal / LIBEI + AT-SPI；ScreenCast portal/PipeWire",
+      "constraints": "逐窗口后台输入不可用；需要 PipeWire/libpipewire；compositor 限制；权限会话级。"
+    },
+    {
+      "platform": "Windows x64/arm64",
+      "backend": "Win32 display/window capture + Win32 input + UI Automation",
+      "constraints": "background type/press 对无窗口元素会 BackgroundUnavailable；UIA/COM 与 DPI 适配。"
+    },
+    {
+      "platform": "其它已发布目标",
+      "backend": "Unsupported unless native addon reports capabilities",
+      "constraints": "没有 backend 就不能假装可用。"
+    }
+  ],
+  "go_hive_constraints": [
+    "Hive 上游没有 computer-use；这是新增能力，不是 go_hive 的 parity 项。",
+    "go_hive 当前约束是纯 Go、CGO_ENABLED=0；macOS ScreenCaptureKit/CoreGraphics/AX 通常需要 cgo/ObjC/Swift。",
+    "现有 go_hive 只有浏览器域（Browser Bridge / browser_*）与 terminal_exec；没有窗口枚举、AX tree、原生鼠标键盘注入。",
+    "当前发布规则：先完成 Hive 对齐，未完成前不新增功能；因此不能把 computer-use 塞进 1.0 对齐范围。",
+    "安全模型不可省略：屏幕是不可信输入，原生输入要审批、可中断、可回滚，最好在专用账号/VM 中运行。",
+    "跨平台一致性是 per-platform 能力矩阵，不是同一套语义；oh-my-pi 自己也列出了 Wayland/Windows/macOS 差异。"
+  ],
+  "options": [
+    {
+      "id": "A",
+      "name": "A. OS CLI 包装",
+      "approach": "调用 screencapture / osascript / grim / xdotool / PowerShell",
+      "benefits": "快；不改 Go 依赖",
+      "costs": "没有 AX tree、后台输入、权限/审批；Linux/Wayland/Windows 差异大；不能称 computer-use 对齐"
+    },
+    {
+      "id": "B",
+      "name": "B. 独立 native sidecar（推荐，若以后做）",
+      "approach": "Go core ↔ JSON-RPC/stdio ↔ Swift/ObjC/Rust/C++ helper",
+      "benefits": "Go 主二进制仍可 CGO=0；平台能力隔离；可独立签名/授权",
+      "costs": "新增发布产物、安装/公证、TCC、Linux 桌面矩阵、Windows UIA/DPI、安全审计"
+    },
+    {
+      "id": "C",
+      "name": "C. 全部塞进 Go core",
+      "approach": "cgo/native bindings 直接进核心",
+      "benefits": "单一二进制",
+      "costs": "违反 CGO_ENABLED=0；平台条件编译复杂；安全边界差；不建议"
+    },
+    {
+      "id": "D",
+      "name": "D. 不移植（当前建议）",
+      "approach": "继续使用 Browser Bridge / terminal；需要截图时人工 screencapture + attach_file",
+      "benefits": "不扩大攻击面；不违反对齐约束",
+      "costs": "不能控制原生应用；不是 computer-use"
+    }
+  ],
+  "acceptance": [
+    "默认关闭，显式配置开启；capabilities() 必须报告当前平台真实能力，而不是假设可用。",
+    "截图必须明确目标显示器/窗口、坐标帧、DPI/缩放；resize/display layout change 后必须重新截图。",
+    "每次输入先校验坐标来自最近一次同目标全量截图；AX 引用要能报告 stale ref。",
+    "审批/权限：读操作与写操作分级；对话式批准；Escape/中断释放按键与鼠标；前台 takeover 必须可回退焦点。",
+    "不得把屏幕内容当作用户授权；危险操作（发送、购买、删除、权限变更）要二次确认。",
+    "每个平台单独 E2E：macOS Screen Recording/Accessibility、Linux X11、Wayland portal、Windows UIA/DPI；无 backend 时返回明确错误。",
+    "不在没有浏览器的 headless 服务器上伪造成功；返回 Unsupported/Unavailable，而不是空截图。"
+  ],
+  "decision": "Do not add to go_hive 1.0; if needed later, build an opt-in native sidecar, not a cgo core change."
+}

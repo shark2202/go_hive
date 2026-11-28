@@ -30,14 +30,10 @@ func sessionStatsColonyID(session *Session) string {
 	return session.ID
 }
 
-// sessionStatsBaseline builds the full /stats schema out of the session itself.
-//
-// Upstream answers colony.get_stats() verbatim, so a session that never spawned
-// a colony used to answer {} here and every counter disappeared from the
-// dashboard. The baseline keeps the same keys and value types for those
-// sessions; colony stats are layered on top by buildSessionStats. running has no
-// colony flag to read on this path, so it reports whether a chat runtime is
-// still attached (StopSession detaches it).
+// sessionStatsBaseline builds the session-side schema that overlays a colony's
+// get_stats payload. It is only used when a colony is attached: upstream
+// answers a colony-less session with {} (framework/server/routes_sessions.py::
+// handle_session_stats), so the baseline is never rendered on its own.
 //
 // Parity: framework/host/colony_runtime.py::ColonyRuntime.get_stats
 func sessionStatsBaseline(session *Session) map[string]any {

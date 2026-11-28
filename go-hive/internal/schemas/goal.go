@@ -26,7 +26,10 @@ func (s GoalStatus) valid() bool {
 }
 
 type SuccessCriterion struct {
-	ID          string  `json:"id,omitempty"`
+	// id is a required Pydantic field (goal.py::SuccessCriterion has no
+	// default), so it is always serialized: an empty id is "id":"", never an
+	// omitted key Python's validator would reject.
+	ID          string  `json:"id"`
 	Description string  `json:"description"`
 	Metric      string  `json:"metric"`
 	Type        string  `json:"type"`
@@ -97,6 +100,13 @@ func (c *SuccessCriterion) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &raw); err != nil {
 		return err
 	}
+	// Pydantic fields without defaults: id, description, metric, target.
+	if err := requireFields(raw, "success criterion", "id", "description", "metric"); err != nil {
+		return err
+	}
+	if err := requirePresent(raw, "success criterion", "target"); err != nil {
+		return err
+	}
 	if _, ok := raw["type"]; !ok {
 		p.Type = "success_rate"
 	}
@@ -111,7 +121,9 @@ func (c *SuccessCriterion) UnmarshalJSON(b []byte) error {
 }
 
 type Constraint struct {
-	ID             string `json:"id,omitempty"`
+	// id is required in goal.py::Constraint; always present like the other
+	// required fields.
+	ID             string `json:"id"`
 	Description    string `json:"description"`
 	ConstraintType string `json:"constraint_type"`
 	Category       string `json:"category"`
@@ -140,6 +152,14 @@ func (c *Constraint) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return err
 	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+	// Pydantic fields without defaults: id, description, constraint_type.
+	if err := requireFields(raw, "constraint", "id", "description", "constraint_type"); err != nil {
+		return err
+	}
 	if p.Category == "" {
 		p.Category = "general"
 	}
@@ -149,7 +169,10 @@ func (c *Constraint) UnmarshalJSON(b []byte) error {
 }
 
 type Goal struct {
-	ID                   string             `json:"id,omitempty"`
+	// goal.py::Goal declares id without a default, so the key is always
+	// serialized; an unset Go ID becomes "id":"" (a value Python accepts),
+	// not a missing required field.
+	ID                   string             `json:"id"`
 	Name                 string             `json:"name"`
 	Description          string             `json:"description"`
 	Status               GoalStatus         `json:"status"`
@@ -263,6 +286,14 @@ func (g *Goal) UnmarshalJSON(b []byte) error {
 	var p plain
 	extras, err := unmarshalStruct(b, &p)
 	if err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+	// Pydantic fields without defaults: id, name, description.
+	if err := requireFields(raw, "goal", "id", "name", "description"); err != nil {
 		return err
 	}
 	now := NowTimestamp()

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/shark2202/go_hive/go-hive/internal/credentials"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
 )
 
 // credentialSpecRouteRows fetches /api/credentials/specs and returns the rows
@@ -171,6 +172,56 @@ func TestCredentialSpecsRouteAvailabilityReadsEnv(t *testing.T) {
 	}
 	if byID["github"]["available"] != false {
 		t.Fatalf("github available = %v, want false", byID["github"]["available"])
+	}
+}
+
+// TestCredentialSpecsRouteDefaultAccountsIncludeEnvOnly pins the route's
+// default account view to the production encrypted+env adapter. The route used
+// to build an encrypted-only adapter, so an env-only credential was available
+// but had no account row — unlike upstream _collect_accounts_by_provider, which
+// reads CredentialStoreAdapter.default().
+//
+// Parity: framework/server/routes_credentials.py::_collect_accounts_by_provider
+func TestCredentialSpecsRouteDefaultAccountsIncludeEnvOnly(t *testing.T) {
+	home := hivehome.Home{Root: t.TempDir()}
+	key, err := credentials.GenerateFernetKey()
+	if err != nil {
+		t.Fatalf("generate key: %v", err)
+	}
+	t.Setenv(credentials.CredentialKeyEnvVar, key)
+	t.Setenv("NOTION_API_TOKEN", "notion-env-token")
+
+	specs := []CredentialSpecView{{
+		Name:                  "notion",
+		CredentialID:          "notion",
+		EnvVar:                "NOTION_API_TOKEN",
+		DirectAPIKeySupported: true,
+		AdenProviderName:      "notion",
+	}}
+	mux := credentialRouteTestMux(CredentialRouteDeps{
+		Home:  home,
+		Specs: func() []CredentialSpecView { return specs },
+	})
+	recorder, body := doSessionJSON(t, mux, http.MethodGet, "/api/credentials/specs", "")
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", recorder.Code, recorder.Body.String())
+	}
+	rows := credentialRouteJSONList(t, body["specs"])
+	if len(rows) != 1 {
+		t.Fatalf("specs = %d, want the single notion row", len(rows))
+	}
+	notion := credentialRouteJSONMap(t, rows[0])
+	accounts := credentialRouteJSONList(t, notion["accounts"])
+	if len(accounts) != 1 {
+		t.Fatalf("notion accounts = %v, want one env-only account", accounts)
+	}
+	account := credentialRouteJSONMap(t, accounts[0])
+	if account["provider"] != "notion" || account["credential_id"] != "notion" {
+		t.Fatalf("account = %v", account)
+	}
+	grouped := credentialRouteJSONMap(t, body["accounts_by_provider"])
+	if got := len(credentialRouteJSONList(t, grouped["notion"])); got != 1 {
+		t.Fatalf("accounts_by_provider[notion] = %v", grouped["notion"])
 	}
 }
 

@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Computer-use 移植评估 · go_hive</title>
+<style>
+:root{--bg:#0b0f14;--panel:#121923;--panel2:#0f1620;--line:#233041;--text:#e6edf3;--muted:#8b9bb0;--accent:#f0b429;--accent2:#58a6ff;--ok:#3fb950;--warn:#d29922;--bad:#f85149;--code:#0a0e13}
+*{box-sizing:border-box} body{margin:0;background:linear-gradient(180deg,#0b0f14,#0d131b 55%,#0b0f14);color:var(--text);font:14.5px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;overflow-wrap:anywhere}
+a{color:var(--accent2);text-decoration:none} a:hover{text-decoration:underline}
+.wrap{max-width:1280px;margin:0 auto;padding:44px 26px 80px}
+header{border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:28px}
+.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+h1{font-size:30px;line-height:1.25;margin:10px 0 10px;letter-spacing:-.02em} h1 span{color:var(--accent)}
+.lede{color:var(--muted);max-width:1040px;font-size:15px} .meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:15px;color:var(--muted);font-size:12.5px} .meta b{color:var(--text)}
+section{margin:38px 0} h2{font-size:22px;margin:0 0 8px} h2 .num{color:var(--accent);font-size:14px;margin-right:8px} h3{font-size:15.5px;margin:22px 0 8px;color:#cfdae6}
+p{color:#c6d2df;margin:8px 0} .sub{color:var(--muted);font-size:12.5px}
+.grid{display:grid;gap:12px} .g4{grid-template-columns:repeat(4,minmax(0,1fr))} .g3{grid-template-columns:repeat(3,minmax(0,1fr))} .grid>*{min-width:0}
+@media(max-width:900px){.g4{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr}} @media(max-width:560px){.g4,.g3{grid-template-columns:1fr}.wrap{padding:30px 16px 60px}h1{font-size:24px}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:15px;min-width:0} .card .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700} .card .v{font-size:20px;font-weight:800;margin-top:5px;letter-spacing:-.01em} .card .d{color:var(--muted);font-size:12px;margin-top:5px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:14px 0;background:var(--panel2);max-width:100%}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed} th,td{border-bottom:1px solid var(--line);padding:9px 10px;vertical-align:top;text-align:left;overflow-wrap:anywhere;word-break:break-word} th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;background:#0d141d;position:sticky;top:0;z-index:1} tr:hover td{background:#121a25} tr:last-child td{border-bottom:0}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--code);border:1px solid #1e2937;border-radius:5px;padding:1px 4px;color:#d7e3f0;overflow-wrap:anywhere}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#cfe0f2;max-width:100%}
+.callout{border-left:3px solid var(--accent);background:#161207;padding:11px 14px;border-radius:0 9px 9px 0;margin:14px 0;color:#e8d9b4;overflow-wrap:anywhere} .callout.bad{border-color:var(--bad);background:#1a0f0f;color:#f2c7c7} .callout.info{border-color:var(--accent2);background:#0d1622;color:#cfe3ff}
+.toc{display:flex;flex-wrap:wrap;gap:7px;margin-top:18px} .toc a{font-size:12px;border:1px solid var(--line);background:var(--panel);padding:5px 9px;border-radius:999px;color:var(--muted)} .toc a:hover{color:var(--text);text-decoration:none}
+ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin-top:44px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:12px}
+figure.diagram{background:var(--code);border:1px solid var(--line);border-radius:12px;padding:14px;overflow-x:auto;margin:16px 0;max-width:100%}
+figure.diagram figcaption{color:var(--muted);font-size:12px;margin-top:8px}
+@media(max-width:560px){table{font-size:12px}th,td{padding:7px 6px}.toc a{padding:8px 12px;font-size:13px;min-height:44px;display:inline-flex;align-items:center}}
+@media(max-width:760px){.tablewrap table{min-width:760px}}
+</style>
+<style>
+.wrap{overflow-wrap:break-word}
+.wrap h1 span{white-space:nowrap}
+.wrap h2,.wrap p,.wrap .sub{word-break:normal}
+.wrap .sub,.wrap .card .d{word-break:keep-all}
+.wrap code{overflow-wrap:break-word;word-break:normal}
+.pill{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:3px 9px;font-size:11px;color:var(--muted);margin-left:8px;vertical-align:middle}
+.pill.ok{border-color:#1f6f3b;color:#7ee2a8;background:#0d1b12}
+.pill.warn{border-color:#7a5a12;color:#f0c75e;background:#1b1608}
+.pill.bad{border-color:#7f2a2a;color:#ff9e9e;background:#1c0e0e}
+.callout b{color:#fff}
+</style>
+</head><body>
+<div class="wrap">
+<header>
+<div class="eyebrow">HIVE / GO_HIVE · CAPABILITY ASSESSMENT</div>
+<h1>Computer-use 移植评估 <span class="pill warn">非对齐项</span></h1>
+<p class="lede">把 <a href="https://github.com/can1357/oh-my-pi/blob/main/docs/computer-use.md">oh-my-pi 的 scriptable computer use</a> 作为外部能力样本，评估 go_hive 能否、以及应该以什么方式移植。结论先行：<b>技术上可以，但当前不应把它加入 go_hive 1.0；全量实现需要独立 native sidecar，而不是纯 Go 核心。</b></p>
+<div class="meta"><span>评估快照：<b>2026-11-23</b></span><span>项目快照：<code>go_hive main @ d2093cba (assessment snapshot)</code></span><span>源文档：<a href="https://github.com/can1357/oh-my-pi/blob/main/docs/computer-use.md">docs/computer-use.md</a></span><span>生成器：<code>go_hive/scripts/gen_computer_use_doc.py</code></span></div>
+</header>
+
+<div class="callout info"><b>用途：</b>这是后续复用资料，不是 Hive parity 声明，也不是 go_hive 已实现的功能说明。任何“可用”结论都必须以本机真实平台 E2E 为准。</div>
+
+<div class="toc"><a href="#s1">01 结论</a><a href="#s2">02 上游能力</a><a href="#s3">03 平台差异</a><a href="#s4">04 go_hive 约束</a><a href="#s5">05 可选方案</a><a href="#s6">06 验收清单</a><a href="#s7">07 决策</a></div>
+
+<section id="s1"><h2><span class="num">01</span>结论速览</h2>
+<div class="grid g4">
+<div class="card ok"><div class="k">技术上可否</div><div class="v">可以</div><div class="d">需要 per-OS native backend</div></div>
+<div class="card bad"><div class="k">纯 Go / CGO=0</div><div class="v">不能全量</div><div class="d">macOS AX/捕获、Windows UIA、Linux AT-SPI 都是原生接口</div></div>
+<div class="card warn"><div class="k">当前是否该做</div><div class="v">不</div><div class="d">Hive 无此特性；属于新增功能，违反先对齐约束</div></div>
+<div class="card"><div class="k">若未来做</div><div class="v">sidecar</div><div class="d">Go 主进程保持 CGO=0；默认关闭、显式审批</div></div>
+</div>
+<p><b>一句话：</b>go_hive 可以移植这个能力，但不能在当前纯 Go 无 cgo、先完成 Hive 对齐的约束下，把它当作一个普通工具塞进核心。</p>
+</section>
+
+<section id="s2"><h2><span class="num">02</span>上游能力边界</h2>
+<p>oh-my-pi 的 <code>computer</code> 不是浏览器 DOM API，而是控制宿主机桌面的 Eval prelude。它和 browser prelude 的分工是：</p>
+<div class="tablewrap"><table><colgroup><col style="width:18%"><col style="width:41%"><col style="width:41%"></colgroup><thead><tr><th>域</th><th>负责</th><th>不负责</th></tr></thead><tbody><tr><td><b>computer</b></td><td>原生窗口/显示器、截图、原生输入、AX tree、剪贴板</td><td>网页 DOM 选择器、页面 JS、CDP tab 控制</td></tr>
+<tr><td><b>browser</b></td><td>网页 DOM/ARIA、页面 JS、CDP tab</td><td>原生应用、桌面窗口、系统级键盘鼠标</td></tr></tbody></table></div>
+<p class="sub">关键 API 摘要（详细语义见源文档；这里只用于评估移植面，不作为完整 API 契约）。</p>
+<div class="tablewrap"><table><colgroup><col style="width:16%"><col style="width:45%"><col style="width:39%"></colgroup><thead><tr><th>能力</th><th>API 例子</th><th>作用</th></tr></thead><tbody><tr><td><b>窗口与显示器</b></td><td><code>windows(app?, title?) / window(idOrFilter) / focusedWindow() / display(active|all|id)</code></td><td>枚举、选择、等待目标窗口或显示器；窗口句柄带 id/app/title/pid/bounds。</td></tr>
+<tr><td><b>截图</b></td><td><code>screenshot({silent?}) / zoom({x,y,width,height})</code></td><td>全窗口或显示器截图；坐标基于最近一次全量截图；区域放大不替换点击帧。</td></tr>
+<tr><td><b>原生输入</b></td><td><code>click / doubleClick / drag / holdMouse / type / press / holdKeys</code></td><td>按键、鼠标、按住、拖拽；坐标输入必须先有截图。</td></tr>
+<tr><td><b>AX 无障碍</b></td><td><code>ax() / find() / ref() / elementAt(x,y) / focusedElement()</code></td><td>读取 OS Accessibility/AX 树，按角色/标题/描述定位元素；引用有 stale-ref 语义。</td></tr>
+<tr><td><b>元素动作</b></td><td><code>el.click() / el.type() / el.press() / el.setValue() / el.perform()</code></td><td>优先语义动作，不依赖截图；支持后台与 takeover 两种投递路径。</td></tr>
+<tr><td><b>菜单</b></td><td><code>win.menu.items() / win.menu.select([...])</code></td><td>按标题选择菜单路径；不猜快捷键。</td></tr>
+<tr><td><b>剪贴板</b></td><td><code>computer.clipboard.read() / write()</code></td><td>读写系统剪贴板。</td></tr>
+<tr><td><b>应用</b></td><td><code>computer.apps.list() / open(idOrNameOrPath, {activate?, reveal?})</code></td><td>枚举/打开应用；部分能力仅 macOS。</td></tr>
+<tr><td><b>批量脚本</b></td><td><code>computer.run(fnOrCode, {args?, read_only?, timeout?})</code></td><td>同一 worker session 内运行多步操作；返回结构化值，截图作为 Eval 图像。</td></tr>
+<tr><td><b>能力探测</b></td><td><code>computer.capabilities()</code></td><td>报告 capture/input/AX/permission/screenLocked/displayAsleep 等能力。</td></tr>
+<tr><td><b>安全控制</b></td><td><code>control.acquire() / release() / state()</code></td><td>请求显式前台控制；需要人工确认或策略批准。</td></tr>
+<tr><td><b>等待</b></td><td><code>wait(fn, {timeout?, interval?})</code></td><td>等待窗口/元素/条件出现。</td></tr></tbody></table></div>
+<div class="callout"><b>重要：</b>它是一个带状态的 worker/session：截图帧、窗口句柄、AX 引用、输入锁、权限、审批和超时都属于语义的一部分。只复制几个函数名不构成移植。</div>
+</section>
+
+<section id="s3"><h2><span class="num">03</span>平台后端与差异</h2>
+<div class="tablewrap"><table><colgroup><col style="width:16%"><col style="width:39%"><col style="width:45%"></colgroup><thead><tr><th>平台</th><th>原生 backend</th><th>必须接受的限制</th></tr></thead><tbody><tr><td><b>macOS x64/arm64</b></td><td><code>ScreenCaptureKit（14+）/ CoreGraphics（12/13）+ native AX + input</code></td><td>需要 Screen Recording + Accessibility；由启动 omp 的终端/IDE 授权；部分 apps.open 能力仅 macOS。</td></tr>
+<tr><td><b>Linux X11 x64/arm64</b></td><td><code>X11 capture/input + AT-SPI</code></td><td>需要可读 display、RandR/XTEST；后台输入依赖 XI2、/dev/uinput、udev/libinput 与 toolkit/window manager。</td></tr>
+<tr><td><b>Linux Wayland x64/arm64</b></td><td><code>RemoteDesktop portal / LIBEI + AT-SPI；ScreenCast portal/PipeWire</code></td><td>逐窗口后台输入不可用；需要 PipeWire/libpipewire；compositor 限制；权限会话级。</td></tr>
+<tr><td><b>Windows x64/arm64</b></td><td><code>Win32 display/window capture + Win32 input + UI Automation</code></td><td>background type/press 对无窗口元素会 BackgroundUnavailable；UIA/COM 与 DPI 适配。</td></tr>
+<tr><td><b>其它已发布目标</b></td><td><code>Unsupported unless native addon reports capabilities</code></td><td>没有 backend 就不能假装可用。</td></tr></tbody></table></div>
+<p>所以“跨平台一致”应定义为 <b>每个平台按自己的能力矩阵正确工作</b>，不是所有平台拥有完全相同的 API/行为。仅凭 Cargo/Go 条件编译不能保证语义一致。</p>
+</section>
+
+<section id="s4"><h2><span class="num">04</span>go_hive 当前约束</h2>
+<div class="callout bad"><b>当前判定：不进入 1.0。</b>Hive 上游没有 computer-use，go_hive 也没有桌面层。把它加入核心等于新增产品面，而不是补齐 Hive。</div>
+<ul><li>Hive 上游没有 computer-use；这是新增能力，不是 go_hive 的 parity 项。</li>
+<li>go_hive 当前约束是纯 Go、CGO_ENABLED=0；macOS ScreenCaptureKit/CoreGraphics/AX 通常需要 cgo/ObjC/Swift。</li>
+<li>现有 go_hive 只有浏览器域（Browser Bridge / browser_*）与 terminal_exec；没有窗口枚举、AX tree、原生鼠标键盘注入。</li>
+<li>当前发布规则：先完成 Hive 对齐，未完成前不新增功能；因此不能把 computer-use 塞进 1.0 对齐范围。</li>
+<li>安全模型不可省略：屏幕是不可信输入，原生输入要审批、可中断、可回滚，最好在专用账号/VM 中运行。</li>
+<li>跨平台一致性是 per-platform 能力矩阵，不是同一套语义；oh-my-pi 自己也列出了 Wayland/Windows/macOS 差异。</li></ul>
+<h3>现有相近能力</h3>
+<div class="tablewrap"><table><colgroup><col style="width:27%"><col style="width:36%"><col style="width:37%"></colgroup><thead><tr><th>现有能力</th><th>能做什么</th><th>不能替代 computer-use 的原因</th></tr></thead><tbody><tr><td><code>Browser Bridge / browser_*</code></td><td>网页 DOM、标签页、CDP、页面 JS</td><td>不能操作原生应用；不是桌面截图/AX/系统输入</td></tr>
+<tr><td><code>terminal_exec</code></td><td>运行 CLI，可间接调用系统命令</td><td>没有窗口枚举、AX tree、坐标输入、权限/审批模型</td></tr>
+<tr><td><code>screencapture + attach_file</code></td><td>人工截屏后作为附件</td><td>不是 agent 可连续控制的桌面 runtime</td></tr></tbody></table></div>
+</section>
+
+<section id="s5"><h2><span class="num">05</span>可选移植方案</h2>
+<div class="tablewrap"><table><colgroup><col style="width:20%"><col style="width:27%"><col style="width:23%"><col style="width:30%"></colgroup><thead><tr><th>方案</th><th>形态</th><th>收益</th><th>代价/结论</th></tr></thead><tbody><tr><td><b>A. OS CLI 包装</b></td><td>调用 screencapture / osascript / grim / xdotool / PowerShell</td><td>快；不改 Go 依赖</td><td>没有 AX tree、后台输入、权限/审批；Linux/Wayland/Windows 差异大；不能称 computer-use 对齐</td></tr>
+<tr><td><b>B. 独立 native sidecar（推荐，若以后做）</b></td><td>Go core ↔ JSON-RPC/stdio ↔ Swift/ObjC/Rust/C++ helper</td><td>Go 主二进制仍可 CGO=0；平台能力隔离；可独立签名/授权</td><td>新增发布产物、安装/公证、TCC、Linux 桌面矩阵、Windows UIA/DPI、安全审计</td></tr>
+<tr><td><b>C. 全部塞进 Go core</b></td><td>cgo/native bindings 直接进核心</td><td>单一二进制</td><td>违反 CGO_ENABLED=0；平台条件编译复杂；安全边界差；不建议</td></tr>
+<tr><td><b>D. 不移植（当前建议）</b></td><td>继续使用 Browser Bridge / terminal；需要截图时人工 screencapture + attach_file</td><td>不扩大攻击面；不违反对齐约束</td><td>不能控制原生应用；不是 computer-use</td></tr></tbody></table></div>
+<div class="callout"><b>推荐顺序：</b>当前选 D（不移植）；若未来产品明确需要，先做 B（独立 native sidecar）的 macOS 单平台 spike，再决定是否扩到 Linux/Windows。不要先做 A 然后宣称“已支持 computer-use”。</div>
+<h3>为什么 sidecar 比 cgo 核心更合适</h3>
+<ul>
+<li>Go 主二进制继续满足 <code>CGO_ENABLED=0</code>，不把原生 ABI 带进核心。</li>
+<li>macOS 的 ScreenCaptureKit/AX、Windows 的 UIA/COM、Linux 的 X11/AT-SPI 可以各自编译、签名、测试。</li>
+<li>权限/审批/崩溃隔离在 helper 边界；helper 不可用时返回明确 Unsupported，而不是伪造截图。</li>
+<li>升级和发布可以按平台独立灰度，不影响 go_hive 核心 slot。</li>
+</ul>
+</section>
+
+<section id="s6"><h2><span class="num">06</span>若未来实施：验收清单</h2>
+<ol><li>默认关闭，显式配置开启；capabilities() 必须报告当前平台真实能力，而不是假设可用。</li>
+<li>截图必须明确目标显示器/窗口、坐标帧、DPI/缩放；resize/display layout change 后必须重新截图。</li>
+<li>每次输入先校验坐标来自最近一次同目标全量截图；AX 引用要能报告 stale ref。</li>
+<li>审批/权限：读操作与写操作分级；对话式批准；Escape/中断释放按键与鼠标；前台 takeover 必须可回退焦点。</li>
+<li>不得把屏幕内容当作用户授权；危险操作（发送、购买、删除、权限变更）要二次确认。</li>
+<li>每个平台单独 E2E：macOS Screen Recording/Accessibility、Linux X11、Wayland portal、Windows UIA/DPI；无 backend 时返回明确错误。</li>
+<li>不在没有浏览器的 headless 服务器上伪造成功；返回 Unsupported/Unavailable，而不是空截图。</li></ol>
+<div class="callout warn"><b>安全底线：</b>屏幕内容是不可信输入，不能授权动作；高风险操作必须二次确认；优先专用账号或 VM。缺少审批、Escape 停止、输入锁和权限失败路径的实现，不算 computer-use。</div>
+</section>
+
+<section id="s7"><h2><span class="num">07</span>决策</h2>
+<p><b>当前决策：</b>不把 computer-use 加入 go_hive 1.0；不为它改 <code>CGO_ENABLED=0</code>、不新增原生依赖、不把它登记为 Hive 对齐项。</p>
+<p><b>重开条件：</b>Hive 对齐封版后，若出现明确的原生桌面自动化需求，再按“独立 native sidecar + 默认关闭 + 显式审批 + 每平台 E2E”立项；先做 macOS spike，用真实窗口/AX/输入证据决定是否扩平台。</p>
+<p><b>复用方式：</b>把本页作为需求评估和架构决策输入；不要把本页的 API 摘要当作已实现契约，实际实现必须另立 schema、权限和测试。</p>
+</section>
+
+<footer>
+<p>源：<a href="https://github.com/can1357/oh-my-pi/blob/main/docs/computer-use.md">oh-my-pi docs/computer-use.md</a> · 评估日期 2026-11-23 · 生成器 <code>go_hive/scripts/gen_computer_use_doc.py</code>（<code>--check</code> 防漂移）</p>
+<p>这不是 Hive 上游能力；Hive/go_hive 当前没有原生桌面控制。所有未来结论以对应平台的真实 E2E 为准。</p>
+</footer>
+</div>
+</body></html>

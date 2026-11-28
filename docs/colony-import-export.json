@@ -1,0 +1,251 @@
+{
+  "schema": "hive-colony-import-export-doc/1",
+  "title": "Colony 导入导出：能力、用法与缺口",
+  "subtitle": "导入服务端完整、前端/CLI 没有入口；导出尚未实现。本文是可复用的 API 操作手册与现状快照。",
+  "status": "import implemented · export absent · UI/CLI import entry absent",
+  "quick": [
+    [
+      "导入",
+      "6 条 HTTP 路由",
+      "小包 one-shot multipart；大包 init → chunk → finalize"
+    ],
+    [
+      "前端入口",
+      "0 处调用",
+      "frontend/src 没有 colonies/import 调用"
+    ],
+    [
+      "CLI 入口",
+      "0 个子命令",
+      "hive colony 只有 list / info / delete"
+    ],
+    [
+      "导出",
+      "0 条路由",
+      "没有 export API；只有 reveal 打开 Finder"
+    ]
+  ],
+  "routes": [
+    [
+      "POST",
+      "/api/colonies/import",
+      "handleImportColony",
+      "一次性 multipart 导入，返回 201"
+    ],
+    [
+      "POST",
+      "/api/colonies/import/init",
+      "handleInitUpload",
+      "初始化分片上传，返回 upload_id 和 received=0"
+    ],
+    [
+      "PUT",
+      "/api/colonies/import/chunk/{upload_id}?offset=N",
+      "handleChunkUpload",
+      "按 offset 顺序写入分片，单片 ≤128 MiB"
+    ],
+    [
+      "GET",
+      "/api/colonies/import/status/{upload_id}",
+      "handleUploadStatus",
+      "查询已接收字节数，可断点续传"
+    ],
+    [
+      "POST",
+      "/api/colonies/import/finalize/{upload_id}",
+      "handleFinalizeUpload",
+      "校验 sha256、解包并落盘，返回 201"
+    ],
+    [
+      "DELETE",
+      "/api/colonies/import/{upload_id}",
+      "handleCancelUpload",
+      "取消未完成的上传并清理 staging"
+    ]
+  ],
+  "one_shot": {
+    "title": "小包：一次性 multipart",
+    "steps": [
+      "在本地把 colony 目录打成 tar / tar.gz / tar.bz2，保留一个顶层目录。",
+      "POST /api/colonies/import，字段 file / name / replace_existing。"
+    ],
+    "curl": "tar -czf /tmp/mycolony.tar.gz -C /Users/mac/hive/go_hive/.hive_go/colonies mycolony\n\ncurl -sS -X POST 'http://127.0.0.1:8787/api/colonies/import' \\\n  -F 'file=@/tmp/mycolony.tar.gz' \\\n  -F 'name=mycolony_imported' \\\n  -F 'replace_existing=false'",
+    "response": "{\n  \"name\": \"mycolony_imported\",\n  \"path\": \"/Users/mac/hive/go_hive/.hive_go/colonies/mycolony_imported\",\n  \"files_imported\": 123,\n  \"replaced\": false\n}",
+    "fields": [
+      [
+        "file",
+        "必填",
+        "归档文件；tar / tar.gz / tar.bz2，最大 2 GiB"
+      ],
+      [
+        "name",
+        "可选",
+        "导入后的 colony slug；不传就用归档顶层目录名"
+      ],
+      [
+        "replace_existing",
+        "可选",
+        "true 覆盖已存在的目标；false 时冲突返回 409"
+      ]
+    ]
+  },
+  "chunked": {
+    "title": "大包：分片上传",
+    "steps": [
+      "POST /api/colonies/import/init，提交 filename / total_bytes / sha256 / name / replace_existing。",
+      "PUT /api/colonies/import/chunk/{upload_id}?offset=N 逐片上传；offset 必须等于服务端已接收字节数。",
+      "GET /api/colonies/import/status/{upload_id} 查询进度。",
+      "POST /api/colonies/import/finalize/{upload_id} 校验 sha256 并解包。",
+      "DELETE /api/colonies/import/{upload_id} 可取消未完成上传。"
+    ],
+    "init": "curl -sS -X POST 'http://127.0.0.1:8787/api/colonies/import/init' \\\n  -H 'Content-Type: application/json' \\\n  -d '{\n    \"filename\": \"mycolony.tar.gz\",\n    \"total_bytes\": 123456789,\n    \"sha256\": \"<64 位十六进制 sha256>\",\n    \"name\": \"mycolony_imported\",\n    \"replace_existing\": false\n  }'",
+    "chunk": "curl -sS -X PUT \\\n  'http://127.0.0.1:8787/api/colonies/import/chunk/<upload_id>?offset=0' \\\n  -H 'Content-Type: application/octet-stream' \\\n  --data-binary '@/tmp/chunk-000'",
+    "finish": "curl -sS 'http://127.0.0.1:8787/api/colonies/import/status/<upload_id>'\n\ncurl -sS -X POST \\\n  'http://127.0.0.1:8787/api/colonies/import/finalize/<upload_id>'",
+    "cancel": "curl -sS -X DELETE 'http://127.0.0.1:8787/api/colonies/import/<upload_id>'"
+  },
+  "archive": {
+    "single_root": "mycolony/\n  metadata.json\n  worker.json\n  tools.json\n  skills/\n  ...",
+    "multi_root": "colonies/mycolony/...\nqueens/...\nmemories/...",
+    "limits": [
+      [
+        "归档上限",
+        "2 GiB",
+        "单次一次性上传的最大字节数"
+      ],
+      [
+        "分片上限",
+        "128 MiB",
+        "单次 PUT 的 Content-Length 上限"
+      ],
+      [
+        "并发上传",
+        "32",
+        "超过限制返回 429"
+      ],
+      [
+        "staging TTL",
+        "24 小时",
+        "超时未完成的上传会被回收"
+      ],
+      [
+        "支持格式",
+        "tar / tar.gz / tar.bz2",
+        "xz / zstd 明确拒绝"
+      ]
+    ]
+  },
+  "errors": [
+    [
+      "409",
+      "目标 colony 已存在",
+      "加 replace_existing=true，或换 name"
+    ],
+    [
+      "400",
+      "归档格式/路径非法、缺少 file、字段非法",
+      "检查 multipart 字段和 tar 内容"
+    ],
+    [
+      "413",
+      "归档或分片超过上限",
+      "使用分片上传或缩小归档"
+    ],
+    [
+      "429",
+      "并发上传达到 32",
+      "完成或取消一个上传后重试"
+    ],
+    [
+      "415",
+      "不是 multipart/form-data",
+      "一次性导入必须用 multipart，不要直接 PUT tar"
+    ],
+    [
+      "500",
+      "staging 或解包 IO 失败",
+      "查看 serve 日志；失败会回滚目标目录"
+    ]
+  ],
+  "gaps": {
+    "ui": [
+      "frontend/src/api/colonies.ts 没有 import 方法",
+      "frontend/src 没有 /api/colonies/import 调用",
+      "Sidebar / colony 页面没有 Import 按钮"
+    ],
+    "cli": [
+      "contracts/cli-surface.json 的 hive colony 只有 list / info / delete",
+      "没有 hive colony import 这样的命令；不要按伪命令操作"
+    ],
+    "export": [
+      "没有 export / download 路由",
+      "没有 CLI export",
+      "没有前端导出入口",
+      "POST /api/colonies/{id}/reveal 只是在 Finder 打开目录，不产生可下载字节",
+      "要导出只能自行 tar/zip 目录，或后续新增 export 能力"
+    ]
+  },
+  "security": [
+    "safeExtractArchive 拒绝路径穿越（.. / 绝对路径 / 越界 symlink）",
+    "目标已存在且没有 replace_existing 时返回 409，不静默覆盖",
+    "解包失败会 RemoveAll 目标目录，避免留下半成品",
+    "name 走 validateColonyName，只接受合法 colony slug"
+  ],
+  "verification": [
+    "internal/server/routes_colonies.go 注册 6 条 import 路由",
+    "internal/server/routes_colonies_import_test.go 有 45 个 Test 函数",
+    "contracts/api-routes.json 收录 6 条 import 路由",
+    "frontend/src 对 colonies/import 的调用为 0",
+    "hive colony CLI 面没有 import 子命令",
+    "全仓没有 export / download 的 colony 路由"
+  ],
+  "sources": [
+    [
+      "实现",
+      "go_hive/go-hive/internal/server/routes_colonies_import.go",
+      "6 个 handler、格式、限额、安全解包"
+    ],
+    [
+      "路由",
+      "go_hive/go-hive/internal/server/routes_colonies.go:42-58",
+      "import 路由注册"
+    ],
+    [
+      "测试",
+      "go_hive/go-hive/internal/server/routes_colonies_import_test.go",
+      "45 个 Test"
+    ],
+    [
+      "前端 API",
+      "go_hive/go-hive/frontend/src/api/colonies.ts",
+      "只有 list/scaffold/getTools/updateTools/rename/delete"
+    ],
+    [
+      "旧审计",
+      "go_hive/docs/queen-tools-and-colony-import-export.md",
+      "导入/导出四层审计"
+    ],
+    [
+      "契约",
+      "go_hive/contracts/api-routes.json",
+      "6 条 import 路由已冻结"
+    ]
+  ],
+  "related": [
+    [
+      "Colony 导入导出审计",
+      "queen-tools-and-colony-import-export.md"
+    ],
+    [
+      "Colony fork 与 clone",
+      "colony-fork-clone.md"
+    ],
+    [
+      "Colony 建议与 pivot",
+      "colony-suggestion-dispatch.md"
+    ],
+    [
+      "API 路由契约",
+      "../contracts/api-routes.json"
+    ]
+  ]
+}

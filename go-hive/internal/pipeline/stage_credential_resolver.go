@@ -33,9 +33,9 @@ type CredentialResolverStage struct {
 	// ToolProviderMap maps credential-backed tool names to their credential
 	// id (output; the generated table the adapter portal exposes).
 	ToolProviderMap map[string]string
-	// AccountsPrompt is the connected-accounts prompt block. The Go port
-	// keeps it empty: the prompt text is assembled by the queen prompt
-	// builder (queen.CredentialsSummaryBlock), not duplicated here.
+	// AccountsPrompt is the connected-accounts prompt block built from the
+	// account snapshot and the generated tool→provider table, exactly as
+	// upstream's stage exposes it to the runtime's prompt builder.
 	AccountsPrompt string
 }
 
@@ -66,6 +66,9 @@ func (s *CredentialResolverStage) Initialize() error {
 	}
 	s.AccountsData = adapter.GetAllAccountInfo()
 	s.ToolProviderMap = credentials.ToolProviderMap()
+	if len(s.AccountsData) > 0 {
+		s.AccountsPrompt = buildAccountsPrompt(s.AccountsData, s.ToolProviderMap, nil)
+	}
 	return nil
 }
 

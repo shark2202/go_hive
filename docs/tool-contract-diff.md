@@ -92,7 +92,7 @@ manifest and re-reports against the live Go registry.
 | `csv_info` | ❌ | ✅ | 1/1 | 0 | 0 | 0 | 0 |
 | `csv_read` | ❌ | ❌ | 3/3 | 0 | 0 | 0 | 1 |
 | `csv_write` | ❌ | ❌ | 3/3 | 0 | 0 | 2 | 0 |
-| `delete_memory_file` | ✅ | ✅ | 2/2 | 0 | 0 | 0 | 0 |
+| `delete_memory_file` | ✅ | ✅ | 3/3 | 0 | 0 | 0 | 0 |
 | `edit_file` | ❌ | ❌ | 7/6 | 1 | 0 | 0 | 0 |
 | `get_account_info` | ❌ | ✅ | 1/1 | 0 | 0 | 0 | 0 |
 | `get_current_time` | ❌ | ✅ | 1/1 | 0 | 0 | 0 | 0 |
@@ -601,7 +601,10 @@ Go 侧仍是 144 个工具，只有本节的残留工具定义变化。
 - 未移植/降级项（不隐藏）：
   - `new_colony` 枢轴（colony 相位）未移植：colony 绑定的 session 仍是 2 参数 `task_create`；
   - 旧 session 的退场是「锁 + 回合结束后自然结束」，Python 会等 `TOOL_CALL_COMPLETED` 立即停 loop（Go 无对应的回合内取消缝）；
-  - Python 的 chat-channel 拒 fork 检查在 Go 无对应字段（session 没有 channel 概念）。
+  - chat-channel 拒 fork 检查已对齐（原缺口）：Go 的 session 现有 `channel` 字段与 `SetChannel`/`Channel` 访问器，
+    重启时从 `meta.json["channel"]` 恢复（`internal/server/session_channel.go`）；`task_create(new_session=true)`
+    带 tasks 且 session 属于某个 channel 时，fork 以 409 拒绝（`internal/server/session_fork_handoff.go`）。
+    工具结果只有 `{"success": false, "error": ...}`，不携带 HTTP status（与其余 fork 错误一致）。
 - 守门测试：`TestTaskCreatePivotDefinitionMatchesPythonContract`（4 参数逐字节）、
   `TestTaskCreateNewSessionForksThroughTheExecutor`（真实 executor 走 fork：工厂调用、种计划、旧 session 置 superseded、
   空 handoff 拒绝且不 fork）、`TestTaskCreateNonPivotSkipsFork`（无 pivot 字段时仍是本 session 建任务）。
@@ -1208,3 +1211,17 @@ python3 go_hive/scripts/freeze_tool_contract.py check     # exit 0
   目录条目（Tool Library / 派发兼容）。这是上游事实，不是 Go 差异。
 - `exa_search`（Go 7-action 聚合 vs Python 扁平）与 `get_worker_health_summary`（Go-only extra）
   维持 §17.4 的登记，不在本轮范围。
+
+## 19. round 10 @ w119-tools-mcp-a（2026-11-24，delete_memory_file `reason` 模型面参数）
+
+- 上游 `core/framework/agents/queen/reflection_agent.py::_REFLECTION_TOOLS` 的
+  `delete_memory_file` 自 round 7 起已带 `reason` 参数（描述：
+  `Why it goes, e.g. 'merged into user-diet.md' or 'the user said it no longer holds'.`），
+  但冻结契约与 Go 侧 schema 仍停在 `filename`/`scope` 两参数——模型看不到删除理由槽位，
+  P0-21 的“删除留理由”提示在 Go 侧没有可填参数。
+- 本轮刷新：`internal/memory/reflection.go` 的 `DeleteMemoryFileInput.properties` 补 `reason`；
+  `contracts/tool-definitions.json` 的 `input_schema`、`proto.params` 与 `go.input_schema` 同步；
+  `contracts/tool-types.proto::DeleteMemoryFileInput` 补 `optional string reason = 3`。
+- 门禁：`internal/memory/reflection_tools_contract_test.go` 对 4 条反射工具做 description +
+  schema 深比较（现为 3/3 参数），`internal/memory/reflection_test.go` 已覆盖
+  `delete_memory_file` 带 `reason` 的执行路径。

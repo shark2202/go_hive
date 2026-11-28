@@ -54,7 +54,7 @@ func TestParallelWorkerTextOnlyStallAutoFailsWithSyntheticReport(t *testing.T) {
 	}}
 	var reports []map[string]any
 	executor, reported := recordReportExecution(&reports)
-	loop := NewAgentLoop(LoopConfig{MaxIterations: 10}, executor)
+	loop := NewAgentLoop(LoopConfig{MaxIterations: 10, StallDetectionThreshold: 999}, executor)
 	ctx := stallWorkerContext(completer, "worker:w1")
 	ctx.StopAfterToolBatch = reported
 	conv := NewNodeConversation("You are a test worker.")
@@ -132,7 +132,7 @@ func TestWorkerStallGraceIsConfigurable(t *testing.T) {
 		completer := &scriptedCompleter{scenarios: []scriptedResponse{{content: "thinking"}}}
 		var reports []map[string]any
 		executor, reported := recordReportExecution(&reports)
-		loop := NewAgentLoop(LoopConfig{MaxIterations: 20, WorkerEscalationGraceTurns: tc.grace}, executor)
+		loop := NewAgentLoop(LoopConfig{MaxIterations: 20, WorkerEscalationGraceTurns: tc.grace, StallDetectionThreshold: 999}, executor)
 		ctx := stallWorkerContext(completer, "worker:w1")
 		ctx.StopAfterToolBatch = reported
 		conv := NewNodeConversation("You are a test worker.")

@@ -1,0 +1,753 @@
+{
+ "schema": "hive-reminders-and-nudges/1",
+ "generated_at": "2026-11-23 20:45 CST",
+ "baseline": "edd40f3d",
+ "counts": {
+  "sources": 15,
+  "points": 9,
+  "lines": 8,
+  "dimensions": 9,
+  "full": 15,
+  "partial": 0
+ },
+ "sources": [
+  {
+   "name": "tasks",
+   "kind": "计划 nudge",
+   "points": "SESSION_START, USER_PROMPT_SUBMIT, POST_TOOL_USE, POST_COMPACT, STOP",
+   "roles": "有 task 写工具的 agent",
+   "why": "计划漂移：未跟踪工作、长期不更新、完成太多未清理、停前未收尾；task list 还能跨 compaction 存活。",
+   "go": "✅ 完全对齐（worker 私有 store / overseer colony 计划均绑定）"
+  },
+  {
+   "name": "colony_parallel",
+   "kind": "行动 nudge",
+   "points": "POST_TOOL_USE",
+   "roles": "colony queen",
+   "why": "queen 自己跑完一条 pilot 并写入 tracker 后，推她 factor 成 skill + playbook，用 run_playbook 并行收敛，别继续逐行内联。",
+   "go": "✅ 完全对齐"
+  },
+  {
+   "name": "active_workers",
+   "kind": "协调",
+   "points": "USER_PROMPT_SUBMIT",
+   "roles": "queen",
+   "why": "提醒还有 in-flight worker，避免重复派单；只列仍 active 的 worker。",
+   "go": "✅ 完全对齐"
+  },
+  {
+   "name": "past_conversations",
+   "kind": "上下文",
+   "points": "SESSION_START, USER_PROMPT_SUBMIT",
+   "roles": "queen + recall provider",
+   "why": "跨会话连续性：把相关旧对话摘录放在当前消息前，避免用户重复解释。",
+   "go": "✅ 完全对齐（dfbf65b2 起进 hub）"
+  },
+  {
+   "name": "memory_recall",
+   "kind": "上下文",
+   "points": "SESSION_START, USER_PROMPT_SUBMIT, POST_COMPACT",
+   "roles": "queen + recall provider",
+   "why": "memory_recall.mode=wait：模型先挑出相关记忆，再回答；只在该模式生效。",
+   "go": "✅ 完全对齐"
+  },
+  {
+   "name": "memory_index",
+   "kind": "上下文",
+   "points": "SESSION_START, USER_PROMPT_SUBMIT, POST_COMPACT",
+   "roles": "queen + index provider",
+   "why": "memory_recall.mode=index：列出所有记忆的 manifest，便宜且不丢发现性。",
+   "go": "✅ 完全对齐"
+  },
+  {
+   "name": "turn_context",
+   "kind": "上下文",
+   "points": "SESSION_START, USER_PROMPT_SUBMIT",
+   "roles": "queen + turn-context provider",
+   "why": "注入时间、账号、环境等 turn context，避免模型凭空猜；没有 provider 时自跳过。",
+   "go": "✅ 完全对齐"
+  },
+  {
+   "name": "searchable_tools",
+   "kind": "上下文",
+   "points": "SESSION_START, USER_PROMPT_SUBMIT, POST_TOOL_USE, POST_COMPACT",
+   "roles": "queen / 带 provider 的 agent",
+   "why": "工具太多时按需公告“现在可搜索哪些工具”，避免全量 schema 撑爆上下文。",
+   "go": "✅ queen；worker 上游 provider 条件不适用"
+  },
+  {
+   "name": "skills_catalog",
+   "kind": "上下文",
+   "points": "SESSION_START, USER_PROMPT_SUBMIT, POST_TOOL_USE, POST_COMPACT",
+   "roles": "queen",
+   "why": "只公告当前 phase 相关的 skill，避免把整个 skills 库塞进 prompt。",
+   "go": "✅ 完全对齐"
+  },
+  {
+   "name": "tracker_snapshot",
+   "kind": "状态 nudge",
+   "points": "POST_TOOL_USE",
+   "roles": "colony queen",
+   "why": "把 tracker 表/行数快照带回上下文，避免 queen 凭记忆猜表状态；无表时自跳过。",
+   "go": "✅ 完全对齐"
+  },
+  {
+   "name": "worker_tracker_snapshot",
+   "kind": "状态 nudge",
+   "points": "POST_TOOL_USE",
+   "roles": "colony worker",
+   "why": "worker 每 20 次工具调用提醒一次“先 tracker_upsert 再继续”；空表不消耗 cadence。",
+   "go": "✅ 完全对齐"
+  },
+  {
+   "name": "colony_worker_snapshot",
+   "kind": "状态 nudge",
+   "points": "TOOL_BUDGET_CHECKPOINT",
+   "roles": "colony queen",
+   "why": "在工具预算检查点给 queen 一份 fleet 快照：active/total worker、在干什么，避免重复派单。",
+   "go": "✅ 完全对齐"
+  },
+  {
+   "name": "idle_nudge",
+   "kind": "行动 nudge",
+   "points": "IDLE_TICK",
+   "roles": "所有 loop",
+   "why": "会话静默/停泊/流卡住时推一下；按 substate 分 cap，用户回复后重置。",
+   "go": "✅ 完全对齐（worker 已接 OpenTasksProvider / SessionGoalProvider）"
+  },
+  {
+   "name": "sentinel_escalation",
+   "kind": "自治/升级",
+   "points": "IDLE_TICK",
+   "roles": "colony queen（opt-in）",
+   "why": "停车后让 Sentinel 分类：continue 就 nudge，needs_human 就升级，done 就收工。",
+   "go": "✅ source 注册；投递通道另算"
+  },
+  {
+   "name": "stream_stall",
+   "kind": "行动 nudge",
+   "points": "STREAM_STALLED",
+   "roles": "所有 loop",
+   "why": "流式传输卡住时注入 continue-nudge，重跑同一 inner turn，而不是无限等。",
+   "go": "✅ 完全对齐（worker/overseer 已接共享 stream watchdog）"
+  }
+ ],
+ "points": [
+  {
+   "name": "SESSION_START",
+   "when": "会话 bringup，第一次模型调用前",
+   "sources": "tasks, past_conversations, memory_recall/index, turn_context, searchable_tools, skills_catalog",
+   "why": "首轮定向：计划、相关旧对话、记忆、时间/账号、工具与技能目录一次到位。"
+  },
+  {
+   "name": "USER_PROMPT_SUBMIT",
+   "when": "每条用户/外部消息进入模型前",
+   "sources": "tasks, active_workers, past_conversations, memory_recall/index, turn_context, searchable_tools, skills_catalog",
+   "why": "先于用户消息注入相关上下文，模型看到消息时已经知道计划、并行工作和可用的工具/技能。"
+  },
+  {
+   "name": "POST_TOOL_USE",
+   "when": "一批工具执行完、结果回填后",
+   "sources": "tasks, colony_parallel, tracker_snapshot, worker_tracker_snapshot, searchable_tools, skills_catalog",
+   "why": "根据工具结果推进：发现计划漂移、pilot 完成该 fan-out、tracker 状态变化、需要发现新工具。"
+  },
+  {
+   "name": "TOOL_BUDGET_CHECKPOINT",
+   "when": "工具预算检查点",
+   "sources": "colony_worker_snapshot",
+   "why": "queen 在继续花工具预算前，先看 fleet 的 active/total 和每个 worker 的任务，避免重复派单。"
+  },
+  {
+   "name": "PRE_COMPACT",
+   "when": "上下文压缩前",
+   "sources": "—（预留，当前没有 source 使用）",
+   "why": "压缩前清理/保存上下文的 hook；目前没有注册 source，保留给未来需要 pre-compaction 快照的 source。"
+  },
+  {
+   "name": "POST_COMPACT",
+   "when": "上下文压缩后",
+   "sources": "tasks, memory_recall/index, searchable_tools, skills_catalog",
+   "why": "压缩会丢工具结果和旧消息；重新公告计划、记忆、工具和技能目录，避免“刚做过又想不起来”。"
+  },
+  {
+   "name": "STOP",
+   "when": "text-only 回合即将收尾",
+   "sources": "tasks",
+   "why": "停前检查：还有 open task 就不要悄悄收尾；干净的 TURN_DONE 才允许结束。"
+  },
+  {
+   "name": "IDLE_TICK",
+   "when": "ReminderHub 的后台节拍器；park 期间也运行",
+   "sources": "idle_nudge, sentinel_escalation",
+   "why": "时间型恢复：会话静默/停泊时推一下；colony queen opt-in 后交给 Sentinel 分类。"
+  },
+  {
+   "name": "STREAM_STALLED",
+   "when": "流式补全的 TTFT 或 inter-event 看门狗触发",
+   "sources": "stream_stall",
+   "why": "传输层恢复：取消卡住的流，注入 continue-nudge，重跑同一 inner turn，不把一次传输故障当模型失败。"
+  }
+ ],
+ "lines": [
+  {
+   "name": "turn",
+   "title": "Turn 生命周期：一次模型调用被哪些点包围",
+   "diagram": "SESSION_START\n  → USER_PROMPT_SUBMIT（reminder 在用户消息之前）\n  → model call\n  → tool batch\n  → POST_TOOL_USE\n  → text-only? STOP\n  → context threshold? PRE_COMPACT → compact → POST_COMPACT\n  → stream stall? STREAM_STALLED",
+   "steps": "每个点只做一件事：SESSION_START 定向；USER_PROMPT_SUBMIT 注入上下文；POST_TOOL_USE 根据工具结果推进；STOP 检查计划；PRE/POST_COMPACT 保连续性；STREAM_STALLED 恢复传输。",
+   "invariants": "reminder 在用户消息之前；所有 body 合并成一个 <system-reminder>；observe_turn 每 turn 一次；source 异常不拖垮 loop。",
+   "failure": "某个点没有 source 时，模型仍能工作，但退化为“无提醒”；source 注册了但 provider 为空时必须 self-skip，而不是产出空 body。",
+   "anchors": "agent_loop.py fire points · reminders.py ReminderHub · loop.go ResetTurn"
+  },
+  {
+   "name": "park-idle",
+   "title": "Park → idle → nudge / escalate → resume",
+   "diagram": "turn end\n  → park(reason)\n  → IDLE_TICK\n  → idle_nudge gates:\n       user_stopped / external_wait / silent_park\n       broken / awaiting / between_turns / slow_ttft\n  → cap / rate-limit\n  → nudge body\n  → drain / resume\n\ncolony queen + opt-in:\n  → sentinel_escalation\n  → classify(continue / needs_human / done)",
+   "steps": "park 先落 reason；idle tick 周期轮询；idle_nudge 按 substate 选预算；Sentinel 只对 colony queen + opt-in 接管；drain 后回到 loop 边界。",
+   "invariants": "user_stopped 不自动恢复；external_wait / silent_park 不打扰；cap 按“用户回复周期”重置；broken park 用更短预算。",
+   "failure": "TURN_DONE + 无 open task 应保持安静；cap 用尽后等待下一条用户消息；Sentinel 开启时 idle_nudge 让位，不能双推。",
+   "anchors": "idle_nudge.py · chat_runtime.go:968 reset · sentinel_runtime.go · escalation_source.py"
+  },
+  {
+   "name": "tool-result",
+   "title": "工具结果 → 计划 / tracker / fleet",
+   "diagram": "POST_TOOL_USE\n  ├─ tasks: drift / untracked / stale\n  ├─ colony_parallel: pilot + tracker write\n  ├─ tracker_snapshot: queen table state\n  ├─ worker_tracker_snapshot: worker cadence 20\n  └─ searchable_tools / skills_catalog: discovery\n\nTOOL_BUDGET_CHECKPOINT\n  └─ colony_worker_snapshot: active/total fleet",
+   "steps": "工具结果回填后统一进入 POST_TOOL_USE；任务源看计划漂移；并行源看 pilot + tracker 写入；tracker 源看表状态；worker 源按工具调用节奏；fleet 源在预算检查点。",
+   "invariants": "tracker 写入是 colony_parallel 的“完成一条”信号；没有表时 tracker 源 self-skip；worker cadence 不被空表消耗；fleet 快照最多 8 个 worker。",
+   "failure": "worker 的 tasks 源已绑定 workerDir/workerID；overseer 已绑定 overseerTaskSet，生产测试覆盖；不再有“注册了但不会产出”的 tasks 缺口。",
+   "anchors": "tracker_snapshot_reminder.py · colony_parallel_nudge.py · worker_reminders.go · tasks/reminders.go"
+  },
+  {
+   "name": "stream-stall",
+   "title": "Stream stall 恢复：传输故障不等于模型失败",
+   "diagram": "stream open\n  → TTFT > 600s 或 inter-event > 120s\n  → watchdog cancels stream\n  → *llm.StreamStalledError\n  → injectStreamStallNudge\n  → WrapReminder\n  → inner--; continue（重跑同一 inner turn）\n\ncap: ≤3 / turn\nreset: ExecuteTurn 开头",
+   "steps": "看门狗只负责判定和取消；loop 负责注入 reminder 并重跑；source 只产出 body；cap 防止一个坏流烧光整回合。",
+   "invariants": "不换 turn、不重跑整个任务；cap 按 turn 重置；TTFT 与 inter-event 是两个独立预算。",
+   "failure": "worker/overseer 已接共享流式 watchdog；真实网络 worker/overseer serve E2E 仍需单独验证，不能把 fake provider 测试当生产证据。",
+   "anchors": "stream_stall.py · streaming_completer.go · stream_wiring.go · loop.go · stream_stall_recovery.go"
+  },
+  {
+   "name": "compaction",
+   "title": "Compaction：上下文压缩后的再定向",
+   "diagram": "context threshold\n  → PRE_COMPACT（当前没有 source）\n  → compact\n  → POST_COMPACT\n  → tasks：重读计划\n  → memory_recall / memory_index：重放记忆\n  → searchable_tools / skills_catalog：重放目录",
+   "steps": "压缩前 hook 已存在；压缩后由 tasks / memory / tools / skills 重新公告；past_conversations 已在 hub（dfbf65b2），不再由 runtime 外挂。",
+   "invariants": "task list 从 store 重新读；memory mode 决定 index/wait；同一个 catalog 不重复公告；past 的包装/顺序与 hub 一致。",
+   "failure": "PRE_COMPACT 没有 source；worker tasks / idle open-task 的 provider/store 缺口已关闭（w87/reminders-residual）。",
+   "anchors": "agent_loop.py PRE/POST_COMPACT · chat_memory_wiring.go · tasks/reminders.go"
+  },
+  {
+   "name": "user-message",
+   "title": "用户消息 → 上下文注入 → 模型",
+   "diagram": "user message\n  → reset idle caps\n  → active_workers\n  → past_conversations\n  → memory_recall / memory_index\n  → turn_context\n  → searchable_tools / skills_catalog\n  → one <system-reminder> before user message\n  → model",
+   "steps": "每条用户消息先重置 idle cap，再按 provider 注入并行工作、旧对话、记忆、时间/账号、工具/技能目录；最后合并成一个 reminder 块。",
+   "invariants": "reminder 在用户消息之前；provider 为空时 self-skip；不产生用户气泡；不让 source 直接写 conversation。",
+   "failure": "worker context 已接 OpenTasksProvider / SessionGoalProvider；worker tasks 绑定私有 store；past 已进 hub（dfbf65b2），不再是缺口。",
+   "anchors": "chat_reminders.go · chat_memory_wiring.go · worker_reminders.go · reminders.py wrap_reminder"
+  },
+  {
+   "name": "worker-failure",
+   "title": "Worker 失败 / 升级：三个 stall 不是一件事",
+   "diagram": "text-only turn\n  → grace 2\n  → parallel worker? synthesized failed report\n  → legacy worker? ESCALATION_REQUESTED + park\n  → stall_check? judge reminder\n  → doom-loop? breaker blocks the call",
+   "steps": "worker_stall 是 turn 级策略；stall_check 是 judge；doom-loop 是 breaker；三者都在 ReminderHub 之外，不能混成 nudge。",
+   "invariants": "任何工具调用都算 progress；parallel worker 不发 escalation，直接 failed report；legacy worker 才 park 等 queen；stall_check 每条用户消息最多一次。",
+   "failure": "worker task reminder 与 worker idle open-task 已由真实 worker 路径测试证明；结构门禁全绿仍不能替代功能门禁。",
+   "anchors": "worker_stall.go · stall_check.py · stream_stall.py · worker_escalation.go"
+  },
+  {
+   "name": "sentinel",
+   "title": "Sentinel：停车后的分类、升级、恢复",
+   "diagram": "colony queen park\n  → classify_after 300s\n  → classify:\n       continue  → nudge\n       needs_human → escalation\n       done      → close\n  → channel: hive / telegram / slack\n  → human reply\n  → token → resume",
+   "steps": "Sentinel 只在 colony queen + opt-in 时工作；source 在 IDLE_TICK 产出分类请求；manager 负责分类、记录、投递、token 路由和 resume。",
+   "invariants": "硬阻塞（认证/崩溃）在 classify 之前决定；最多 5 次 nudge 后升级；escalation 有盘上记录；人回复按 token 恢复。",
+   "failure": "未知 channel 会报错；source 注册不等于投递可用；OSS 前端没有 escalation 历史/收件箱 UI。",
+   "anchors": "escalation_source.py · sentinel/manager.py · sentinel/store.py · routes_sentinel.py"
+  }
+ ],
+ "dimensions": [
+  {
+   "name": "角色视角",
+   "question": "谁有资格看到这条 source？",
+   "observes": "chat queen / colony overseer / worker / judge / Sentinel",
+   "finding": "同一 source 跨角色复用，applies_to 是唯一边界；chat queen 13 个 hub source + Sentinel 1 = 14；worker 4 个；overseer 6 个 queen-role source（含 tasks）；past_conversations 已在 hub（dfbf65b2）。",
+   "evidence": "chat_reminders.go / worker_reminders.go / overseer_reminders.go; 角色矩阵测试"
+  },
+  {
+   "name": "时间视角",
+   "question": "什么时候触发？",
+   "observes": "lifecycle / temporal / reactive",
+   "finding": "9 个注入点；IDLE_TICK 是唯一后台节拍器；STREAM_STALLED 是唯一 reactive 点；PRE_COMPACT 目前没有 source。",
+   "evidence": "reminders.py ReminderPoint; 9/9 枚举；ticker 0.01–5s"
+  },
+  {
+   "name": "状态视角",
+   "question": "park 后处于什么状态？",
+   "observes": "ParkReason / idle substate / activity / escalation status",
+   "finding": "11 个 ParkReason；idle_nudge 5 个 substate；只碰异常与 unknown，不碰干净 TURN_DONE 与外部等待。",
+   "evidence": "idle_nudge.py; ParkReason 表；activity 单点推导"
+  },
+  {
+   "name": "数据视角",
+   "question": "body 从哪里来？",
+   "observes": "task store / tracker DB / memory / skills / tools / conversation",
+   "finding": "provider 为空时必须 self-skip；task/tracker 源读盘；memory/skills 源读目录；past 读旧会话；没有 provider 就没有 body。",
+   "evidence": "providers in chat_reminders.go; tasks/reminders.go; tracker_snapshot_reminder.py"
+  },
+  {
+   "name": "控制视角",
+   "question": "如何限速、唤醒、重置？",
+   "observes": "applies_to / points / cap / cooldown / energizes / reset",
+   "finding": "idle 120s/3；parallel cooldown 4/cap 4；stream cap 3/turn；Sentinel 300s/5；只有行动型 source 才 energize。",
+   "evidence": "idle_nudge.py; colony_parallel_nudge.py; stream_stall.py; sentinel/store.py"
+  },
+  {
+   "name": "失败视角",
+   "question": "什么坏了？",
+   "observes": "stream stall / worker stall / stall_check / doom loop",
+   "finding": "四套不同的检测-决策-动作；stream 治传输，worker_stall 治 turn，stall_check 治言行，doom-loop 治重复调用。",
+   "evidence": "stream_stall.py; worker_stall.go; server/stall_check.py; doom-loop breaker"
+  },
+  {
+   "name": "实现视角",
+   "question": "Python 与 Go 差在哪？",
+   "observes": "source 类型 / 注册矩阵 / 真实触发 / provider / store",
+   "finding": "15/15 类型与行为面全部对齐；worker/overseer 的 tasks 与 worker idle open-task 变体均绑定真实 store/provider，并有生产路径测试；结构门禁 ≠ 功能门禁仍是审查原则。",
+   "evidence": "reminders-coverage.md; 目标包 3/3 PASS; Python 155 + 97（基线）"
+  },
+  {
+   "name": "运维视角",
+   "question": "怎么知道它工作了？",
+   "observes": "reminder_injected / stream_* / execution_* / logs / tests",
+   "finding": "source 产出有事件和日志；worker task snapshot / worker real turn / worker idle open-task / overseer real turn 均有生产路径测试；真实网络 worker/overseer serve E2E 仍属外部验证项。",
+   "evidence": "event bus; e2e-assets/reminders; test names in §09"
+  },
+  {
+   "name": "决策视角",
+   "question": "为什么不是更少/更多？",
+   "observes": "source 数量 / cap / 角色过滤 / 上下文经济",
+   "finding": "每个 source 对应一种可独立测试的失败模式；cap 防 wallpaper；provider 为空 self-skip；拆开比一个大 source 更容易治理。",
+   "evidence": "tradeoff 表; 设计原则; 反模式"
+  }
+ ],
+ "angles": [
+  {
+   "name": "模型视角",
+   "see": "一条 <system-reminder> 文本；不知道是哪个 source 产出的。",
+   "blind": "source 的身份、cap、provider、注册矩阵。",
+   "implication": "body 必须自包含；不能依赖“模型记得这是第几次提醒”。"
+  },
+  {
+   "name": "source 视角",
+   "see": "points / applies_to / render / observe_turn / tick_interval。",
+   "blind": "loop 的内部状态，除了 ReminderContext 暴露的 signals、tool_names、user_text。",
+   "implication": "source 不能直接写 conversation；只能返回 body，由 hub 统一包装。"
+  },
+  {
+   "name": "loop 视角",
+   "see": "observe_turn / collect / fire / reset / pending drain。",
+   "blind": "source 的业务细节；它只按 point 和 applies_to 调用。",
+   "implication": "新增 source 不改 loop；只注册 + 实现接口。"
+  },
+  {
+   "name": "运维视角",
+   "see": "reminder_injected、stream_*、execution_*、日志、测试。",
+   "blind": "模型是否真的照做；只能看“注入了什么”。",
+   "implication": "需要功能 E2E 和真实转录，不能只看事件计数。"
+  },
+  {
+   "name": "Go 视角",
+   "see": "注册表、ticker、provider、store、真实触发面。",
+   "blind": "上游 source 的隐含语义；必须逐条对照。",
+   "implication": "注册 ≠ 工作；结构门禁 ≠ 功能门禁。"
+  }
+ ],
+ "tradeoffs": [
+  {
+   "choice": "拆成 15 个 source",
+   "why": "每个 source 的触发条件、状态、cap、文案都不同；拆开才能独立测试、独立调参、独立关闭。",
+   "cost": "注册矩阵和角色过滤更复杂；新增 source 要补 provider、测试、文档。"
+  },
+  {
+   "choice": "nudge 推自己，escalate 找人",
+   "why": "能自己恢复的不要打扰人；真正需要人的才升级。",
+   "cost": "分类错误会导致该找人时自己空转，或该自己干时过早打扰。"
+  },
+  {
+   "choice": "cap + cooldown",
+   "why": "没有限速的提醒会变成 wallpaper，模型学会忽略。",
+   "cost": "极端情况下会少推一次；所以 cap 按用户回复周期重置，而不是整个会话。"
+  },
+  {
+   "choice": "一个 hub，按 applies_to 过滤",
+   "why": "queen DM、overseer、worker 共用 AgentLoop；避免三套 loop 各写一遍。",
+   "cost": "source 必须正确实现 applies_to；provider 为空时要 self-skip。"
+  },
+  {
+   "choice": "部分机制放在 hub 外",
+   "why": "worker_stall 是 turn 策略；stall_check 是 judge；doom-loop 是 breaker；它们不是“注入一段上下文”。",
+   "cost": "对齐时要跨文件审计，容易把“注册了”误当成“完整”。"
+  },
+  {
+   "choice": "上下文经济",
+   "why": "工具 schema、skill 目录、记忆 manifest 都很大；只公告相关部分。",
+   "cost": "发现性下降；需要 searchable_tools / skills_catalog 的 phase 过滤。"
+  },
+  {
+   "choice": "fail-open",
+   "why": "source 的 applies_to / render 抛异常时，不能静默丢掉所有提醒。",
+   "cost": "坏 source 可能反复失败；需要日志和测试兜底。"
+  },
+  {
+   "choice": "结构门禁 + 功能门禁分开",
+   "why": "注册/ticker 只能证明接线；真实注入要跑会话。",
+   "cost": "CI 更慢；但能避免“全绿但 worker 不工作”的假绿。"
+  }
+ ],
+ "matrix": [
+  {
+   "source": "tasks",
+   "cells": [
+    "●",
+    "●",
+    "●",
+    "●",
+    "●",
+    "●",
+    "●",
+    "●",
+    "●"
+   ]
+  },
+  {
+   "source": "colony_parallel",
+   "cells": [
+    "●",
+    "●",
+    "●",
+    "●",
+    "●",
+    "●",
+    "●",
+    "●",
+    "●"
+   ]
+  },
+  {
+   "source": "active_workers",
+   "cells": [
+    "●",
+    "●",
+    "○",
+    "●",
+    "○",
+    "●",
+    "●",
+    "●",
+    "●"
+   ]
+  },
+  {
+   "source": "past_conversations",
+   "cells": [
+    "○",
+    "●",
+    "○",
+    "●",
+    "○",
+    "●",
+    "●",
+    "●",
+    "●"
+   ]
+  },
+  {
+   "source": "memory_recall",
+   "cells": [
+    "○",
+    "●",
+    "○",
+    "●",
+    "○",
+    "●",
+    "●",
+    "●",
+    "●"
+   ]
+  },
+  {
+   "source": "memory_index",
+   "cells": [
+    "○",
+    "●",
+    "○",
+    "●",
+    "○",
+    "●",
+    "●",
+    "●",
+    "●"
+   ]
+  },
+  {
+   "source": "turn_context",
+   "cells": [
+    "○",
+    "●",
+    "—",
+    "●",
+    "—",
+    "●",
+    "●",
+    "●",
+    "●"
+   ]
+  },
+  {
+   "source": "searchable_tools",
+   "cells": [
+    "●",
+    "●",
+    "○",
+    "●",
+    "○",
+    "●",
+    "●",
+    "●",
+    "●"
+   ]
+  },
+  {
+   "source": "skills_catalog",
+   "cells": [
+    "●",
+    "●",
+    "○",
+    "●",
+    "○",
+    "●",
+    "●",
+    "●",
+    "●"
+   ]
+  },
+  {
+   "source": "tracker_snapshot",
+   "cells": [
+    "●",
+    "●",
+    "●",
+    "●",
+    "○",
+    "●",
+    "●",
+    "●",
+    "●"
+   ]
+  },
+  {
+   "source": "worker_tracker_snapshot",
+   "cells": [
+    "●",
+    "●",
+    "●",
+    "●",
+    "○",
+    "●",
+    "●",
+    "●",
+    "●"
+   ]
+  },
+  {
+   "source": "colony_worker_snapshot",
+   "cells": [
+    "●",
+    "●",
+    "●",
+    "●",
+    "○",
+    "●",
+    "●",
+    "●",
+    "●"
+   ]
+  },
+  {
+   "source": "idle_nudge",
+   "cells": [
+    "●",
+    "●",
+    "●",
+    "○",
+    "●",
+    "●",
+    "●",
+    "●",
+    "●"
+   ]
+  },
+  {
+   "source": "sentinel_escalation",
+   "cells": [
+    "○",
+    "●",
+    "●",
+    "●",
+    "●",
+    "●",
+    "●",
+    "●",
+    "●"
+   ]
+  },
+  {
+   "source": "stream_stall",
+   "cells": [
+    "●",
+    "●",
+    "●",
+    "○",
+    "●",
+    "●",
+    "●",
+    "●",
+    "●"
+   ]
+  }
+ ],
+ "view_cube": "                  ┌──────────── 角色 ────────────┐\n                  │  queen / overseer / worker     │\n                  │  judge / sentinel              │\n                  └──────────────┬─────────────────┘\n                                 │\n        ┌──────────── 时间 ──────┼──────── 状态 ─────────┐\n        │ lifecycle / ticker     │ park reason / substate │\n        │ reactive               │ activity / escalation  │\n        └────────────┬───────────┴───────────┬────────────┘\n                     │                       │\n        ┌──────────── 数据 ──────┐  ┌──────── 控制 ────────┐\n        │ store / provider / body│  │ cap / cooldown /     │\n        │ wrapper / conversation │  │ energize / reset     │\n        └────────────┬───────────┘  └───────────┬──────────┘\n                     │                          │\n        ┌──────────── 失败 ──────┐  ┌──────── 实现 ────────┐\n        │ stream / worker /      │  │ Python vs Go /       │\n        │ stall_check / doom     │  │ 结构 vs 功能         │\n        └────────────┬───────────┘  └───────────┬──────────┘\n                     │                          │\n                     └────────── 运维 / 决策 ──┘",
+ "nudges": [
+  {
+   "name": "idle_nudge",
+   "trigger": "IDLE_TICK；会话静默/停泊超过预算",
+   "guard": "120s / 3 次；awaiting 120s；broken 30s；按 substate 分 cap；用户消息 reset；Sentinel autopilot 让位",
+   "why": "防止 loop 静默停住；broken park 用更短预算快速恢复，干净 TURN_DONE 不打扰。"
+  },
+  {
+   "name": "colony_parallel",
+   "trigger": "POST_TOOL_USE；pilot 工作 + 刚写 tracker",
+   "guard": "cooldown 4 回合 / cap 4；run_playbook 后静默；colony phase 工具门控",
+   "why": "queen 跑通一条后，应该把协议 factor 成 skill + playbook 并行收敛，而不是继续逐行内联。"
+  },
+  {
+   "name": "stream_stall",
+   "trigger": "STREAM_STALLED；TTFT > 600s 或 inter-event > 120s",
+   "guard": "continue-nudge ≤3/回合；cap 按 turn ResetTurn",
+   "why": "传输卡住时重跑同一 turn；cap 防止一个坏流把整个回合预算烧光。"
+  },
+  {
+   "name": "tasks",
+   "trigger": "生命周期点；计划漂移/未跟踪/停前未收尾",
+   "guard": "warmup 4；drift 10；cooldown 10；soft cap 2 / backoff 2；snapshot heartbeat 12",
+   "why": "task list 是跨 compaction 的计划真相；提醒模型把工作和计划对齐，停前收尾。"
+  },
+  {
+   "name": "tracker_snapshot",
+   "trigger": "POST_TOOL_USE；queen 在 colony 内",
+   "guard": "首次第 3 个工具 turn；有表 cooldown 20 / 无表 10；无表 self-skip",
+   "why": "tracker 是 colony 的表状态真相；让 queen 看到行数/表名，避免凭记忆猜。"
+  },
+  {
+   "name": "worker_tracker_snapshot",
+   "trigger": "POST_TOOL_USE；worker 每 20 次工具调用",
+   "guard": "tracker_* 调用重置；空表不消耗 cadence",
+   "why": "worker 容易忘记先 upsert；空表时不要用“无表”提醒消耗 cadence。"
+  },
+  {
+   "name": "colony_worker_snapshot",
+   "trigger": "TOOL_BUDGET_CHECKPOINT",
+   "guard": "active/total 都为 0 静默；最多 8 个 worker；task 截断 80 字符",
+   "why": "queen 在花更多工具预算前先看 fleet，避免重复派单，优先等 WORKER_REPORT。"
+  },
+  {
+   "name": "active_workers",
+   "trigger": "USER_PROMPT_SUBMIT",
+   "guard": "只列 in-flight worker；无 colony/无 active 时静默",
+   "why": "用户新消息进来时，提醒 queen 还有并行工作，别重复做同一件事。"
+  },
+  {
+   "name": "sentinel_escalation",
+   "trigger": "IDLE_TICK；colony queen opt-in",
+   "guard": "classify_after 300s；最多 5 次 nudge 后升级；hive/telegram/slack",
+   "why": "停车后的自治：continue 推一把，needs_human 升级给人，done 收工；避免无人值守时烂在 park。"
+  }
+ ],
+ "guards": [
+  {
+   "name": "worker_stall",
+   "what": "worker 连续 text-only turn，没有工具调用；grace 2 后：parallel worker 合成 failed report 终止，legacy worker 发 ESCALATION_REQUESTED 并 park。",
+   "why": "这是 turn 级策略，不是 ReminderHub source；它决定“这个 worker 该失败/该找人”，不是“注入一段上下文”。"
+  },
+  {
+   "name": "stall_check",
+   "what": "judge 判断“说了没做”：回合宣称/承诺动作却没调用工具就收尾；概率 ≥ 0.5 时注入一次提醒。",
+   "why": "需要 judge 模型和阈值，且每条用户消息最多一次；不是 source 的 applies_to 能表达的。"
+  },
+  {
+   "name": "doom-loop breaker",
+   "what": "相同工具 + 相同参数反复调用；breaker 阻断该调用，注入“换条路”的引导。",
+   "why": "阻断的是调用本身，不是提醒；它先于 reminder 发生，避免把坏调用继续喂给模型。"
+  },
+  {
+   "name": "Sentinel manager",
+   "what": "colony queen park 后分类 continue / needs_human / done；escalation 记录、投递、token 路由、人回复后 resume。",
+   "why": "source 只负责在 IDLE_TICK 产出“该分类”的提醒；真正的分类、投递、恢复是 manager 的职责。"
+  }
+ ],
+ "principles": [
+  {
+   "name": "一个 hub，按角色过滤",
+   "why": "queen DM、colony overseer、worker 共用 AgentLoop；每个 source 用 applies_to 自报“我属于谁”，避免三套 loop 各写一遍。"
+  },
+  {
+   "name": "生命周期点，不是到处轮询",
+   "why": "source 只声明 points；loop 在 SESSION_START / USER_PROMPT_SUBMIT / POST_TOOL_USE / POST_COMPACT / STOP / IDLE_TICK / STREAM_STALLED 等已知点调用，时序可测。"
+  },
+  {
+   "name": "cap 与 cooldown",
+   "why": "每个 source 自己限速；没有 cap 的提醒会变成 wallpaper，模型会学会忽略。"
+  },
+  {
+   "name": "上下文经济",
+   "why": "工具 schema、skill 目录、记忆 manifest 都很大；searchable_tools / skills_catalog / memory_index 只公告“现在相关”的部分。"
+  },
+  {
+   "name": "advisory wrapper",
+   "why": "所有 body 合并后包成一个 <system-reminder>；模型可忽略，不污染用户消息，也不假装是用户指令。"
+  },
+  {
+   "name": "可观测 + 失败隔离",
+   "why": "reminder_injected 事件记录 source / substate / nudge 计数；source 的 applies_to / render 抛异常只跳过该 source，不拖垮 loop。"
+  },
+  {
+   "name": "守卫与自治分开",
+   "why": "stream stall / stall check / doom loop 是三种不同守卫；worker_stall 是 turn 策略；Sentinel 是停车 supervisor。不要把它们都叫 nudge。"
+  }
+ ],
+ "status": [],
+ "tests": [
+  {
+   "name": "Go 目标包",
+   "evidence": "internal/colony / agentloop / tasks：PASS（本分支实跑）"
+  },
+  {
+   "name": "Go 全量 CI",
+   "evidence": "基线 5,976 tests PASS（本分支未重跑全量 make ci）"
+  },
+  {
+   "name": "Python reminder",
+   "evidence": "8 个 reminder 测试文件：155 passed（基线）"
+  },
+  {
+   "name": "Python Sentinel",
+   "evidence": "8 个 Sentinel 测试文件：97 passed（基线）"
+  },
+  {
+   "name": "真实链路",
+   "evidence": "TestWorkerTaskReminderReachesARealWorkerTurn / TestOverseerTaskReminderReachesARealOverseerTurn / TestWorkerIdleNudgeParkedOpenTasksCarriesGoalAndNamesTasks / TestChatRuntimeStreamStallReminderReachesTheModel / TestWorkerTrackerSnapshotReachesARealWorkerTurn"
+  }
+ ],
+ "maintenance": {
+  "generator": "go_hive/scripts/gen_reminders_and_nudges.py",
+  "check": "uv run python go_hive/scripts/gen_reminders_and_nudges.py --check",
+  "coverage": "go_hive/docs/reminders-coverage.md"
+ }
+}

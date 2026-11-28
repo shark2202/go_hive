@@ -1458,8 +1458,8 @@
           "inputs": "assistant_text / tool_calls / output_accumulator / accumulator / iteration / conversation_summary / output_keys / missing_keys",
           "host_path": "缝在两条路径上都存在；Python 侧无生产注入方（仅测试注入）",
           "go_status": "measured_aligned",
-          "go_ref": "agentloop/judge.go:58 Judge 接口、:98-109 ConfigureJudge、:169 evaluateJudgeWithRetry（_judge_turn 失败回落契约）、llm_judge.go:57 默认适配器、loop.go:777-782 与 worker_stall.go:152-157 调用、loop_judge.go:17 应用；criteria 来源补 colony goal 回落（colony/runtime.go:1195-1200、:1290-1296）与 chat 继承（chat_runtime.go:1316-1328，Parity-exempt）",
-          "verdict": "已对齐；Go 侧是同一缝的生产实现（Python 侧缝无注入方）。失败回落语义经 judge-j2 车道实测后对齐（重试瞬态→耗尽回退 ACCEPT、非瞬态上抛），见 docs/judge-parity.md §3.2 末条与 §6.2",
+          "go_ref": "agentloop/judge.go Judge 接口、ConfigureJudge、evaluateJudgeWithRetry（_judge_turn 失败回落契约）、llm_judge.go 默认适配器、loop.go/worker_stall.go 的 shouldJudge 调用、loop_judge.go 应用；通用 API 保留，但 2026-11-26 起 queen spec SkipJudge=true，colony worker/overseer 不调用 ConfigureJudge，Go-only goal criteria 继承已移除",
+          "verdict": "已对齐；两侧生产构造都不注入 judge（Python judge=None；Go 女王 skip_judge=True、colony worker/overseer 不 ConfigureJudge）。通用 Judge/ConfigureJudge API 保留给 graph-era 与显式调用方。失败回落语义经 judge-j2 车道实测后对齐（重试瞬态→耗尽回退 ACCEPT、非瞬态上抛），见 docs/judge-parity.md §3.2 末条与 §6.2",
           "evidence": [
             "probe:go-judge-wired",
             "probe:go-judge-gated",

@@ -37,14 +37,14 @@
 - **EventBus 异步派发**：观测等价（SSE 42/42）。
 - **版本双轨**：Go `1.0.27-go.1` / Python 参考 `1.0.15`，独立演进。
 - **工具 schema 归一**：raw 25/47、归一 33/47（其余为可选字段/描述差异，逐条在 `tool-surface` 登记）。
-- **`attached_credentials.json`**：Python-only（会话固定凭据），Go 无读写；不阻塞启动/迁移。
+- **`attached_credentials.json`**：已从「Python-only」转为双向（Go 写 `$HIVE_HOME/sessions/<sid>/` 的 Python 形状，旧会话目录副本读入后迁移）；`.play.json` 旁生成 `.play.py` 镜像；`runs.jsonl` 仍为 Python 写 / Go 只读。见 `08-storage-and-data.md` §3.4。
 - **cold_interrupted 的 `[System]` 注记**：Go 恢复时不自动续跑回合，下一回合从用户消息开始。
 - **colony sidecar 权限**：Go 原子写更严（0600 vs 0644），不放宽。
 
 ## 4. 已知功能缺口（按优先级，已在 backlog）
 
 - `check-agent` / `resync` 凭据端点（P1，lane 修复中）。
-- `attached_credentials.json` 会话固定凭据（P2）。
+- ~~`attached_credentials.json` 会话固定凭据（P2）~~：已闭环（Go 双向读写 Python 全局路径；见 08 §3.4）。
 - antigravity provider、GA 工具迁移（P2/P3）。（`sentinel_setup` 工具已移植，真实投递未验证）
 - 19 条真未移植模块（清单见 `docs/unported-triage.md`）。
 

@@ -1,0 +1,5 @@
+wrote /Users/mac/hive/.wt/w91-g1-acceptance/go_hive/contracts/env-vars.json
+wrote /Users/mac/hive/.wt/w91-g1-acceptance/go_hive/contracts/config-keys.json
+wrote /Users/mac/hive/.wt/w91-g1-acceptance/go_hive/docs/env-config-contract-diff.md
+env audit: python=90 go=125 common=84 python_only=6 go_only=41 (match=True)
+config: {'keys': 137, 'sections': 22, 'status_counts': {'aligned': 131, 'go_only': 4, 'go_partial': 1, 'unread': 1}, 'env_overrides': 28, 'boundary_rules': 9}

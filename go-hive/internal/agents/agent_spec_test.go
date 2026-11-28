@@ -509,3 +509,42 @@ func TestLoadAgentSpecJSONAndYAMLYieldSameSpec(t *testing.T) {
 		t.Fatalf("loop configs differ: json=%#v yaml=%#v", jsonSpec.LoopConfig, yamlSpec.LoopConfig)
 	}
 }
+
+// Parity: core/framework/loader/agent_loader.py::AgentLoader.load -- the
+// worker file filter is ("agent","flowchart","triggers","configuration",
+// "metadata"); "tasks" is excluded only by framework/agents/discovery.py.
+func TestLoadAgentSpecAcceptsTasksJSONAsWorkerConfig(t *testing.T) {
+	root := t.TempDir()
+	agentDir := filepath.Join(root, "colony_tasks")
+	mustMkdir(t, agentDir)
+	writeWorkerSpecFile(t, agentDir, "tasks.json",
+		`{"name":"task_runner","description":"runs tasks","tools":["alpha"],`+
+			`"goal":{"description":"finish tasks"}}`)
+
+	spec, err := LoadAgentSpec(agentDir)
+	if err != nil {
+		t.Fatalf("LoadAgentSpec: %v", err)
+	}
+	if spec.AgentSpec.ID != "task_runner" {
+		t.Fatalf("id = %q", spec.AgentSpec.ID)
+	}
+	if filepath.Base(spec.ConfigPath) != "tasks.json" {
+		t.Fatalf("config = %q", spec.ConfigPath)
+	}
+}
+
+// Parity: core/framework/loader/agent_loader.py::AgentLoader.load -- a
+// non-string description fails the load in both implementations (Python raises
+// pydantic ValidationError on NodeSpec; Go rejects at decode time). This pins
+// the shared outcome: the config is rejected, not silently defaulted.
+func TestLoadAgentSpecRejectsNonStringDescription(t *testing.T) {
+	root := t.TempDir()
+	agentDir := filepath.Join(root, "bad_desc")
+	mustMkdir(t, agentDir)
+	writeWorkerSpecFile(t, agentDir, "worker.json",
+		`{"name":"worker","description":123,"goal":{"description":"ship"}}`)
+
+	if _, err := LoadAgentSpec(agentDir); err == nil {
+		t.Fatal("non-string description should reject the worker config")
+	}
+}

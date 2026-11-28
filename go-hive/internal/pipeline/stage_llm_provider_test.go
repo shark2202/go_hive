@@ -170,3 +170,83 @@ func TestLLMProviderResolverInjectionUsed(t *testing.T) {
 		t.Fatal("resolver output not installed")
 	}
 }
+
+// writeAntigravityAccounts writes the v4 accounts file the provider's
+// _init_credentials reads from $HIVE_HOME.
+func writeAntigravityAccounts(t *testing.T, homeDir string) {
+	t.Helper()
+	doc := map[string]any{
+		"schemaVersion": 4,
+		"accounts": []any{map[string]any{
+			"enabled": true,
+			"refresh": "refresh-1|proj-1",
+			"access":  "ya29.valid-access",
+			"expires": 4102444800000,
+		}},
+	}
+	data, err := json.Marshal(doc)
+	if err != nil {
+		t.Fatalf("marshal accounts: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(homeDir, "antigravity-accounts.json"), data, 0o600); err != nil {
+		t.Fatalf("write accounts: %v", err)
+	}
+}
+
+// Parity: framework/pipeline/stages/llm_provider.py::LlmProviderStage.initialize
+// (use_antigravity_subscription swaps the whole completer when a login exists)
+func TestLLMProviderResolvesAntigravitySubscription(t *testing.T) {
+	_, dir := testHome(t)
+	writeAntigravityAccounts(t, dir)
+	writeTestConfig(t, dir, map[string]any{
+		"llm": map[string]any{
+			"provider":                     "google",
+			"model":                        "gemini-3-flash",
+			"use_antigravity_subscription": true,
+			"api_key":                      "sk-ignored",
+		},
+	})
+	stage := &LLMProviderStage{
+		BaseStage: BaseStage{StageName: "llm_provider", StageOrder: 10},
+	}
+	if err := stage.Initialize(); err != nil {
+		t.Fatalf("initialize: %v", err)
+	}
+	provider, ok := stage.LLM.(*llm.AntigravityProvider)
+	if !ok {
+		t.Fatalf("completer = %T, want *llm.AntigravityProvider", stage.LLM)
+	}
+	if !provider.HasCredentials() {
+		t.Fatal("antigravity provider built without credentials")
+	}
+	if provider.ModelName() != "gemini-3-flash" {
+		t.Fatalf("model = %q, want the provider prefix stripped", provider.ModelName())
+	}
+}
+
+// Parity: framework/pipeline/stages/llm_provider.py::LlmProviderStage.initialize
+// (the flag without credentials falls through to the HTTP provider)
+func TestLLMProviderAntigravityWithoutCredentialsFallsBack(t *testing.T) {
+	_, dir := testHome(t)
+	writeTestConfig(t, dir, map[string]any{
+		"llm": map[string]any{
+			"provider":                     "google",
+			"model":                        "gemini-3-flash",
+			"use_antigravity_subscription": true,
+			"api_key":                      "sk-fallback",
+		},
+	})
+	stage := &LLMProviderStage{
+		BaseStage: BaseStage{StageName: "llm_provider", StageOrder: 10},
+	}
+	if err := stage.Initialize(); err != nil {
+		t.Fatalf("initialize: %v", err)
+	}
+	provider, ok := stage.LLM.(*llm.Provider)
+	if !ok {
+		t.Fatalf("completer = %T, want the HTTP provider fallback", stage.LLM)
+	}
+	if provider.APIKey != "sk-fallback" {
+		t.Fatalf("api key = %q", provider.APIKey)
+	}
+}

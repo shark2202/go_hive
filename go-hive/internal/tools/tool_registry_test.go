@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 	"sync"
 	"testing"
@@ -1078,5 +1079,31 @@ func TestSessionCwdIsContextParamAndStripped(t *testing.T) {
 	}
 	if _, ok := props["session_cwd"]; ok {
 		t.Fatal("session_cwd must be stripped")
+	}
+}
+
+// Parity: core/framework/loader/tool_registry.py::_register_mcp_server_with_retry
+// -- the Tool Library catalog rows carry name/description/input_schema/provider
+// only; server_tool is a Go-only extra that upstream clients never see.
+func TestFullMCPCatalogRowKeysMatchUpstream(t *testing.T) {
+	registry := NewToolRegistry()
+	disable := false
+	registry.newMCPClient = fakeFactory(map[string]MCPClient{
+		"srv": newFakeMCPClient(&MCPServerConfig{Name: "srv"}, tool("read_file")),
+	})
+	registry.RegisterMCPServer(MCPServerSpec{Name: "srv", Transport: "stdio", Command: "echo"},
+		RegisterMCPServerOptions{UseConnectionManager: &disable})
+
+	entries := registry.GetFullMCPCatalog()["srv"]
+	if len(entries) != 1 {
+		t.Fatalf("entries = %v", entries)
+	}
+	keys := make([]string, 0, len(entries[0]))
+	for key := range entries[0] {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	if strings.Join(keys, ",") != "description,input_schema,name,provider" {
+		t.Fatalf("catalog keys = %v", keys)
 	}
 }

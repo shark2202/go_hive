@@ -267,10 +267,17 @@ func BuildAskUserTool() llm.ToolDef {
 	}
 }
 
+// CollectResultToolName is the synthetic poll tool for backgrounded calls. The
+// agent loop intercepts it (never the executor) and answers from its
+// background-call registry.
+//
+// Parity: framework/agent_loop/internals/synthetic_tools.py build_collect_result_tool
+const CollectResultToolName = "collect_result"
+
 // Parity: framework/agent_loop/internals/synthetic_tools.py build_collect_result_tool.
 func BuildCollectResultTool() llm.ToolDef {
 	return llm.ToolDef{
-		Name: "collect_result",
+		Name: CollectResultToolName,
 		Description: "Fetch the result of a tool that is running in the background — one " +
 			`that returned {"status":"started","handle":"bg_…"}. Pass that handle. ` +
 			"It waits until the work is done and returns the real result. If a new " +
@@ -340,6 +347,12 @@ func BuildSuggestColonyTool() llm.ToolDef {
 	}
 }
 
+// SetOutputToolName is the legacy synthetic output-declaration tool. Upstream's
+// live loop no longer supports it (calls are rejected with an error before any
+// executor runs); the builder and handler remain for the legacy synthetic
+// surface only.
+const SetOutputToolName = "set_output"
+
 // Parity: framework/agent_loop/internals/synthetic_tools.py build_set_output_tool.
 func BuildSetOutputTool(outputKeys []string) *llm.ToolDef {
 	if len(outputKeys) == 0 {
@@ -351,7 +364,7 @@ func BuildSetOutputTool(outputKeys []string) *llm.ToolDef {
 		enumValues[i] = key
 	}
 	return &llm.ToolDef{
-		Name: "set_output",
+		Name: SetOutputToolName,
 		Description: "Set an output value for this node. Call once per output key. " +
 			"Use this for brief notes, counts, status, and file references — " +
 			"NOT for large data payloads. When a tool result was saved to a " +

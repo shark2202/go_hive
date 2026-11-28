@@ -204,6 +204,19 @@ func TestParseCronSupportedSyntax(t *testing.T) {
 		{"0 9 * * 1-5/2", true},
 		{"0 9 * * 1-5", true},
 		{"0 9 * 5 *", true},
+		// croniter extensions accepted by the parser (base is Monday,
+		// 2026-05-18 09:00:00).
+		{"5-1 * * * *", true},
+		{"0 9 * * MON", true},
+		{"0 9 ? * ?", true},
+		{"0 9 * JAN-MAY *", true},
+		{"0 9 * * 1#3", true},
+		{"0 9 * * MON#3", true},
+		{"0 9 * * 1#2", false},
+		{"0 9 * * L5", false},
+		{"0 9 L * *", false},
+		{"0 9 * * 7", false},
+		{"@daily", false},
 	}
 	for _, tc := range cases {
 		sched, ok := parseCron(tc.expr)
@@ -214,7 +227,14 @@ func TestParseCronSupportedSyntax(t *testing.T) {
 			t.Errorf("matches(%q, %s) = %v, want %v", tc.expr, base, got, tc.match)
 		}
 	}
-	for _, bad := range []string{"", "* * * *", "not-a-cron", "60 * * * *", "* 24 * * *", "* * 0 * *", "* * * 13 *", "* * * * 8", "*/0 * * * *", "5-1 * * * *"} {
+	for _, bad := range []string{
+		"", "* * * *", "not-a-cron", "60 * * * *", "* 24 * * *", "* * 0 * *",
+		"* * * 13 *", "* * * * 8", "*/0 * * * *",
+		// croniter 6.0.0 also rejects these: Quartz W, L offsets, bare DOW L,
+		// out-of-range #n, numeric range with #n and spaced macros.
+		"0 0 15W * *", "0 0 L-3 * *", "0 0 * * L", "0 0 * * 1#6",
+		"0 0 * * 1-5#2", " @daily",
+	} {
 		if _, ok := parseCron(bad); ok {
 			t.Errorf("parseCron(%q) = valid, want invalid", bad)
 		}
@@ -230,6 +250,52 @@ func TestCronNextDueStrictlyAfterNow(t *testing.T) {
 		t.Fatalf("count=%d ticks=%v, want none", count, ticks)
 	}
 	requireNextDue(t, next, "2026-05-19T09:00:00+00:00")
+}
+
+// Parity: croniter has no look-back horizon — a trigger dormant for more than
+// five years still reports every missed tick (the old Go cap undercounted).
+func TestComputeMissedCronCountsBeyondFiveYears(t *testing.T) {
+	triggers := []map[string]any{
+		trigEntry("t", "timer", map[string]any{"cron": "0 0 1 1 *"}, true, "2018-01-01T00:00:00+00:00"),
+	}
+	now := utc(2026, time.May, 1, 0, 0)
+	missed := ComputeMissed(triggers, now)
+	if len(missed) != 1 {
+		t.Fatalf("len(missed) = %d, want 1", len(missed))
+	}
+	if missed[0].Count != 8 {
+		t.Fatalf("count = %d, want 8 (2019..2026 Jan 1, not capped at 5 years)", missed[0].Count)
+	}
+	if len(missed[0].Ticks) != 8 || missed[0].Ticks[0] != "2019-01-01T00:00:00+00:00" {
+		t.Fatalf("ticks = %v", missed[0].Ticks)
+	}
+	requireNextDue(t, missed[0].NextDueAt, "2027-01-01T00:00:00+00:00")
+}
+
+// Parity: croniter keeps searching past five years. Feb 29 skips the
+// non-leap century year (2096 -> 2104 is an eight-year gap).
+func TestCronNextMatchAcrossLeapCenturyGap(t *testing.T) {
+	next, ok := NextCronMatch("0 0 29 2 *", utc(2097, time.March, 1, 0, 0))
+	if !ok {
+		t.Fatal("NextCronMatch returned no match; the search must outlive the old 5-year horizon")
+	}
+	if got := FormatISO(next); got != "2104-02-29T00:00:00+00:00" {
+		t.Fatalf("next = %s, want 2104-02-29", got)
+	}
+
+	count, _, nextDue := missedForCron("0 0 29 2 *", utc(2097, time.March, 1, 0, 0), utc(2104, time.March, 1, 0, 0))
+	if count != 1 {
+		t.Fatalf("count = %d, want 1 (2104-02-29)", count)
+	}
+	requireNextDue(t, nextDue, "2108-02-29T00:00:00+00:00")
+}
+
+// Parity: a syntactically valid but never-matching schedule (Feb 30) reports
+// no next tick instead of hanging; croniter's full-cycle search has no match.
+func TestCronNextMatchNeverMatchingScheduleTerminates(t *testing.T) {
+	if next, ok := NextCronMatch("0 0 30 2 *", utc(2026, time.January, 1, 0, 0)); ok {
+		t.Fatalf("next = %s, want no match for Feb 30", FormatISO(next))
+	}
 }
 
 type fakeViewSession struct {

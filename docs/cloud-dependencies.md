@@ -48,7 +48,7 @@ OAuth/ESP 投递在上游经 "Aden cloud connector"，Go 未实现、直接给�
 - `'hive'` 托管模型提供商：`HIVE_CLOUD_BASE` 未设置时**从模型目录隐藏**（`internal/llm/catalog.go:525-529`）；keycheck 端点 `HiveLLMEndpoint`（`keycheck.go:19`）。
 - **image_gen_tool 默认代理**：`batch3ImageProxyBase = "https://llm.open-hive.com"`（`tools/integrations/image.go:36`）；base 覆盖优先级 `HIVE_LLM_BASE_URL` env > `modules.image_gen_tool.base_url` 配置 > 默认；token = `HIVE_API_KEY`（`:280`，无则报 "Sign in to refresh credentials"）。
 - Bearer 认证启发（仅影响指向该主机的请求头选择）：`internal/llm/transport.go:253`（镜像 Python `llm/litellm.py::_api_base_needs_bearer_auth`）。
-- **streamToken 24h 刷新**：Python `core/framework/server/streamtoken_refresh.py`（`POST {base}/user/refresh-stream-token-from-stream`）；**Go 未移植（C12 `out_of_scope`）**——用 hive 代理的长会话需桌面端或外部刷新。
+- **streamToken 24h 刷新**：Python `core/framework/server/streamtoken_refresh.py`（`POST {base}/user/refresh-stream-token-from-stream`）；Go 已移植到 `internal/streamtoken`（C12 `ported`，含 401/403 重放与可取消调度）；真实 cloud endpoint E2E 未跑。
 
 ### 1.5 api.adenhq.com —— 网关 ping 与凭据代理
 

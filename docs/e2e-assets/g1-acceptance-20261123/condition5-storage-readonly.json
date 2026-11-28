@@ -1,0 +1,64 @@
+{
+ "condition": 5,
+ "mode": "read-only snapshot recheck (storage_compat_run.sh NOT re-run; it rewrites tracked evidence)",
+ "head": "42f2b93215edddcd3f7f9ef5ca246162753e6d7b",
+ "summary_path": "docs/storage-compat/summary.md",
+ "runs": {
+  "v1": {
+   "files": "python 20 / go 20",
+   "identical_files": "18",
+   "changed_files": "0",
+   "json_field_diffs": "0",
+   "sqlite_mismatch": "0",
+   "only_python": "0 []",
+   "only_go": "0 []"
+  },
+  "v2": {
+   "files": "python 59 / go 59",
+   "identical_files": "56",
+   "changed_files": "0",
+   "json_field_diffs": "0",
+   "sqlite_mismatch": "0",
+   "only_python": "0 []",
+   "only_go": "0 []"
+  },
+  "colony-fork": {
+   "files": "python 32 / go 32",
+   "identical_files": "30",
+   "changed_files": "0",
+   "json_field_diffs": "0",
+   "sqlite_mismatch": "0",
+   "only_python": "0 []",
+   "only_go": "0 []"
+  },
+  "probes": {
+   "files": "python 14 / go 14",
+   "identical_files": "1",
+   "changed_files": "10",
+   "json_field_diffs": "0",
+   "sqlite_mismatch": "0",
+   "only_python": "0 []",
+   "only_go": "0 []"
+  }
+ },
+ "storage_fields_contract": {
+  "path": "contracts/storage-fields.json",
+  "baseline_commit": "93193450",
+  "observed_classes": 10,
+  "code_classes": 9
+ },
+ "credentials_crossread": {
+  "path": "docs/storage-compat/credentials-crossread.json",
+  "go_reads_python_rows": 2,
+  "python_reads_go_sections": [
+   "credentials",
+   "ids",
+   "index"
+  ]
+ },
+ "current_head_corroboration": [
+  "CI @ cea04d9e: C4 storage contract self-consistent (19 file classes, inventory partition ok)",
+  "CI @ cea04d9e: C5 DB schema versions agree (tracker schema_version=3 both sides)"
+ ],
+ "verdict": "PASS (snapshot, unchanged evidence anchored at baseline 93193450; code-side corroborated by CI C4/C5)"
+}

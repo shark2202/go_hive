@@ -1,6 +1,7 @@
 package server
 
 import (
+	"os"
 	"testing"
 
 	"github.com/shark2202/go_hive/go-hive/internal/agentloop"
@@ -103,6 +104,21 @@ func TestLoopMaxToolResultCharsReadsTheLoopSection(t *testing.T) {
 	writeFeatureConfig(t, home, map[string]any{"loop": map[string]any{"max_tool_result_chars": 4096.5}})
 	if got := LoopMaxToolResultChars(home, 30_000); got != 30_000 {
 		t.Fatalf("float = %d, want the fallback", got)
+	}
+	// Numeric text is coerced by the int field upstream, so it counts.
+	writeFeatureConfig(t, home, map[string]any{"loop": map[string]any{"max_tool_result_chars": "4096"}})
+	if got := LoopMaxToolResultChars(home, 30_000); got != 4096 {
+		t.Fatalf("numeric string = %d, want 4096", got)
+	}
+	// Empty and null values keep the fallback: reading them as 0 would
+	// silently disable the spillover cap.
+	writeFeatureConfig(t, home, map[string]any{"loop": map[string]any{"max_tool_result_chars": ""}})
+	if got := LoopMaxToolResultChars(home, 30_000); got != 30_000 {
+		t.Fatalf("empty string = %d, want the fallback", got)
+	}
+	writeFeatureConfig(t, home, map[string]any{"loop": map[string]any{"max_tool_result_chars": nil}})
+	if got := LoopMaxToolResultChars(home, 30_000); got != 30_000 {
+		t.Fatalf("null = %d, want the fallback", got)
 	}
 }
 
@@ -329,7 +345,7 @@ func TestSectionAPIKeyUsesTheProviderEnvVar(t *testing.T) {
 
 // TestHiveMaxIterCapsTheQueenLoop pins HIVE_MAX_ITER: a positive integer caps
 // the queen's reply loop; unset, non-numeric and non-positive values keep the
-// configured default.
+// queen profile's 999_999 autonomous default.
 //
 // Parity-exempt: upstream's HIVE_MAX_ITER read lives inline in
 // queen_orchestrator and has no test of its own.
@@ -341,10 +357,18 @@ func TestHiveMaxIterCapsTheQueenLoop(t *testing.T) {
 	if got := chatLoopConfig(t.TempDir(), home.Root, "").MaxIterations; got != 3 {
 		t.Fatalf("MaxIterations = %d, want the env cap 3", got)
 	}
+	// The fallback is the queen profile's 999_999, not DefaultLoopConfig's 50:
+	// the old base made a normal DM queen stop at 50 inner turns.
+	if err := os.Unsetenv("HIVE_MAX_ITER"); err != nil {
+		t.Fatalf("unset HIVE_MAX_ITER: %v", err)
+	}
+	if got, want := chatLoopConfig(t.TempDir(), home.Root, "").MaxIterations, agentloop.QueenLoopConfig().MaxIterations; got != want {
+		t.Fatalf("unset HIVE_MAX_ITER gave MaxIterations %d, want the queen default %d", got, want)
+	}
 	for _, value := range []string{"", "  ", "abc", "0", "-2"} {
 		t.Setenv("HIVE_MAX_ITER", value)
-		if got := chatLoopConfig(t.TempDir(), home.Root, "").MaxIterations; got != agentloop.DefaultLoopConfig().MaxIterations {
-			t.Fatalf("HIVE_MAX_ITER=%q gave MaxIterations %d, want the default", value, got)
+		if got, want := chatLoopConfig(t.TempDir(), home.Root, "").MaxIterations, agentloop.QueenLoopConfig().MaxIterations; got != want {
+			t.Fatalf("HIVE_MAX_ITER=%q gave MaxIterations %d, want the queen default %d", value, got, want)
 		}
 	}
 }

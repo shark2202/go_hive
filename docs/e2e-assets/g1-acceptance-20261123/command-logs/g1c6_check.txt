@@ -1,0 +1,1 @@
+gen_builtin_skills_manifest: OK — /Users/mac/hive/.wt/w91-g1-acceptance/go_hive/contracts/builtin-skills.json is up to date (25 files, 229354 bytes)

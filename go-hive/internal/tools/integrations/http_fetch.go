@@ -62,10 +62,6 @@ func batch2Array(root map[string]any, key string) []any {
 	return integrationkit.Array(root, key)
 }
 
-// batch2EntityPattern is the entity matcher now owned by integrationkit; the
-// name stays for provider files that post-process scraped markup.
-var batch2EntityPattern = integrationkit.EntityPattern
-
 // stripHTMLTags mirrors wikipedia_tool's regex-based tag removal.
 func stripHTMLTags(text string) string { return integrationkit.StripHTMLTags(text) }
 

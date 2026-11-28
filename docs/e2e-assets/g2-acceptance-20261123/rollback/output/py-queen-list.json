@@ -1,0 +1,190 @@
+[
+  {
+    "id": "queen_brand_design",
+    "name": "Jony Ive",
+    "title": "Head of Brand & Design",
+    "has_avatar": false,
+    "portrait": {
+      "cut": "crop-thin",
+      "face": "round",
+      "hair": "#7E6A56",
+      "skin": "#EBC8A2",
+      "beard": "stubble",
+      "mouth": "smile-soft",
+      "shirt": "tee-grey"
+    }
+  },
+  {
+    "id": "queen_content_creation",
+    "name": "Gary Vaynerchuk",
+    "title": "Head of Content",
+    "has_avatar": false,
+    "portrait": {
+      "cut": "short-back",
+      "face": "round",
+      "hair": "#1A1410",
+      "skin": "#E5BD90",
+      "beard": "stubble",
+      "mouth": "smile-broad",
+      "eyes": "sharp",
+      "shirt": "tee-grey"
+    }
+  },
+  {
+    "id": "queen_finance_fundraising",
+    "name": "Warren Buffett",
+    "title": "Head of Finance",
+    "has_avatar": false,
+    "portrait": {
+      "cut": "side-bushy-grey",
+      "brow": "bushy",
+      "face": "round",
+      "hair": "#E5DECF",
+      "skin": "#F4DDB6",
+      "mouth": "smile-soft",
+      "glasses": "square-thick"
+    }
+  },
+  {
+    "id": "queen_growth",
+    "name": "queen_growth",
+    "title": "",
+    "has_avatar": false,
+    "custom": false
+  },
+  {
+    "id": "queen_lead_gen",
+    "name": "Alex Hormozi",
+    "title": "Head of Lead Generation",
+    "has_avatar": false,
+    "portrait": {
+      "cut": "bald-shine",
+      "face": "square",
+      "hair": "#1A1410",
+      "skin": "#E5BD90",
+      "beard": "full",
+      "mouth": "flat",
+      "eyes": "sharp",
+      "shirt": "tee-black"
+    }
+  },
+  {
+    "id": "queen_legal",
+    "name": "Ruth Bader Ginsburg",
+    "title": "Head of Legal",
+    "has_avatar": false,
+    "portrait": {
+      "cut": "pulled-tight",
+      "face": "oval",
+      "hair": "#E2DBCC",
+      "skin": "#F2D5B0",
+      "mouth": "flat",
+      "collar": "jabot",
+      "glasses": "round-thick"
+    }
+  },
+  {
+    "id": "queen_market_research",
+    "name": "Mary Meeker",
+    "title": "Head of Market Research",
+    "has_avatar": false,
+    "portrait": {
+      "cut": "bob-long",
+      "face": "oval",
+      "hair": "#C8AE86",
+      "skin": "#F0CFA8",
+      "mouth": "smile-soft",
+      "glasses": "rect",
+      "shirt": "shirt-blue"
+    }
+  },
+  {
+    "id": "queen_operations",
+    "name": "Tim Cook",
+    "title": "Head of Operations",
+    "has_avatar": false,
+    "portrait": {
+      "cut": "side-short-grey",
+      "eyes": "kind",
+      "face": "oval",
+      "hair": "#C9C2B8",
+      "skin": "#E6C5A4",
+      "mouth": "flat",
+      "shirt": "tee-black"
+    }
+  },
+  {
+    "id": "queen_outbound",
+    "name": "Chris Voss",
+    "title": "Head of Outbound",
+    "has_avatar": false,
+    "portrait": {
+      "cut": "bald-shine",
+      "face": "oval",
+      "hair": "#C9C2B8",
+      "skin": "#EFCDA6",
+      "glasses": "rect",
+      "mouth": "smile-soft",
+      "shirt": "shirt-blue"
+    }
+  },
+  {
+    "id": "queen_product_strategy",
+    "name": "Steve Jobs",
+    "title": "Head of Product Strategy",
+    "has_avatar": false,
+    "portrait": {
+      "cut": "crop-thin",
+      "face": "oval",
+      "hair": "#2A2520",
+      "neck": "turtleneck",
+      "skin": "#E8C7A4",
+      "beard": "goatee-stubble",
+      "glasses": "round-rimless"
+    }
+  },
+  {
+    "id": "queen_sales",
+    "name": "Larry Ellison",
+    "title": "Head of RevOps",
+    "has_avatar": false,
+    "portrait": {
+      "cut": "side-back",
+      "face": "rect",
+      "hair": "#7B6F62",
+      "skin": "#E9C2A0",
+      "beard": "stubble",
+      "mouth": "smirk"
+    }
+  },
+  {
+    "id": "queen_talent",
+    "name": "Laszlo Bock",
+    "title": "Head of Talent",
+    "has_avatar": false,
+    "portrait": {
+      "cut": "short",
+      "face": "rect",
+      "hair": "#1F1A16",
+      "skin": "#EAC09C",
+      "mouth": "smile-soft",
+      "glasses": "rect"
+    }
+  },
+  {
+    "id": "queen_technology",
+    "name": "Elon Musk",
+    "title": "Head of Technology",
+    "has_avatar": false,
+    "portrait": {
+      "cut": "swept-front",
+      "brow": "arched",
+      "eyes": "sharp",
+      "face": "long",
+      "hair": "#8B6E55",
+      "skin": "#F0D2B0",
+      "mouth": "flat",
+      "shirt": "tee-black"
+    }
+  }
+]

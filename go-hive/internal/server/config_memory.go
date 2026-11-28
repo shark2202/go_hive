@@ -35,7 +35,7 @@ func readJSONBody(w http.ResponseWriter, r *http.Request) (any, bool) {
 	var data []byte
 	if r.Body != nil {
 		var err error
-		data, err = io.ReadAll(r.Body)
+		data, err = readLimitedBody(r, maxJSONBodyBytes)
 		if err != nil {
 			return invalid()
 		}

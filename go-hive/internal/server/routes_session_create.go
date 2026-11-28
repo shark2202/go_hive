@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
 	"github.com/shark2202/go_hive/go-hive/internal/queen"
 	"github.com/shark2202/go_hive/go-hive/internal/session"
 )
@@ -114,7 +115,7 @@ func handleCreateSession(w http.ResponseWriter, r *http.Request, deps SessionRou
 	if r.ContentLength != 0 || len(r.TransferEncoding) > 0 {
 		decoded, err := decodeJSONValue(r)
 		if err != nil {
-			writeJSON(w, http.StatusBadRequest, map[string]any{"error": "Invalid JSON body"})
+			writeJSONBodyFailure(w, err, http.StatusBadRequest, "Invalid JSON body")
 			return
 		}
 		object, ok := decoded.(map[string]any)
@@ -133,9 +134,8 @@ func handleCreateSession(w http.ResponseWriter, r *http.Request, deps SessionRou
 	queenName := bodyString(body, "queen_name")
 	sourceSessionID := bodyString(body, "source_session_id")
 
-	// Custom session ids are accepted, but they become one path segment under
-	// the session tree. Separators and dot segments would let a request root a
-	// runtime (and write its transcript) outside that tree.
+	// Custom session ids become one path segment; separators and dot segments
+	// could root a runtime (and its transcript) outside the session tree.
 	if sessionID != nil && !session.ValidSegment(strings.TrimSpace(*sessionID)) {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "Invalid session_id"})
 		return
@@ -171,15 +171,21 @@ func handleCreateSession(w http.ResponseWriter, r *http.Request, deps SessionRou
 		initialPhase = &text
 	}
 
-	// A truthy non-string queen_name runs ensure_default_queens() and then
-	// reaches load_queen_profile, where Path / value raises TypeError → 500.
-	// Falsy non-strings are skipped by Python's `if queen_name:` and only the
-	// string form is checked here.
+	// A truthy non-string queen_name reaches Path / value → TypeError → 500;
+	// falsy non-strings are skipped by upstream's `if queen_name:`.
 	if queenName == nil && pyTruthy(body["queen_name"]) {
 		queen.EnsureDefaultQueens()
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": internalServerError})
 		return
 	}
+
+	// A create bound to an existing colony inherits that colony's queen.
+	resolvedQueen, err := resolveColonyQueenForCreate(deps.Home, colonyID, sourceSessionID, queenName)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": "failed to resolve colony queen: " + err.Error()})
+		return
+	}
+	queenName = resolvedQueen
 
 	if queenName != nil && *queenName != "" {
 		queen.EnsureDefaultQueens()
@@ -205,15 +211,11 @@ func handleCreateSession(w http.ResponseWriter, r *http.Request, deps SessionRou
 		sourceValue = *sourceSessionID
 	}
 
-	// Frontend "Create Colony" popup path: fork the source independent queen
-	// session into a freshly named colony. A soft-deleted colony squatting on
-	// the name is parked aside first, and a live colony on the name forces a
-	// deduplicated slug so the fork always lands somewhere new.
+	// Frontend "Create Colony" fork: a soft-deleted colony squatting on the
+	// name is parked aside; a live one forces a deduplicated slug.
 	if colonyValue != "" && sourceValue != "" {
-		// Upstream validates this slug inside _create_colony_from_source, after
-		// the vacate/dedupe steps. Check it before those steps too, so a
-		// path-unsafe slug never reaches the filesystem; the 400 body is the
-		// one upstream returns for the same input.
+		// Upstream validates this slug after vacate/dedupe; reject a
+		// path-unsafe slug before it reaches the filesystem.
 		if invalidForkSlug(colonyValue) {
 			writeForkSlugError(w)
 			return
@@ -239,9 +241,8 @@ func handleCreateSession(w http.ResponseWriter, r *http.Request, deps SessionRou
 			writeJSON(w, http.StatusInternalServerError, map[string]any{"error": internalServerError})
 			return
 		}
-		// Python validates and creates with the trimmed slug (cn = colony_id
-		// .strip()) even though vacate/dedupe above use the raw value, so the
-		// hook sees the name the colony will actually land under.
+		// Python creates with the trimmed slug (cn = colony_id.strip()); the
+		// hook sees the name the colony actually lands under.
 		session, err := deps.CreateColonyFromSource(CreateColonyFromSourceParams{
 			SourceSessionID: sourceValue,
 			ColonyID:        strings.TrimSpace(colonyValue),
@@ -271,10 +272,8 @@ func handleCreateSession(w http.ResponseWriter, r *http.Request, deps SessionRou
 		return
 	}
 
-	// Go-only guard: upstream forwards colony_id to create_session untouched,
-	// where it becomes a directory segment under the colonies root. Refuse
-	// separators and dot segments without narrowing the naming policy upstream
-	// allows (hyphens, dots, mixed case all still pass through).
+	// Go-only guard: upstream forwards colony_id untouched and it becomes a
+	// directory segment; refuse separators/dot segments, keep upstream naming.
 	if colonyID != nil && *colonyID != "" && !session.ValidSegment(*colonyID) {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "Invalid colony_id"})
 		return
@@ -359,4 +358,25 @@ func colonyMetadataExists(home interface{ ColoniesDir() string }, colonyID strin
 	}
 	_, err := os.Stat(filepath.Join(home.ColoniesDir(), colonyID, "metadata.json"))
 	return err == nil
+}
+
+// colonyMetadataQueenName returns the queen a colony records in its
+// metadata.json, or "" when the colony does not exist yet (the fresh-colony
+// bootstrap path owns that case) or records no queen. A malformed metadata
+// document is an error: silently binding the default queen would detach the
+// session from the colony's history.
+func colonyMetadataQueenName(home hivehome.Home, colonyID string) (string, error) {
+	colonyID = strings.TrimSpace(colonyID)
+	if colonyID == "" || !session.ValidSegment(colonyID) {
+		return "", nil
+	}
+	metadataPath := filepath.Join(home.ColoniesDir(), colonyID, "metadata.json")
+	metadata, err := readJSONObject(metadataPath)
+	if errors.Is(err, os.ErrNotExist) {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("read %s: %w", metadataPath, err)
+	}
+	return strings.TrimSpace(pythonString(metadata["queen_name"])), nil
 }

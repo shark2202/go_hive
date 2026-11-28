@@ -34,6 +34,14 @@ func newChatRuntimeLogger(root, sessionID string) *runtimelogs.RuntimeLogger {
 	logger := runtimelogs.NewRuntimeLogger(
 		runtimelogs.NewRuntimeLogStore(filepath.Join(storageRoot, "runtime_logs")), "queen")
 	logger.StartRun("", sessionID)
+	// Upstream's execution manager establishes trace context at
+	// Runtime.start_run (framework/host/execution_manager.py ->
+	// stream_runtime.py::set_trace_context) before the runtime logger records
+	// anything. Bind the equivalent pair to this session's logger: assigning
+	// the package-level TraceContextProvider here would race between
+	// concurrently running sessions and could stamp one session's trace on
+	// another's records.
+	logger.SetTraceContext(runtimelogs.NewTraceContext())
 	return logger
 }
 

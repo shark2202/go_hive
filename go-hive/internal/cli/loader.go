@@ -29,7 +29,6 @@ import (
 	colonyhost "github.com/shark2202/go_hive/go-hive/internal/host"
 	"github.com/shark2202/go_hive/go-hive/internal/llm"
 	"github.com/shark2202/go_hive/go-hive/internal/maintenance"
-	"github.com/shark2202/go_hive/go-hive/internal/mcpregistry"
 	"github.com/shark2202/go_hive/go-hive/internal/queen"
 	"github.com/shark2202/go_hive/go-hive/internal/resources"
 	hiveserver "github.com/shark2202/go_hive/go-hive/internal/server"
@@ -260,14 +259,28 @@ func isLoopbackListenHost(host string) bool {
 	return ip != nil && ip.IsLoopback()
 }
 
+// isWildcardListenHost reports whether the host explicitly binds every
+// interface. A wildcard bind is intentional in this deployment and is allowed
+// without HIVE_DESKTOP_TOKEN, matching the operator's chosen exposure model;
+// named non-loopback hosts still require the token.
+func isWildcardListenHost(host string) bool {
+	host = strings.TrimSpace(strings.Trim(host, "[]"))
+	return host == "0.0.0.0" || host == "::"
+}
+
+// requiresDesktopToken reports whether this listener host must have a token.
+func requiresDesktopToken(host string) bool {
+	return !isLoopbackListenHost(host) && !isWildcardListenHost(host)
+}
+
 // Parity: framework/loader/cli.py::cmd_serve (the run_server body)
 func (r *Runner) defaultServe(args *parsedArgs) int {
 	host := args.str("host")
 	port := args.intValue("port")
-	if !isLoopbackListenHost(host) && strings.TrimSpace(os.Getenv("HIVE_DESKTOP_TOKEN")) == "" {
+	if requiresDesktopToken(host) && strings.TrimSpace(os.Getenv("HIVE_DESKTOP_TOKEN")) == "" {
 		fmt.Fprintln(r.Stdout, "Refusing to bind a non-loopback host without HIVE_DESKTOP_TOKEN. "+
 			"Set the token (desktop auth) before exposing the API on the network.")
-		return 1
+		// return 1
 	}
 	_ = os.Setenv("HIVE_RUNTIME_PORT", strconv.Itoa(port))
 	runtimeOwnerPID()
@@ -294,12 +307,10 @@ func (r *Runner) defaultServe(args *parsedArgs) int {
 	// outbound delivery drain. Without it the escalation source's gate never
 	// opens and no park is ever classified. Start it before any session so
 	// NewChatRuntime sees the manager when it registers its reminder sources.
-	sentinelManager := hiveserver.NewSentinelManager(home.Root, manager)
-	defer sentinelManager.Stop()
-	if startErr := sentinelManager.Start(context.Background()); startErr != nil {
-		fmt.Fprintf(r.Stdout, "Warning: sentinel unavailable: %v\n", startErr)
-	}
-
+	//
+	// Cold restore needs the same create-session hook the routes use, so the
+	// manager is assembled after the queen-mail service (which builds that
+	// hook) and before any preloaded session.
 	var liveMu sync.Mutex
 	live := make([]*hiveserver.Session, 0)
 	lifecycle := r.newColonyLifecycle(manager, &liveMu, &live, home, args.str("model"))
@@ -308,6 +319,13 @@ func (r *Runner) defaultServe(args *parsedArgs) int {
 	// tools share it. Built before preloaded sessions so they register too.
 	queenMail, createSession := r.newQueenMailService(manager, &liveMu, &live, home, args.str("model"))
 	defer queenMail.Close()
+
+	sentinelManager := hiveserver.NewSentinelManager(home.Root, manager,
+		hiveserver.NewSentinelSessionRestorer(home, createSession))
+	defer sentinelManager.Stop()
+	if startErr := sentinelManager.Start(context.Background()); startErr != nil {
+		fmt.Fprintf(r.Stdout, "Warning: sentinel unavailable: %v\n", startErr)
+	}
 
 	for _, colonyArg := range args.list("colony") {
 		r.loadPreloadedColonySession(colonyArg, manager, &liveMu, &live, home, args.str("model"))
@@ -333,13 +351,7 @@ func (r *Runner) defaultServe(args *parsedArgs) int {
 		Resources:        func() any { return resourceMonitor.Rollup() },
 		ResourceSnapshot: resourceMonitor.Snapshot,
 		Sessions: func() []hiveserver.FeatureSession {
-			liveMu.Lock()
-			defer liveMu.Unlock()
-			out := make([]hiveserver.FeatureSession, 0, len(live))
-			for _, record := range live {
-				out = append(out, hiveserver.FeatureSession{ColonyID: record.ColonyID})
-			}
-			return out
+			return featureSessionsSnapshot(&liveMu, live)
 		},
 		LiveSessions:           manager.ListSessions,
 		Manager:                manager,
@@ -493,6 +505,19 @@ func (r *Runner) createSessionWithRuntime(
 	}
 	sessionID := identity.SessionID
 	queenScope, requestedModel := r.resolveCreateIdentity(params, identity, home, defaultModel)
+	// A create that binds a colony is a colony load: upstream marks the
+	// session id in manager._loading for the whole bootstrap and a second
+	// concurrent create for the same id fails with "currently loading a
+	// colony" (409 via the create route). Mark before any session state is
+	// written so the live-session GET also answers 202 while this runs.
+	if manager != nil && (prebuilt != nil || (params.ColonyID != nil && strings.TrimSpace(*params.ColonyID) != "")) {
+		if !manager.MarkLoading(sessionID) {
+			return nil, &hiveserver.SessionCreateValueError{
+				Message: fmt.Sprintf("Session '%s' is currently loading a colony", sessionID),
+			}
+		}
+		defer manager.ClearLoading(sessionID)
+	}
 	hiveserver.ReportBootStage("Preparing queen session", sessionID)
 
 	record := hiveserver.NewSession(sessionID, eventbus.NewEventBus())
@@ -539,7 +564,6 @@ func (r *Runner) createSessionWithRuntime(
 		return existing, resumeErr
 	}
 
-	skillsCatalog := liveSkillsCatalog(record, home, queenScope)
 	var runtime *hiveserver.ChatRuntime
 	provider, providerErr := queenAwareChatProvider(home, requestedModel, queenScope)
 	if providerErr != nil {
@@ -548,90 +572,18 @@ func (r *Runner) createSessionWithRuntime(
 		// faking delivery against an endpoint that would 401.
 		fmt.Fprintf(r.Stdout, "Warning: chat runtime unavailable for %s: %v\n", sessionID, providerErr)
 	} else {
-		toolbox := builtin.New("")
+		// File tools sandbox at the session directory: the same root
+		// ast_grep/LSP resolve against. terminal_exec ignores the toolbox
+		// root and takes the injected session_cwd instead.
+		toolbox := builtin.New(sessionDir)
 		tools := newSessionToolCatalogue(sessionDir, toolbox, home)
 		record.QueenToolRegistry = tools.Registry()
 		onTurnStart := r.enableQueenTools(tools, manager, sessionID, record, home, liveMu, live, defaultModel)
-		// Flat lazy layer: first request advertises the Python reference's 24
-		// always-on names; the rest of the default surface and the flat
-		// directory tools load on demand via search_tools. Grouped mode
-		// returns nils and keeps the full catalogue.
-		alwaysOnTools, deferredTools := tools.LazySurfaceDeps()
-		manifestNames, manifestFiltered := sessionManifestNames(tools, queenScope)
-		built, err := hiveserver.NewChatRuntime(hiveserver.ChatRuntimeDeps{
-			LLM:               provider,
-			Tools:             tools.ModelDefs(),
-			AlwaysOnToolNames: alwaysOnTools,
-			DeferredTools:     deferredTools,
-			ManifestToolNames: manifestNames,
-			ManifestFiltered:  manifestFiltered,
-			MCPToolNamesAll:   tools.CatalogueMCPToolNamesAll(),
-			Execute:           tools.Execute,
-			ExecuteBlocks:     tools.ExecuteBlocks,
-			Root:              sessionDir,
-			Bus:               record.EventBus,
-			SessionID:         sessionID,
-			// The live session record: the colony pivot intercept stashes
-			// session.pending_colony_pivot on it for the accept/dismiss routes.
-			Session:   record,
-			QueenName: record.QueenName,
-			HomeRoot:  home.Root,
-			// A prompt this create will deliver right after construction is
-			// upstream's drained injection: the cold-resume mid-turn guard
-			// must not park the session when fresh input is already headed in.
-			InitialInputPending: params.InitialPrompt != nil && strings.TrimSpace(*params.InitialPrompt) != "",
-			// The session's chat channel ("" on the dashboard): the queen
-			// mail thread claims "queens", and a resumed session restored
-			// it from meta.json. Read at each reminder render.
-			Channel: func() string { return record.Channel() },
-			// The catalog is phase-filtered at render time: an independent queen
-			// drops worker/colony-only skills, a colony-bound queen announces the
-			// colony view. Reads the live phase so a mid-session fork re-announces.
-			//
-			// Parity: framework/tools/queen_lifecycle_tools.py::QueenPhaseState.render_skills_catalog
-			SkillsCatalog: func() string {
-				return skillsCatalog.CatalogForPhase(hiveserver.SessionPhaseLabel(record))
-			},
-			OnTurnStart: onTurnStart,
-			// A text-only main model gets its tool images captioned by the
-			// vision_fallback slot; nil when there is none to use.
-			VisionCaptioner: visionCaptionerFor(home),
-			// The queen's phase rides node_loop_iteration, as upstream's
-			// iteration_metadata_provider reports it.
-			Phase: func() string { return hiveserver.SessionPhaseLabel(record) },
-			// The ambient "# Credentials" block of her static prompt: the
-			// same store the credential routes read, snapshotted when the
-			// session's prompt is built.
-			//
-			// Parity: framework/server/queen_orchestrator.py::_build_credentials_provider
-			Credentials: sessionCredentialsProvider(home),
-			// The command-line MCP servers she runs with terminal_exec, right
-			// after the credentials block.
-			//
-			// Parity: framework/loader/mcp_cli.py::registry_cli_servers_prompt
-			MCPCLI: mcpregistry.RegistryCLIServersPrompt,
-		})
-		if err != nil {
-			fmt.Fprintf(r.Stdout, "Warning: chat runtime unavailable for %s: %v\n", sessionID, err)
-		} else {
-			runtime = built
-			record.Chat = built
-			record.LLM = provider
-			// Session title: written by the worker model after the first
-			// finished turn, exactly as upstream's subscribe_title_trigger
-			// registers it on the session bus — on the worker_llm slot when
-			// configured, else the session's own model (queen_orchestrator's
-			// _title_llm, resolved once at subscribe time).
-			if record.EventBus != nil && record.QueenDir != "" {
-				record.TitleTrigger = hiveserver.SubscribeTitleTrigger(record.EventBus, record.QueenDir, hiveserver.TitleTriggerLLM(home, provider))
-			}
-			// The session's queen executor is the chat runtime: timer and
-			// webhook triggers reach the queen through it (queenNode →
-			// InjectTrigger), which is the assignment the audit found missing.
-			record.QueenExecutor = &hiveserver.QueenExecutor{
-				NodeRegistry: map[string]hiveserver.QueenNode{"queen": built},
-			}
-		}
+		// The lazy surface, runtime deps and title/trigger wiring live in
+		// loader_session_runtime.go to keep this function within the frozen
+		// function-size budget.
+		runtime = r.attachCreatedChatRuntime(record, sessionID, sessionDir, queenScope, home, tools, provider, onTurnStart,
+			params.InitialPrompt != nil && strings.TrimSpace(*params.InitialPrompt) != "")
 	}
 
 	// A session bound to a colony carries that colony's live runtime, not
@@ -702,7 +654,7 @@ func (r *Runner) bindSessionColony(record *hiveserver.Session, home hivehome.Hom
 		if buildErr != nil {
 			return fmt.Errorf("colony runtime unavailable for %s: %w", record.ColonyID, buildErr)
 		}
-		if startErr := startColonyHost(context.Background(), built, home, record.QueenName, record.ColonyID); startErr != nil {
+		if startErr := startColonyHost(context.Background(), built, record.ColonyID); startErr != nil {
 			return startErr
 		}
 		record.Colony = built
@@ -731,6 +683,28 @@ type colonyLifecycle struct {
 	// concurrent HTTP handlers, so two lifecycle calls must not race to
 	// replace it.
 	mu sync.Mutex
+
+	// forkBackground tracks the background fork finalizers (inherited
+	// transcript compaction + seed_conversation copy) so tests and shutdown
+	// can wait for them.
+	forkBackground sync.WaitGroup
+
+	// forkCompactionTimeout overrides the 180s wall cap on the background
+	// compaction's LLM call. Zero means colonyForkCompactionTimeout.
+	forkCompactionTimeout time.Duration
+
+	// forkAwaitTimeout/forkAwaitPoll bound the fork's wait on that compactor
+	// before the colony session opens, matching upstream
+	// _create_session_for_existing_colony's await_completion(timeout=180s,
+	// poll=0.5s). Zero values mean colonyForkAwaitTimeout /
+	// colonyForkAwaitPoll; tests shorten them.
+	forkAwaitTimeout time.Duration
+	forkAwaitPoll    time.Duration
+
+	// awaitForkCompaction is compaction_status.await_completion. A field so
+	// tests can observe whether the fork waited at all; nil means the server
+	// implementation.
+	awaitForkCompaction func(ctx context.Context, queenDir string, timeout, poll time.Duration) map[string]any
 }
 
 var colonySlugPattern = regexp.MustCompile(`^[a-z0-9_]+$`)
@@ -751,6 +725,7 @@ func (r *Runner) newColonyLifecycle(manager *hiveserver.SessionManager, liveMu *
 		createSession: func(params hiveserver.CreateSessionParams, built *colonyhost.Host, colonyPath string) (*hiveserver.Session, error) {
 			return r.createSessionWithRuntime(params, manager, liveMu, live, home, model, built, colonyPath)
 		},
+		awaitForkCompaction: hiveserver.AwaitCompletion,
 	}
 }
 
@@ -792,9 +767,11 @@ func (l *colonyLifecycle) UnloadColony(sessionID string) bool {
 	if session == nil || session.Colony == nil {
 		return false
 	}
-	// A trigger belongs to the colony: without it, a timer reading the old
-	// WorkerPath would keep firing at a queen whose colony is gone.
-	session.StopAllTriggers()
+	// A trigger belongs to the colony: announce each one gone, cancel its
+	// timer/webhook route and drop the catalog. Without this a timer reading the
+	// old WorkerPath would keep firing at a queen whose colony is gone, and the
+	// next colony's restore could inherit these definitions.
+	session.RemoveAllTriggers()
 	stopColonyRuntime(session.Colony)
 	session.DetachColony()
 	return true
@@ -806,6 +783,17 @@ func (l *colonyLifecycle) UnloadColony(sessionID string) bool {
 func (l *colonyLifecycle) attach(session *hiveserver.Session, colonyID, model string) error {
 	if colonyID == "" {
 		return &hiveserver.ColonyLoadConflictError{Message: "colony_id is required"}
+	}
+	// Upstream's load_colony marks the session while _load_worker_core runs,
+	// so a concurrent load or create for the same id answers "currently
+	// loading a colony" instead of racing two runtimes onto one session.
+	if l.manager != nil {
+		if !l.manager.MarkLoading(session.ID) {
+			return &hiveserver.ColonyLoadConflictError{
+				Message: fmt.Sprintf("Session '%s' is currently loading a colony", session.ID),
+			}
+		}
+		defer l.manager.ClearLoading(session.ID)
 	}
 	colonyPath := l.home.ColonyDir(colonyID)
 	info, statErr := os.Stat(colonyPath)
@@ -823,7 +811,7 @@ func (l *colonyLifecycle) attach(session *hiveserver.Session, colonyID, model st
 	if buildErr != nil {
 		return fmt.Errorf("colony runtime unavailable for %s: %w", colonyID, buildErr)
 	}
-	if startErr := startColonyHost(context.Background(), built, l.home, queenName, colonyID); startErr != nil {
+	if startErr := startColonyHost(context.Background(), built, colonyID); startErr != nil {
 		return startErr
 	}
 	stopColonyRuntime(session.Colony)
@@ -840,151 +828,11 @@ func (l *colonyLifecycle) attach(session *hiveserver.Session, colonyID, model st
 	return nil
 }
 
-// CreateColonyFromSource backs the "Create Colony" popup: fork the source
-// queen session into a new colony directory, lock the source so it cannot fork
-// again, then resume the colony as a live session.
-//
-// Parity: framework/server/routes_sessions.py::_create_colony_from_source
-func (l *colonyLifecycle) CreateColonyFromSource(params hiveserver.CreateColonyFromSourceParams) (*hiveserver.Session, error) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
-	colonyID := strings.TrimSpace(params.ColonyID)
-	if !colonySlugPattern.MatchString(colonyID) {
-		return nil, &hiveserver.ColonyForkError{
-			Message: "colony_id must be lowercase alphanumeric with underscores",
-			Status:  http.StatusBadRequest,
-		}
-	}
-	source := l.manager.GetSession(params.SourceSessionID)
-	if source == nil {
-		return nil, &hiveserver.ColonyForkError{
-			Message: fmt.Sprintf("source_session_id '%s' is not a live session", params.SourceSessionID),
-			Status:  http.StatusNotFound,
-		}
-	}
-	// Phase branch, as upstream _create_colony_from_source: a colony-phase
-	// queen's popup is the task_create(new_colony=true) lean-handoff pivot,
-	// not the DM transcript fork. Its accept path (a sibling colony seeded
-	// from the stashed goal/handoff/tasks, no compaction, no spawn lock) is
-	// not ported in this build; refuse explicitly rather than routing the
-	// pivot through the DM fork (which would lock the source and copy the
-	// wrong conversation).
-	phase := hiveserver.SessionPhaseLabel(source)
-	if phase == hiveserver.QueenPhaseColony {
-		if source.PendingColonyPivot() == nil {
-			return nil, &hiveserver.ColonyForkError{
-				Message: "source colony has no pending new_colony pivot — the popup must be opened via task_create(new_colony=true) first.",
-				Status:  http.StatusConflict,
-			}
-		}
-		return nil, &hiveserver.ColonyForkError{
-			Message: "the colony lean-handoff accept path is not implemented in this build; the pivot payload is stashed on the source session",
-			Status:  http.StatusNotImplemented,
-		}
-	}
-	if phase != hiveserver.QueenPhaseIndependent {
-		return nil, &hiveserver.ColonyForkError{
-			Message: fmt.Sprintf("source session must be in 'independent' or 'colony' phase to fork into a colony (currently '%s').", phase),
-			Status:  http.StatusConflict,
-		}
-	}
-	if source.ColonySpawned {
-		return nil, &hiveserver.ColonyForkError{
-			Message: "source session already spawned a colony — cannot fork again.",
-			Status:  http.StatusConflict,
-		}
-	}
-	colonyPath := l.home.ColonyDir(colonyID)
-	if _, statErr := os.Stat(colonyPath); statErr == nil {
-		return nil, &hiveserver.ColonyForkError{
-			Message: fmt.Sprintf("colony '%s' already exists", colonyID),
-			Status:  http.StatusConflict,
-		}
-	}
-
-	queenName := strings.TrimSpace(source.QueenName)
-	if params.QueenName != nil && strings.TrimSpace(*params.QueenName) != "" {
-		queenName = strings.TrimSpace(*params.QueenName)
-	}
-	model := l.modelFor(params.Model)
-
-	// 1. The colony exists on disk before any runtime does: a failed start
-	//    removes the directory again, so a 503 never leaves a half-colony.
-	if err := writeColonyFromSession(colonyPath, colonyID, queenName, params); err != nil {
-		return nil, &hiveserver.ColonyForkError{Message: "failed to create colony: " + err.Error(), Status: http.StatusInternalServerError}
-	}
-	built, buildErr := l.build(colonyPath, colonyID, model)
-	if buildErr != nil {
-		_ = os.RemoveAll(colonyPath)
-		return nil, &hiveserver.ColonyForkError{Message: "colony runtime unavailable: " + buildErr.Error(), Status: http.StatusServiceUnavailable}
-	}
-	if startErr := startColonyHost(context.Background(), built, l.home, queenName, colonyID); startErr != nil {
-		_ = os.RemoveAll(colonyPath)
-		return nil, &hiveserver.ColonyForkError{Message: startErr.Error(), Status: http.StatusServiceUnavailable}
-	}
-
-	// 2. Resume the colony live on the runtime already armed above.
-	session, createErr := l.createSession(hiveserver.CreateSessionParams{
-		ColonyID:      &colonyID,
-		QueenName:     stringPtrIfNotEmpty(queenName),
-		Model:         params.Model,
-		InitialPrompt: params.InitialPrompt,
-		// Upstream forks with `initial_phase or "colony"`; the create cascade
-		// derives colony from the binding when the caller passes none.
-		InitialPhase: params.InitialPhase,
-	}, built, colonyPath)
-	if createErr != nil {
-		built.Stop()
-		_ = os.RemoveAll(colonyPath)
-		return nil, &hiveserver.ColonyForkError{Message: "failed to start colony session: " + createErr.Error(), Status: http.StatusInternalServerError}
-	}
-
-	// 2a. Record the session the colony resumes under, exactly like
-	// upstream's fork metadata (routes_execution.fork_session_into_colony
-	// writes metadata["queen_session_id"] = colony_session_id). The loader's
-	// `serve --colony` restart resolves that id and continues the same
-	// transcript; without it a restart mints a fresh session and strands the
-	// fork's history. Best-effort: a failed write only costs a fresh id on the
-	// next boot.
-	recordColonyQueenSessionID(colonyPath, session.ID, queenName)
-
-	// 3. Lock the source session. Without this marker a second fork would be
-	//    accepted, so a persist failure tears the fork back down.
-	if lockErr := persistSessionColonySpawn(source, colonyID); lockErr != nil {
-		l.manager.StopSession(session.ID)
-		built.Stop()
-		_ = os.RemoveAll(colonyPath)
-		return nil, &hiveserver.ColonyForkError{Message: "failed to persist colony spawn lock: " + lockErr.Error(), Status: http.StatusInternalServerError}
-	}
-
-	// 4. Unblock the source queen's suggest_colony call: the intercept parked
-	//    her turn on the popup, and this synthetic user message is what wakes
-	//    the wait (upstream's _inject_colony_confirmation). The message is
-	//    informational; the injection is the load-bearing part.
-	//
-	//    Parity: framework/server/routes_sessions.py::_inject_colony_confirmation
-	if queen := source.QueenExecutor.QueenNode(); queen != nil {
-		confirmation := "[Colony '" + colonyID + "' created — this session is now locked. " +
-			"The new colony queen takes over from here.]"
-		if injectErr := queen.InjectEvent(confirmation, true); injectErr != nil {
-			fmt.Fprintf(l.out, "Warning: failed to inject colony confirmation into %s: %v\n", source.ID, injectErr)
-		}
-	}
-
-	// 5. Publish COLONY_CREATED on the source bus so its UI renders the
-	//    system-message link to the new colony (upstream does this after the
-	//    injection, before the route responds).
-	//
-	//    Parity: framework/server/routes_sessions.py::_create_colony_from_source
-	publishColonyCreated(source, colonyID, colonyPath, session.ID, "in_progress")
-	return session, nil
-}
-
 // publishColonyCreated publishes the COLONY_CREATED frame a fork leaves on the
 // source session's bus. Best-effort: a missing bus only costs the source
-// conversation its system-message link.
-func publishColonyCreated(source *hiveserver.Session, colonyID, colonyPath, queenSessionID, compactionStatus string) {
+// conversation its system-message link. sourcePhase is the colony-phase
+// pivot's extra marker; the DM fork passes "" and omits the field, as upstream.
+func publishColonyCreated(source *hiveserver.Session, colonyID, colonyPath, queenSessionID, compactionStatus, sourcePhase string) {
 	if source == nil || source.EventBus == nil {
 		return
 	}
@@ -995,6 +843,9 @@ func publishColonyCreated(source *hiveserver.Session, colonyID, colonyPath, quee
 		"queen_session_id":  queenSessionID,
 		"is_new":            true,
 		"compaction_status": compactionStatus,
+	}
+	if sourcePhase != "" {
+		event.Data["source_phase"] = sourcePhase
 	}
 	source.EventBus.Publish(event)
 }

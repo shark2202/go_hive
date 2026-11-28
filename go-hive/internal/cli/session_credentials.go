@@ -79,7 +79,9 @@ func (v *sessionAccountSource) AccountToken(provider, alias string) (string, boo
 // buildSessionCredentialAdapter opens the session's credential store the same
 // way the credential routes do: pick up the persisted key file first (otherwise
 // a fresh process generates a throwaway key and cannot read what an earlier run
-// wrote), then build the encrypted store under the session home.
+// wrote), then build the production adapter under the session home. The
+// adapter keeps the encrypted store primary and the spec env vars as fallback,
+// so get_account_info and account aliases also see env-only credentials.
 func buildSessionCredentialAdapter(home hivehome.Home) *credentials.CredentialStoreAdapter {
 	_, _ = credentials.LoadCredentialKey()
 
@@ -87,18 +89,14 @@ func buildSessionCredentialAdapter(home hivehome.Home) *credentials.CredentialSt
 	if home.Root != "" {
 		baseDir = home.CredentialsDir()
 	}
-	store, err := credentials.WithEncryptedStorage(baseDir)
-	if err != nil || store == nil {
-		// The credential key or store directory is unusable. An env-backed
-		// store still lists nothing rather than failing the tool call.
-		store = credentials.WithEnvStorage(map[string]string{})
+	adapter, err := credentials.DefaultAdapterAt(baseDir, sessionCredentialSpecs())
+	if err == nil && adapter != nil {
+		return adapter
 	}
-
-	var local credentials.LocalRegistry
-	if registry, err := credentials.LocalCredentialRegistryAtPath(baseDir); err == nil && registry != nil {
-		local = registry
-	}
-	return credentials.NewCredentialStoreAdapter(store, sessionCredentialSpecs(), local)
+	// Defensive fallback: an env-backed store still answers (with an empty
+	// account list) rather than failing the tool call.
+	store := credentials.WithEnvStorage(map[string]string{})
+	return credentials.NewCredentialStoreAdapter(store, sessionCredentialSpecs(), nil)
 }
 
 // sessionCredentialSpecs projects the generated credential table onto the
@@ -124,6 +122,7 @@ func sessionCredentialSpecs() []credentials.NamedSpec {
 				AdenProviderName: spec.AdenProviderName,
 				Description:      spec.Description,
 			},
+			EnvVar: spec.EnvVar,
 		})
 	}
 	return named

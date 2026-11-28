@@ -586,25 +586,77 @@ func TestMCPSplitContentEmptyMimeTypeStaysImageURL(t *testing.T) {
 	}
 }
 
-// TestMCPSplitContentNullMimeTypeDiverges pins the one malformed-payload
-// divergence the probe found: a data item whose mimeType is null goes to the
-// image branch on the Python side (hasattr check) and to the data-only text
-// branch on the Go side (string type check).
+// TestMCPSplitContentNullMimeTypeMatchesPython pins the null-mimeType branch:
+// keying on field presence (Python's hasattr) rather than a string type check
+// keeps {data, mimeType: null} on the image branch, and the URL renders the
+// null the way Python's f-string does.
 //
-// Parity-exempt: Python emits an unconvertible "data:None;base64,AAA" image
-// URL for {data: "AAA", mimeType: null} (probe split.null_mime in
-// go_hive/docs/e2e-assets/mcp-namespace/python-output.json); Go degrades to
-// text "AAA". Registered as residual R3 note in
-// go_hive/docs/mcp-namespace-residuals.md.
-func TestMCPSplitContentNullMimeTypeDiverges(t *testing.T) {
+// Parity: core/framework/loader/mcp_client.py::_split_mcp_content —
+// {data: "AAA", mimeType: None} -> image_url "data:None;base64,AAA"; probe
+// split.null_mime in go_hive/docs/e2e-assets/mcp-namespace/python-output.json.
+func TestMCPSplitContentNullMimeTypeMatchesPython(t *testing.T) {
 	text, images := SplitMCPContent([]any{map[string]any{"data": "AAA", "mimeType": nil}})
-	if text != "AAA" || len(images) != 0 {
-		t.Fatalf("text = %q images = %#v, want text fallback for a null mimeType", text, images)
+	if text != "" {
+		t.Fatalf("text = %q, want no text for a data+mimeType block", text)
+	}
+	if len(images) != 1 {
+		t.Fatalf("images = %#v, want the image branch", images)
+	}
+	imageURL, _ := images[0]["image_url"].(map[string]any)
+	if got := imageURL["url"]; got != "data:None;base64,AAA" {
+		t.Fatalf("url = %v, want data:None;base64,AAA (Python f-string spelling)", got)
+	}
+}
+
+// TestMCPSplitContentMimeTypeAliasNotRecognised is the negative regression for
+// R4: Python only reads the SDK's camelCase mimeType field, so a snake_case
+// `mime_type` must not turn a data block into image content. The block falls
+// through to the data-only text branch.
+//
+// Parity: core/framework/loader/mcp_client.py::_split_mcp_content (reads the
+// mimeType field only; there is no snake_case alias).
+func TestMCPSplitContentMimeTypeAliasNotRecognised(t *testing.T) {
+	text, images := SplitMCPContent([]any{map[string]any{
+		"data": "AAA", "mime_type": "image/png",
+	}})
+	if text != "AAA" {
+		t.Fatalf("text = %q, want the data-only fallback", text)
+	}
+	if len(images) != 0 {
+		t.Fatalf("images = %#v, want none (mime_type is not an alias for mimeType)", images)
+	}
+}
+
+// TestMCPSplitContentNonStringDataUsesPythonStr pins the type handling for a
+// data field that is not a string: Python's data-only branch appends
+// str(item.data), so numbers/bools/null keep their Python spellings instead of
+// being dropped by a Go string assertion.
+//
+// Parity: core/framework/loader/mcp_client.py::_split_mcp_content (data-only
+// branch appends str(item.data)).
+func TestMCPSplitContentNonStringDataUsesPythonStr(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		item map[string]any
+		want string
+	}{
+		{"number", map[string]any{"data": float64(42)}, "42"},
+		{"large number", map[string]any{"data": float64(1_000_000)}, "1000000"},
+		{"decimal", map[string]any{"data": 1.5}, "1.5"},
+		{"bool", map[string]any{"data": true}, "True"},
+		{"null", map[string]any{"data": nil}, "None"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			text, images := SplitMCPContent([]any{tc.item})
+			if text != tc.want || len(images) != 0 {
+				t.Fatalf("text = %q images = %#v, want text %q", text, images, tc.want)
+			}
+		})
 	}
 }
 
 // TestMCPSplitContentResourceLinkItemDropped pins the shared blind spot: a
-// resource_link item has neither text nor data, so both sides drop it.
+// standard resource_link item has neither text nor data, so both sides drop it.
 //
 // Parity: core/framework/loader/mcp_client.py::_split_mcp_content — item with
 // only uri/name/mimeType -> skipped; probe split.resource_link_only in
@@ -616,6 +668,39 @@ func TestMCPSplitContentResourceLinkItemDropped(t *testing.T) {
 	}})
 	if text != "" || len(images) != 0 {
 		t.Fatalf("text = %q images = %#v, want both empty (resource_link dropped)", text, images)
+	}
+}
+
+// TestMCPSplitContentResourceLinkExtraFieldsMatchPydantic pins what "drop
+// resource_link" means at the field level: the SDK models allow extra fields
+// (ConfigDict(extra="allow")), so an extra text field is forwarded and an extra
+// data field takes the image branch. Go's key-presence checks reproduce that —
+// it is not a type-based special case for resource_link.
+//
+// Parity: core/framework/loader/mcp_client.py::_split_mcp_content with
+// mcp/types.py Resource/ResourceLink (extra="allow"); verified against the
+// installed mcp 1.26.0 objects, not assumed.
+func TestMCPSplitContentResourceLinkExtraFieldsMatchPydantic(t *testing.T) {
+	link := map[string]any{
+		"type": "resource_link", "uri": "https://example.test/x", "name": "x", "mimeType": "text/plain",
+	}
+	link["text"] = "from-extra"
+	text, images := SplitMCPContent([]any{link})
+	if text != "from-extra" || len(images) != 0 {
+		t.Fatalf("text = %q images = %#v, want the extra text field forwarded", text, images)
+	}
+
+	withData := map[string]any{
+		"type": "resource_link", "uri": "https://example.test/x", "name": "x", "mimeType": "image/png",
+	}
+	withData["data"] = "AAA"
+	text, images = SplitMCPContent([]any{withData})
+	if text != "" || len(images) != 1 {
+		t.Fatalf("text = %q images = %#v, want the image branch", text, images)
+	}
+	imageURL, _ := images[0]["image_url"].(map[string]any)
+	if got := imageURL["url"]; got != "data:image/png;base64,AAA" {
+		t.Fatalf("url = %v", got)
 	}
 }
 
@@ -710,9 +795,11 @@ func TestMCPExecutorLegacyContentListEmptyAndNil(t *testing.T) {
 //
 // Parity: core/framework/loader/tool_registry.py::make_mcp_executor — returns
 // result[0] when it has no text; probe model_visible.http-image-first in
-// go_hive/docs/e2e-assets/mcp-namespace/python-output.json. Shape (L1/L2) is
-// equal on both sides; key order differs (L3, PythonJSONDumps sorts) — see
-// residual R3.
+// go_hive/docs/e2e-assets/mcp-namespace/python-output.json. Shape and key
+// order are equal on both sides: the HTTP transport re-decodes the first
+// non-text block in server order (mcp_content_order.go,
+// TestMCPHTTPFirstNonTextContentBlockPreservesKeyOrder). This scripted client
+// bypasses that decode, so the assertion here stays key-insensitive.
 func TestMCPExecutorLegacyContentListFirstNonTextBlock(t *testing.T) {
 	clients := map[string]*scriptedMCPClient{
 		"http": {

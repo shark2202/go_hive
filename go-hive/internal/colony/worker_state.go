@@ -44,9 +44,14 @@ const (
 // so a custom explicit report never silently looks resumable.
 func workerStateFromReport(status string) string {
 	switch strings.ToLower(strings.TrimSpace(status)) {
-	case "success", "completed":
+	case "success", "completed", "partial":
+		// A partial report is a clean worker termination (P0-1's synthesized
+		// no-explicit-report backstop uses it); run-state recovery must not
+		// treat the worker as still in flight.
 		return string(WorkerCompleted)
-	case "failed", "error":
+	case "failed", "error", "timeout":
+		// timeout is a terminal report too: a restarted colony must not
+		// resume a worker the queen already received a timeout report for.
 		return string(WorkerFailed)
 	case "stopped":
 		return string(WorkerStopped)
@@ -257,6 +262,7 @@ func (r *ColonyRuntime) ResumeInFlightWorkers(ctx context.Context) ([]string, []
 		}
 		worker, err := r.resumeWorkerOverTranscript(
 			workerID,
+			nil,
 			"",
 			nil,
 			stringValue(record["batch_id"]),

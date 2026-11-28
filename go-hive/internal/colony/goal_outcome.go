@@ -27,12 +27,45 @@ import (
 	"github.com/shark2202/go_hive/go-hive/internal/agentloop"
 )
 
-// workerSystemPrompt builds the worker's system prompt and appends the goal
-// block from the worker's AgentContext. An empty goal context returns the base
-// prompt unchanged, so colonies without a declared goal behave exactly as
-// before.
+// workerSystemPrompt builds the worker's system prompt through the generic
+// builder from the worker's AgentContext: identity, binding, accounts, the
+// phase-filtered skills catalog, operational protocols, the worker base prompt
+// (the spec's SystemPrompt as the focus block) and the structured-output
+// instruction, with the narrative as the dynamic suffix.
+//
+// The colony goal is deliberately NOT part of this prompt: upstream carries
+// goal_context on the worker's initial user message
+// (agent_loop.py::_build_initial_message), so workerSeedUserMessage appends it
+// there instead. A nil context (legacy callers/tests) keeps the plain base
+// prompt.
+//
+// Parity: framework/agent_loop/agent_loop.py::_restore
+// (build_system_prompt_parts_for_context)
 func (r *ColonyRuntime) workerSystemPrompt(worker *Worker, spec agentloop.AgentSpec) string {
-	base := systemPromptFor(spec)
+	if worker != nil && worker.Context != nil {
+		overrides := workerPromptOverrides(worker.Context.AgentSpec)
+		static, suffix := agentloop.BuildSystemPromptPartsForContext(worker.Context, overrides)
+		return agentloop.JoinSystemPromptParts(static, suffix)
+	}
+	return systemPromptFor(spec)
+}
+
+// workerPromptOverrides keeps the historical "You are <name>." focus for a
+// worker spec that declares no system_prompt (legacy/hand-built colonies). A
+// declared prompt — the fork path always writes one — passes through untouched.
+func workerPromptOverrides(spec agentloop.AgentSpec) agentloop.PromptOverrides {
+	if spec.SystemPrompt != nil {
+		return agentloop.PromptOverrides{}
+	}
+	fallback := systemPromptFor(spec)
+	return agentloop.PromptOverrides{FocusPrompt: &fallback}
+}
+
+// workerGoalContext is the goal block a worker receives: the context's
+// compiled GoalContext, falling back to the runtime goal when the context was
+// built before one was set. An empty goal returns "", so colonies without a
+// declared goal behave exactly as before.
+func (r *ColonyRuntime) workerGoalContext(worker *Worker) string {
 	goalContext := ""
 	if worker != nil && worker.Context != nil {
 		goalContext = worker.Context.GoalContext
@@ -40,14 +73,28 @@ func (r *ColonyRuntime) workerSystemPrompt(worker *Worker, spec agentloop.AgentS
 	if strings.TrimSpace(goalContext) == "" && r != nil && r.goal != nil {
 		goalContext = r.goal.ToPromptContext()
 	}
-	goalContext = strings.TrimSpace(goalContext)
+	return strings.TrimSpace(goalContext)
+}
+
+// workerSeedUserMessage is the worker's first user turn: its task frame, then
+// the colony goal block where upstream puts it. _build_initial_message joins
+// "\nGoal: {goal_context}" onto the accumulated parts with "\n", which lands a
+// blank line between the task and the goal paragraph.
+//
+// Parity: framework/agent_loop/agent_loop.py::_build_initial_message
+func (r *ColonyRuntime) workerSeedUserMessage(worker *Worker) string {
+	base := ""
+	if worker != nil {
+		base = worker.Task
+	}
+	if strings.TrimSpace(base) == "" {
+		base = "Hello"
+	}
+	goalContext := r.workerGoalContext(worker)
 	if goalContext == "" {
 		return base
 	}
-	if strings.TrimSpace(base) == "" {
-		return goalContext
-	}
-	return base + "\n\n" + goalContext
+	return base + "\n\nGoal: " + goalContext
 }
 
 // goalOutputText is the evidence the criteria execute against: the worker's
@@ -96,16 +143,6 @@ func (r *ColonyRuntime) evaluateWorkerGoal(ctx context.Context, worker *Worker, 
 		r.bus.EmitGoalProgress(worker.StreamID, evaluation.Score, criterionStatusMap(evaluation))
 	}
 	return evaluation
-}
-
-// judgeEventWriter returns the judge event sink, or nil when the runtime has no
-// bus. Returning the untyped nil matters: a nil *eventbus.EventBus stored in a
-// non-nil interface would make the loop call methods on a nil receiver.
-func (r *ColonyRuntime) judgeEventWriter() agentloop.JudgeEventWriter {
-	if r == nil || r.bus == nil {
-		return nil
-	}
-	return r.bus
 }
 
 // criterionStatusMap renders the per-criterion verdict for the goal_progress

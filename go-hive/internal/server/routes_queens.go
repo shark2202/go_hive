@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/llm"
 	"github.com/shark2202/go_hive/go-hive/internal/memory"
 	"github.com/shark2202/go_hive/go-hive/internal/queen"
 	"gopkg.in/yaml.v3"
@@ -1035,6 +1036,23 @@ func queenStr(value any) string {
 func mapString(object map[string]any, key string) string {
 	text, _ := object[key].(string)
 	return text
+}
+
+// queenValidateProviderKey adapts llm.ValidateProviderKey's
+// {"valid", "message"} map onto QueenRouteDeps' (valid, message) pair. The
+// upstream route fails the save only when the check says valid is False; an
+// absent/nil verdict (the check itself raised) passes, so a validation
+// transport failure never blocks storing a key.
+//
+// Parity: framework/server/routes_config.py::_validate_provider_key
+func queenValidateProviderKey(provider, apiKey, apiBase, model string) (bool, string) {
+	base, modelID := apiBase, model
+	result := llm.ValidateProviderKey(provider, apiKey, &base, &modelID)
+	message, _ := result["message"].(string)
+	if valid, ok := result["valid"].(bool); ok {
+		return valid, message
+	}
+	return true, message
 }
 
 // RegisterQueenRoutes mounts the queen identity, avatar and session routes.

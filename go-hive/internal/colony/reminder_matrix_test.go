@@ -70,7 +70,7 @@ func TestOverseerReminderWiringRegistersQueenSources(t *testing.T) {
 	defer stop()
 
 	registered := loop.Hub.RegisteredSourceNames()
-	for _, want := range []string{"colony_parallel", "active_workers", "tracker_snapshot", "colony_worker_snapshot", "stream_stall"} {
+	for _, want := range []string{"colony_parallel", "active_workers", "tracker_snapshot", "colony_worker_snapshot", "tasks", "stream_stall"} {
 		if !containsName(registered, want) {
 			t.Fatalf("overseer hub sources = %v, missing %q", registered, want)
 		}
@@ -85,7 +85,7 @@ func TestOverseerReminderWiringRegistersQueenSources(t *testing.T) {
 	// Bound matrix: every registered queen source passes its gate with a
 	// queen-shaped context and a real colony binding provider.
 	active := loop.Hub.ActiveSourceNames()
-	for _, want := range []string{"colony_parallel", "active_workers", "tracker_snapshot", "colony_worker_snapshot", "stream_stall"} {
+	for _, want := range []string{"colony_parallel", "active_workers", "tracker_snapshot", "colony_worker_snapshot", "tasks", "stream_stall"} {
 		if !containsName(active, want) {
 			t.Fatalf("active overseer sources = %v, missing %q", active, want)
 		}

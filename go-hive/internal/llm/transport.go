@@ -70,12 +70,12 @@ func (p *Provider) AComplete(ctx context.Context, req CompletionRequest) (Comple
 	if p.Call == nil {
 		return Completion{}, errors.New("llm: provider has no completion transport")
 	}
-	system := MergedSystemPrompt(req.System, req.SystemDynamicSuffix)
 	return p.Complete(ctx, ChatMessagesToMaps(req.Messages), CompleteOptions{
-		System:    system,
-		Tools:     req.Tools,
-		MaxTokens: req.MaxTokens,
-		JSONMode:  req.JSONMode,
+		System:              req.System,
+		SystemDynamicSuffix: req.SystemDynamicSuffix,
+		Tools:               req.Tools,
+		MaxTokens:           req.MaxTokens,
+		JSONMode:            req.JSONMode,
 	})
 }
 
@@ -101,6 +101,19 @@ func (p *Provider) httpCompletion(ctx context.Context, kwargs map[string]any) (C
 		if pooled := p.KeyPool.GetKey(); pooled != "" {
 			apiKey = pooled
 		}
+	}
+
+	// Codex ChatGPT subscriptions only expose the Responses API; the bridge
+	// always streams and folds the events back into a CompletionResponse.
+	//
+	// Parity: core/framework/llm/litellm.py::LiteLLMProvider._codex_backend
+	if isCodexResponsesBase(resolveCompletionAPIBase(model, apiBase)) {
+		result, err := p.codexResponsesStream(ctx, kwargs, model, apiBase, apiKey, nil)
+		p.noteKeyOutcome(apiKey, err)
+		if err != nil {
+			return CompletionResponse{}, err
+		}
+		return codexCompletionResponse(result.completion), nil
 	}
 
 	if usesAnthropicMessagesAPI(model) {
@@ -361,7 +374,9 @@ type openAIUsagePayload struct {
 	CacheReadInputTokens     int     `json:"cache_read_input_tokens"`
 	CacheCreationInputTokens int     `json:"cache_creation_input_tokens"`
 	Cost                     float64 `json:"cost"`
-	PromptTokensDetails      *struct {
+	// Credits is the Hive proxy extension; absent for every direct provider.
+	Credits             *float64 `json:"credits"`
+	PromptTokensDetails *struct {
 		CachedTokens     int `json:"cached_tokens"`
 		CacheWriteTokens int `json:"cache_creation_tokens"`
 	} `json:"prompt_tokens_details"`
@@ -401,6 +416,23 @@ func (p *Provider) openAIChatCompletion(ctx context.Context, kwargs map[string]a
 	return payload.toCompletionResponse(model), nil
 }
 
+// openAIRequestBody renders the OpenAI-compatible chat payload. Thinking
+// blocks are an Anthropic Messages concept: the OpenAI wire format has no
+// message field for them, so the projection drops the key instead of
+// forwarding an unknown field a provider would reject.
+//
+// Parity: core/framework/llm/litellm.py::LiteLLMProvider.stream (Anthropic
+// transform consumes thinking_blocks; the OpenAI transform does not send it)
+func stripMessageKey(raw any, key string) {
+	messages, ok := asMapSlice(raw)
+	if !ok {
+		return
+	}
+	for _, message := range messages {
+		delete(message, key)
+	}
+}
+
 func openAIRequestBody(kwargs map[string]any, model string) map[string]any {
 	body := make(map[string]any, len(kwargs)+2)
 	for key, value := range kwargs {
@@ -411,6 +443,7 @@ func openAIRequestBody(kwargs map[string]any, model string) map[string]any {
 		}
 		body[key] = value
 	}
+	stripMessageKey(body["messages"], "thinking_blocks")
 	body["model"] = wireModelName(model)
 	if _, ok := body["messages"]; !ok {
 		body["messages"] = []any{}
@@ -476,6 +509,7 @@ func (usage openAIUsagePayload) toUsage() *Usage {
 		PromptTokens:     usage.PromptTokens,
 		CompletionTokens: usage.CompletionTokens,
 		Cost:             usage.Cost,
+		Credits:          usage.Credits,
 	}
 	cachedRead := usage.CacheReadInputTokens
 	cacheCreation := usage.CacheCreationInputTokens
@@ -543,18 +577,22 @@ func decodeMessageContent(raw json.RawMessage) string {
 // ---------------------------------------------------------------------------
 
 type anthropicContentBlockPayload struct {
-	Type  string          `json:"type"`
-	Text  string          `json:"text"`
-	ID    string          `json:"id"`
-	Name  string          `json:"name"`
-	Input json.RawMessage `json:"input"`
+	Type      string          `json:"type"`
+	Text      string          `json:"text"`
+	ID        string          `json:"id"`
+	Name      string          `json:"name"`
+	Input     json.RawMessage `json:"input"`
+	Thinking  string          `json:"thinking"`
+	Signature string          `json:"signature"`
+	Data      string          `json:"data"`
 }
 
 type anthropicUsagePayload struct {
-	InputTokens              int `json:"input_tokens"`
-	OutputTokens             int `json:"output_tokens"`
-	CacheReadInputTokens     int `json:"cache_read_input_tokens"`
-	CacheCreationInputTokens int `json:"cache_creation_input_tokens"`
+	InputTokens              int      `json:"input_tokens"`
+	OutputTokens             int      `json:"output_tokens"`
+	CacheReadInputTokens     int      `json:"cache_read_input_tokens"`
+	CacheCreationInputTokens int      `json:"cache_creation_input_tokens"`
+	Credits                  *float64 `json:"credits"`
 }
 
 type anthropicMessagePayload struct {
@@ -566,7 +604,7 @@ type anthropicMessagePayload struct {
 
 // Parity: core/framework/llm/anthropic.py::AnthropicProvider, core/framework/llm/litellm.py::rewrite_proxy_model
 func (p *Provider) anthropicMessagesCompletion(ctx context.Context, kwargs map[string]any, model, apiBase, apiKey string) (CompletionResponse, error) {
-	body, err := anthropicRequestBody(kwargs, model)
+	body, err := anthropicRequestBody(kwargs, model, apiKey)
 	if err != nil {
 		return CompletionResponse{}, err
 	}
@@ -581,8 +619,16 @@ func (p *Provider) anthropicMessagesCompletion(ctx context.Context, kwargs map[s
 	return payload.toCompletionResponse(model), nil
 }
 
-func anthropicRequestBody(kwargs map[string]any, model string) (map[string]any, error) {
-	messages, err := anthropicMessages(kwargs["messages"])
+func anthropicRequestBody(kwargs map[string]any, model, apiKey string) (map[string]any, error) {
+	rawMessages := kwargs["messages"]
+	if IsClaudeCodeOAuthKey(apiKey) {
+		// Claude Code OAuth requires a billing integrity system block ahead
+		// of the caller's system prompt.
+		//
+		// Parity: core/framework/llm/litellm.py::LiteLLMProvider.stream
+		rawMessages = withClaudeCodeBillingMessage(rawMessages)
+	}
+	messages, err := anthropicMessages(rawMessages)
 	if err != nil {
 		return nil, err
 	}
@@ -597,7 +643,7 @@ func anthropicRequestBody(kwargs map[string]any, model string) (map[string]any, 
 		"max_tokens": maxTokens,
 		"messages":   messages,
 	}
-	if system := anthropicSystem(kwargs["messages"]); system != nil {
+	if system := anthropicSystem(rawMessages); system != nil {
 		body["system"] = system
 	}
 	if tools := anthropicTools(kwargs["tools"]); len(tools) > 0 {
@@ -1081,6 +1127,23 @@ func (payload anthropicMessagePayload) toCompletionResponse(requestedModel strin
 				Name:      block.Name,
 				Arguments: arguments,
 			})
+		case "thinking":
+			// Signed reasoning blocks are echoed back verbatim next request;
+			// unsigned blocks are dropped because Anthropic rejects them.
+			//
+			// Parity: core/framework/llm/litellm.py::LiteLLMProvider.stream
+			if block.Signature != "" {
+				response.ThinkingBlocks = append(response.ThinkingBlocks, map[string]any{
+					"type":      "thinking",
+					"thinking":  block.Thinking,
+					"signature": block.Signature,
+				})
+			}
+		case "redacted_thinking":
+			response.ThinkingBlocks = append(response.ThinkingBlocks, map[string]any{
+				"type": "redacted_thinking",
+				"data": block.Data,
+			})
 		}
 	}
 	response.Content = text.String()
@@ -1119,6 +1182,7 @@ func (usage anthropicUsagePayload) toUsage() *Usage {
 	converted := &Usage{
 		PromptTokens:             promptTokens + cacheRead + cacheCreation,
 		CompletionTokens:         usage.OutputTokens,
+		Credits:                  usage.Credits,
 		CacheReadInputTokens:     cacheRead,
 		CacheCreationInputTokens: cacheCreation,
 	}

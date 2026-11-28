@@ -11,15 +11,41 @@ import (
 // real croniter; this file is the Go half of the dual-run comparison.
 
 type cronParityCase struct {
+	Family    string     `json:"family"`
 	Expr      string     `json:"expr"`
+	Anchors   []string   `json:"anchors"`
+	Steps     int        `json:"steps"`
 	Sequences [][]string `json:"sequences"`
 }
 
+type cronNoMatchCase struct {
+	Expr   string `json:"expr"`
+	Anchor string `json:"anchor"`
+}
+
 type cronParityFixture struct {
-	Anchors          []string         `json:"anchors"`
-	MatchesPerAnchor int              `json:"matches_per_anchor"`
-	Cases            []cronParityCase `json:"cases"`
-	Invalid          []string         `json:"invalid"`
+	Anchors                  []string          `json:"anchors"`
+	MatchesPerAnchor         int               `json:"matches_per_anchor"`
+	Cases                    []cronParityCase  `json:"cases"`
+	Invalid                  []string          `json:"invalid"`
+	NoMatch                  []cronNoMatchCase `json:"no_match"`
+	AcceptedWithoutIteration []string          `json:"accepted_without_iteration"`
+}
+
+// cronRequiredFamilies must all be represented in the fixture. A missing family
+// means the extension corpus lost coverage of a syntax family.
+var cronRequiredFamilies = []string{
+	"numeric",
+	"macro",
+	"names",
+	"dom-last",
+	"dow-last",
+	"nth-weekday",
+	"question-mark",
+	"wrap-range",
+	"year-field",
+	"field-alias",
+	"combined",
 }
 
 func loadCronParityFixture(t *testing.T) cronParityFixture {
@@ -41,23 +67,37 @@ func TestCronSecondsParityAgainstCroniter(t *testing.T) {
 	if len(fixture.Anchors) < 3 {
 		t.Fatalf("fixture has %d anchors, want >= 3", len(fixture.Anchors))
 	}
-	if len(fixture.Cases) < 20 {
-		t.Fatalf("fixture has %d expressions, want >= 20", len(fixture.Cases))
+	if len(fixture.Cases) < 100 {
+		t.Fatalf("fixture has %d expressions, want >= 100", len(fixture.Cases))
 	}
 
+	families := make(map[string]int)
+	totalSteps := 0
 	for _, c := range fixture.Cases {
+		families[c.Family]++
+		anchors := c.Anchors
+		if len(anchors) == 0 {
+			anchors = fixture.Anchors
+		}
+		steps := c.Steps
+		if steps == 0 {
+			steps = fixture.MatchesPerAnchor
+		}
+		if len(c.Sequences) != len(anchors) {
+			t.Fatalf("fixture %q has %d sequences for %d anchors", c.Expr, len(c.Sequences), len(anchors))
+		}
 		if !IsValidCron(c.Expr) {
 			t.Errorf("IsValidCron(%q) = false, croniter accepts it", c.Expr)
 			continue
 		}
-		for anchorIndex, anchorISO := range fixture.Anchors {
+		for anchorIndex, anchorISO := range anchors {
 			anchor := ParseISO(&anchorISO)
 			if anchor == nil {
 				t.Fatalf("fixture anchor not parseable: %q", anchorISO)
 			}
 			want := c.Sequences[anchorIndex]
-			if len(want) != fixture.MatchesPerAnchor {
-				t.Fatalf("fixture %q anchor %d has %d matches, want %d", c.Expr, anchorIndex, len(want), fixture.MatchesPerAnchor)
+			if len(want) != steps {
+				t.Fatalf("fixture %q anchor %d has %d matches, want %d", c.Expr, anchorIndex, len(want), steps)
 			}
 			cursor := *anchor
 			for step, expected := range want {
@@ -71,21 +111,568 @@ func TestCronSecondsParityAgainstCroniter(t *testing.T) {
 				}
 				cursor = got
 			}
+			totalSteps += len(want)
 		}
+	}
+	for _, family := range cronRequiredFamilies {
+		if families[family] == 0 {
+			t.Errorf("fixture has no cases for family %q", family)
+		}
+	}
+	// A truncated corpus would silently weaken the dual-run evidence.
+	if totalSteps < 4000 {
+		t.Fatalf("fixture covers %d steps, want >= 4000", totalSteps)
 	}
 }
 
 // Parity: core/tests/test_cron_seconds_parity.py::test_invalid_cron_corpus_rejected_by_croniter
 func TestCronInvalidCorpusParityAgainstCroniter(t *testing.T) {
 	fixture := loadCronParityFixture(t)
-	if len(fixture.Invalid) < 20 {
-		t.Fatalf("fixture has %d invalid expressions, want >= 20", len(fixture.Invalid))
+	if len(fixture.Invalid) < 60 {
+		t.Fatalf("fixture has %d invalid expressions, want >= 60", len(fixture.Invalid))
 	}
 	for _, expr := range fixture.Invalid {
 		if IsValidCron(expr) {
 			t.Errorf("IsValidCron(%q) = true, croniter rejects it", expr)
 		}
 	}
+}
+
+// Parity: core/tests/test_cron_seconds_parity.py::test_no_match_cases_raise_croniter_bad_date
+func TestCronNoMatchCorpus(t *testing.T) {
+	fixture := loadCronParityFixture(t)
+	if len(fixture.NoMatch) < 3 {
+		t.Fatalf("fixture has %d no-match cases, want >= 3", len(fixture.NoMatch))
+	}
+	for _, c := range fixture.NoMatch {
+		if !IsValidCron(c.Expr) {
+			t.Errorf("IsValidCron(%q) = false, croniter accepts it", c.Expr)
+			continue
+		}
+		anchor := ParseISO(&c.Anchor)
+		if anchor == nil {
+			t.Fatalf("no-match anchor not parseable: %q", c.Anchor)
+		}
+		if got, ok := NextCronMatch(c.Expr, *anchor); ok {
+			t.Errorf("NextCronMatch(%q, %s) = %s, want no match", c.Expr, c.Anchor, FormatISO(got))
+		}
+	}
+}
+
+// Parity: core/tests/test_cron_seconds_parity.py::test_special_croniter_runtime_failures_are_documented
+//
+// croniter accepts these but its get_next raises on an impossible
+// day-of-month ∩ nth-weekday intersection; the Go scheduler follows the
+// expansion and returns the nth-weekday schedule.
+func TestCronAcceptedWithoutIteration(t *testing.T) {
+	fixture := loadCronParityFixture(t)
+	if len(fixture.AcceptedWithoutIteration) == 0 {
+		t.Fatal("fixture has no accepted_without_iteration cases")
+	}
+	anchor := time.Date(2026, time.May, 18, 9, 0, 0, 0, time.UTC)
+	for _, expr := range fixture.AcceptedWithoutIteration {
+		if !IsValidCron(expr) {
+			t.Errorf("IsValidCron(%q) = false, croniter accepts it", expr)
+			continue
+		}
+		got, ok := NextCronMatch(expr, anchor)
+		if !ok {
+			t.Errorf("NextCronMatch(%q) = no match, want the nth-weekday schedule", expr)
+			continue
+		}
+		// The schedule must be an nth-weekday match even though the
+		// day-of-month part is impossible.
+		if !nthWeekdayTime(expr, got) {
+			t.Errorf("NextCronMatch(%q) = %s, want an nth-weekday day", expr, FormatISO(got))
+		}
+	}
+}
+
+// Parity: core/tests/test_cron_seconds_parity.py::test_extension_families_are_croniter_features
+//
+// TestCronMacroEquivalence checks each croniter macro against the numeric
+// expression croniter expands it to.
+func TestCronMacroEquivalence(t *testing.T) {
+	macros := map[string]string{
+		"@yearly":   "0 0 1 1 *",
+		"@annually": "0 0 1 1 *",
+		"@monthly":  "0 0 1 * *",
+		"@weekly":   "0 0 * * 0",
+		"@daily":    "0 0 * * *",
+		"@midnight": "0 0 * * *",
+		"@hourly":   "0 * * * *",
+	}
+	anchor := time.Date(2026, time.May, 18, 9, 0, 0, 0, time.UTC)
+	for macro, expanded := range macros {
+		cursorMacro, cursorExpanded := anchor, anchor
+		for i := 0; i < 20; i++ {
+			a, okA := NextCronMatch(macro, cursorMacro)
+			b, okB := NextCronMatch(expanded, cursorExpanded)
+			if okA != okB || (okA && !a.Equal(b)) {
+				t.Fatalf("macro %q diverges from %q at step %d", macro, expanded, i)
+			}
+			cursorMacro, cursorExpanded = a, b
+		}
+	}
+	if IsValidCron("@reboot") || IsValidCron("@every_minute") || IsValidCron("@daily 5") {
+		t.Error("non-croniter macros must be rejected")
+	}
+	// Macro lookup is on the whole expression, like croniter's dict lookup.
+	if IsValidCron(" @daily") || IsValidCron("@daily ") {
+		t.Error("macros with surrounding whitespace must be rejected")
+	}
+}
+
+// Parity: core/tests/test_cron_seconds_parity.py::test_extension_families_are_croniter_features
+//
+// TestCronNamedFieldsMatchNumeric pins the abbreviation tables and their
+// case-insensitive handling against numeric equivalents.
+func TestCronNamedFieldsMatchNumeric(t *testing.T) {
+	pairs := [][2]string{
+		{"0 0 * JAN *", "0 0 * 1 *"},
+		{"0 0 * jan *", "0 0 * 1 *"},
+		{"0 0 * JAN-MAR *", "0 0 * 1-3 *"},
+		{"0 0 * NOV-FEB *", "0 0 * 11-2 *"},
+		{"0 0 * * MON", "0 0 * * 1"},
+		{"0 0 * * mon", "0 0 * * 1"},
+		{"0 0 * * MON-FRI", "0 0 * * 1-5"},
+		{"0 0 * * FRI-MON", "0 0 * * 5-1"},
+		{"0 0 * * SUN-SUN", "0 0 * * 0-0"},
+		{"0 0 * * SUN-SAT", "0 0 * * 0-6"},
+		{"0 0 * JAN-DEC/2 *", "0 0 * 1-12/2 *"},
+		{"0 0 * * MON/2", "0 0 * * 1/2"},
+	}
+	anchor := time.Date(2026, time.May, 18, 9, 0, 0, 0, time.UTC)
+	for _, pair := range pairs {
+		cursorA, cursorB := anchor, anchor
+		for i := 0; i < 12; i++ {
+			a, okA := NextCronMatch(pair[0], cursorA)
+			b, okB := NextCronMatch(pair[1], cursorB)
+			if okA != okB || (okA && !a.Equal(b)) {
+				t.Fatalf("%q and %q diverge at step %d: %v/%v vs %v/%v", pair[0], pair[1], i, FormatISO(a), okA, FormatISO(b), okB)
+			}
+			cursorA, cursorB = a, b
+		}
+	}
+	// Full names are not part of croniter's table.
+	if IsValidCron("0 0 * JANUARY *") || IsValidCron("0 0 * * SUNDAY") {
+		t.Error("long month/weekday names must be rejected")
+	}
+}
+
+// Parity: core/tests/test_cron_seconds_parity.py::test_extension_families_are_croniter_features
+//
+// TestCronLastDayOfMonth covers "L" in day-of-month.
+func TestCronLastDayOfMonth(t *testing.T) {
+	cursor := time.Date(2026, time.January, 15, 12, 0, 0, 0, time.UTC)
+	for i := 0; i < 14; i++ {
+		next, ok := NextCronMatch("0 0 L * *", cursor)
+		if !ok {
+			t.Fatal("L schedule produced no match")
+		}
+		if next.Day() != cronDaysInMonth(next.Year(), next.Month()) {
+			t.Fatalf("L matched %s, not the last day of its month", FormatISO(next))
+		}
+		if next.Hour() != 0 || next.Minute() != 0 || next.Second() != 0 {
+			t.Fatalf("L matched non-midnight %s", FormatISO(next))
+		}
+		cursor = next
+	}
+	// L with a weekday becomes an OR: last day or Monday.
+	cursor = time.Date(2026, time.May, 18, 9, 0, 0, 0, time.UTC)
+	next, ok := NextCronMatch("0 0 L * MON", cursor)
+	if !ok || FormatISO(next) != "2026-05-25T00:00:00+00:00" {
+		t.Fatalf("L+MON first match = %s (ok=%v), want the next Monday", FormatISO(next), ok)
+	}
+	next, ok = NextCronMatch("0 0 L * MON", next)
+	if !ok || FormatISO(next) != "2026-05-31T00:00:00+00:00" {
+		t.Fatalf("L+MON second match = %s (ok=%v), want the last day", FormatISO(next), ok)
+	}
+}
+
+// Parity: core/tests/test_cron_seconds_parity.py::test_extension_families_are_croniter_features
+//
+// TestCronLastWeekdayOfMonth covers "l<dow>" in day-of-week.
+func TestCronLastWeekdayOfMonth(t *testing.T) {
+	cases := []struct {
+		expr string
+		dow  time.Weekday
+	}{
+		{"0 0 * * L5", time.Friday},
+		{"0 0 * * L0", time.Sunday},
+		{"0 0 * * L6", time.Saturday},
+	}
+	for _, tc := range cases {
+		cursor := time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC)
+		for i := 0; i < 12; i++ {
+			next, ok := NextCronMatch(tc.expr, cursor)
+			if !ok {
+				t.Fatalf("%s produced no match", tc.expr)
+			}
+			if next.Weekday() != tc.dow {
+				t.Fatalf("%s matched weekday %s, want %s", tc.expr, next.Weekday(), tc.dow)
+			}
+			if next.Day()+7 <= cronDaysInMonth(next.Year(), next.Month()) {
+				t.Fatalf("%s matched %s, which is not the last %s of the month", tc.expr, FormatISO(next), tc.dow)
+			}
+			cursor = next
+		}
+	}
+	// l7 is Sunday in the 5-field form; the 6-field form disables the alias.
+	if !IsValidCron("0 0 * * l7") || IsValidCron("0 0 * * l7 0") {
+		t.Error("l7 alias must apply only to the 5-field form")
+	}
+}
+
+// Parity: core/tests/test_cron_seconds_parity.py::test_extension_families_are_croniter_features
+//
+// TestCronNthWeekday covers "#n".
+func TestCronNthWeekday(t *testing.T) {
+	cursor := time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC)
+	for i := 0; i < 12; i++ {
+		next, ok := NextCronMatch("0 0 * * 1#2", cursor)
+		if !ok {
+			t.Fatal("1#2 produced no match")
+		}
+		if next.Weekday() != time.Monday {
+			t.Fatalf("1#2 matched %s, want Monday", FormatISO(next))
+		}
+		if got := (next.Day()-1)/7 + 1; got != 2 {
+			t.Fatalf("1#2 matched occurrence %d on %s, want the second", got, FormatISO(next))
+		}
+		cursor = next
+	}
+	// MON-FRI#2 means the second occurrence of each weekday, not the second
+	// week of the month.
+	cursor = time.Date(2026, time.May, 18, 9, 0, 0, 0, time.UTC)
+	next, ok := NextCronMatch("0 0 * * MON-FRI#2", cursor)
+	if !ok || FormatISO(next) != "2026-06-08T00:00:00+00:00" {
+		t.Fatalf("MON-FRI#2 = %s (ok=%v), want 2026-06-08", FormatISO(next), ok)
+	}
+	// Mixing a literal weekday with #n is rejected unless the literal is also
+	// constrained by #n.
+	if IsValidCron("0 0 * * 1,2#3") {
+		t.Error("literal + nth mixing must be rejected")
+	}
+	if !IsValidCron("0 0 * * 1#2,1") {
+		t.Error("a literal covered by the nth map is accepted by croniter")
+	}
+	if IsValidCron("0 0 * * 1#6") || IsValidCron("0 0 * * 1#0") {
+		t.Error("nth ordinals outside 1..5 must be rejected")
+	}
+	// Numeric ranges cannot carry "#"; only named ranges can.
+	if IsValidCron("0 0 * * 1-5#2") || !IsValidCron("0 0 * * MON-FRI#2") {
+		t.Error("numeric range + # must be rejected while named range + # is accepted")
+	}
+}
+
+// Parity: core/tests/test_cron_seconds_parity.py::test_extension_families_are_croniter_features
+//
+// TestCronNthWeekdayDayOrBranches pins the two day_or paths for "#n":
+// a DOW field that collapsed to "*" is intersected with the day-of-month,
+// while a literal DOW list reduces the union to the nth weekday alone.
+func TestCronNthWeekdayDayOrBranches(t *testing.T) {
+	anchor := time.Date(2026, time.May, 18, 9, 0, 0, 0, time.UTC)
+
+	// MON-SUN#2 covers all seven weekdays, so the DOW field collapses to "*"
+	// (the day-of-month contains a wildcard) and croniter intersects it with
+	// the odd days of */2: 2026-06-09 is the second Tuesday.
+	next, ok := NextCronMatch("0 0 */2 * MON-SUN#2", anchor)
+	if !ok || FormatISO(next) != "2026-06-09T00:00:00+00:00" {
+		t.Fatalf("MON-SUN#2 with */2 = %s (ok=%v), want the 2nd weekday on an odd day (2026-06-09)", FormatISO(next), ok)
+	}
+
+	// MON#2 stays a literal list, so the union reduces to the nth weekday and
+	// day-of-month is ignored: 2026-06-08 is the second Monday.
+	next, ok = NextCronMatch("0 0 */2 * MON#2", anchor)
+	if !ok || FormatISO(next) != "2026-06-08T00:00:00+00:00" {
+		t.Fatalf("MON#2 with */2 = %s (ok=%v), want the 2nd Monday (2026-06-08)", FormatISO(next), ok)
+	}
+}
+
+// Parity: core/tests/test_cron_seconds_parity.py::test_extension_families_are_croniter_features
+//
+// TestCronQuestionMark covers "?" in the two day fields.
+func TestCronQuestionMark(t *testing.T) {
+	anchor := time.Date(2026, time.May, 18, 9, 0, 0, 0, time.UTC)
+	pairs := [][2]string{
+		{"0 0 ? * *", "0 0 * * *"},
+		{"0 0 * * ?", "0 0 * * *"},
+		{"0 0 ? * MON", "0 0 * * MON"},
+		{"0 0 ? * * 0 2026-2030", "0 0 * * * 0 2026-2030"},
+	}
+	for _, pair := range pairs {
+		cursorA, cursorB := anchor, anchor
+		for i := 0; i < 10; i++ {
+			a, okA := NextCronMatch(pair[0], cursorA)
+			b, okB := NextCronMatch(pair[1], cursorB)
+			if okA != okB || (okA && !a.Equal(b)) {
+				t.Fatalf("%q and %q diverge at step %d", pair[0], pair[1], i)
+			}
+			cursorA, cursorB = a, b
+		}
+	}
+	for _, bad := range []string{"0 0 ? ? *", "0 0 15 ? *", "0 0 ?/2 * *", "0 0 * ? *"} {
+		if IsValidCron(bad) {
+			t.Errorf("IsValidCron(%q) = true, croniter rejects it", bad)
+		}
+	}
+}
+
+// Parity: core/tests/test_cron_seconds_parity.py::test_extension_families_are_croniter_features
+//
+// TestCronWrapRange covers wrap-around ranges such as 5-1.
+func TestCronWrapRange(t *testing.T) {
+	anchor := time.Date(2026, time.May, 18, 9, 0, 0, 0, time.UTC)
+	got := make(map[int]bool)
+	cursor := anchor
+	for i := 0; i < 60; i++ {
+		next, ok := NextCronMatch("5-1 * * * *", cursor)
+		if !ok {
+			t.Fatal("wrap range produced no match")
+		}
+		got[next.Minute()] = true
+		cursor = next
+	}
+	want := map[int]bool{0: true, 1: true}
+	for m := 5; m <= 59; m++ {
+		want[m] = true
+	}
+	if len(got) != len(want) {
+		t.Fatalf("5-1 matched %d distinct minutes, want %d", len(got), len(want))
+	}
+	for m := range want {
+		if !got[m] {
+			t.Fatalf("5-1 missed minute %d", m)
+		}
+	}
+	for m := 2; m <= 4; m++ {
+		if got[m] {
+			t.Fatalf("5-1 matched excluded minute %d", m)
+		}
+	}
+
+	// A stepped wrap keeps croniter's step phase: 5-1/5 = 5,10,...,55,0.
+	cursor = time.Date(2026, time.May, 18, 9, 0, 0, 0, time.UTC)
+	wantSteps := []string{
+		"2026-05-18T09:05:00+00:00",
+		"2026-05-18T09:10:00+00:00",
+		"2026-05-18T09:15:00+00:00",
+		"2026-05-18T09:20:00+00:00",
+		"2026-05-18T09:25:00+00:00",
+		"2026-05-18T09:30:00+00:00",
+		"2026-05-18T09:35:00+00:00",
+		"2026-05-18T09:40:00+00:00",
+		"2026-05-18T09:45:00+00:00",
+		"2026-05-18T09:50:00+00:00",
+		"2026-05-18T09:55:00+00:00",
+	}
+	for _, expected := range wantSteps {
+		next, ok := NextCronMatch("5-1/5 * * * *", cursor)
+		if !ok || FormatISO(next) != expected {
+			t.Fatalf("5-1/5 = %s (ok=%v), want %s", FormatISO(next), ok, expected)
+		}
+		cursor = next
+	}
+	next, ok := NextCronMatch("5-1/5 * * * *", cursor)
+	if !ok || FormatISO(next) != "2026-05-18T10:00:00+00:00" {
+		t.Fatalf("5-1/5 wrap tail = %s (ok=%v), want 10:00:00", FormatISO(next), ok)
+	}
+
+	// Named and numeric wrap ranges agree, including a wrapped month range.
+	pairs := [][2]string{
+		{"0 0 * * FRI-MON", "0 0 * * 5-1"},
+		{"0 0 * NOV-FEB *", "0 0 * 11-2 *"},
+		{"0 22-2 * * *", "0 22,23,0,1,2 * * *"},
+	}
+	cursorA := time.Date(2026, time.May, 18, 9, 0, 0, 0, time.UTC)
+	for _, pair := range pairs {
+		cursorA = time.Date(2026, time.May, 18, 9, 0, 0, 0, time.UTC)
+		for i := 0; i < 20; i++ {
+			a, okA := NextCronMatch(pair[0], cursorA)
+			b, okB := NextCronMatch(pair[1], cursorA)
+			if okA != okB || (okA && !a.Equal(b)) {
+				t.Fatalf("%q and %q diverge at step %d", pair[0], pair[1], i)
+			}
+			cursorA = a
+		}
+	}
+}
+
+// Parity: core/tests/test_cron_seconds_parity.py::test_extension_families_are_croniter_features
+//
+// TestCronSevenFieldYear covers the trailing year field.
+func TestCronSevenFieldYear(t *testing.T) {
+	cursor := time.Date(2026, time.May, 18, 9, 0, 0, 0, time.UTC)
+	if next, ok := NextCronMatch("0 0 1 1 * 0 2026", cursor); ok {
+		t.Fatalf("2026-only schedule matched %s from 2026-05-18", FormatISO(next))
+	}
+	next, ok := NextCronMatch("0 0 1 1 * 0 2025-2030", cursor)
+	if !ok || FormatISO(next) != "2027-01-01T00:00:00+00:00" {
+		t.Fatalf("year range first match = %s (ok=%v), want 2027-01-01", FormatISO(next), ok)
+	}
+	next, ok = NextCronMatch("0 0 1 1 * 0 2027", cursor)
+	if !ok || FormatISO(next) != "2027-01-01T00:00:00+00:00" {
+		t.Fatalf("single-year first match = %s (ok=%v), want 2027-01-01", FormatISO(next), ok)
+	}
+	if _, ok := NextCronMatch("0 0 1 1 * 0 2027", next); ok {
+		t.Fatal("single-year schedule must stop after its year")
+	}
+	// Year bounds are croniter's 1970..2099.
+	for _, bad := range []string{"0 0 * * * 0 1969", "0 0 * * * 0 2100", "0 0 * * * 2026"} {
+		if IsValidCron(bad) {
+			t.Errorf("IsValidCron(%q) = true, croniter rejects it", bad)
+		}
+	}
+	// A 7-field WRAP year range includes both sides of the wrap.
+	next, ok = NextCronMatch("0 0 * * * 0 2028-2026", cursor)
+	if !ok || next.Year() != 2026 {
+		t.Fatalf("wrap year first match = %s (ok=%v), want a 2026 year", FormatISO(next), ok)
+	}
+}
+
+// Parity: core/tests/test_cron_seconds_parity.py::test_extension_families_are_croniter_features, core/tests/test_cron_seconds_parity.py::test_invalid_cron_corpus_rejected_by_croniter
+//
+// TestCronFieldAliasesAndWRejection covers the field-count dependent aliases
+// and the Quartz "W" family croniter 6.0.0 does not implement.
+func TestCronFieldAliasesAndWRejection(t *testing.T) {
+	// DOM 0 aliases to 1 only in the 6-field form.
+	if IsValidCron("0 0 0 * *") {
+		t.Error("5-field DOM 0 must be rejected")
+	}
+	if !IsValidCron("0 0 0 * * 0") {
+		t.Error("6-field DOM 0 aliases to 1 in croniter")
+	}
+	if IsValidCron("0 0 0 * * 0 2026") {
+		t.Error("7-field DOM 0 must be rejected")
+	}
+	next, ok := NextCronMatch("0 0 0 * * 0", time.Date(2026, time.May, 18, 9, 0, 0, 0, time.UTC))
+	if !ok || next.Day() != 1 || next.Hour() != 0 {
+		t.Fatalf("6-field DOM 0 = %s (ok=%v), want day 1 midnight", FormatISO(next), ok)
+	}
+	// DOW 7 aliases to Sunday only in the 5-field form.
+	if !IsValidCron("0 0 * * 7") || IsValidCron("0 0 * * 7 0") || IsValidCron("0 0 * * 7 0 2026") {
+		t.Error("DOW 7 alias must apply only to the 5-field form")
+	}
+	// W is Quartz syntax; croniter 6.0.0 rejects it in every position.
+	for _, bad := range []string{"0 0 15W * *", "0 0 1W * *", "0 0 LW * *", "0 0 * * 1W"} {
+		if IsValidCron(bad) {
+			t.Errorf("IsValidCron(%q) = true, croniter 6.0.0 has no W support", bad)
+		}
+	}
+}
+
+// nthWeekdayTime reports whether t is the nth-weekday day required by expr's
+// day-of-week field. Used to prove the accepted-without-iteration schedules
+// still land on an nth weekday.
+func nthWeekdayTime(expr string, t time.Time) bool {
+	fields := splitCronFields(expr)
+	if len(fields) < 5 {
+		return false
+	}
+	dow := fields[4]
+	for _, element := range splitCronList(dow) {
+		if isNthDowElement(element, t) {
+			return true
+		}
+	}
+	return false
+}
+
+func splitCronFields(expr string) []string {
+	var fields []string
+	current := ""
+	for _, r := range expr {
+		if r == ' ' || r == '\t' || r == '\n' {
+			if current != "" {
+				fields = append(fields, current)
+				current = ""
+			}
+			continue
+		}
+		current += string(r)
+	}
+	if current != "" {
+		fields = append(fields, current)
+	}
+	return fields
+}
+
+func splitCronList(field string) []string {
+	var parts []string
+	current := ""
+	for _, r := range field {
+		if r == ',' {
+			parts = append(parts, current)
+			current = ""
+			continue
+		}
+		current += string(r)
+	}
+	parts = append(parts, current)
+	return parts
+}
+
+func isNthDowElement(element string, t time.Time) bool {
+	lower := ""
+	for _, r := range element {
+		if r >= 'A' && r <= 'Z' {
+			r += 'a' - 'A'
+		}
+		lower += string(r)
+	}
+	hash := -1
+	for i := 0; i < len(lower); i++ {
+		if lower[i] == '#' {
+			hash = i
+			break
+		}
+	}
+	if hash >= 0 {
+		n := 0
+		for i := hash + 1; i < len(lower); i++ {
+			if lower[i] < '0' || lower[i] > '9' {
+				return false
+			}
+			n = n*10 + int(lower[i]-'0')
+		}
+		if n < 1 || n > 5 {
+			return false
+		}
+		value, ok := cronDowValue(lower[:hash])
+		if !ok || int(t.Weekday()) != value {
+			return false
+		}
+		return (t.Day()-1)/7+1 == n
+	}
+	if len(lower) > 1 && lower[0] == 'l' {
+		value, ok := cronDowValue(lower[1:])
+		if !ok || int(t.Weekday()) != value {
+			return false
+		}
+		return t.Day()+7 > cronDaysInMonth(t.Year(), t.Month())
+	}
+	return false
+}
+
+func cronDowValue(token string) (int, bool) {
+	if v, ok := cronDowNames[token]; ok {
+		return v, true
+	}
+	n := 0
+	for i := 0; i < len(token); i++ {
+		if token[i] < '0' || token[i] > '9' {
+			return 0, false
+		}
+		n = n*10 + int(token[i]-'0')
+	}
+	switch n {
+	case 7:
+		return 0, true
+	case 0, 1, 2, 3, 4, 5, 6:
+		return n, true
+	}
+	return 0, false
 }
 
 // Parity: core/tests/test_cron_seconds_parity.py::test_compute_missed_cron_seconds_counts_and_ticks

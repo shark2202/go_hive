@@ -4,7 +4,9 @@ package credentials
 
 import (
 	"fmt"
+	"os"
 	"strings"
+	"time"
 )
 
 type CredentialStoreAdapter struct {
@@ -163,12 +165,147 @@ func (a *CredentialStoreAdapter) AccountToken(provider, alias string) (string, b
 	return "", false
 }
 
+// DefaultAdapter builds the production adapter: the encrypted file store is
+// the primary backend and the process env (or .env) is the fallback, so a
+// credential that only exists as an env var still resolves. Upstream
+// CredentialStoreAdapter.default() wraps EncryptedFileStorage in
+// CompositeStorage with EnvVarStorage keyed by spec name; this mirrors that
+// shape and additionally registers the credential id when it differs from the
+// name (cloudflare / cloudflare_api_token).
+//
+// The local-only form deliberately registers no OAuth2 provider: upstream's
+// default store is StaticProvider-only, and the HubSpot/Zoho providers need
+// client credentials plus an unambiguous provider_id. Callers that own an
+// OAuth2 provider register it with WithProviders; hive-cred uses
+// DefaultAdapterWithAden so OAuth2 tokens refresh through the Aden platform
+// when ADEN_API_KEY is configured.
+//
+// Parity: tools/src/aden_tools/credentials/store_adapter.py::CredentialStoreAdapter.default
 func DefaultAdapter(specs []NamedSpec) (*CredentialStoreAdapter, error) {
-	store, err := WithEncryptedStorage("")
-	if err != nil {
-		store = WithEnvStorage(map[string]string{})
+	if specs == nil {
+		specs = CatalogNamedSpecs()
 	}
-	return NewCredentialStoreAdapter(store, specs, DefaultLocalCredentialRegistry()), nil
+	return DefaultAdapterAt("", specs)
+}
+
+// DefaultAdapterAt is DefaultAdapter rooted at an explicit credentials
+// directory, without the Aden upgrade. Session tools and credential routes
+// resolve HIVE_HOME themselves, so they pass that directory instead of
+// falling back to the process-wide environment; keeping the construction here
+// ensures every caller gets the same encrypted-primary + env-fallback
+// composite.
+func DefaultAdapterAt(basePath string, specs []NamedSpec) (*CredentialStoreAdapter, error) {
+	storage, local := localAdapterStorage(basePath, specs)
+	return NewCredentialStoreAdapter(NewCredentialStore(WithStorage(storage)), specs, local), nil
+}
+
+// DefaultAdapterWithAden is the one-shot CLI flavour of DefaultAdapter. It
+// mirrors upstream CredentialStoreAdapter.default(): when ADEN_API_KEY is set
+// the local composite store is wrapped in AdenCachedStorage and an
+// AdenSyncProvider is registered, so OAuth2/Bearer credentials refresh
+// through the platform before hive-cred prints a value. The initial sync is
+// best-effort; a missing key, an unbuildable client or a sync failure leaves
+// the local store in place. This is the only default OAuth2-capable provider
+// upstream wires into production.
+//
+// Serve and session paths keep using DefaultAdapterAt because their stores
+// already share the runtime's Aden client; a fresh CLI process has no such
+// store, so it needs the one-shot sync upstream performs.
+//
+// Parity: tools/src/aden_tools/credentials/store_adapter.py::CredentialStoreAdapter.default
+func DefaultAdapterWithAden(basePath string, specs []NamedSpec) (*CredentialStoreAdapter, error) {
+	if specs == nil {
+		specs = CatalogNamedSpecs()
+	}
+	if strings.TrimSpace(os.Getenv(AdenEnvVar)) == "" {
+		return DefaultAdapterAt(basePath, specs)
+	}
+	// Upstream's default adapter constructs the Aden client with a 5-second
+	// timeout. One attempt keeps `hive-cred token` responsive when the
+	// platform is unreachable; the token command is not a retry loop.
+	client, err := NewAdenCredentialClient(AdenClientConfig{
+		Timeout:       5 * time.Second,
+		RetryAttempts: 1,
+	})
+	if err != nil {
+		LogWarning("framework.credentials.store_adapter",
+			"Aden backend unavailable, using local credential storage: %v", err)
+		return DefaultAdapterAt(basePath, specs)
+	}
+	return defaultAdapterWithAdenClient(basePath, specs, client)
+}
+
+// defaultAdapterWithAdenClient is the injectable seam for tests and for
+// callers that already own an Aden client. A nil client keeps the local
+// composite store, matching the unconfigured branch of DefaultAdapterWithAden.
+func defaultAdapterWithAdenClient(basePath string, specs []NamedSpec, client AdenSyncClient) (*CredentialStoreAdapter, error) {
+	storage, local := localAdapterStorage(basePath, specs)
+	if client == nil {
+		return NewCredentialStoreAdapter(NewCredentialStore(WithStorage(storage)), specs, local), nil
+	}
+	provider := NewAdenSyncProvider(client, "", 5)
+	cached := NewAdenCachedStorage(storage, provider, 0, true)
+	store := NewCredentialStore(
+		WithStorage(cached),
+		WithProviders(provider),
+		WithAutoRefresh(true),
+	)
+	// SyncAll treats listing and per-integration failures as diagnostics and
+	// returns the number saved; upstream wraps the same call in try/except.
+	provider.SyncAll(store)
+	return NewCredentialStoreAdapter(store, specs, local), nil
+}
+
+// localAdapterStorage builds the encrypted-primary + env-fallback storage and
+// the local account registry. If encrypted storage cannot be initialised it
+// degrades to env-only storage, as upstream does.
+func localAdapterStorage(basePath string, specs []NamedSpec) (CredentialStorage, LocalRegistry) {
+	envMapping := envMappingForNamedSpecs(specs)
+	envStorage := NewEnvVarStorage(envMapping)
+	local := localRegistryAt(basePath)
+	encrypted, err := NewEncryptedFileStorage(basePath, "")
+	if err != nil {
+		return envStorage, local
+	}
+	return NewCompositeStorage(encrypted, envStorage), local
+}
+
+// localRegistryAt opens the local account registry beside the encrypted store
+// so accounts saved through POST /api/credentials/local resolve through the
+// same adapter as encrypted and env credentials.
+func localRegistryAt(basePath string) LocalRegistry {
+	if basePath == "" {
+		return DefaultLocalCredentialRegistry()
+	}
+	if registry, err := LocalCredentialRegistryAtPath(basePath); err == nil && registry != nil {
+		return registry
+	}
+	return DefaultLocalCredentialRegistry()
+}
+
+// envMappingForNamedSpecs builds the credential id -> env var table the env
+// fallback storage reads. Upstream keys it by CREDENTIAL_SPECS name; Go CLI
+// and tool callers also address credentials by CredentialID, so both keys map
+// to the same variable.
+func envMappingForNamedSpecs(specs []NamedSpec) map[string]string {
+	mapping := make(map[string]string, len(specs)*2)
+	for _, named := range specs {
+		envVar := named.EnvVar
+		if envVar == "" {
+			continue
+		}
+		name := named.Name
+		if name == "" {
+			name = named.Spec.CredentialID
+		}
+		if name != "" {
+			mapping[name] = envVar
+		}
+		if named.Spec.CredentialID != "" {
+			mapping[named.Spec.CredentialID] = envVar
+		}
+	}
+	return mapping
 }
 
 func mapString(acct map[string]any, key string) string {

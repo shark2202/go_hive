@@ -45,8 +45,8 @@ VERDICTS: dict[str, dict[str, str]] = {
         "note": "Repo-packaged built-in agent descriptor read by the Python loader/credential setup; not HIVE_HOME user data, so Go needs no reader.",
     },
     "attached_credentials.json": {
-        "verdict": "不兼容",
-        "note": "Python-only feature: pinned credentials per session at HIVE_HOME/sessions/<sid>/attached_credentials.json (agent_loop/internals/credential_tool.py). Go has no reader/writer; the file is ignored, so attach-credential state is lost on a runtime switch (feature gap, not a startup/migration blocker).",
+        "verdict": "兼容",
+        "note": "Pinned credentials per session at HIVE_HOME/sessions/<sid>/attached_credentials.json. Python writes it (agent_loop/internals/credential_tool.py:311); Go reads and writes the same path and shape (internal/tools/credentials_tool.go, wired from internal/server/chat_credentials_tool.go), and migrates the older session-local file on first write. Tests: internal/server/chat_credentials_tool_test.go, internal/tools/credentials_tool_test.go.",
     },
     "conversations.json": {
         "verdict": "兼容",
@@ -74,7 +74,7 @@ VERDICTS: dict[str, dict[str, str]] = {
     },
     "runs.jsonl": {
         "verdict": "兼容",
-        "note": "Run lifecycle log: Python appends (host/execution_manager.py) and discovers (agents/discovery.py); Go reads it in agents/discovery.go but does not append. Read compatibility holds; Go records its runs through its own runtime state.",
+        "note": "Run lifecycle log: Python appends (host/execution_manager.py) and discovers (agents/discovery.py); Go reads it in agents/discovery.go but does not append (its chat turns have no graph run_id, and its worker dirs are worker_* which Python's session_ filter excludes). One-way read compatibility is documented and tested; no conversion exists.",
     },
     "user_report.json": {
         "verdict": "兼容",
@@ -87,7 +87,7 @@ VERDICTS: dict[str, dict[str, str]] = {
     },
     ".play.json": {
         "verdict": "单向兼容",
-        "note": "Go-native playbook definition at colonies/<id>/playbooks/<name>.play.json (internal/playbook/rows.go, colony/playbook_tools.go). Go also reads Python's .play.py, but Python does not read .play.json: a Go-saved playbook is invisible after switching back (no data damage).",
+        "note": "Go-native playbook definition at colonies/<id>/playbooks/<name>.play.json (internal/playbook/rows.go, colony/playbook_tools.go). Go also reads Python's .play.py, and now writes a generated .play.py mirror beside a native playbook (internal/playbook/python_mirror.go): Python can list/run it, a hand-written mirror is never overwritten, and .play.json stays authoritative on the Go side. Tests: internal/playbook/python_mirror_test.go.",
     },
     "_tools.json": {
         "verdict": "兼容",

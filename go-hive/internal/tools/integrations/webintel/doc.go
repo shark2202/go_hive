@@ -6,9 +6,10 @@
 // enrichment (see docs/integrations-layout.md §5.5 and
 // docs/integrations-package-structure.md):
 //
-//   - NewRegistry/Register are the exported entry points the root assembly
-//     uses; the historical InstallBatch7Lane6 facade stays in the root package
-//     and forwards here, so the CLI assembly is unchanged.
+//   - NewRegistry/Register/Catalog are the exported entry points the root
+//     assembly uses; the historical InstallBatch7Lane6 facade and the
+//     upstream-name aliases stay in the root package and read the catalog
+//     here, so the CLI assembly is unchanged.
 //   - The package imports internal/tools/integrationkit and the standard
 //     library; it never imports the integrations root or internal/tools.
 //   - The historical batch7Lane6* identifiers were dropped on the way in; the

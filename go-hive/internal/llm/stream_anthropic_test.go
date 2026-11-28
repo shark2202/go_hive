@@ -5,7 +5,9 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
+	"time"
 )
 
 // Parity: core/tests/test_litellm_streaming.py::TestRealAPITextStreaming::test_text_stream
@@ -65,8 +67,16 @@ func TestAnthropicProviderStreamsTextDeltas(t *testing.T) {
 	if body["stream"] != true {
 		t.Fatalf("request stream = %#v, want true", body["stream"])
 	}
-	if body["system"] != "You are helpful." {
-		t.Fatalf("request system = %#v, want the folded system prompt", body["system"])
+	blocks, ok := body["system"].([]any)
+	if !ok || len(blocks) != 1 {
+		t.Fatalf("request system = %#v, want one cached text block", body["system"])
+	}
+	systemBlock, _ := blocks[0].(map[string]any)
+	if systemBlock["text"] != "You are helpful." {
+		t.Fatalf("request system text = %#v", systemBlock["text"])
+	}
+	if cacheControl, _ := systemBlock["cache_control"].(map[string]any); cacheControl["type"] != "ephemeral" {
+		t.Fatalf("request system cache_control = %#v", systemBlock["cache_control"])
 	}
 	if _, ok := body["messages"].([]any); !ok {
 		t.Fatalf("request messages = %#v, want the Anthropic message array", body["messages"])
@@ -232,5 +242,99 @@ func TestAnthropicProviderStreamStripsRoutingPrefix(t *testing.T) {
 	body := capture.snapshot()[0]
 	if body["model"] != "claude-haiku-4-5-20251001" {
 		t.Fatalf("wire model = %#v, want the prefix stripped", body["model"])
+	}
+}
+
+// A12: Anthropic Messages streaming retries the transient gateway family the
+// OpenAI-compatible transport retries instead of failing the turn on the
+// first 5xx.
+//
+// Parity: core/framework/llm/litellm.py::_is_stream_transient_error
+func TestAnthropicProviderStreamRetriesTransientGatewayFailure(t *testing.T) {
+	var calls atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		if calls.Add(1) == 1 {
+			writer.Header().Set("Content-Type", "application/json")
+			writer.WriteHeader(http.StatusServiceUnavailable)
+			_, _ = io.WriteString(writer, `{"error":{"message":"upstream unavailable"}}`)
+			return
+		}
+		writer.Header().Set("Content-Type", "text/event-stream")
+		writer.WriteHeader(http.StatusOK)
+		writeSSEFrame(t, writer, `data: {"type":"message_start","message":{"model":"claude-haiku-4-5-20251001","usage":{"input_tokens":5}}}`)
+		writeSSEFrame(t, writer, `data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"recovered"}}`)
+		writeSSEFrame(t, writer, `data: {"type":"message_delta","delta":{"stop_reason":"end_turn"},"usage":{"output_tokens":2}}`)
+		writeSSEFrame(t, writer, `data: {"type":"message_stop"}`)
+	}))
+	defer server.Close()
+
+	provider, err := NewAnthropicProviderWithBase("test-key", "claude-haiku-4-5-20251001", server.URL)
+	if err != nil {
+		t.Fatalf("NewAnthropicProviderWithBase: %v", err)
+	}
+	provider.Provider.SleepFunc = func(time.Duration) {}
+	var events []StreamEvent
+	completion, err := provider.ACompleteStream(context.Background(), CompletionRequest{
+		Messages: []ChatMessage{{Role: "user", Content: "hi"}},
+	}, collectStreamEvents(&events))
+	if err != nil {
+		t.Fatalf("ACompleteStream: %v", err)
+	}
+	if calls.Load() != 2 {
+		t.Fatalf("requests = %d, want one 503 then one retry", calls.Load())
+	}
+	if completion.Content != "recovered" || completion.StopReason != "stop" {
+		t.Fatalf("completion = %#v", completion)
+	}
+	var finishes, streamErrors int
+	for _, event := range events {
+		switch event.(type) {
+		case FinishEvent:
+			finishes++
+		case StreamErrorEvent:
+			streamErrors++
+		}
+	}
+	if finishes != 1 || streamErrors != 0 {
+		t.Fatalf("finishes = %d, stream errors = %d", finishes, streamErrors)
+	}
+}
+
+// A12: the transient retry is bounded; a gateway that stays down surfaces the
+// typed error after StreamTransientMaxRetries retries instead of looping.
+//
+// Parity: core/framework/llm/litellm.py::_is_stream_transient_error
+func TestAnthropicProviderStreamTransientRetryIsBounded(t *testing.T) {
+	var calls atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		calls.Add(1)
+		writer.Header().Set("Content-Type", "application/json")
+		writer.WriteHeader(http.StatusBadGateway)
+		_, _ = io.WriteString(writer, `{"error":{"message":"bad gateway"}}`)
+	}))
+	defer server.Close()
+
+	provider, err := NewAnthropicProviderWithBase("test-key", "claude-haiku-4-5-20251001", server.URL)
+	if err != nil {
+		t.Fatalf("NewAnthropicProviderWithBase: %v", err)
+	}
+	provider.Provider.SleepFunc = func(time.Duration) {}
+	var events []StreamEvent
+	if _, err := provider.ACompleteStream(context.Background(), CompletionRequest{
+		Messages: []ChatMessage{{Role: "user", Content: "hi"}},
+	}, collectStreamEvents(&events)); err == nil {
+		t.Fatal("ACompleteStream succeeded against a permanently failing gateway")
+	}
+	if got, want := calls.Load(), int32(StreamTransientMaxRetries+1); got != want {
+		t.Fatalf("requests = %d, want %d (bounded transient retry)", got, want)
+	}
+	var streamErrors int
+	for _, event := range events {
+		if _, ok := event.(StreamErrorEvent); ok {
+			streamErrors++
+		}
+	}
+	if streamErrors != 1 {
+		t.Fatalf("stream errors = %d, want the terminal error announced once", streamErrors)
 	}
 }

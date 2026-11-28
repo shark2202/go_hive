@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"strings"
 	"testing"
@@ -447,12 +448,48 @@ func TestTrackerToolRoles(t *testing.T) {
 	})
 	requireFailure(t, res, "queen-only")
 
+	// Worker-facing schemas must not advertise a scope the executor rejects
+	// (P0-2 residual): both shared tools enumerate colony only.
+	for _, name := range []string{"tracker_query", "tracker_upsert"} {
+		tool, ok := worker.Get(name)
+		if !ok {
+			t.Fatalf("worker missing %s", name)
+		}
+		if got := toolScopeEnum(t, tool); !reflect.DeepEqual(got, []any{"colony"}) {
+			t.Fatalf("%s worker scope enum = %#v, want [colony]", name, got)
+		}
+	}
+	// The queen keeps both because scope='global' is wired to the cloud DB.
+	queenQuery, _ := queen.Get("tracker_query")
+	if got := toolScopeEnum(t, queenQuery); !reflect.DeepEqual(got, []any{"colony", "global"}) {
+		t.Fatalf("queen scope enum = %#v", got)
+	}
+
 	if err := RegisterTrackerTools(NewRegistry(nil), "bogus"); err == nil || !strings.Contains(err.Error(), "role") {
 		t.Fatalf("invalid role accepted: %v", err)
 	}
 }
 
-// Parity-exempt: the global-scope short-circuit for queen-only tracker tools has
+func toolScopeEnum(t *testing.T, tool Tool) []any {
+	t.Helper()
+	properties, ok := tool.Parameters["properties"].(map[string]any)
+	if !ok {
+		t.Fatalf("%s: parameters.properties = %#v", tool.Name, tool.Parameters["properties"])
+	}
+	scope, ok := properties["scope"].(map[string]any)
+	if !ok {
+		t.Fatalf("%s: scope = %#v", tool.Name, properties["scope"])
+	}
+	values, ok := scope["enum"].([]any)
+	if !ok {
+		t.Fatalf("%s: scope enum = %#v", tool.Name, scope["enum"])
+	}
+	return values
+}
+
+// Parity-exempt: the global-scope short-circuit for queen-only tracker tools is
+// asserted here against the production EnvGlobalDB path (global_test.go covers
+// the injected-client contract).
 func TestQueenGlobalScope(t *testing.T) {
 	b := testBinding(t)
 	tools := toolSet(t, b)

@@ -8,6 +8,40 @@ import (
 	"testing"
 )
 
+// Parity: core/framework/agents/queen/reflection_agent.py::_REFLECTION_TOOLS —
+// delete_memory_file carries the model-facing `reason` slot so the reflection
+// prompt's "say why it goes" rule has a parameter to fill.
+func TestDeleteMemoryFileSchemaExposesReason(t *testing.T) {
+	for _, def := range ReflectionTools {
+		if def.Name != "delete_memory_file" {
+			continue
+		}
+		properties, ok := def.Parameters["properties"].(map[string]any)
+		if !ok {
+			t.Fatalf("properties = %#v", def.Parameters["properties"])
+		}
+		reason, ok := properties["reason"].(map[string]any)
+		if !ok {
+			t.Fatalf("delete_memory_file has no reason property: %#v", properties)
+		}
+		if reason["type"] != "string" {
+			t.Fatalf("reason type = %#v", reason["type"])
+		}
+		want := "Why it goes, e.g. 'merged into user-diet.md' or 'the user said it no longer holds'."
+		if reason["description"] != want {
+			t.Fatalf("reason description = %#v", reason["description"])
+		}
+		required, _ := def.Parameters["required"].([]string)
+		for _, name := range required {
+			if name == "reason" {
+				t.Fatal("reason must stay optional")
+			}
+		}
+		return
+	}
+	t.Fatal("delete_memory_file missing from ReflectionTools")
+}
+
 // Parity: core/framework/agents/queen/reflection_agent.py::_REFLECTION_TOOLS
 func TestReflectionToolDefinitionsMatchUpstreamContract(t *testing.T) {
 	path := filepath.Join("..", "..", "..", "contracts", "tool-definitions.json")

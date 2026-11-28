@@ -17,8 +17,8 @@
 | # | 机制 | 归属判定 | 一句话依据 |
 | --- | --- | --- | --- |
 | J1 | Level 0 短路：`skip_judge` 跳过判定，但仍发 `judge_verdict(implicit)` | **已对齐** | 两侧都有生产接线：Go `internal/server/chat_implicit_judge.go:35,51`、Python `judge_pipeline.py:76` + `agent_loop.py:3343` |
-| J2 | Level 1 判定缝（`JudgeProtocol`）+ LLM criteria judge | **已对齐**（Go 侧另有扩展；失败回落语义经 judge-j2 车道实测后对齐，见 §3.2 末条） | Go 默认适配器接线于 colony/chat（3 处 `ConfigureJudge`）；prompt 与 Python `LLMJudge` 逐字一致（golden 钉住）。Python 侧该缝无生产注入，见 §3.2 |
-| J3 | Level 2 隐式 output-key 门（缺 key 即 RETRY） | **未对齐（登记，不移植）** | Go 无 output-key accumulator、`set_output` 未接线；参考侧该门的输入也已恒空（§3.3） |
+| J2 | Level 1 判定缝（`JudgeProtocol`）+ LLM criteria judge | **已对齐**（colony/queen 生产路径无注入，与上游 `judge=None` 同形；通用 API 保留；失败回落语义经 judge-j2 车道实测后对齐，见 §3.2 末条） | Go 保留 `Judge`/`ConfigureJudge` 通用 API，但女王 `SkipJudge=true`、worker/overseer 不调用 `ConfigureJudge`（2026-11-26 移除 Go-only colony criteria 继承）；prompt 与 Python `LLMJudge` 逐字一致（golden 钉住）。Python 侧该缝同样无生产注入，见 §3.2 |
+| J3 | Level 2 隐式 output-key 门（缺 key 即 RETRY） | **已对齐（两侧输入恒空）** | 两侧活循环都拒绝 `set_output`（Go `executeTool` 逐字返回上游错误）；Go 的 accumulator/隐式门是只读扩展，输入与上游一样恒空（§3.3） |
 | J4 | Level 2b 会话质量判官 `conversation_judge.evaluate_phase_completion` | **范围外（登记）** | 唯一调用点在 `judge_pipeline.py:130`，触发条件是 graph 节点的 `success_criteria`+`llm`；Go 无 graph 运行时、无 phase/accumulator 宿主 |
 | J5 | `SubagentJudge`（含迭代余量 urgency 反馈） | **范围外（登记，不移植）** | 参考侧无生产构造调用（仅 `core/tests/test_subagent.py`）；Go 的迭代预算位置由 grace 收尾占用且已对齐（§3.5） |
 | J6 | stall-check judge（`noul`/typesafe 概率判官） | **已对齐**（另一条判定面，仅登记） | Go `internal/server/judge.go:22,65` + `stall_check.go:101`；Python `framework/server/judge.py:39` + `stall_check.py:87` |
@@ -27,9 +27,9 @@
 
 | 机制 | Python 调用链（谁调用 → 被调用） | 输入字段 | 路径 | Go 状态 | 依据 |
 | --- | --- | --- | --- | --- | --- |
-| J1 | `agent_loop.py:3325 _judge_turn` → `6223 judge_turn` → `judge_pipeline.py:76 if ctx.agent_spec.skip_judge → RETRY(feedback=None)`；事件 `agent_loop.py:3343 judge_type="custom" if self._judge else "implicit"` → `7459 _publish_judge_verdict` | `agent_spec.skip_judge` | graph 节点 + colony worker 都走（两条路径都用同一个 `agent_spec` 鸭子类型） | **有**：`chat_implicit_judge.go:35-74`（`noteImplicitJudgeVerdictDue`/`emitPendingImplicitJudgeVerdict`，`judge_type="implicit"`），门控见 `:64` `HasSuccessCriteria` | 探针 `go-implicit-verdict-event`；`wiring_check` judge 组 |
-| J2 | `agent_loop.py:6223 judge_turn(judge=self._judge)` → `judge_pipeline.py:81-96`（`JudgeProtocol.evaluate`） | `assistant_text` / `tool_calls` / `output_accumulator` / `accumulator` / `iteration` / `conversation_summary` / `output_keys` / `missing_keys` | 缝存在于两条路径，但两侧生产构造都是 `judge=None`（§3.2） | **有（Go 扩展）**：`agentloop/judge.go:58 Judge` 接口、`:98-109 ConfigureJudge`（默认 `llm_judge.go:57 NewLLMJudgeAdapterFromCompleter`）、失败回落 `:169 evaluateJudgeWithRetry`、调用点 `loop.go` 的 `runJudgeStep` 入口与 `worker_stall.go:152-157`、判定实现与判定应用 `loop_judge.go:17` | `wiring_check` judge 组 67 项（judge-j2 增 2；loop_judge 抽出后 judge 面拆为 loop.go 入口点 + loop_judge.go 三点）；`go test ./internal/agentloop -run Judge` |
-| J3 | `agent_loop.py:3356` 与 `judge_pipeline.py:104-124`（`get_missing_output_keys_fn` 见 `6313-6323`） | `OutputAccumulator`（`internals/types.py:368`） | graph 节点（声明 `output_keys` 的 NodeSpec） | **无**：Go 无 `OutputAccumulator` 类型、无 `missing_keys` 门；`synthetic_tools.go:344/491/534` 的 set_output 家族仅定义无调用方 | 探针 `go-no-output-accumulator`、`go-set-output-unwired`；动态用例 3 |
+| J1 | `agent_loop.py:3325 _judge_turn` → `6223 judge_turn` → `judge_pipeline.py:76 if ctx.agent_spec.skip_judge → RETRY(feedback=None)`；事件 `agent_loop.py:3343 judge_type="custom" if self._judge else "implicit"` → `7459 _publish_judge_verdict` | `agent_spec.skip_judge` | graph 节点 + colony worker 都走（两条路径都用同一个 `agent_spec` 鸭子类型） | **有**：`chat_implicit_judge.go:35-74`（`noteImplicitJudgeVerdictDue`/`emitPendingImplicitJudgeVerdict`，`judge_type="implicit"`；女王回合不接 loop judge，故不再有 custom 判定与之互斥） | 探针 `go-implicit-verdict-event`；`wiring_check` judge 组 |
+| J2 | `agent_loop.py:6223 judge_turn(judge=self._judge)` → `judge_pipeline.py:81-96`（`JudgeProtocol.evaluate`） | `assistant_text` / `tool_calls` / `output_accumulator` / `accumulator` / `iteration` / `conversation_summary` / `output_keys` / `missing_keys` | 缝存在于两条路径，但两侧生产构造都是 `judge=None`（§3.2） | **有（通用 API）**：`agentloop/judge.go` 的 `Judge` 接口、`ConfigureJudge`、默认 `llm_judge.go:57 NewLLMJudgeAdapterFromCompleter`、失败回落 `evaluateJudgeWithRetry`、`loop.go`/`worker_stall.go` 的 `shouldJudge` 调用、`loop_judge.go` 的判定应用；生产 queen/colony 路径不调用 `ConfigureJudge`（2026-11-26） | `wiring_check` judge 组；`go test ./internal/agentloop -run Judge` |
+| J3 | `agent_loop.py:3356` 与 `judge_pipeline.py:104-124`（`get_missing_output_keys_fn` 见 `6313-6323`） | `OutputAccumulator`（`internals/types.py:368`） | graph 节点（声明 `output_keys` 的 NodeSpec） | **有（只读扩展）**：`conversation_output.go` 的 `OutputAccumulator` + `judge.go` 的 `implicitOutputKeyVerdict`；活循环在 `executeTool` 逐字拒绝 `set_output`（w176），builder/handler 仍仅定义无调用方 | 探针 `go-no-output-accumulator`、`go-set-output-unwired`（探针按旧基线登记，见 §3.3 注） |
 | J4 | `judge_pipeline.py:126-138`（`if ctx.agent_spec.success_criteria and ctx.llm`）→ `conversation_judge.py:33 evaluate_phase_completion` → `:59 _extract_recent_context` + `:143 _format_outputs` | 最近 10 条消息（含 `set_output` 参数摘要）、`phase_name`/`phase_description`、criteria、accumulator 值；judge 预算 `max(1024, max_context_tokens//5)` | **graph 节点**（`orchestrator/orchestrator.py:764-766` 与 `node_worker.py:592-594` 都以 `judge=None` 建 loop）；触发字段可由 agent 配置抵达（`node.py:168` ← `agent_loader.py:968`） | **无宿主**：`internal/orchestrator` 只有 `buffer.go/safe_eval.go/validator.go`，无 graph/节点/边运行时，且**无人 import**；Go 无 phase 概念 | 探针 `go-no-graph-host`、`py-2b-single-call-site`、`py-criteria-config-reachable`；`internal/orchestrator` 全仓 0 引用 |
 | J5 | `judge_pipeline.py:15-39 SubagentJudge.evaluate`（`:30 remaining`、`:33/:35 URGENT/WARNING` 文案）；别名 `agent_loop.py:715` | `context["missing_keys"]` + `iteration` + `max_iterations` | 需要一个把 `SubagentJudge()` 注入 `AgentLoop(judge=…)` 的调用方 —— **不存在**（仅测试） | **无对应物**：无 judge 实现、无 urgency 文案；迭代预算位置是 grace 收尾（`loop.go:58 graceReminderBody`、`:551 announceGrace`），两侧逐字对齐 | 探针 `py-subagent-no-production-caller`、`go-iteration-feedback-is-grace`；`core/tests/test_subagent.py:1-14` 自述为 legacy 遗留面 |
 | J6 | `stall_check.py:87 judge.ask` → `judge.py:39 typesafe` | 槽位 `judge.{protocol,api_base,model,api_key,threshold}`、队列状态、固定问题/判据 | chat 会话（queen）旁路守卫 | **有**：`internal/server/judge.go:22 Protocol 表`、`:65 TypesafeJudge`、`stall_check.go:101 AskJudge` | `go test ./internal/server -run Judge`、`-run Stall` |
@@ -39,12 +39,12 @@
 ### 3.1 J1（已对齐）：`skip_judge` 的隐式判定事件
 
 Python 的 queen 是「永远在线」会话：`agents/queen/nodes/__init__.py:772` 与 `server/queen_orchestrator.py:1636` 都设 `skip_judge=True`。判官短路（`judge_pipeline.py:76-77`，`feedback=None` 表示「没有真正评估，不要注入反馈」），但 6i 仍按 `judge_type="implicit"` 发事件（`agent_loop.py:3343-3352`）。
-Go 的移植保留了事件、去掉了无意义的每轮评估：`chat_implicit_judge.go` 在下一回合开头补发上一回合的 `judge_verdict`（`judge_type="implicit"`、`action=RETRY`、空 feedback），并在有 criteria judge 时不再重复发（`:64`）。语义差异（何时发）已在文件头注明为移植口径。
+Go 的移植保留了事件、去掉了无意义的每轮评估：`chat_implicit_judge.go` 在下一回合开头补发上一回合的 `judge_verdict`（`judge_type="implicit"`、`action=RETRY`、空 feedback）。女王 spec 固定 `SkipJudge=true`，因此这是女王回合唯一的 judge 事件；语义差异（何时发）已在文件头注明为移植口径。
 
 ### 3.2 J2（已对齐）：判定缝与 criteria judge
 
 * Python 侧：`judge_pipeline.py:81-96` 是完整的 `JudgeProtocol` 缝，`agent_loop.py:6223` 传 `self._judge`。但生产构造点全部传 `judge=None`：`orchestrator/orchestrator.py:766`、`orchestrator/node_worker.py:594`、`host/colony_runtime.py:1477`（worker）与 `:2322`（overseer）、`server/queen_orchestrator.py:1611` 均未注入；`agent_loop.py:715` 的 `SubagentJudge` 别名也只被测试使用（§3.5）。即：**缝是生产可达的，注入方不是**。
-* Go 侧：同一缝（`Judge` 接口）+ 生产默认实现（`LLMJudgeAdapter` → `internal/llmjudge`），并把 criteria 的来源补齐：worker/overseer 在自己的 spec 无 criteria 时回落到 colony goal 的 criteria（`colony/runtime.go:1195-1200`、`:1290-1296`，`GoalCriteriaText`），chat 会话绑定 colony 时继承同一批 criteria（`chat_runtime_colony.go:48-70`，已标 `Parity-exempt: Go-only inheritance seam`；该段 2026-11-22 从 chat_runtime.go 拆出守文件规模预算）。
+* Go 侧：同一缝（`Judge` 接口）+ 默认实现（`LLMJudgeAdapter` → `internal/llmjudge`），但生产路径与 Python 一样不注入：女王 spec 固定 `SkipJudge=true`，colony worker/overseer 的 loop 不调用 `ConfigureJudge`。2026-11-26（w195）移除了此前的 Go-only goal criteria 继承（colony worker/overseer 不再 `GoalCriteriaText` 回落，chat 会话绑定 colony 时也不再继承 criteria）；因此 goal 即使声明 criteria，colony 自然停点与显式 `report_to_parent` 都不会注入 `[Judge feedback]`。通用 `ConfigureJudge`/`Judge` API 保留给 graph-era 与显式调用方。
 * prompt 逐字一致：`internal/llmjudge/judge.go:94-108` ↔ `core/framework/testing/llm_judge.py` 的 `LLMJudge.evaluate` 模板（205 字符）。本车道把它冻成 golden：
   `go_hive/go-hive/internal/llmjudge/testdata/prompt-parity/judge.prompt.txt`，由 `internal/llmjudge/prompt_parity_golden_test.go` 与 `go_hive/scripts/judge_prompt_golden.py` 两侧核对。
 * 已知语义差异（judge-j2 车道：已实测并修复）：judge 调用失败时，Python 的 `_judge_turn` 先重试瞬态错误、预算耗尽后回落到 ACCEPT（`agent_loop.py:6202-6270`），本车道修复前 Go 把错误归一成 RETRY + `"Judge evaluation failed: …"`（原 `judge.go:148-153`）。两侧都先用真实纯函数实跑过同一矩阵（`go_hive/scripts/judge_j2_probe.py` ↔ `internal/agentloop/judge_j2_parity_test.go`），修复后 Go 对齐 Python 的缝契约：
@@ -61,7 +61,7 @@ Go 的移植保留了事件、去掉了无意义的每轮评估：`chat_implicit
 * 修复落点（`internal/agentloop`）：`evaluateJudge` 现返回 `(JudgeVerdict, error)`，新 `evaluateJudgeWithRetry` 实现 `_judge_turn` 契约（`max(1, MaxStreamRetries)` 次尝试、`min(base*2**attempt, max_delay)` 退避、耗尽回退 ACCEPT、非瞬态上抛）；`isTransientJudgeError` 移植 `is_transient_error` 的类/关键字规则；`normalizeJudgeVerdict` 去掉 error 归一臂并把 RETRY 空反馈文案对齐为 `"Custom judge returned RETRY."`（`judge_pipeline.py:95`）；`LoopConfig` 补 `MaxStreamRetries`/`StreamRetryBackoffBase`/`StreamRetryMaxDelay`（上游 `types.py:173-175` 的镜像，默认 5/2.0/60.0）；`loop.go`/`worker_stall.go` 两处调用点把非瞬态错误作为 turn 错误返回。
 * 上游自身的边界与矛盾（重试预算借用 stream 旋钮、`OSError` 家族的过宽分类、fail-open 语义与"参考侧不可达"）逐条登记在 §6.2，不猜测。
 
-### 3.3 J3（未对齐，登记）：Level 2 output-key 门
+### 3.3 J3（已对齐，输入恒空）：Level 2 output-key 门
 
 参考侧的门本身是活的（`judge_pipeline.py:104-124`，`agent_loop.py:3356` 在 ACCEPT 后再查一次），但**输入恒空**：
 
@@ -70,7 +70,9 @@ Go 的移植保留了事件、去掉了无意义的每轮评估：`chat_implicit
 * 连 `outputs_set_this_turn` 也 0 个写入点（`agent_loop.py:4003` 声明后无人 append）。
 
 动态证据（探针用例 3）：声明 `output_keys=["findings"]` 的节点，两轮都收到 `Task incomplete. Required outputs not yet produced: ['findings']`，循环以失败结束——即该门在当前 runtime 下只能把回合推到 `max_iterations`。
-Go 侧连宿主都没有（无 accumulator、`synthetic_tools.go:344 BuildSetOutputTool` 与 `:534 SyntheticPhaseToolBuilders` 仅定义无调用方）。**移植它等于移植一个两边都不成立的契约**，故只登记：等上游给 output key 接上写入点（或 Go 决定实现 output-key 面）时重开。
+Go 侧现状（w176）：`conversation_output.go` 提供只读 `OutputAccumulator`，`judge.go` 的 `implicitOutputKeyVerdict` 实现同一 Level 2 顺序（工具结果→静默 RETRY；缺 key→`Task incomplete`；全 nullable 未设→set_output 提示）。活循环在 `executeTool` 逐字拒绝 `set_output`（错误文本与 `agent_loop.py:4864` 相同），因此 accumulator 与上游一样没有活写入点，ACCEPT/CONTINUE 的可观察输入仍恒空。`BuildSetOutputTool`/`HandleSetOutput` 保持定义，供遗留合成面与恢复了历史成功调用的会话使用。结论：**两侧活路径语义一致**；若上游将来给 output key 接上写入点，双方一起重开。
+
+注：静态探针 `go-no-output-accumulator` / `go-set-output-unwired` 是更早基线的断言；前者的“无 accumulator”前提已被后续只读实现推翻，本车道未改探针，只对齐了活循环的 dispatch 行为。
 
 ### 3.4 J4（范围外）：会话质量判官 `conversation_judge.evaluate_phase_completion`
 
@@ -100,7 +102,7 @@ Go 侧连宿主都没有（无 accumulator、`synthetic_tools.go:344 BuildSetOut
 | `go_hive/scripts/judge_python_probe.py` | 动态探针（3 用例） | 真实 `AgentLoop` 驱动 Level 2/2b 的可达性与 output-key 门现状 |
 | `go_hive/scripts/judge_prompt_golden.py` + `internal/llmjudge/testdata/prompt-parity/judge.prompt.txt` | 跨语言 golden | judge prompt 逐字冻结（Python 侧提取模板、Go 侧 `buildPrompt("%s"×4)` 比对） |
 | `internal/llmjudge/prompt_parity_golden_test.go` | 单测 | golden 漂移即失败（已用 1 字符漂移验证会红） |
-| `go_hive/scripts/wiring_check.py`（新增 6 个接线点 / 17 项要求；judge-j2 车道再增 2 项，现 20 接线文件 / 67 要求） | 接线门禁 | 把「判定仍在主循环、宿主仍接线」纳入既有门禁 |
+| `go_hive/scripts/wiring_check.py`（judge 组；w195 后为 23 接线文件 / 66 项要求） | 接线门禁 | 把「判定仍在主循环、宿主仍接线」纳入既有门禁；queen/colony 不再有 `ConfigureJudge` 接线点，女王 `SkipJudge=true` 由 `chat_runtime.go` 守护 |
 | `go_hive/docs/appearance-scope-registry.json`（新维度 `judge`） | 登记 | 6 个机制的状态与依据；J3 未对齐与 J4/J5 范围外的结论都在这里 |
 
 ## 5. 试验证据
@@ -128,11 +130,12 @@ python go_hive/scripts/judge_scope_probe.py --dynamic
 
 ```
 python go_hive/scripts/wiring_check.py --root go_hive/go-hive
-  wiring_check: OK —— 20 个接线文件、67 项要求全部命中（loop_judge 抽出后）
+  wiring_check: OK —— 23 个接线文件、66 项要求全部命中
 python go_hive/scripts/wiring_check.py --self-test
-  wiring_check self-test: OK —— 20 个接线文件、67 项要求，缺失会被报出
+  wiring_check self-test: OK —— 23 个接线文件、66 项要求，缺失会被报出
 python go_hive/scripts/judge_scope_probe.py
-  judge_scope_probe: OK —— 16 条静态断言全部与 docs/judge-parity.md 一致
+  judge_scope_probe: 15/16 PASS；唯一失败是 §3.3 已登记的旧基线断言
+  go-no-output-accumulator（Go 已有只读 accumulator/隐式门，探针未随 w176 更新）
 python go_hive/scripts/judge_prompt_golden.py
   judge_prompt_golden: OK —— 205 chars match …
 ```

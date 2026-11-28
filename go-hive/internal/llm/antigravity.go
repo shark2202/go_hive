@@ -301,14 +301,14 @@ func (p *AntigravityProvider) ACompleteStream(ctx context.Context, req Completio
 	body := p.buildBody(ChatMessagesToMaps(req.Messages), system, req.Tools, maxTokens)
 	response, err := p.post(ctx, body, true)
 	if err != nil {
-		emit(StreamErrorEvent{Error: err.Error()})
+		emit(NewStreamErrorEvent(err))
 		return Completion{}, err
 	}
 	defer response.Body.Close()
 
 	result, err := p.parseAntigravitySSE(ctx, response.Body, emit)
 	if err != nil {
-		emit(StreamErrorEvent{Error: err.Error()})
+		emit(NewStreamErrorEvent(err))
 		return Completion{}, err
 	}
 	emitStreamTail(result, emit)

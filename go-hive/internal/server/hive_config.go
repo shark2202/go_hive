@@ -2,9 +2,7 @@ package server
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/shark2202/go_hive/go-hive/internal/hiveconf"
@@ -29,33 +27,6 @@ func StallCheckEnabled(home hivehome.Home) bool {
 		}
 	}
 	return pyTruthy(HiveConfig(home)["stall_check"])
-}
-
-func pyTruthy(value any) bool {
-	switch v := value.(type) {
-	case nil:
-		return false
-	case bool:
-		return v
-	case string:
-		return v != ""
-	case json.Number:
-		f, err := v.Float64()
-		return err != nil || f != 0
-	case float64:
-		return v != 0
-	case float32:
-		return v != 0
-	case int:
-		return v != 0
-	case int64:
-		return v != 0
-	case []any:
-		return len(v) > 0
-	case map[string]any:
-		return len(v) > 0
-	}
-	return true
 }
 
 // GcuViewportScaleDefault / GcuViewportScaleMin / GcuViewportScaleMax are the
@@ -101,66 +72,6 @@ func pythonNumber(value any) (float64, bool) {
 		return float64(v), true
 	case int64:
 		return float64(v), true
-	case bool:
-		if v {
-			return 1, true
-		}
-		return 0, true
-	}
-	return 0, false
-}
-
-func pyStr(value any) string {
-	switch v := value.(type) {
-	case nil:
-		return ""
-	case string:
-		return v
-	case bool:
-		if v {
-			return "True"
-		}
-		return "False"
-	case json.Number:
-		return v.String()
-	case float64:
-		s := strconv.FormatFloat(v, 'g', -1, 64)
-		if !strings.ContainsAny(s, ".eE") && !strings.Contains(s, "Inf") && !strings.Contains(s, "NaN") {
-			s += ".0"
-		}
-		return s
-	case float32:
-		return pyStr(float64(v))
-	case int:
-		return strconv.Itoa(v)
-	case int64:
-		return strconv.FormatInt(v, 10)
-	}
-	return fmt.Sprintf("%v", value)
-}
-
-func toFloat(value any) (float64, bool) {
-	switch v := value.(type) {
-	case json.Number:
-		f, err := v.Float64()
-		if err != nil {
-			return 0, false
-		}
-		return f, true
-	case float64:
-		return v, true
-	case float32:
-		return float64(v), true
-	case int:
-		return float64(v), true
-	case int64:
-		return float64(v), true
-	case string:
-		f, err := strconv.ParseFloat(strings.TrimSpace(v), 64)
-		if err != nil {
-			return 0, false
-		}
-		return f, true
 	case bool:
 		if v {
 			return 1, true

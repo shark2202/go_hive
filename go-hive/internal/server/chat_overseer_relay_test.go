@@ -1,6 +1,11 @@
 package server
 
-// Parity: framework/host/colony_runtime.py::ColonyRuntime.start_overseer
+// Parity-exempt (Go-only opt-in): every test in this file manually starts the
+// dormant live overseer; Hive 1.0.15 production never attaches one. The
+// "Parity:" markers below cite the upstream behavior each test mirrors, not a
+// production Go caller.
+//
+// Upstream reference: framework/host/colony_runtime.py::ColonyRuntime.start_overseer
 // (the overseer receives the user's chat: session.colony_runtime.overseer.inject)
 
 import (
@@ -232,9 +237,16 @@ func TestChatRuntimeRelayOwnsReportsAndTriggers(t *testing.T) {
 }
 
 // Parity: framework/server/routes_sessions.py::handle_session_chat (fallback)
+// Reference production ownership (Hive 1.0.15): a ChatRuntime bound to a
+// colony never has a live overseer on the normal path, so Deliver runs the
+// chat runtime's own queen loop. The live-overseer relay is a dormant Go-only
+// extension exercised by the opt-in relay tests.
 func TestChatRuntimeWithoutOverseerKeepsChatQueen(t *testing.T) {
 	overseerProvider := &overseerRecordLLM{replies: []string{"idle"}}
 	colonyRuntime := startRelayColony(t, overseerProvider)
+	if overseerID := colonyRuntime.OverseerID(); overseerID != "" {
+		t.Fatalf("colony has a live overseer id %q; the reference production path has none", overseerID)
+	}
 
 	chatProvider := &fakeChatLLM{}
 	chatRuntime, err := NewChatRuntime(ChatRuntimeDeps{
@@ -255,7 +267,25 @@ func TestChatRuntimeWithoutOverseerKeepsChatQueen(t *testing.T) {
 	if !waitForServerCondition(3*time.Second, func() bool { return chatProvider.requestCount() >= 1 }) {
 		t.Fatal("a colony without an overseer dropped the client message")
 	}
+	// The chat queen's own loop ran the turn: a model request carries the
+	// client message. Nothing was relayed into the dormant overseer slot.
+	chatProvider.mu.Lock()
+	sawQuestion := false
+	for _, request := range chatProvider.requests {
+		for _, message := range request.Messages {
+			if message.Role == "user" && strings.Contains(message.Content, question) {
+				sawQuestion = true
+			}
+		}
+	}
+	chatProvider.mu.Unlock()
+	if !sawQuestion {
+		t.Fatal("the chat queen's model never received the client message")
+	}
 	if overseerProvider.sawUserText(question) {
 		t.Fatal("a message was injected into a colony with no overseer")
+	}
+	if overseerProvider.callCount() != 0 {
+		t.Fatalf("dormant overseer ran %d turn(s), want 0", overseerProvider.callCount())
 	}
 }

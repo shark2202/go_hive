@@ -2,6 +2,7 @@ package skills
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -81,7 +82,7 @@ func (e *OverrideEntry) ToDict() map[string]any {
 		out["notes"] = *e.Notes
 	}
 	if e.CreatedAt != nil {
-		out["created_at"] = e.CreatedAt.Format(time.RFC3339Nano)
+		out["created_at"] = pythonTimestamp(*e.CreatedAt)
 	}
 	if e.CreatedBy != nil {
 		out["created_by"] = *e.CreatedBy
@@ -273,6 +274,19 @@ func (s *SkillOverrideStore) Save() error {
 }
 
 func UTCNow() time.Time { return time.Now().UTC() }
+
+// pythonTimestamp renders t the way datetime.isoformat() does: microsecond
+// precision when the clock has a sub-second component, and a numeric UTC
+// offset ("+00:00") rather than the "Z" time.RFC3339 emits for UTC. Python
+// writes created_at through this layout, so matching it byte-for-byte lets
+// either implementation read the other's override files.
+func pythonTimestamp(t time.Time) string {
+	rendered := t.Format("2006-01-02T15:04:05")
+	if micro := t.Nanosecond() / 1000; micro != 0 {
+		rendered += "." + fmt.Sprintf("%06d", micro)
+	}
+	return rendered + t.Format("-07:00")
+}
 
 func pyInt(v any, fallback int) int {
 	switch typed := v.(type) {

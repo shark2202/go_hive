@@ -1,10 +1,19 @@
 #!/usr/bin/env bash
-# go-hive-cloud L2a smoke (M1 acceptance):
-#   1. build the service, boot it on a random port with a throwaway data dir
-#   2. mint an operator JWT with the real `hive-cloud token` command
-#   3. drive every global-db method with the REAL go_hive client
-#      (harness/globaldb-smoke → github.com/shark2202/go_hive/go-hive/internal/globaldb)
-#   4. assert the harness verdict and leave evidence at evidence/globaldb-smoke.json
+# go-hive-cloud smoke entrypoint:
+#   1. L2a: global-db with the REAL go_hive client (evidence/globaldb-smoke.json)
+#   2. L2b: inbox closed loop with the REAL go_hive sentinel client
+#      (evidence/inbox-smoke.json)
+#   3. L2 M3: streamToken rotation with the REAL Python runtime client +
+#      `hive` LLM credential validation with the REAL go_hive keycheck
+#      (evidence/m3-smoke.json)
+#   4. L2 M5: Messages JSON/SSE pass-through with the REAL go_hive Anthropic
+#      client + real hive-cloud binary + local fake upstream
+#      (evidence/m5-smoke.json)
+#   5. L2 M4: grid_query-generated Postgres SQL through the REAL go_hive
+#      global-db client + the /v1/crm/* generic grid subset
+#      (evidence/m4-smoke.json)
+#
+# Each stage boots its own throwaway server on a random port.
 #
 # Toolchain: source the lane goenv (go1.26.11 + module cache) before running, or
 # point GOENV at it.
@@ -81,3 +90,13 @@ if ! grep -q '"name": "list_rows_introspect"' "$ROOT/evidence/globaldb-smoke.jso
   exit 1
 fi
 echo "smoke: OK — evidence at evidence/globaldb-smoke.json"
+
+echo "smoke: running the M2 inbox closed-loop stage"
+"$HERE/inbox-smoke.sh"
+echo "smoke: running the M3 streamToken rotation + hive LLM credential stage"
+"$HERE/m3-smoke.sh"
+echo "smoke: running the M5 Messages/images pass-through stage"
+"$HERE/m5-smoke.sh"
+echo "smoke: running the M4 CRM/grid_query stage"
+"$HERE/m4-smoke.sh"
+echo "smoke: OK — evidence at evidence/globaldb-smoke.json, evidence/inbox-smoke.json, evidence/m3-smoke.json, evidence/m5-smoke.json and evidence/m4-smoke.json"

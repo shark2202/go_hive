@@ -2,16 +2,20 @@ package server
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
+	"github.com/shark2202/go_hive/go-hive/internal/agentloop"
 	"github.com/shark2202/go_hive/go-hive/internal/colony"
 	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/llm"
 	"github.com/shark2202/go_hive/go-hive/internal/skills"
 	"github.com/shark2202/go_hive/go-hive/internal/tasks"
 )
@@ -625,5 +629,291 @@ func TestColonyWorkerRoutesWithoutRuntime(t *testing.T) {
 	decodeColonyWorkerBody(t, raw, &payload)
 	if payload.Workers == nil || len(payload.Workers) != 0 {
 		t.Errorf("workers = %v, want []", payload.Workers)
+	}
+}
+
+// Parity: framework/server/routes_colony_workers.py::_walk_colony_workers
+// (attribution by meta.json queen_session_id, started_at from spawned_at,
+// batch coordinates from batch_index/batch_size/worker_seq)
+//
+// Worker surface: the meta.json the Go colony runtime writes must be readable
+// by the routes that render a terminated worker — otherwise a worker that ran
+// fine disappears from the dashboard the moment its runtime is gone.
+func TestWorkerSurfaceReadsColonyMetaLineage(t *testing.T) {
+	surface := &fakeColonyWorkerSurface{colonyID: "test_colony"}
+	deps, manager, home := colonyWorkerTestDeps(t, surface)
+	manager.AddSession(NewSession("s1", nil))
+
+	workerDir := filepath.Join(home.ColoniesDir(), "test_colony", "workers", "w_lineage")
+	if err := os.MkdirAll(workerDir, 0o755); err != nil {
+		t.Fatalf("mkdir worker dir: %v", err)
+	}
+	// Exactly the shape writeWorkerMeta produces.
+	writeServerTestJSON(t, filepath.Join(workerDir, "meta.json"), map[string]any{
+		"worker_id":        "w_lineage",
+		"queen_session_id": "s1",
+		"queen_name":       "queen_growth",
+		"colony_id":        "test_colony",
+		"spawned_at":       1700000000.25,
+		"task":             "scrape page 7",
+		"profile_name":     "researcher",
+		"goal":             "Scraping page 7",
+		"batch_id":         "rpw_20260101T000000Z_abcd1234",
+		"batch_index":      2,
+		"batch_size":       3,
+		"worker_seq":       5,
+	})
+	writeServerTestJSON(t, filepath.Join(workerDir, "result.json"), map[string]any{
+		"status":  "success",
+		"summary": "done",
+	})
+
+	recorder, raw := colonyWorkerDo(t, deps, http.MethodGet, "/api/sessions/s1/workers", nil)
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (%s)", recorder.Code, string(raw))
+	}
+	var list struct {
+		Workers []struct {
+			WorkerID       string  `json:"worker_id"`
+			Status         string  `json:"status"`
+			StartedAt      float64 `json:"started_at"`
+			QueenSessionID string  `json:"queen_session_id"`
+			QueenName      string  `json:"queen_name"`
+			Batch          struct {
+				BatchID    string `json:"batch_id"`
+				BatchIndex int    `json:"batch_index"`
+				BatchSize  int    `json:"batch_size"`
+				WorkerSeq  int    `json:"worker_seq"`
+			} `json:"batch"`
+		} `json:"workers"`
+	}
+	decodeColonyWorkerBody(t, raw, &list)
+	var entry *struct {
+		WorkerID       string  `json:"worker_id"`
+		Status         string  `json:"status"`
+		StartedAt      float64 `json:"started_at"`
+		QueenSessionID string  `json:"queen_session_id"`
+		QueenName      string  `json:"queen_name"`
+		Batch          struct {
+			BatchID    string `json:"batch_id"`
+			BatchIndex int    `json:"batch_index"`
+			BatchSize  int    `json:"batch_size"`
+			WorkerSeq  int    `json:"worker_seq"`
+		} `json:"batch"`
+	}
+	for index := range list.Workers {
+		if list.Workers[index].WorkerID == "w_lineage" {
+			entry = &list.Workers[index]
+		}
+	}
+	if entry == nil {
+		t.Fatalf("w_lineage missing from the workers list: %s", string(raw))
+	}
+	if entry.Status != "historical" {
+		t.Errorf("status = %q, want historical", entry.Status)
+	}
+	if entry.StartedAt != 1700000000.25 {
+		// spawned_at must win over the directory mtime.
+		t.Errorf("started_at = %v, want the meta spawned_at (1700000000.25)", entry.StartedAt)
+	}
+	if entry.QueenSessionID != "s1" || entry.QueenName != "queen_growth" {
+		t.Errorf("lineage = %q/%q, want s1/queen_growth", entry.QueenSessionID, entry.QueenName)
+	}
+	if entry.Batch.BatchID != "rpw_20260101T000000Z_abcd1234" || entry.Batch.BatchIndex != 2 ||
+		entry.Batch.BatchSize != 3 || entry.Batch.WorkerSeq != 5 {
+		t.Errorf("batch = %+v, want the rpw_ id with 2/3 and worker_seq 5", entry.Batch)
+	}
+
+	recorder, raw = colonyWorkerDo(t, deps, http.MethodGet, "/api/sessions/s1/workers/w_lineage", nil)
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("detail status = %d, want 200 (%s)", recorder.Code, string(raw))
+	}
+	var detail struct {
+		Worker struct {
+			WorkerID       string `json:"worker_id"`
+			QueenSessionID string `json:"queen_session_id"`
+			QueenName      string `json:"queen_name"`
+			Batch          struct {
+				WorkerSeq int `json:"worker_seq"`
+			} `json:"batch"`
+		} `json:"worker"`
+	}
+	decodeColonyWorkerBody(t, raw, &detail)
+	if detail.Worker.QueenSessionID != "s1" || detail.Worker.QueenName != "queen_growth" {
+		t.Errorf("detail lineage = %q/%q, want s1/queen_growth", detail.Worker.QueenSessionID, detail.Worker.QueenName)
+	}
+	if detail.Worker.Batch.WorkerSeq != 5 {
+		t.Errorf("detail worker_seq = %d, want 5", detail.Worker.Batch.WorkerSeq)
+	}
+}
+
+// Parity: framework/server/routes_colony_workers.py::_walk_colony_workers
+// ("Workers without a meta.json are skipped because we can't attribute them
+// safely")
+//
+// Negative regression: a meta.json without queen_session_id is NOT attributed
+// to the session. That is what the pre-fix Go writer produced, and it is why a
+// Go-spawned worker used to vanish from the surface once its runtime was gone —
+// the walk must keep refusing unattributable directories rather than list every
+// worker in the colony.
+func TestWorkerSurfaceSkipsUnattributedLegacyMeta(t *testing.T) {
+	surface := &fakeColonyWorkerSurface{colonyID: "test_colony"}
+	deps, manager, home := colonyWorkerTestDeps(t, surface)
+	manager.AddSession(NewSession("s1", nil))
+
+	workersDir := filepath.Join(home.ColoniesDir(), "test_colony", "workers")
+	legacy := filepath.Join(workersDir, "w_unattributed")
+	if err := os.MkdirAll(legacy, 0o755); err != nil {
+		t.Fatalf("mkdir worker dir: %v", err)
+	}
+	// The old Go shape: no queen_session_id, no queen_name, no spawned_at.
+	writeServerTestJSON(t, filepath.Join(legacy, "meta.json"), map[string]any{
+		"worker_id":    "w_unattributed",
+		"colony_id":    "test_colony",
+		"task":         "orphan",
+		"batch_id":     "batch_3",
+		"batch_index":  0,
+		"batch_size":   2,
+		"profile_name": "",
+	})
+
+	recorder, raw := colonyWorkerDo(t, deps, http.MethodGet, "/api/sessions/s1/workers", nil)
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (%s)", recorder.Code, string(raw))
+	}
+	var list struct {
+		Workers []struct {
+			WorkerID string `json:"worker_id"`
+		} `json:"workers"`
+	}
+	decodeColonyWorkerBody(t, raw, &list)
+	for _, worker := range list.Workers {
+		if worker.WorkerID == "w_unattributed" {
+			t.Fatalf("w_unattributed has no queen_session_id and must not be attributed to s1: %s", string(raw))
+		}
+	}
+
+	// The detail read still resolves the directory directly, and reports the
+	// missing lineage as null rather than inventing one.
+	recorder, raw = colonyWorkerDo(t, deps, http.MethodGet, "/api/sessions/s1/workers/w_unattributed", nil)
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("detail status = %d, want 200 (%s)", recorder.Code, string(raw))
+	}
+	var detail struct {
+		Worker struct {
+			QueenSessionID any `json:"queen_session_id"`
+			QueenName      any `json:"queen_name"`
+		} `json:"worker"`
+	}
+	decodeColonyWorkerBody(t, raw, &detail)
+	if detail.Worker.QueenSessionID != nil || detail.Worker.QueenName != nil {
+		t.Fatalf("detail lineage = %v/%v, want null/null for an unattributed meta",
+			detail.Worker.QueenSessionID, detail.Worker.QueenName)
+	}
+}
+
+// metaSurfaceLLM is a one-line completion source: enough for a spawned worker
+// to run a turn and terminate without tool calls.
+type metaSurfaceLLM struct{}
+
+func (metaSurfaceLLM) AComplete(context.Context, llm.CompletionRequest) (llm.Completion, error) {
+	return llm.Completion{Content: "done", StopReason: "stop"}, nil
+}
+
+// Parity: framework/host/colony_runtime.py::ColonyRuntime.spawn (meta.json)
+// Parity: framework/server/routes_colony_workers.py::_walk_colony_workers
+//
+// Round trip: workers spawned by the real Go colony runtime must be readable by
+// the HTTP worker surface purely from disk. The surface used here reports no
+// in-memory workers, so a worker only shows up if the meta.json the runtime
+// wrote carries the lineage the walk filters on.
+func TestWorkerSurfaceRoundTripsSpawnedWorkerMeta(t *testing.T) {
+	deps, manager, home := colonyWorkerTestDeps(t, &fakeColonyWorkerSurface{colonyID: "roundtrip_colony"})
+	colonyDir := filepath.Join(home.ColoniesDir(), "roundtrip_colony")
+	if err := os.MkdirAll(colonyDir, 0o755); err != nil {
+		t.Fatalf("mkdir colony: %v", err)
+	}
+
+	runtime := colony.NewColonyRuntime(colony.RuntimeOptions{
+		AgentSpec:   agentloop.AgentSpec{ID: "roundtrip", Name: "Roundtrip"},
+		StoragePath: colonyDir,
+		LLM:         metaSurfaceLLM{},
+		Tools:       []llm.ToolDef{},
+		ToolExecutor: func(agentloop.ToolCallRequest) (agentloop.ToolResult, error) {
+			return agentloop.ToolResult{Content: "ok"}, nil
+		},
+		StreamID:  "s_roundtrip",
+		QueenName: "queen_growth",
+	})
+	if err := runtime.Start(context.Background()); err != nil {
+		t.Fatalf("start colony: %v", err)
+	}
+
+	ids, err := runtime.SpawnBatch(context.Background(), []colony.BatchTask{
+		{Task: "first"},
+		{Task: "second"},
+	})
+	if err != nil {
+		runtime.Stop()
+		t.Fatalf("spawn batch: %v", err)
+	}
+	for _, id := range ids {
+		if worker := runtime.GetWorker(id); worker != nil {
+			worker.Wait()
+		}
+	}
+	// The runtime going away is the point: from here only disk can answer.
+	runtime.Stop()
+
+	manager.AddSession(NewSession("s_roundtrip", nil))
+
+	recorder, raw := colonyWorkerDo(t, deps, http.MethodGet, "/api/sessions/s_roundtrip/workers", nil)
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (%s)", recorder.Code, string(raw))
+	}
+	var list struct {
+		Workers []struct {
+			WorkerID       string `json:"worker_id"`
+			Status         string `json:"status"`
+			QueenSessionID string `json:"queen_session_id"`
+			QueenName      string `json:"queen_name"`
+			Batch          struct {
+				BatchID    string `json:"batch_id"`
+				BatchIndex int    `json:"batch_index"`
+				BatchSize  int    `json:"batch_size"`
+			} `json:"batch"`
+		} `json:"workers"`
+	}
+	decodeColonyWorkerBody(t, raw, &list)
+
+	found := map[string]int{}
+	for _, worker := range list.Workers {
+		if worker.Status != "historical" {
+			t.Fatalf("worker %s status = %q, want historical", worker.WorkerID, worker.Status)
+		}
+		if worker.QueenSessionID != "s_roundtrip" || worker.QueenName != "queen_growth" {
+			t.Fatalf("worker %s lineage = %q/%q, want s_roundtrip/queen_growth",
+				worker.WorkerID, worker.QueenSessionID, worker.QueenName)
+		}
+		if worker.Batch.BatchSize != len(ids) {
+			t.Fatalf("worker %s batch_size = %d, want %d", worker.WorkerID, worker.Batch.BatchSize, len(ids))
+		}
+		if !strings.HasPrefix(worker.Batch.BatchID, "rpw_") {
+			t.Fatalf("worker %s batch_id = %q, want an rpw_ prefix", worker.WorkerID, worker.Batch.BatchID)
+		}
+		found[worker.WorkerID] = worker.Batch.BatchIndex
+	}
+	if len(found) != len(ids) {
+		t.Fatalf("listed %d of %d spawned workers: %s", len(found), len(ids), string(raw))
+	}
+	seen := map[int]struct{}{}
+	for id, index := range found {
+		if index < 1 || index > len(ids) {
+			t.Fatalf("worker %s batch_index = %d, want 1..%d", id, index, len(ids))
+		}
+		if _, duplicate := seen[index]; duplicate {
+			t.Fatalf("batch_index %d assigned to more than one worker", index)
+		}
+		seen[index] = struct{}{}
 	}
 }

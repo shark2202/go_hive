@@ -1,0 +1,334 @@
+{
+  "probe": "g2-rollback-manifest",
+  "version": 1,
+  "home": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback-rerun/rollback/home",
+  "file_count": 54,
+  "dir_count": 52,
+  "markers": {
+    ".migrated-v2": true,
+    ".migrated-v3": false,
+    "colony_sessions_v1": false
+  },
+  "files": {
+    ".migrated-v2": {
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+      "size": 2
+    },
+    "configuration.json": {
+      "sha256": "ac81cca5f7fa4b18851d2ece37dd89662959290dea4e675f0ac84d17667c3383",
+      "size": 87
+    },
+    "trusted_repos.json": {
+      "sha256": "363e34732c8e438884e9bfddca0dbb87994537ecd5b202384412a8ec46aa6969",
+      "size": 60
+    },
+    "agents/alpha/scout/worker.json": {
+      "sha256": "a98c452c85b3d9b487fbd83a1f4a3b77e921e40c4c5ab6e86c82b505867ca98a",
+      "size": 57
+    },
+    "agents/alpha/scout/sessions/session_20260201_000004_eeeeeeee/state.json": {
+      "sha256": "ef9d3585c37653ded51349cd273c38f37fd71891aa7ca3f3dbc97fc1e8473c2b",
+      "size": 1433
+    },
+    "agents/alpha/worker/conversations/cursor.json": {
+      "sha256": "60317667196e17e55b377078454c389b812775ee4f220c56325a1c71464358b5",
+      "size": 19
+    },
+    "agents/alpha/worker/conversations/meta.json": {
+      "sha256": "f7fc90b487d18d6140e95d252870a83e21bb497eb27364a9c29b20bd248d099d",
+      "size": 70
+    },
+    "agents/alpha/worker/conversations/parts/0000000000.json": {
+      "sha256": "deeb5ff3ddd3594b91fb4e422c39c064fe7d5145857d6cb1432c3840eafdba06",
+      "size": 80
+    },
+    "agents/queens/queen_growth/profile.yaml": {
+      "sha256": "7917c2d998580e4b35fa2b2c326f504cd6ce5af580a7246caa48c17eef7d4e0d",
+      "size": 32
+    },
+    "agents/queens/queen_growth/sessions/session_20260201_000001_bbbbbbbb/meta.json": {
+      "sha256": "8ad1f885df8d44ba6c1babd1d501dd3152249dbcc2b2664d459a76e6de7170c3",
+      "size": 174
+    },
+    "agents/queens/queen_growth/sessions/session_20260201_000001_bbbbbbbb/state.json": {
+      "sha256": "f7adc1277ece5747cb7bb8de8f003c80cd99d59a48bd091e1a27d73438d57522",
+      "size": 1437
+    },
+    "agents/queens/queen_growth/sessions/session_20260201_000001_bbbbbbbb/conversations/cursor.json": {
+      "sha256": "8d1ac3253668710ebb75f3ac1a60f27725148fb7b328622dc1cf646470667acc",
+      "size": 19
+    },
+    "agents/queens/queen_growth/sessions/session_20260201_000001_bbbbbbbb/conversations/meta.json": {
+      "sha256": "7cf3fb03219afc57e38a036d758cd19e326c79a6224e82a4f33c889687bceeb6",
+      "size": 239
+    },
+    "agents/queens/queen_growth/sessions/session_20260201_000001_bbbbbbbb/conversations/parts/0000000000.json": {
+      "sha256": "7529690f41233bc1b947e1043ad90261ddffd218577af40661dc4b797c948a11",
+      "size": 104
+    },
+    "agents/queens/queen_growth/sessions/session_20260201_000001_bbbbbbbb/conversations/parts/0000000001.json": {
+      "sha256": "426aad1466cdf7f23f33e65f6315ac6690780e2efba13d5b9a2861a2adf430ca",
+      "size": 85
+    },
+    "agents/queens/queen_growth/sessions/session_20260201_000002_cccccccc/meta.json": {
+      "sha256": "73aa7600775d8f30294773163e5ce5d4594564502bf6afdbfda6bd306ce9be1d",
+      "size": 314
+    },
+    "agents/queens/queen_growth/sessions/session_20260201_000002_cccccccc/conversations/cursor.json": {
+      "sha256": "8d1ac3253668710ebb75f3ac1a60f27725148fb7b328622dc1cf646470667acc",
+      "size": 19
+    },
+    "agents/queens/queen_growth/sessions/session_20260201_000002_cccccccc/conversations/meta.json": {
+      "sha256": "7cf3fb03219afc57e38a036d758cd19e326c79a6224e82a4f33c889687bceeb6",
+      "size": 239
+    },
+    "agents/queens/queen_growth/sessions/session_20260201_000002_cccccccc/conversations/parts/0000000000.json": {
+      "sha256": "7529690f41233bc1b947e1043ad90261ddffd218577af40661dc4b797c948a11",
+      "size": 104
+    },
+    "agents/queens/queen_growth/sessions/session_20260201_000002_cccccccc/conversations/parts/0000000001.json": {
+      "sha256": "426aad1466cdf7f23f33e65f6315ac6690780e2efba13d5b9a2861a2adf430ca",
+      "size": 85
+    },
+    "agents/queens/queen_growth/sessions/session_20260201_000003_dddddddd/meta.json": {
+      "sha256": "0694a963c3799a52d0ed1339e942a63262ad266ee372e6d9c8120956322e8a8b",
+      "size": 337
+    },
+    "agents/queens/queen_growth/sessions/session_20260201_000003_dddddddd/conversations/cursor.json": {
+      "sha256": "8d1ac3253668710ebb75f3ac1a60f27725148fb7b328622dc1cf646470667acc",
+      "size": 19
+    },
+    "agents/queens/queen_growth/sessions/session_20260201_000003_dddddddd/conversations/meta.json": {
+      "sha256": "7cf3fb03219afc57e38a036d758cd19e326c79a6224e82a4f33c889687bceeb6",
+      "size": 239
+    },
+    "agents/queens/queen_growth/sessions/session_20260201_000003_dddddddd/conversations/parts/0000000000.json": {
+      "sha256": "7529690f41233bc1b947e1043ad90261ddffd218577af40661dc4b797c948a11",
+      "size": 104
+    },
+    "agents/queens/queen_growth/sessions/session_20260201_000003_dddddddd/conversations/parts/0000000001.json": {
+      "sha256": "426aad1466cdf7f23f33e65f6315ac6690780e2efba13d5b9a2861a2adf430ca",
+      "size": 85
+    },
+    "agents/queens/queen_growth/skills/briefing/SKILL.md": {
+      "sha256": "f2f15b19dea9d64c3d959fae5805949a9c566d32562421719c4c585404e4a0c5",
+      "size": 11
+    },
+    "colonies/alpha/colony.db": {
+      "sha256": "da2c859f2d05bd7f4ecd7a65babf2560a36053de6ac99223ffb024137acf5559",
+      "size": 12288
+    },
+    "colonies/alpha/metadata.json": {
+      "sha256": "e29733dbf16961af3b5ba7677528eeea8ec5abb5788dcfc6fa310914a6f554d8",
+      "size": 186
+    },
+    "colonies/alpha/tools.json": {
+      "sha256": "503255f721e2e69d3c662075e7de83be6f95db199f89f9f3444861858d7bf12c",
+      "size": 108
+    },
+    "colonies/alpha/triggers.json": {
+      "sha256": "a5fe5e110f9090fc27184fa113dab6863005b220c4d88b095bcfe6178e262051",
+      "size": 307
+    },
+    "colonies/alpha/worker.json": {
+      "sha256": "174accd81013386cbc6a7997bd0bb5e6ce52cfd956b9c265ad4a3e3383189e5c",
+      "size": 93
+    },
+    "colonies/alpha/data/tracker.db": {
+      "sha256": "bf5a521a6f7ede17d7f6217752d9fa1c21cd2f8173fc7a231f750dd901056a81",
+      "size": 36864
+    },
+    "colonies/alpha/queens/queen_growth/sessions/session_20260202_000002_11111111/events.jsonl": {
+      "sha256": "3fa846b8793a8caa2a6872aa7059c3f4949af545b85884c1c1fb8b25e38cbb95",
+      "size": 41
+    },
+    "colonies/alpha/skills/briefing/SKILL.md": {
+      "sha256": "31c0633d9ed4a5861218bd42924fc14e168e310a87fff8a8468015d82376055f",
+      "size": 18
+    },
+    "colonies/beta/metadata.json": {
+      "sha256": "ff48a18f5889682ba3a3395c1e1951e8a6a078ce6dfb18d5f2e54799dfae47ca",
+      "size": 50
+    },
+    "colonies/beta/data/tracker.db": {
+      "sha256": "bf5a521a6f7ede17d7f6217752d9fa1c21cd2f8173fc7a231f750dd901056a81",
+      "size": 36864
+    },
+    "colonies/beta/queen/session_20260203_000001_22222222/meta.json": {
+      "sha256": "9b019389dcb95af8f366b3bfaadcffe55932264fba8a4fe1cafc484a016875ca",
+      "size": 171
+    },
+    "colonies/beta/queen/session_20260203_000001_22222222/conversations/cursor.json": {
+      "sha256": "8d1ac3253668710ebb75f3ac1a60f27725148fb7b328622dc1cf646470667acc",
+      "size": 19
+    },
+    "colonies/beta/queen/session_20260203_000001_22222222/conversations/meta.json": {
+      "sha256": "7cf3fb03219afc57e38a036d758cd19e326c79a6224e82a4f33c889687bceeb6",
+      "size": 239
+    },
+    "colonies/beta/queen/session_20260203_000001_22222222/conversations/parts/0000000000.json": {
+      "sha256": "7529690f41233bc1b947e1043ad90261ddffd218577af40661dc4b797c948a11",
+      "size": 104
+    },
+    "colonies/beta/queen/session_20260203_000001_22222222/conversations/parts/0000000001.json": {
+      "sha256": "426aad1466cdf7f23f33e65f6315ac6690780e2efba13d5b9a2861a2adf430ca",
+      "size": 85
+    },
+    "mcp_registry/installed.json": {
+      "sha256": "e92d879856e90f035e33ddf3023400002ba73a5e62a384276b52f722b966ba25",
+      "size": 19
+    },
+    "memories/agents/queens/queen_growth/profile.md": {
+      "sha256": "2c14db497720e836e4282405b3c02c4ea4467a9105a1ef53eb6754d1e9c99b86",
+      "size": 23
+    },
+    "memories/global/global.md": {
+      "sha256": "eeae630fb77c250fc6aa072a14e53b3162b32df53b97ef98c356e822b564443b",
+      "size": 9
+    },
+    "queens/queen_growth/sessions/session_20260202_000001_ffffffff/meta.json": {
+      "sha256": "abe13651e7c9326a4c8b8186bb45d1a43c1180dc1e08d473bb8b2184b47bb7b0",
+      "size": 337
+    },
+    "queens/queen_growth/sessions/session_20260202_000001_ffffffff/conversations/cursor.json": {
+      "sha256": "8d1ac3253668710ebb75f3ac1a60f27725148fb7b328622dc1cf646470667acc",
+      "size": 19
+    },
+    "queens/queen_growth/sessions/session_20260202_000001_ffffffff/conversations/meta.json": {
+      "sha256": "7cf3fb03219afc57e38a036d758cd19e326c79a6224e82a4f33c889687bceeb6",
+      "size": 239
+    },
+    "queens/queen_growth/sessions/session_20260202_000001_ffffffff/conversations/parts/0000000000.json": {
+      "sha256": "7529690f41233bc1b947e1043ad90261ddffd218577af40661dc4b797c948a11",
+      "size": 104
+    },
+    "queens/queen_growth/sessions/session_20260202_000001_ffffffff/conversations/parts/0000000001.json": {
+      "sha256": "426aad1466cdf7f23f33e65f6315ac6690780e2efba13d5b9a2861a2adf430ca",
+      "size": 85
+    },
+    "queens/queen_growth/sessions/session_20260202_000002_11111111/meta.json": {
+      "sha256": "8dc4f5626e149e2c1fdbc11c14b750b40f95e8813fa33ddbba7570091910b161",
+      "size": 337
+    },
+    "queens/queen_growth/sessions/session_20260202_000002_11111111/conversations/cursor.json": {
+      "sha256": "8d1ac3253668710ebb75f3ac1a60f27725148fb7b328622dc1cf646470667acc",
+      "size": 19
+    },
+    "queens/queen_growth/sessions/session_20260202_000002_11111111/conversations/meta.json": {
+      "sha256": "7cf3fb03219afc57e38a036d758cd19e326c79a6224e82a4f33c889687bceeb6",
+      "size": 239
+    },
+    "queens/queen_growth/sessions/session_20260202_000002_11111111/conversations/parts/0000000000.json": {
+      "sha256": "7529690f41233bc1b947e1043ad90261ddffd218577af40661dc4b797c948a11",
+      "size": 104
+    },
+    "queens/queen_growth/sessions/session_20260202_000002_11111111/conversations/parts/0000000001.json": {
+      "sha256": "426aad1466cdf7f23f33e65f6315ac6690780e2efba13d5b9a2861a2adf430ca",
+      "size": 85
+    }
+  },
+  "dirs": [
+    "agents",
+    "agents/alpha",
+    "agents/alpha/scout",
+    "agents/alpha/scout/sessions",
+    "agents/alpha/scout/sessions/session_20260201_000004_eeeeeeee",
+    "agents/alpha/worker",
+    "agents/alpha/worker/conversations",
+    "agents/alpha/worker/conversations/parts",
+    "agents/queens",
+    "agents/queens/queen_growth",
+    "agents/queens/queen_growth/sessions",
+    "agents/queens/queen_growth/sessions/session_20260201_000001_bbbbbbbb",
+    "agents/queens/queen_growth/sessions/session_20260201_000001_bbbbbbbb/conversations",
+    "agents/queens/queen_growth/sessions/session_20260201_000001_bbbbbbbb/conversations/parts",
+    "agents/queens/queen_growth/sessions/session_20260201_000002_cccccccc",
+    "agents/queens/queen_growth/sessions/session_20260201_000002_cccccccc/conversations",
+    "agents/queens/queen_growth/sessions/session_20260201_000002_cccccccc/conversations/parts",
+    "agents/queens/queen_growth/sessions/session_20260201_000003_dddddddd",
+    "agents/queens/queen_growth/sessions/session_20260201_000003_dddddddd/conversations",
+    "agents/queens/queen_growth/sessions/session_20260201_000003_dddddddd/conversations/parts",
+    "agents/queens/queen_growth/skills",
+    "agents/queens/queen_growth/skills/briefing",
+    "colonies",
+    "colonies/alpha",
+    "colonies/alpha/data",
+    "colonies/alpha/queens",
+    "colonies/alpha/queens/queen_growth",
+    "colonies/alpha/queens/queen_growth/sessions",
+    "colonies/alpha/queens/queen_growth/sessions/session_20260202_000002_11111111",
+    "colonies/alpha/skills",
+    "colonies/alpha/skills/briefing",
+    "colonies/beta",
+    "colonies/beta/data",
+    "colonies/beta/queen",
+    "colonies/beta/queen/session_20260203_000001_22222222",
+    "colonies/beta/queen/session_20260203_000001_22222222/conversations",
+    "colonies/beta/queen/session_20260203_000001_22222222/conversations/parts",
+    "mcp_registry",
+    "memories",
+    "memories/agents",
+    "memories/agents/queens",
+    "memories/agents/queens/queen_growth",
+    "memories/global",
+    "queens",
+    "queens/queen_growth",
+    "queens/queen_growth/sessions",
+    "queens/queen_growth/sessions/session_20260202_000001_ffffffff",
+    "queens/queen_growth/sessions/session_20260202_000001_ffffffff/conversations",
+    "queens/queen_growth/sessions/session_20260202_000001_ffffffff/conversations/parts",
+    "queens/queen_growth/sessions/session_20260202_000002_11111111",
+    "queens/queen_growth/sessions/session_20260202_000002_11111111/conversations",
+    "queens/queen_growth/sessions/session_20260202_000002_11111111/conversations/parts"
+  ],
+  "sqlite": {
+    "colonies/alpha/colony.db": {
+      "tables": {
+        "playbook_runs": {
+          "rows": 1,
+          "row_sha256": "634d2b1b83e9dcd8df6588e3bb620bfc53328c7d2b63f1af9ede215e09e189be"
+        }
+      }
+    },
+    "colonies/alpha/data/tracker.db": {
+      "tables": {
+        "_tracker_changes": {
+          "rows": 0,
+          "row_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "_tracker_meta": {
+          "rows": 1,
+          "row_sha256": "074988e3142e10dce464d85bd8e21628bf6f3157c45e4231f13283b661905ec0"
+        },
+        "_tracker_registry": {
+          "rows": 1,
+          "row_sha256": "2afe500925ee252e220b5e75e2807e4c79326683d8818a90eb86d22a8e75f51b"
+        },
+        "leads": {
+          "rows": 1,
+          "row_sha256": "e7943ba707e9ad96ca9dca2b7d3eff86e2ff81b07c1798c8c84f7ddecb51081e"
+        }
+      }
+    },
+    "colonies/beta/data/tracker.db": {
+      "tables": {
+        "_tracker_changes": {
+          "rows": 0,
+          "row_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "_tracker_meta": {
+          "rows": 1,
+          "row_sha256": "074988e3142e10dce464d85bd8e21628bf6f3157c45e4231f13283b661905ec0"
+        },
+        "_tracker_registry": {
+          "rows": 1,
+          "row_sha256": "2afe500925ee252e220b5e75e2807e4c79326683d8818a90eb86d22a8e75f51b"
+        },
+        "leads": {
+          "rows": 1,
+          "row_sha256": "e7943ba707e9ad96ca9dca2b7d3eff86e2ff81b07c1798c8c84f7ddecb51081e"
+        }
+      }
+    }
+  }
+}

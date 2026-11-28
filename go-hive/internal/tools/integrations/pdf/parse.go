@@ -37,6 +37,13 @@ type pdfPage struct {
 }
 
 func pdfOpen(data []byte) (*pdfDocument, error) {
+	return pdfOpenPassword(data, "")
+}
+
+// pdfOpenPassword parses data and, when the trailer carries an /Encrypt
+// dictionary, authenticates and decrypts its objects with password. A wrong
+// or missing password surfaces as errPDFEncrypted.
+func pdfOpenPassword(data []byte, password string) (*pdfDocument, error) {
 	header := bytes.Index(data, []byte("%PDF-"))
 	if header < 0 || header > 1024 {
 		return nil, fmt.Errorf("%w: missing %%PDF- header", errPDFInvalid)
@@ -47,15 +54,15 @@ func pdfOpen(data []byte) (*pdfDocument, error) {
 		doc.objects = map[pdfRef]any{}
 		doc.scanObjects()
 	}
-	doc.expandObjectStreams()
 	if len(doc.trailer) == 0 {
 		doc.findTrailer()
 	}
+	if err := doc.decryptDocument(password); err != nil {
+		return nil, err
+	}
+	doc.expandObjectStreams()
 	if _, ok := doc.trailer["Root"]; !ok {
 		doc.findCatalog()
-	}
-	if doc.trailer["Encrypt"] != nil {
-		return nil, errPDFEncrypted
 	}
 	if len(doc.objects) == 0 {
 		return nil, fmt.Errorf("%w: no indirect objects", errPDFInvalid)

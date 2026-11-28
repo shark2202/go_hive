@@ -143,6 +143,14 @@ type chatStreamingCompleter struct {
 	// leaves the pre-existing streaming behaviour untouched.
 	ttftBudget       time.Duration
 	interEventBudget time.Duration
+	// payment routes a classified 402 to the session's event bus with the
+	// turn's stream/execution identity, so the SSE feed receives
+	// payment_required instead of only execution_failed.
+	payment agentloop.PaymentRequiredTarget
+	// providerPublishes is true when the provider behind this adapter carries
+	// the sink itself: its transport publishes payment_required, and the
+	// adapter must not publish a second frame.
+	providerPublishes bool
 }
 
 // newChatStreamingCompleter returns nil when the provider cannot stream, which
@@ -171,26 +179,60 @@ func (c *chatStreamingCompleter) setStreamWatchdog(ttft, interEvent time.Duratio
 	c.mu.Unlock()
 }
 
-// streamWatchdogBudgets resolves the loop config's stream budgets, applying
-// the legacy inactivity alias exactly like the upstream loop:
-// a positive `llm_stream_inactivity_timeout_seconds` below the inter-event
-// budget overrides it.
+// setPaymentRequiredSink installs the billing-gate routing for the turn's
+// stream. The provider publishes payment_required from inside its transport
+// with this stream/execution identity, so a 402 reaches the session SSE feed
+// (and the desktop upgrade popup) instead of only the generic
+// execution_failed. A provider that cannot carry the sink (a non-*llm.Provider
+// streaming transport) is covered by the adapter's own event-boundary emit.
+//
+// A nil emitter means the session has no live bus: the routing is cleared so a
+// later turn's provider never publishes a stale frame.
+//
+// Parity: core/framework/agent_loop/agent_loop.py::_run_turn_loop
+// (StreamErrorEvent error_type=="payment_required" -> emit_payment_required)
+func (c *chatStreamingCompleter) setPaymentRequiredSink(emitter llm.PaymentRequiredEmitter, streamID, executionID string) {
+	if c == nil {
+		return
+	}
+	target := agentloop.PaymentRequiredTarget{Sink: emitter, StreamID: streamID}
+	if executionID != "" {
+		id := executionID
+		target.ExecutionID = &id
+	}
+	// c.completer is fixed at construction; install before publishing the
+	// target so providerPublishes and the routing become visible together.
+	providerPublishes := emitter != nil && agentloop.InstallProviderPaymentRequiredSink(c.completer, target)
+	c.mu.Lock()
+	c.payment = target
+	c.providerPublishes = providerPublishes
+	c.mu.Unlock()
+}
+
+// emitStreamPaymentRequired publishes a non-recoverable billing gate the
+// provider did not already publish from inside its transport.
+func (c *chatStreamingCompleter) emitStreamPaymentRequired(event *llm.StreamErrorEvent, err error) {
+	if c == nil {
+		return
+	}
+	c.mu.Lock()
+	skip := c.providerPublishes
+	target := c.payment
+	c.mu.Unlock()
+	if skip {
+		return
+	}
+	agentloop.EmitPaymentRequiredForStreamError(target, event, err)
+}
+
+// streamWatchdogBudgets resolves the loop config's stream budgets through the
+// shared agentloop helper so the chat adapter, workers and the overseer apply
+// the same legacy-alias rule.
 //
 // Parity: framework/agent_loop/agent_loop.py::_run_turn_loop (budget
 // resolution with the `_legacy` back-compat rule).
 func streamWatchdogBudgets(config agentloop.LoopConfig) (time.Duration, time.Duration) {
-	seconds := func(value float64) time.Duration {
-		if value <= 0 {
-			return 0
-		}
-		return time.Duration(value * float64(time.Second))
-	}
-	ttft := seconds(config.LLMStreamTTFTTimeoutSeconds)
-	inter := seconds(config.LLMStreamInterEventIdleSeconds)
-	if legacy := config.LLMStreamInactivityTimeoutSeconds; legacy > 0 && legacy < config.LLMStreamInterEventIdleSeconds {
-		inter = seconds(legacy)
-	}
-	return ttft, inter
+	return agentloop.StreamWatchdogBudgets(config)
 }
 
 // ModelName forwards the provider's model so the loop keeps resolving the same
@@ -226,7 +268,17 @@ func (c *chatStreamingCompleter) endTurn() {
 	c.streaming = false
 	c.sink = nil
 	c.iteration = 0
+	// The turn's execution is over. Keep the sink so a post-turn auxiliary
+	// 402 still reaches the session feed, but stop attributing it to the
+	// finished execution (upstream passes `execution_id or None`).
+	c.payment.ExecutionID = nil
+	target := c.payment
+	completer := c.completer
+	providerPublishes := c.providerPublishes
 	c.mu.Unlock()
+	if providerPublishes {
+		agentloop.InstallProviderPaymentRequiredSink(completer, target)
+	}
 }
 
 // noteIteration records the loop iteration the next LLM call belongs to.
@@ -276,8 +328,18 @@ func (c *chatStreamingCompleter) AComplete(ctx context.Context, req llm.Completi
 	watchdog.start()
 
 	streamed := false
+	var streamError *llm.StreamErrorEvent
 	completion, err := c.streamer.ACompleteStream(streamCtx, req, func(event llm.StreamEvent) {
 		watchdog.event()
+		if failure, ok := event.(llm.StreamErrorEvent); ok {
+			// The terminal frame carries error_type/upstream_status; keep it
+			// so the billing gate does not re-parse the returned error. The
+			// callback runs synchronously in the stream, the same assumption
+			// `streamed` makes.
+			captured := failure
+			streamError = &captured
+			return
+		}
 		delta, ok := event.(llm.TextDeltaEvent)
 		if !ok || delta.Content == "" {
 			return
@@ -302,8 +364,18 @@ func (c *chatStreamingCompleter) AComplete(ctx context.Context, req llm.Completi
 		c.mu.Lock()
 		c.disabled = true
 		c.mu.Unlock()
-		return c.completer.AComplete(ctx, req)
+		completion, fallbackErr := c.completer.AComplete(ctx, req)
+		if fallbackErr != nil {
+			// The non-streaming transport never builds a StreamErrorEvent, so
+			// this is the only place its 402 can reach the event bus.
+			c.mu.Lock()
+			target := c.payment
+			c.mu.Unlock()
+			agentloop.EmitPaymentRequiredForStreamError(target, nil, fallbackErr)
+		}
+		return completion, fallbackErr
 	}
+	c.emitStreamPaymentRequired(streamError, err)
 	return llm.Completion{}, err
 }
 

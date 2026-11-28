@@ -196,6 +196,37 @@ func TestCountRunsUniqueRunIDs(t *testing.T) {
 	}
 }
 
+// Parity-exempt: framework/agents/discovery.py has no Python tests; pins the
+// exact run-event record shape execution_manager._write_run_event appends, so
+// Go keeps reading Python telemetry after a runtime switch.
+func TestCountRunsReadsPythonRunEventRecords(t *testing.T) {
+	colony := t.TempDir()
+	records := "" +
+		`{"run_id": "run_py_1", "event": "run_started", "timestamp": "2026-11-25T10:00:00.123456", "created_at": 1764064800.123456}` + "\n" +
+		`{"run_id": "run_py_1", "event": "run_completed", "timestamp": "2026-11-25T10:00:05.654321", "created_at": 1764064805.654321}` + "\n" +
+		`{"run_id": "run_py_2", "event": "run_failed", "timestamp": "2026-11-25T10:01:00", "created_at": 1764064860, "error": "boom"}` + "\n"
+	writeDiscoveryFile(t, colony, "workers/session_one/ws/runs.jsonl", records)
+
+	if got := CountRuns(colony); got != 2 {
+		t.Fatalf("CountRuns = %d, want 2", got)
+	}
+}
+
+// Parity-exempt: negative regression for the session_* filter the Python
+// scanner applies; upstream has no test for a non-session worker directory.
+// The picture only counts directories named session_*, so a runs.jsonl under a
+// Go worker_* dir (or any other name) is not counted and cannot inflate the
+// Python-facing run count.
+func TestCountRunsIgnoresNonSessionDirectories(t *testing.T) {
+	colony := t.TempDir()
+	writeDiscoveryFile(t, colony, "workers/worker_abc/runs.jsonl", `{"run_id": "run_go_1"}`+"\n")
+	writeDiscoveryFile(t, colony, "workers/session_one/runs.jsonl", `{"run_id": "run_py_1"}`+"\n")
+
+	if got := CountRuns(colony); got != 1 {
+		t.Fatalf("CountRuns = %d, want 1 (only session_one)", got)
+	}
+}
+
 // Parity-exempt: framework/agents/discovery.py has no Python tests; pins the lexicographic max of state.json timestamps over queen-dir mtimes.
 func TestLastActivePicksLatestTimestamp(t *testing.T) {
 	colony := t.TempDir()

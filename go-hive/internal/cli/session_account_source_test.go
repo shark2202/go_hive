@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/shark2202/go_hive/go-hive/internal/credentials"
@@ -128,6 +129,39 @@ func TestSessionAccountInfoListsConnectedAccounts(t *testing.T) {
 	}
 	if account["source"] != "local" {
 		t.Fatalf("source = %v", account["source"])
+	}
+}
+
+// TestSessionAccountInfoIncludesEnvOnlyCredential is the tool-path half of
+// P0-4: the session adapter must use the same encrypted+env composite as
+// hive-cred, so get_account_info reports a credential supplied only by the
+// environment instead of an empty account list.
+//
+// Parity: tools/src/aden_tools/credentials/store_adapter.py::CredentialStoreAdapter.default
+func TestSessionAccountInfoIncludesEnvOnlyCredential(t *testing.T) {
+	const envToken = "hubspot-env-only-token"
+	home := sessionCredentialHome(t)
+	t.Setenv("HUBSPOT_ACCESS_TOKEN", envToken)
+	root := testTempDir(t)
+	catalogue := newSessionToolCatalogue(root, builtin.New(root), home)
+
+	payload := runAccountInfo(t, catalogue, nil)
+	if count := accountInfoCount(t, payload); count != 1 {
+		t.Fatalf("count = %d, payload = %v", count, payload)
+	}
+	account, ok := accountInfoAccounts(t, payload)[0].(map[string]any)
+	if !ok {
+		t.Fatalf("account = %T", accountInfoAccounts(t, payload)[0])
+	}
+	if account["provider"] != "hubspot" || account["credential_id"] != "hubspot" {
+		t.Fatalf("account = %v", account)
+	}
+	encoded, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("marshal payload: %v", err)
+	}
+	if strings.Contains(string(encoded), envToken) {
+		t.Fatalf("get_account_info leaked the environment secret: %s", encoded)
 	}
 }
 

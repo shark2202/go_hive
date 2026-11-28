@@ -35,6 +35,10 @@ func (d *pdfDocument) decodeStream(stream *pdfStream) ([]byte, error) {
 			data = decoded
 		case "ASCIIHexDecode", "AHx":
 			data = pdfASCIIHexDecode(data)
+		case "Crypt":
+			// The security handler already decrypted the stream body; the
+			// Crypt filter only selects the method and is a no-op here.
+			continue
 		default:
 			return nil, fmt.Errorf("%w: unsupported stream filter %s", errPDFInvalid, name)
 		}

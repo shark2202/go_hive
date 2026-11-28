@@ -1,0 +1,2 @@
+ok  	github.com/shark2202/go_hive/go-hive/internal/colony	2.889s
+ok  	github.com/shark2202/go_hive/go-hive/internal/agentloop	0.565s

@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "settings": {
+    "enabled": true,
+    "lazy": true,
+    "requestTimeout": 10,
+    "formatOnWrite": false,
+    "diagnosticsOnWrite": true,
+    "diagnosticsOnEdit": false,
+    "shared": false
+  },
+  "idleTimeoutMs": 300000,
+  "servers": {
+    "bashls": {
+      "command": "bash-language-server",
+      "args": ["start"],
+      "fileTypes": [".sh", ".bash", ".zsh"],
+      "rootMarkers": [".shellcheckrc", ".bashrc"],
+      "languageId": "shellscript"
+    },
+    "clangd": {
+      "command": "clangd",
+      "fileTypes": [".c", ".h", ".cc", ".cpp", ".cxx", ".hpp", ".hxx"],
+      "rootMarkers": ["compile_commands.json", "compile_flags.txt", "CMakeLists.txt", ".clangd"],
+      "languageId": "cpp"
+    },
+    "gopls": {
+      "command": "gopls",
+      "args": ["serve"],
+      "fileTypes": [".go", ".mod", ".sum", ".work"],
+      "rootMarkers": ["go.mod", "go.work", "go.sum"],
+      "languageId": "go"
+    },
+    "pyright": {
+      "command": "pyright-langserver",
+      "args": ["--stdio"],
+      "fileTypes": [".py", ".pyi"],
+      "rootMarkers": ["pyproject.toml", "pyrightconfig.json", "setup.py", "requirements.txt"],
+      "languageId": "python"
+    },
+    "rust-analyzer": {
+      "command": "rust-analyzer",
+      "fileTypes": [".rs"],
+      "rootMarkers": ["Cargo.toml"],
+      "languageId": "rust"
+    },
+    "typescript-language-server": {
+      "command": "typescript-language-server",
+      "args": ["--stdio"],
+      "fileTypes": [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts"],
+      "rootMarkers": ["tsconfig.json", "jsconfig.json", "package.json"],
+      "languageId": "typescript"
+    },
+    "yamlls": {
+      "command": "yaml-language-server",
+      "args": ["--stdio"],
+      "fileTypes": [".yaml", ".yml"],
+      "rootMarkers": [".yamllint", ".yaml-language-server", "docker-compose.yml"],
+      "languageId": "yaml"
+    }
+  }
+}

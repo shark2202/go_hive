@@ -67,12 +67,23 @@ func planChatSession(params hiveserver.CreateSessionParams, home hivehome.Home) 
 			return chatSessionPlan{}, &hiveserver.SessionCreateValueError{Message: "invalid queen_resume_from"}
 		}
 	}
-	// Colony-bound sessions resolve their own transcript tree upstream
-	// (_derive_resume_colony_id / colony metadata), which this hook does not
-	// model. Adopting a queen-DM copy there would surface the wrong history,
-	// so only the standard queen-only create resumes by id.
-	if resumeFrom != "" && !chatSessionColonyBound(params) {
-		if queenScope != "default" {
+	// A resume reopens the persisted session under its original id. A
+	// colony-bound resume resolves its tree from the colony layout upstream
+	// (_queen_session_dir with colony_id): the forked-colony copy lives at
+	// colonies/<c>/queens/<q>/sessions/<id>, and adopting a queen-DM copy
+	// there would surface the wrong history. A queen-only resume stays inside
+	// the queen's own tree.
+	if resumeFrom != "" {
+		if chatSessionColonyBound(params) {
+			if dir := colonyResumableSessionDir(home, *params.ColonyID, queenScope, resumeFrom); dir != "" {
+				return chatSessionPlan{
+					SessionID:  resumeFrom,
+					QueenScope: queenScope,
+					ResumedDir: dir,
+					ResumeFrom: resumeFrom,
+				}, nil
+			}
+		} else if queenScope != "default" {
 			if dir := resumableSessionDir(home, queenScope, resumeFrom); dir != "" {
 				return chatSessionPlan{
 					SessionID:  resumeFrom,
@@ -130,6 +141,26 @@ func resumableSessionDir(home hivehome.Home, queenName, sessionID string) string
 		return ""
 	}
 	return legacy
+}
+
+// colonyResumableSessionDir returns the colony-tree session dir
+// queen_resume_from names inside colony_id, or "" when it is not there. A
+// colony-bound session lives at colonies/<c>/queens/<q>/sessions/<id>
+// upstream (_queen_session_dir with colony_id); the queen-DM trees are not a
+// fallback here, because the same id can exist in a DM and must not be
+// mistaken for the colony's copy.
+//
+// Parity: framework/server/session_manager.py::_queen_session_dir
+func colonyResumableSessionDir(home hivehome.Home, colonyID, queenName, sessionID string) string {
+	colonyID = strings.TrimSpace(colonyID)
+	if colonyID == "" || !hivesession.ValidSegment(colonyID) {
+		return ""
+	}
+	target := home.ColonyQueenSessionDir(colonyID, queenName, sessionID)
+	if !isSessionDir(target) || !sessionDirQueenMatches(target, queenName) {
+		return ""
+	}
+	return target
 }
 
 // persistedSessionQueen finds a persisted session across the queen DM trees and

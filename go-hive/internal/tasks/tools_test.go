@@ -3,7 +3,9 @@ package tasks
 // Parity: framework/tasks/tests/test_tools.py
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 )
@@ -761,5 +763,116 @@ func TestHookBlocksTaskCompletedNeverWrites(t *testing.T) {
 	}
 	if after.UpdatedAt != tsBefore {
 		t.Fatalf("updated_at changed (%v -> %v): transient write happened", tsBefore, after.UpdatedAt)
+	}
+}
+
+// Parity: core/framework/tasks/tools/session_tools.py::_make_update_executor
+// (TaskStatus(status_in) rejects an unknown value before the store is
+// touched; Go must not persist it or Python reads the document as corrupt).
+func TestUpdateRejectsInvalidStatus(t *testing.T) {
+	store := NewTaskStore(t.TempDir())
+	reg := newTestToolRegistry(store, nil)
+	withTestContext(t, "agent_a", "sess_1")
+	invokeCreateOne(t, reg, "test goal", map[string]any{"subject": "x"})
+
+	result := invokeTool(t, reg, TaskUpdate, map[string]any{"id": 1, "status": "bogus"})
+	if successFlag(t, result) {
+		t.Fatalf("invalid status accepted: %#v", result)
+	}
+	if got, _ := result["error"].(string); !strings.Contains(got, "'bogus' is not a valid TaskStatus") {
+		t.Fatalf("error = %q", got)
+	}
+
+	path, err := store.DocPath("sess_1")
+	if err != nil {
+		t.Fatalf("DocPath: %v", err)
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("ReadFile tasks.json: %v", err)
+	}
+	var doc map[string]any
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		t.Fatalf("tasks.json unreadable: %v", err)
+	}
+	records, _ := doc["tasks"].([]any)
+	if len(records) != 1 {
+		t.Fatalf("records = %#v", doc["tasks"])
+	}
+	if status := records[0].(map[string]any)["status"]; status != "pending" {
+		t.Fatalf("persisted status = %v, want pending", status)
+	}
+	listed := invokeTool(t, reg, TaskList, map[string]any{})
+	if listed["count"] != 1 {
+		t.Fatalf("task list count = %v, want 1", listed["count"])
+	}
+
+	// The rejection must not wedge the tool: a subsequent valid update still
+	// lands, and the file stays readable.
+	ok := invokeTool(t, reg, TaskUpdate, map[string]any{"id": 1, "status": "completed"})
+	if !successFlag(t, ok) {
+		t.Fatalf("valid status update after rejection failed: %#v", ok)
+	}
+	if rec := store.GetTask("sess_1", 1); rec == nil || rec.Status != TaskStatusCompleted {
+		t.Fatalf("record = %#v, want completed", rec)
+	}
+}
+
+// Parity: core/framework/tasks/tools/session_tools.py::_make_update_executor
+// (a non-string status cannot construct a TaskStatus either).
+func TestUpdateRejectsNonStringStatus(t *testing.T) {
+	store := NewTaskStore(t.TempDir())
+	reg := newTestToolRegistry(store, nil)
+	withTestContext(t, "agent_a", "sess_1")
+	invokeCreateOne(t, reg, "test goal", map[string]any{"subject": "x"})
+
+	result := invokeTool(t, reg, TaskUpdate, map[string]any{"id": 1, "status": 123})
+	if successFlag(t, result) {
+		t.Fatalf("non-string status accepted: %#v", result)
+	}
+	if got, _ := result["error"].(string); !strings.Contains(got, "123 is not a valid TaskStatus") {
+		t.Fatalf("error = %q", got)
+	}
+	if rec := store.GetTask("sess_1", 1); rec == nil || rec.Status != TaskStatusPending {
+		t.Fatalf("record = %#v, want pending", rec)
+	}
+}
+
+// Parity: core/framework/tasks/store.py — pydantic rejects the whole document
+// on read, so the Go writer refuses a record with an unknown status.
+func TestWriteDocRefusesInvalidStatus(t *testing.T) {
+	store := NewTaskStore(t.TempDir())
+	doc := &TaskListDocument{
+		Meta: NewTaskListMeta(),
+		Tasks: []*TaskRecord{{
+			ID:      1,
+			Subject: "x",
+			Status:  TaskStatus("bogus"),
+		}},
+	}
+	if err := store.writeDoc("sess_1", doc); err == nil {
+		t.Fatal("writeDoc accepted an invalid status")
+	}
+}
+
+// Parity: core/framework/tasks/tools/colony_tools.py::_make_update_executor
+// (the template updater constructs TaskStatus the same way).
+func TestColonyTemplateUpdateRejectsInvalidStatus(t *testing.T) {
+	store := NewTaskStore(t.TempDir())
+	listID := "colony:test"
+	added := makeColonyAddExecutor(store, listID)(map[string]any{"subject": "x"})
+	if success, _ := added["success"].(bool); !success {
+		t.Fatalf("add failed: %#v", added)
+	}
+
+	updated := makeColonyUpdateExecutor(store, listID)(map[string]any{"id": 1, "status": "bogus"})
+	if success, _ := updated["success"].(bool); success {
+		t.Fatalf("invalid status accepted: %#v", updated)
+	}
+	if got, _ := updated["error"].(string); !strings.Contains(got, "'bogus' is not a valid TaskStatus") {
+		t.Fatalf("error = %q", got)
+	}
+	if rec := store.GetTask(listID, 1); rec == nil || rec.Status != TaskStatusPending {
+		t.Fatalf("record = %#v, want pending", rec)
 	}
 }

@@ -1,0 +1,365 @@
+{
+  "schema": "hive.journey-e2e/v1",
+  "ok": true,
+  "exit_code": 0,
+  "generated_at": "2026-11-25T07:34:26+00:00",
+  "duration_ms": 2631.8,
+  "environment": {
+    "python": "3.13.5",
+    "platform": "Linux-7.0.14-linuxkit-aarch64-with-glibc2.41",
+    "repo_root": "/repo",
+    "binary": "/repo/go_hive/go-hive/dist/hive-embed-linux-arm64",
+    "binary_version": "hive 1.0.27-go.1",
+    "binary_sha256": "487c3ada956f17dba97a500d0e7b6dede99deeca6c2ced20a1680f7f10ca45cb",
+    "scratch_root": "/tmp",
+    "hive_home": "/tmp/journey-ed625270-b133-41d5-b3e8-8b9481d40530",
+    "home_kept": false,
+    "serve_browser_bridge": "disabled (HIVE_BROWSER_BRIDGE=0)",
+    "git_head": "",
+    "git_branch": "",
+    "port": 59059,
+    "base_url": "http://127.0.0.1:59059",
+    "serve_log_saved": "go_hive/docs/e2e-assets/linux-docker/journey-linux-current.log"
+  },
+  "steps": [
+    {
+      "id": "a",
+      "title": "create queen DM session",
+      "expect": "HTTP 201 + session_id + colony_id null",
+      "status": "pass",
+      "http_status": 201,
+      "duration_ms": 27.5,
+      "actual": "HTTP 201 · session_id=session_20261125_073423_187213e6 · colony_id=None",
+      "checks": [
+        {
+          "name": "HTTP status is 201",
+          "ok": true,
+          "actual": "HTTP 201"
+        },
+        {
+          "name": "body carries session_id",
+          "ok": true,
+          "actual": "session_id='session_20261125_073423_187213e6'"
+        },
+        {
+          "name": "session is a queen DM (no colony_id)",
+          "ok": true,
+          "actual": "colony_id=None"
+        }
+      ],
+      "fields": {
+        "session_id": "session_20261125_073423_187213e6"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/sessions",
+        "body": {}
+      },
+      "response": {
+        "status": 201,
+        "content_type": "application/json",
+        "body": "{\"agent_path\":\"\",\"colony_id\":null,\"colony_spawned\":false,\"description\":\"\",\"goal\":\"\",\"has_worker\":false,\"loaded_at\":1795592063.7223394,\"node_count\":0,\"queen_id\":\"queen_growth\",\"queen_name\":\"Steve Jobs\",\"queen_phase\":\"independent\",\"queen_supports_images\":true,\"session_id\":\"session_20261125_073423_187213e6\",\"spawned_colony_id\":null,\"uptime_seconds\":0}\n"
+      }
+    },
+    {
+      "id": "b",
+      "title": "list queen profiles (UI prerequisite)",
+      "expect": "HTTP 200 + non-empty queens[] + id",
+      "status": "pass",
+      "http_status": 200,
+      "duration_ms": 0.9,
+      "actual": "HTTP 200 · 13 queen(s) · first id=queen_brand_design",
+      "checks": [
+        {
+          "name": "HTTP status is 200",
+          "ok": true,
+          "actual": "HTTP 200"
+        },
+        {
+          "name": "queens is a non-empty list",
+          "ok": true,
+          "actual": "13 queen(s)"
+        },
+        {
+          "name": "first profile carries an id",
+          "ok": true,
+          "actual": "id='queen_brand_design'"
+        }
+      ],
+      "fields": {
+        "queen_count": 13,
+        "queen_id": "queen_brand_design"
+      },
+      "request": {
+        "method": "GET",
+        "path": "/api/queen/profiles"
+      },
+      "response": {
+        "status": 200,
+        "content_type": "application/json",
+        "body": "{\"queens\":[{\"has_avatar\":false,\"id\":\"queen_brand_design\",\"name\":\"Jony Ive\",\"portrait\":{\"beard\":\"stubble\",\"cut\":\"crop-thin\",\"face\":\"round\",\"hair\":\"#7E6A56\",\"mouth\":\"smile-soft\",\"shirt\":\"tee-grey\",\"skin\":\"#EBC8A2\"},\"title\":\"Head of Brand \\u0026 Design\"},{\"has_avatar\":false,\"id\":\"queen_content_creation\",\"name\":\"Gary Vaynerchuk\",\"portrait\":{\"beard\":\"stubble\",\"cut\":\"short-back\",\"eyes\":\"sharp\",\"face\":\"round\",\"hair\":\"#1A1410\",\"mouth\":\"smile-broad\",\"shirt\":\"tee-grey\",\"skin\":\"#E5BD90\"},\"title\":\"Head of Content\"},{\"has_avatar\":false,\"id\":\"queen_finance_fundraising\",\"name\":\"Warren Buffett\",\"portrait\":{\"brow\":\"bushy\",\"cut\":\"side-bushy-grey\",\"face\":\"round\",\"glasses\":\"square-thick\",\"hair\":\"#E5DECF\",\"mouth\":\"smile-soft\",\"skin\":\"#F4DDB6\"},\"title\":\"Head of Finance\"},{\"custom\":false,\"has_avatar\":false,\"id\":\"queen_growth\",\"name\":\"Steve Jobs\",\"portrait\":{\"beard\":\"stubble\",\"cut\":\"crop-thin\",\"face\":\"oval\",\"glasses\":\"round-rimless\",\"hair\":\"#2B2624\",\"mouth\":\"smile-soft\",\"neck\":\"turtleneck\",\"skin\":\"#E8D2B8\"},\"title\":\"Head of Growth\"},{\"has_avatar\":false,\"id\":\"queen_lead_gen\",\"name\":\"Alex Hormozi\",\"portrait\":{\"beard\":\"full\",\"cut\":\"bald-shine\",\"eyes\":\"sharp\",\"face\":\"square\",\"hair\":\"#1A1410\",\"mouth\":\"flat\",\"shirt\":\"tee-black\",\"skin\":\"#E5BD90\"},\"title\":\"Head of Lead Generation\"},{\"has_avatar\":false,\"id\":\"queen_legal\",\"name\":\"Ruth Bader Ginsburg\",\"portrait\":{\"collar\":\"jabot\",\"cut\":\"pulled-tight\",\"face\":\"oval\",\"glasses\":\"round-thick\",\"hair\":\"#E2DBCC\",\"mouth\":\"flat\",\"skin\":\"#F2D5B0\"},\"title\":\"Head of Legal\"... (3098 bytes total)"
+      }
+    },
+    {
+      "id": "c",
+      "title": "create fresh colony 'journey-colony' (popup path)",
+      "expect": "HTTP 201 + session_id + colony_id + has_worker",
+      "status": "pass",
+      "http_status": 201,
+      "duration_ms": 42.9,
+      "actual": "HTTP 201 · session_id=session_20261125_073423_a222daff",
+      "checks": [
+        {
+          "name": "HTTP status is 201",
+          "ok": true,
+          "actual": "HTTP 201"
+        },
+        {
+          "name": "body carries session_id",
+          "ok": true,
+          "actual": "session_id='session_20261125_073423_a222daff'"
+        },
+        {
+          "name": "session is bound to the new colony",
+          "ok": true,
+          "actual": "colony_id='journey-colony', want 'journey-colony'"
+        },
+        {
+          "name": "has_worker is true",
+          "ok": true,
+          "actual": "has_worker=True"
+        }
+      ],
+      "fields": {
+        "session_id": "session_20261125_073423_a222daff"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/api/sessions",
+        "body": {
+          "colony_id": "journey-colony",
+          "queen_name": "queen_brand_design",
+          "initial_phase": "colony"
+        }
+      },
+      "response": {
+        "status": 201,
+        "content_type": "application/json",
+        "body": "{\"agent_path\":\"/tmp/journey-ed625270-b133-41d5-b3e8-8b9481d40530/colonies/journey-colony\",\"colony_id\":\"journey-colony\",\"colony_spawned\":false,\"description\":\"\",\"goal\":\"\",\"has_worker\":true,\"loaded_at\":1795592063.751612,\"node_count\":0,\"queen_id\":\"queen_brand_design\",\"queen_name\":\"Jony Ive\",\"queen_phase\":\"colony\",\"queen_supports_images\":true,\"session_id\":\"session_20261125_073423_a222daff\",\"spawned_colony_id\":null,\"uptime_seconds\":0}\n"
+      }
+    },
+    {
+      "id": "d",
+      "title": "colony on disk + in tools-index + in sessions",
+      "expect": "metadata.json{name,created_at,queen_name} + worker.json{name} + both lists",
+      "status": "pass",
+      "http_status": 200,
+      "duration_ms": 0.4,
+      "actual": "metadata=ok · worker=ok · tools-index=listed · sessions=listed",
+      "checks": [
+        {
+          "name": "metadata.json exists",
+          "ok": true,
+          "actual": "/tmp/journey-ed625270-b133-41d5-b3e8-8b9481d40530/colonies/journey-colony/metadata.json exists"
+        },
+        {
+          "name": "metadata.json name == colony_id",
+          "ok": true,
+          "actual": "name='journey-colony'"
+        },
+        {
+          "name": "metadata.json has created_at",
+          "ok": true,
+          "actual": "created_at=1795592063.7640872"
+        },
+        {
+          "name": "metadata.json queen_name == bound queen",
+          "ok": true,
+          "actual": "queen_name='queen_brand_design'"
+        },
+        {
+          "name": "worker.json exists",
+          "ok": true,
+          "actual": "/tmp/journey-ed625270-b133-41d5-b3e8-8b9481d40530/colonies/journey-colony/worker.json exists"
+        },
+        {
+          "name": "worker.json has a name",
+          "ok": true,
+          "actual": "name='Journey-Colony'"
+        },
+        {
+          "name": "GET /api/colonies/tools-index lists the colony",
+          "ok": true,
+          "actual": "tools-index HTTP 200, listed"
+        },
+        {
+          "name": "GET /api/sessions lists the colony session",
+          "ok": true,
+          "actual": "sessions HTTP 200, listed"
+        },
+        {
+          "name": "listed session carries colony_id",
+          "ok": true,
+          "actual": "colony_id='journey-colony'"
+        }
+      ],
+      "fields": {
+        "metadata": {
+          "created_at": 1795592063.7640872,
+          "name": "journey-colony",
+          "queen_name": "queen_brand_design"
+        },
+        "worker": {
+          "description": "Colony journey-colony",
+          "goal": {
+            "description": "Work on tasks for colony journey-colony"
+          },
+          "name": "Journey-Colony",
+          "queen_name": "queen_brand_design",
+          "tools": []
+        },
+        "read_errors": [],
+        "tools_index_status": 200,
+        "sessions_status": 200
+      },
+      "response": {
+        "status": 200,
+        "content_type": "application/json",
+        "body": "{\"colonies\":[{\"created_at\":1795592063.7640872,\"enabled_count\":null,\"has_allowlist\":false,\"name\":\"journey-colony\",\"queen_name\":\"queen_brand_design\"}]}\n"
+      }
+    },
+    {
+      "id": "e",
+      "title": "SPA pages answer (root + colony route)",
+      "expect": "HTTP 200 text/html for / and /colony/<id>",
+      "status": "pass",
+      "http_status": 200,
+      "duration_ms": 2.7,
+      "actual": "/ → HTTP 200 text/html; charset=utf-8 · /colony/journey-colony → HTTP 200 text/html; charset=utf-8",
+      "checks": [
+        {
+          "name": "GET / is 200",
+          "ok": true,
+          "actual": "HTTP 200"
+        },
+        {
+          "name": "GET / is text/html",
+          "ok": true,
+          "actual": "content-type='text/html; charset=utf-8'"
+        },
+        {
+          "name": "GET / serves the SPA document",
+          "ok": true,
+          "actual": "doctype/'<html' check"
+        },
+        {
+          "name": "GET /colony/<id> is 200",
+          "ok": true,
+          "actual": "HTTP 200"
+        },
+        {
+          "name": "GET /colony/<id> is text/html",
+          "ok": true,
+          "actual": "content-type='text/html; charset=utf-8'"
+        },
+        {
+          "name": "GET /colony/<id> serves the SPA document",
+          "ok": true,
+          "actual": "doctype/'<html' check"
+        }
+      ],
+      "fields": {
+        "root_status": 200,
+        "colony_page_status": 200
+      },
+      "request": {
+        "method": "GET",
+        "paths": [
+          "/",
+          "/colony/journey-colony"
+        ]
+      },
+      "response": {
+        "status": 200,
+        "content_type": "text/html; charset=utf-8",
+        "body": "<!DOCTYPE html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n    <link rel=\"icon\" type=\"image/png\" href=\"/favicon.png\" />\n    <title>Hive</title>\n    <script type=\"module\" crossorigin src=\"/assets/index-C0kktE5o.js\"></script>\n    <link rel=\"stylesheet\" crossorigin href=\"/assets/index-C2h229g6.css\">\n  </head>\n  <body>\n    <div id=\"root\"></div>\n  </body>\n</html>\n"
+      }
+    },
+    {
+      "id": "f",
+      "title": "create + deactivate a timer trigger on the colony session",
+      "expect": "HTTP 200/201 with trigger_id, then HTTP 200 on deactivate",
+      "status": "pass",
+      "http_status": 200,
+      "duration_ms": 1.0,
+      "actual": "create HTTP 200 trigger_id=user-probe · deactivate HTTP 200",
+      "checks": [
+        {
+          "name": "create trigger is 200/201",
+          "ok": true,
+          "actual": "HTTP 200"
+        },
+        {
+          "name": "create trigger returns trigger_id",
+          "ok": true,
+          "actual": "trigger_id='user-probe'"
+        },
+        {
+          "name": "deactivate trigger is 200",
+          "ok": true,
+          "actual": "HTTP 200"
+        },
+        {
+          "name": "deactivate echoes the trigger_id",
+          "ok": true,
+          "actual": "trigger_id='user-probe'"
+        }
+      ],
+      "fields": {
+        "trigger_id": "user-probe",
+        "deactivate_status": 200,
+        "deactivate_body": {
+          "status": "deactivated",
+          "trigger_id": "user-probe"
+        }
+      },
+      "request": {
+        "method": "POST",
+        "paths": [
+          "/api/sessions/session_20261125_073423_a222daff/triggers",
+          "/api/sessions/session_20261125_073423_a222daff/triggers/<id>/deactivate"
+        ]
+      },
+      "response": {
+        "status": 200,
+        "content_type": "application/json",
+        "body": "{\"name\":\"probe\",\"trigger_config\":{\"interval_minutes\":60},\"trigger_id\":\"user-probe\",\"trigger_type\":\"timer\"}\n"
+      }
+    }
+  ],
+  "cleanup": [
+    {
+      "action": "DELETE colony session session_20261125_073423_a222daff",
+      "ok": true,
+      "detail": "HTTP 200 · {\"session_id\":\"session_20261125_073423_a222daff\",\"stopped\":true}"
+    },
+    {
+      "action": "DELETE queen DM session session_20261125_073423_187213e6",
+      "ok": true,
+      "detail": "HTTP 200 · {\"session_id\":\"session_20261125_073423_187213e6\",\"stopped\":true}"
+    },
+    {
+      "action": "stop serve process",
+      "ok": true,
+      "detail": "serve stopped on SIGTERM (rc=0)"
+    },
+    {
+      "action": "delete temp HIVE_HOME",
+      "ok": true,
+      "detail": "/tmp/journey-ed625270-b133-41d5-b3e8-8b9481d40530"
+    }
+  ],
+  "cleanup_ok": true,
+  "failed": [],
+  "notes": []
+}

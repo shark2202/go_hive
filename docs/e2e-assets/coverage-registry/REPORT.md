@@ -1,5 +1,7 @@
 # Coverage Registry 报告
 
+> 2026-11-23 更新：本报告是 lane 交付时的快照。后续实现已把 `gap:colony_pivot_lean_handoff` 与 `gap:dm_fork_seed_compaction` 标为 fixed；另新增 `gap:dm_fork_worker_surface`、`gap:credentials_aden_client`（open）。当前状态以 `docs/coverage-registry.json`（11 gaps：8 fixed / 3 open）为准。
+
 ## 1. 目标
 
 现有门禁冻结的是「形状」：routes、工具 desc/schema、config/env 台账。parity 数字多来自自证式注解，没有把「上游可观察行为」变成机器可重新计算的登记册，因此用户不问就发现不了的遗漏反复出现。本 lane 建立第一版机器生成登记册，覆盖四个高价值维度：
@@ -15,7 +17,7 @@
 
 - `go_hive/scripts/gen_coverage_registry.py`：stdlib 生成器，支持 `--check`。
 - `scripts/test_gen_coverage_registry.py`：7 个 unittest 守卫。
-- `docs/coverage-registry.json`：机器可读登记册（141 行 + 9 条 known_gaps（6 fixed / 3 open））。
+- `docs/coverage-registry.json`：机器可读登记册（本报告交付时 141 行 + 9 条 known_gaps（6 fixed / 3 open）；当前为 11 条 / 8 fixed / 3 open，见顶部注记）。
 - `docs/coverage-registry.md`：同一数据的人类可读渲染。
 - 本报告。
 

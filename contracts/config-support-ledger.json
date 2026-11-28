@@ -33,7 +33,7 @@
           "contains": "func (s *ProviderSlot) Reconfigure("
         },
         {
-          "file": "go_hive/go-hive/internal/server/chat_runtime.go",
+          "file": "go_hive/go-hive/internal/server/chat_runtime_turn_boundary.go",
           "contains": "func (r *ChatRuntime) pinTurnProvider("
         }
       ],
@@ -194,7 +194,7 @@
           "contains": "runtime.workerLLM = opts.WorkerLLM"
         },
         {
-          "file": "go_hive/go-hive/internal/colony/runtime.go",
+          "file": "go_hive/go-hive/internal/colony/decision_runtime.go",
           "contains": "completer = r.workerCompleter()"
         },
         {
@@ -611,7 +611,7 @@
           "contains": "envNonEmpty(\"HIVE_COMPACTION_DEBUG\")"
         },
         {
-          "file": "go_hive/go-hive/internal/agentloop/loop.go",
+          "file": "go_hive/go-hive/internal/agentloop/compaction_run.go",
           "contains": "writeCompactionReport(agentCtx, ratioBefore, ratioAfter, preInventory)"
         },
         {
@@ -762,7 +762,7 @@
         },
         {
           "file": "go_hive/go-hive/internal/server/app.go",
-          "contains": "RegisterAppExtraRoutes(mux, AppExtraRouteDeps{Resources: deps.ResourceSnapshot})"
+          "contains": "routesapp.RegisterRoutes(mux, routesapp.Deps{Resources: deps.ResourceSnapshot})"
         }
       ],
       "tests": [
@@ -783,12 +783,12 @@
       "matches_wildcard": true,
       "anchors": [
         {
-          "file": "go_hive/go-hive/internal/cli/browser_cli.go",
+          "file": "go_hive/go-hive/internal/cli/browsercli/browser_cli.go",
           "contains": "the CLI that replaces"
         },
         {
-          "file": "go_hive/go-hive/internal/cli/browser_supervisor.go",
-          "contains": "func startBrowserBridge(cfg browserSupervisorConfig) func()"
+          "file": "go_hive/go-hive/internal/cli/browsersupervisor/supervisor.go",
+          "contains": "func Start(cfg Config) func()"
         }
       ],
       "reason": "Platform difference: the GCU memory tracer (tools/src/gcu/memtrace.py, 5 vars) belongs to the Python GCU process. The Go port replaces that process with the Go browser bridge + hive-browser CLI (browserbridge module, supervised by startBrowserBridge) and samples no GCU heap, so there is no code path a reader could tune. The substitute mechanism is the Go bridge's process supervision and its own runtime health surface; nothing is silently ignored — the names are registered here and in docs/environment-variables.html."

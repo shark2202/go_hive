@@ -6,10 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/shark2202/go_hive/go-hive/internal/credentials"
+	"github.com/shark2202/go_hive/go-hive/internal/hiveconf"
 	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
 	"github.com/shark2202/go_hive/go-hive/internal/llm"
 	"github.com/shark2202/go_hive/go-hive/internal/ratelimit"
@@ -247,78 +247,16 @@ func defaultDetectSubscriptions(home hivehome.Home) func() []string {
 	}
 }
 
-func claudeCodeToken() string {
-	return jsonFileString(filepath.Join(homeDir(), ".claude", ".credentials.json"),
-		"claudeAiOauth", "accessToken")
-}
+// Subscription-token readers delegate to hiveconf so the pipeline's LLM stage
+// and this route family share one resolution (A18).
 
-func codexToken() string {
-	return jsonFileString(filepath.Join(homeDir(), ".codex", "auth.json"),
-		"tokens", "access_token")
-}
+func claudeCodeToken() string { return hiveconf.ClaudeCodeToken() }
 
-func kimiCodeToken() string {
-	data, err := os.ReadFile(filepath.Join(homeDir(), ".kimi", "config.toml"))
-	if err != nil {
-		return ""
-	}
-	for _, line := range strings.Split(string(data), "\n") {
-		trimmed := strings.TrimSpace(line)
-		if !strings.HasPrefix(trimmed, "api_key") {
-			continue
-		}
-		rest := strings.TrimSpace(strings.TrimPrefix(trimmed, "api_key"))
-		if !strings.HasPrefix(rest, "=") {
-			continue
-		}
-		value := strings.TrimSpace(rest[1:])
-		if len(value) >= 2 && (value[0] == '"' || value[0] == '\'') && value[len(value)-1] == value[0] {
-			return value[1 : len(value)-1]
-		}
-	}
-	return ""
-}
+func codexToken() string { return hiveconf.CodexToken() }
 
-func antigravityToken(home hivehome.Home) string {
-	data, err := os.ReadFile(filepath.Join(home.Root, "antigravity-accounts.json"))
-	if err != nil {
-		return ""
-	}
-	var doc map[string]any
-	if err := json.Unmarshal(data, &doc); err != nil {
-		return ""
-	}
-	accounts, ok := doc["accounts"].([]any)
-	if !ok || len(accounts) == 0 {
-		return ""
-	}
-	first, ok := accounts[0].(map[string]any)
-	if !ok {
-		return ""
-	}
-	token, _ := first["accessToken"].(string)
-	return token
-}
+func kimiCodeToken() string { return hiveconf.KimiCodeToken() }
 
-func jsonFileString(path string, keys ...string) string {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return ""
-	}
-	var current any
-	if err := json.Unmarshal(data, &current); err != nil {
-		return ""
-	}
-	for _, key := range keys {
-		object, ok := current.(map[string]any)
-		if !ok {
-			return ""
-		}
-		current = object[key]
-	}
-	value, _ := current.(string)
-	return value
-}
+func antigravityToken(home hivehome.Home) string { return hiveconf.AntigravityToken(home) }
 
 func homeDir() string {
 	dir, err := os.UserHomeDir()

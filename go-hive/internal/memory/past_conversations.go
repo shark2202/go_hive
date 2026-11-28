@@ -254,8 +254,8 @@ func RecallPastConversations(homeRoot string, ref ScopeRef, text string, opts Pa
 		// Term frequencies come from the process-wide memo
 		// (recall_counts.go); they are a pure function of this turn's
 		// text, so a warm query never rebuilds them. The reference path
-		// is pastRecallTurnCounts + the same length sum, and results are
-		// identical (recall_counts_test.go).
+		// is pastRecallTurnCounts + the same character length, and results
+		// are identical (recall_counts_test.go).
 		freqs := recallTurnFreqsFor(homeRoot, ref, index.Sessions[turn.Session].EventsSize, turn.Session, turn.Ordinal, turn.User, turn.Reply)
 		docs = append(docs, pastRecallDoc{
 			turn:  PastTurn{Session: turn.Session, Ordinal: turn.Ordinal, User: turn.User, Reply: turn.Reply},

@@ -160,8 +160,8 @@ func TestUploadAttachmentStoresAndServesBack(t *testing.T) {
 	if response.Code != http.StatusOK {
 		t.Fatalf("GET attachment status = %d, body = %s", response.Code, response.Body.String())
 	}
-	if got := response.Header().Get("Content-Type"); got != "text/markdown" {
-		t.Fatalf("Content-Type = %q, want text/markdown", got)
+	if got := response.Header().Get("Content-Type"); got != "text/markdown; charset=utf-8" {
+		t.Fatalf("Content-Type = %q, want text/markdown; charset=utf-8", got)
 	}
 	if response.Body.String() != content {
 		t.Fatalf("served body = %q", response.Body.String())
@@ -259,6 +259,85 @@ func TestUploadAttachmentBuildsBoundedPreviews(t *testing.T) {
 	_, body = uploadAttachment(t, mux, sessionID, "file", "icon.svg", "image/svg+xml", []byte("<svg/>"))
 	if body["extracted_text"] != "" {
 		t.Fatalf("svg preview = %#v, want empty", body["extracted_text"])
+	}
+}
+
+// textPDFFixture builds a one-page PDF 1.4 file with a Helvetica text layer.
+// It has no xref table on purpose: the pdf parser's object-scan fallback is the
+// same path a slightly damaged user upload takes.
+func textPDFFixture(text string) []byte {
+	content := fmt.Sprintf("BT /F1 12 Tf 72 720 Td (%s) Tj ET", text)
+	var buffer bytes.Buffer
+	buffer.WriteString("%PDF-1.4\n")
+	buffer.WriteString("1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n")
+	buffer.WriteString("2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n")
+	buffer.WriteString("3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] " +
+		"/Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>\nendobj\n")
+	buffer.WriteString("4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>\nendobj\n")
+	fmt.Fprintf(&buffer, "5 0 obj\n<< /Length %d >>\nstream\n%s\nendstream\nendobj\n", len(content), content)
+	buffer.WriteString("trailer\n<< /Root 1 0 R /Size 6 >>\n%%EOF\n")
+	return buffer.Bytes()
+}
+
+// Parity: framework/server/routes_sessions.py::handle_upload_attachment
+// (pdfplumber branch: per-page text prefixed with "[PDF page N]")
+func TestUploadAttachmentExtractsPDFText(t *testing.T) {
+	home, err := hivehome.ResolveAt(t.TempDir())
+	if err != nil {
+		t.Fatalf("resolve home: %v", err)
+	}
+	sessionID := "session_20261125_090000_pdf00001"
+	manager, _ := attachmentSession(t, home, "queen_x", sessionID)
+	mux := sessionRoutesMux(SessionRouteDeps{Home: home, Manager: manager})
+
+	recorder, body := uploadAttachment(t, mux, sessionID, "file", "report.pdf", "application/pdf", textPDFFixture("Hello PDF"))
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("upload status = %d, body = %s", recorder.Code, recorder.Body.String())
+	}
+	if got := body["extracted_text"]; got != "[PDF page 1]\nHello PDF" {
+		t.Fatalf("extracted_text = %#v, want the page-prefixed text", got)
+	}
+}
+
+// Parity: framework/server/routes_sessions.py::handle_upload_attachment
+// (a > 10 MB PDF is exempt from extraction and stays path-only)
+func TestUploadAttachmentSkipsExtractionForLargePDF(t *testing.T) {
+	home, err := hivehome.ResolveAt(t.TempDir())
+	if err != nil {
+		t.Fatalf("resolve home: %v", err)
+	}
+	sessionID := "session_20261125_090000_pdf00002"
+	manager, _ := attachmentSession(t, home, "queen_x", sessionID)
+	mux := sessionRoutesMux(SessionRouteDeps{Home: home, Manager: manager})
+
+	large := textPDFFixture("Hello PDF")
+	large = append(large, bytes.Repeat([]byte(" "), int(largePDFThresholdBytes)+1)...)
+	recorder, body := uploadAttachment(t, mux, sessionID, "file", "large.pdf", "application/pdf", large)
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("upload status = %d, body = %s", recorder.Code, recorder.Body.String())
+	}
+	if body["extracted_text"] != "" {
+		t.Fatalf("large PDF extracted_text = %#v, want empty", body["extracted_text"])
+	}
+}
+
+// Parity: framework/server/routes_sessions.py::handle_upload_attachment
+// (pdfplumber failures degrade to empty text, never a failed upload)
+func TestUploadAttachmentToleratesUnreadablePDF(t *testing.T) {
+	home, err := hivehome.ResolveAt(t.TempDir())
+	if err != nil {
+		t.Fatalf("resolve home: %v", err)
+	}
+	sessionID := "session_20261125_090000_pdf00003"
+	manager, _ := attachmentSession(t, home, "queen_x", sessionID)
+	mux := sessionRoutesMux(SessionRouteDeps{Home: home, Manager: manager})
+
+	recorder, body := uploadAttachment(t, mux, sessionID, "file", "broken.pdf", "application/pdf", []byte("%PDF-1.4\nnot really a pdf"))
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("upload status = %d, body = %s", recorder.Code, recorder.Body.String())
+	}
+	if body["extracted_text"] != "" {
+		t.Fatalf("broken PDF extracted_text = %#v, want empty", body["extracted_text"])
 	}
 }
 

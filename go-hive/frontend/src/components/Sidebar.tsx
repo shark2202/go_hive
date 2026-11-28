@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import HiveLogo from "./HiveLogo";
+import ColonyNameField, { colonySlug, isUsableColonySlug } from "./ColonyNameField";
 import { apiUrl } from "@/api/client";
 import SidebarColonyItem from "./SidebarColonyItem";
 import SidebarQueenItem from "./SidebarQueenItem";
@@ -224,7 +225,7 @@ export default function Sidebar() {
   const { pendingRequest, clearRequest } = useCreateColony();
   useEffect(() => {
     if (!pendingRequest) return;
-    const slugged = (pendingRequest.name ?? "").toLowerCase().replace(/[^a-z0-9_]+/g, "_");
+    const slugged = colonySlug(pendingRequest.name ?? "", "_");
     setNewColonyName(slugged);
     setNewColonyGoal(pendingRequest.goal ?? "");
     // Pre-select the queen the prompt maps to, but only if the user actually
@@ -238,8 +239,8 @@ export default function Sidebar() {
   }, [pendingRequest, clearRequest, visibleQueenProfiles]);
 
   const handleCreateColony = async () => {
-    const cname = newColonyName.trim();
-    if (!cname || !newColonyQueen || creatingColony) return;
+    const cname = colonySlug(newColonyName, "_");
+    if (!isUsableColonySlug(cname) || !newColonyQueen || creatingColony) return;
     setCreatingColony(true);
     const goal = newColonyGoal.trim();
     try {
@@ -619,10 +620,8 @@ export default function Sidebar() {
 
             <div>
               <label className="block text-[11px] font-medium text-muted-foreground mb-1">{t("Colony Name")} <span className="text-primary">*</span></label>
-              <input type="text" value={newColonyName}
-                onChange={(e) => setNewColonyName(e.target.value.toLowerCase().replace(/[^a-z0-9_]+/g, "_"))}
-                placeholder={t("e.g. research team")} autoFocus
-                className="w-full rounded-md border border-border/60 bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary" />
+              <ColonyNameField value={newColonyName} onChange={setNewColonyName}
+                placeholder={t("e.g. research team")} autoFocus separator="_" />
             </div>
 
             <div>
@@ -639,7 +638,7 @@ export default function Sidebar() {
               className="px-3 py-1.5 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50">
               {t("Cancel")}
             </button>
-            <button onClick={handleCreateColony} disabled={creatingColony || !newColonyName.trim() || !newColonyQueen}
+            <button onClick={handleCreateColony} disabled={creatingColony || !isUsableColonySlug(colonySlug(newColonyName, "_")) || !newColonyQueen}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50">
               {creatingColony ? <><Loader2 className="w-3 h-3 animate-spin" /> {t("Creating...")}</> : t("Create")}
             </button>

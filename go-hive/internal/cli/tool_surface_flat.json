@@ -4,7 +4,7 @@
  "provenance": {
   "purpose": "Python reference default session tool surface advertised by the Go catalogue (flat names, one tool per action)",
   "source": "go_hive/contracts/tool-definitions.json",
-  "source_sha256": "a1c457c94ef4ae5c3c58f9d3aaf3e46747db7c4686fb6e5a675a891509fcb9af",
+  "source_sha256": "283115647283d01ef53bd74fa78bda8e3da16dcd1865120e7da63a7ff94d6ff8",
   "reference": {
    "name": "python",
    "package": "aden-hive / hive (core/)",

@@ -24,7 +24,7 @@ import (
 )
 
 // workerTaskExecutionMu serialises the process-wide execution context the task
-// executors read. Same reason as the queen side (internal/cli/task_tools.go):
+// executors read. Same reason as the queen side (internal/cli/toolcatalog/tasktools.go):
 // one tool call at a time observes one session id.
 var workerTaskExecutionMu sync.Mutex
 

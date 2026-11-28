@@ -124,6 +124,44 @@ func TestMaterializeWritesPersonaOnly(t *testing.T) {
 	}
 }
 
+// Parity: core/framework/agents/queen/queen_profiles.py::_atomic_write_text
+//
+// The durable guarantee is the shared atomicfs helper; this asserts the
+// materialized result is complete and readable, not a concurrency race.
+func TestMaterializeDefaultQueenWritesCompleteProfile(t *testing.T) {
+	dir := t.TempDir()
+	path, ok := materializeDefaultQueen(dir, "queen_outbound")
+	if !ok {
+		t.Fatal("materializeDefaultQueen(queen_outbound) = false, want true")
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("stat %s: %v", path, err)
+	}
+	if info.Size() == 0 {
+		t.Fatalf("%s is empty", path)
+	}
+	if mode := info.Mode().Perm(); mode != 0o644 {
+		t.Errorf("%s mode = %04o, want 0644", path, mode)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read %s: %v", path, err)
+	}
+	var written map[string]any
+	if err := yaml.Unmarshal(data, &written); err != nil {
+		t.Fatalf("parse %s as YAML: %v", path, err)
+	}
+	if want := DefaultProfilePersona("queen_outbound"); !reflect.DeepEqual(written, want) {
+		t.Errorf("materialized profile\n got: %#v\nwant: %#v", written, want)
+	}
+	for _, key := range []string{"default_tool_categories", "default_preset_skills"} {
+		if _, exists := written[key]; exists {
+			t.Errorf("profile.yaml carries %s", key)
+		}
+	}
+}
+
 // Parity: framework/agents/queen/tests/test_queen_profiles_defaults.py::test_self_heal_equality_holds_for_untouched_default
 func TestSelfHealEqualityHoldsForUntouchedDefault(t *testing.T) {
 	dir := t.TempDir()

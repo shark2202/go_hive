@@ -1,0 +1,24 @@
+Using CPython 3.11.16
+Creating virtual environment at: .venv
+   Building aden-hive @ file:///Users/mac/hive/.wt/w91-g1-acceptance/core
+   Building aden-tools @ file:///Users/mac/hive/.wt/w91-g1-acceptance/tools
+      Built aden-hive @ file:///Users/mac/hive/.wt/w91-g1-acceptance/core
+      Built aden-tools @ file:///Users/mac/hive/.wt/w91-g1-acceptance/tools
+Installed 130 packages in 245ms
+[prompt-parity] building Go target
+[prompt-parity] fake turn-context package: /var/folders/fx/_9b3wvr91jq2f28pmwr7p7sc0000gn/T/hive-prompt-parity-73276/python-turn-context-plugins
+[prompt-parity] stub LLMs: reference=http://127.0.0.1:59803/v1 target=http://127.0.0.1:59804/v1
+[prompt-parity] Python reference healthy on http://127.0.0.1:59805
+[prompt-parity] Go target healthy on http://127.0.0.1:59806
+[prompt-parity] Python reference session session_20261123_224652_33c518b2
+[prompt-parity] Go target session session_20261123_224658_cfdc39f3
+[prompt-parity] Python reference: opening queen request captured (1)
+[prompt-parity] Go target: opening queen request captured (1)
+[prompt-parity] Python reference: user-turn queen request captured (2)
+[prompt-parity] Go target: user-turn queen request captured (2)
+first-turn prompt parity (canonicalized)
+  system prompt:        IDENTICAL (python=21584 chars, go=21584 chars)
+  opening messages:     IDENTICAL (python=4344 chars, go=4344 chars)
+  skills catalog block: IDENTICAL (python=3985 chars, go=3985 chars)
+  searchable manifest:  IDENTICAL (python=307 chars, go=307 chars)
+  turn_context:         python_injected=True go_injected=True body=IDENTICAL (keys python=['probe'] go=['probe'])

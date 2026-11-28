@@ -62,6 +62,15 @@ var ToolCategories = map[string][]string{
 		"get_account_info",
 	},
 	"web_core": {"web_scrape"},
+	// Native HTTP family. It is not a member of web_core/research: the
+	// reference manifest must stay chart_render + web_scrape. The tools are
+	// loadable through the lazy tier, and CategoryAdditions[web_core] heals
+	// saved sidecars that already cover web_scrape.
+	"http_core": {
+		"http_request",
+		"http_download",
+		"http_upload",
+	},
 	"research": {"web_scrape", "pdf_read"},
 	"context_awareness": {
 		"get_current_time",
@@ -99,6 +108,7 @@ var categoryOrder = []string{
 	"files_core",
 	"context_core",
 	"web_core",
+	"http_core",
 	"research",
 	"context_awareness",
 	"charts",

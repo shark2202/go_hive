@@ -1,0 +1,120 @@
+{
+  "harness": "m7-deploy-drill (backup -> delete -> restore -> health, upgrade check/install/rollback)",
+  "started_at": "2026-11-23T13:34:26Z",
+  "finished_at": "2026-11-23T13:34:32Z",
+  "ok": true,
+  "exit_code": 0,
+  "binary_version": "hive-cloud 0.1.0-m3",
+  "environment": {
+    "os": "Darwin 25.6.0 arm64",
+    "bash": "3.2.57(1)-release",
+    "sqlite3": "3.51.0 2025-06-12 13:14:41 f0ca7bba1c5e232e5d279fad6338121ab55af0c8c68c84cdfb18ba5114dcaapl (64-bit)",
+    "docker_compose": "Docker Compose version v5.6.0",
+    "plutil": "available",
+    "systemd_analyze": "unavailable",
+    "docker_image_build": "not run: the drill validates compose config; building needs registry access"
+  },
+  "artifacts": {
+    "backup_bytes": 2602,
+    "backup_sha256": "2702091ee649a0ad0dae29104140817449510e4bae618075b9c841d02d2549b1",
+    "archive_entries": 7,
+    "team_databases": 1
+  },
+  "checks": [
+    {
+      "name": "build_binary",
+      "ok": true,
+      "detail": "version=hive-cloud 0.1.0-m3"
+    },
+    {
+      "name": "health_initial",
+      "ok": true,
+      "detail": "status=200 version=0.1.0-m3"
+    },
+    {
+      "name": "seed_data",
+      "ok": true,
+      "detail": "globaldb_rows=1 inbox_messages=1"
+    },
+    {
+      "name": "backup_live",
+      "ok": true,
+      "detail": "mode=live bytes=2602 entries=7 sha256=2702091ee649a0ad0dae29104140817449510e4bae618075b9c841d02d2549b1"
+    },
+    {
+      "name": "verify_backup",
+      "ok": true,
+      "detail": "checksums=ok integrity=ok"
+    },
+    {
+      "name": "delete_data",
+      "ok": true,
+      "detail": "path_removed=1"
+    },
+    {
+      "name": "restore_archive",
+      "ok": true,
+      "detail": "target_created=1 databases=1"
+    },
+    {
+      "name": "restore_permissions",
+      "ok": true,
+      "detail": "data_dir=700 jwt_secret=600 stream_secret=600"
+    },
+    {
+      "name": "restore_health",
+      "ok": true,
+      "detail": "status=200 version=0.1.0-m3"
+    },
+    {
+      "name": "restore_data_intact",
+      "ok": true,
+      "detail": "globaldb_rows=1 inbox_rows=1"
+    },
+    {
+      "name": "upgrade_check",
+      "ok": true,
+      "detail": "version=hive-cloud 0.1.0-m3 writes=0"
+    },
+    {
+      "name": "upgrade_install",
+      "ok": true,
+      "detail": "version=hive-cloud 0.1.0-m3 previous=hive-cloud 0.1.0-m3 backups=1"
+    },
+    {
+      "name": "upgrade_health_restart",
+      "ok": true,
+      "detail": "status=200 port=18788"
+    },
+    {
+      "name": "upgrade_rollback",
+      "ok": true,
+      "detail": "version=hive-cloud 0.1.0-m3 health=ok"
+    },
+    {
+      "name": "upgrade_version_guard",
+      "ok": true,
+      "detail": "exit=2 installed_unchanged=1"
+    },
+    {
+      "name": "launchd_plist",
+      "ok": true,
+      "detail": "plutil=ok"
+    },
+    {
+      "name": "compose_config",
+      "ok": true,
+      "detail": "docker compose config=ok"
+    },
+    {
+      "name": "deploy_lint",
+      "ok": true,
+      "detail": "shell=ok systemd_directives=ok plist=ok compose=ok"
+    },
+    {
+      "name": "systemd_unit_static",
+      "ok": true,
+      "detail": "static_directives=ok runtime_verify=BLOCKED(systemd-analyze-unavailable)"
+    }
+  ]
+}

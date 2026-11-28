@@ -22,6 +22,7 @@ type scriptedResponse struct {
 	Content    string
 	ToolCalls  []llm.ToolCall
 	StopReason string
+	Credits    *float64
 }
 
 func textResponse(text string) scriptedResponse {
@@ -126,6 +127,7 @@ func toCompletion(response scriptedResponse) llm.Completion {
 		Content:    response.Content,
 		ToolCalls:  response.ToolCalls,
 		StopReason: response.StopReason,
+		Credits:    response.Credits,
 	}
 }
 

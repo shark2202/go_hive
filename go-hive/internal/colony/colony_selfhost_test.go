@@ -55,7 +55,15 @@ func (m *queenAwareLLM) AComplete(_ context.Context, req llm.CompletionRequest) 
 	m.requests = append(m.requests, req)
 	if !isQueenRequest(req) {
 		m.workerCalls++
-		return llm.Completion{Content: "worker finished the unit", StopReason: "stop"}, nil
+		// A worker that reports nothing is auto-failed by the text-only stall
+		// policy on its third turn (grace 2 + 1). Keep the turns mutually
+		// dissimilar so the 6f response n-gram guard does not pre-empt it —
+		// this test pins the overseer dispatch path, not stall detection.
+		text := "Alphabetic summary of the unit"
+		if m.workerCalls%2 == 0 {
+			text = "Zygomorphic outcome reached"
+		}
+		return llm.Completion{Content: text, StopReason: "stop"}, nil
 	}
 	m.overseerCalls++
 	if m.overseerCalls == 1 {
@@ -293,7 +301,9 @@ func TestWorkerReportCarriesDurationSeconds(t *testing.T) {
 
 // Parity: framework/host/colony_runtime.py::ColonyRuntime.resume_worker
 func TestResumeWorkersContinuesSavedTranscript(t *testing.T) {
-	provider := newScriptedLLM(reportResponse("success", "first pass", nil), reportResponse("success", "second pass", nil))
+	provider := newScriptedLLM(reportResponse("success", "first pass", nil),
+		toolResponse("echo_1", "echo", `{}`),
+		reportResponse("success", "second pass", nil))
 	runtime := makeTestColony(t, provider, eventbus.NewEventBus())
 
 	ids, err := runtime.SpawnBatch(context.Background(), []BatchTask{{Task: "finish the ledger"}})
@@ -306,7 +316,7 @@ func TestResumeWorkersContinuesSavedTranscript(t *testing.T) {
 	}
 	before := provider.callCount()
 
-	resumed, failures := runtime.ResumeWorkers(context.Background(), ids, "use the second drawer", nil, "batch_resume")
+	resumed, failures := runtime.ResumeWorkers(context.Background(), ids, nil, "use the second drawer", nil, "batch_resume")
 	if len(failures) != 0 {
 		t.Fatalf("resume failures = %v", failures)
 	}
@@ -331,6 +341,18 @@ func TestResumeWorkersContinuesSavedTranscript(t *testing.T) {
 	if !strings.Contains(lastUserText(last.Messages), "use the second drawer") {
 		t.Fatalf("resumed turn lost the queen's guidance: %q", lastUserText(last.Messages))
 	}
+	// A23: guidance is client input injected mid-turn (upstream's
+	// inject_event(is_client_input=True)), not a plain user message written
+	// into the saved transcript before the loop starts.
+	guidanceMarked := false
+	for _, message := range resumedWorker.Conversation().Messages() {
+		if strings.Contains(message.Content, "use the second drawer") && message.IsClientInput {
+			guidanceMarked = true
+		}
+	}
+	if !guidanceMarked {
+		t.Fatal("resume guidance was not delivered as client input")
+	}
 	if resumedWorker.BatchID != "batch_resume" {
 		t.Fatalf("resumed batch id = %q, want batch_resume", resumedWorker.BatchID)
 	}
@@ -340,7 +362,7 @@ func TestResumeWorkersContinuesSavedTranscript(t *testing.T) {
 func TestResumeWorkersRejectsMissingTranscript(t *testing.T) {
 	runtime := makeTestColony(t, newScriptedLLM(textResponse("ok")), eventbus.NewEventBus())
 
-	resumed, failures := runtime.ResumeWorkers(context.Background(), []string{"worker_nope"}, "", nil, "")
+	resumed, failures := runtime.ResumeWorkers(context.Background(), []string{"worker_nope"}, nil, "", nil, "")
 	if len(resumed) != 0 {
 		t.Fatalf("resumed = %v, want none", resumed)
 	}

@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>lsp · 使用手册</title>
+<style>
+:root{--bg:#0b0f14;--panel:#121923;--panel2:#0f1620;--line:#233041;--text:#e6edf3;--muted:#8b9bb0;--accent:#f0b429;--accent2:#58a6ff;--ok:#3fb950;--warn:#d29922;--bad:#f85149;--code:#0a0e13}
+*{box-sizing:border-box} body{margin:0;background:linear-gradient(180deg,#0b0f14,#0d131b 55%,#0b0f14);color:var(--text);font:14.5px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;overflow-wrap:anywhere}
+a{color:var(--accent2);text-decoration:none} a:hover{text-decoration:underline}
+.wrap{max-width:1180px;margin:0 auto;padding:44px 26px 80px}
+header{border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:22px}
+.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+h1{font-size:30px;line-height:1.25;margin:10px 0;letter-spacing:-.02em} h1 span{color:var(--accent)}
+.lede{color:var(--muted);max-width:1040px;font-size:15px}
+.meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:15px;color:var(--muted);font-size:12.5px} .meta b{color:var(--text)}
+nav{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin:0 0 8px}
+nav b{color:var(--muted);font-size:11px;letter-spacing:.12em;text-transform:uppercase}
+nav ul{display:flex;flex-wrap:wrap;gap:6px 18px;list-style:none;margin:8px 0 0;padding:0}
+nav li{margin:0} nav a{font-size:13px}
+section{margin:36px 0} h2{font-size:22px;margin:0 0 8px} h2 .num{color:var(--accent);font-size:14px;margin-right:8px} h3{font-size:15.5px;margin:16px 0 8px;color:#cfdae6}
+p{color:#c6d2df;margin:8px 0} .sub{color:var(--muted);font-size:12.5px}
+.grid{display:grid;gap:12px} .g2{grid-template-columns:repeat(2,minmax(0,1fr))} .g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:1000px){.g3{grid-template-columns:repeat(2,minmax(0,1fr))}} @media(max-width:560px){.g3,.g2{grid-template-columns:1fr}.wrap{padding:30px 16px 60px}h1{font-size:24px}nav ul{gap:5px 12px}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:15px;min-width:0}
+.card .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.card .d{color:var(--muted);font-size:12px;margin-top:5px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:14px 0;background:var(--panel2);max-width:100%}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed}
+th,td{border-bottom:1px solid var(--line);padding:9px 10px;vertical-align:top;text-align:left;overflow-wrap:anywhere;word-break:break-word}
+th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;background:#0d141d;position:sticky;top:0;z-index:1}
+tr:hover td{background:#121a25} tr:last-child td{border-bottom:0}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--code);border:1px solid #1e2937;border-radius:5px;padding:1px 4px;color:#d7e3f0;overflow-wrap:anywhere}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#cfe0f2}
+.pill{display:inline-flex;align-items:center;font-size:11px;border-radius:999px;padding:2px 8px;border:1px solid var(--line);color:var(--muted);white-space:normal;margin:1px 2px 1px 0}
+.pill.ok{color:var(--ok);border-color:#1d3b26;background:#0f1a13} .pill.warn{color:var(--warn);border-color:#3d3013;background:#1a150a} .pill.bad{color:var(--bad);border-color:#3d1c1c;background:#1a0f0f} .pill.muted{color:var(--muted);border-color:var(--line);background:#0f1620}
+.callout{border-left:3px solid var(--accent);background:#161207;padding:11px 14px;border-radius:0 9px 9px 0;margin:14px 0;color:#e8d9b4}
+.callout.info{border-color:var(--accent2);background:#0d1622;color:#cfe3ff}
+.callout.bad{border-color:var(--bad);background:#1a0f0f;color:#f2c7c7}
+ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df}
+footer{margin-top:44px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:12px}
+@media(max-width:560px){table{font-size:12px}th,td{padding:7px 6px}pre{white-space:pre-wrap;overflow-wrap:anywhere}}
+</style></head><body><div class="wrap">
+
+<header>
+  <div class="eyebrow">GO_HIVE · LSP · USER GUIDE</div>
+  <h1>lsp <span>使用手册</span></h1>
+  <p class="lede">go_hive 通过纯 Go 的 stdio JSON-RPC 客户端接入你本机安装的语言服务器，提供只读的语义导航、类型信息、引用查询和诊断。语言服务器是外部运行时依赖，不随 go_hive 发布包分发；模型不能选择服务器命令或参数。</p>
+  <div class="meta"><span>状态：<b>read-only v1</b></span><span>动作：<b>9 个只读</b></span><span>核心：<b>internal/lsp</b></span><span>配置：<b>JSON</b></span><span>工作区：<b>cwd root marker / rootDir</b></span><span>实测平台：<b>darwin/arm64</b></span></div>
+</header>
+
+<nav><b>目录</b><ul>
+  <li><a href="#quick">00 快速开始</a></li>
+  <li><a href="#build">01 构建环境</a></li>
+  <li><a href="#install">02 安装语言服务器</a></li>
+  <li><a href="#config">03 配置</a></li>
+  <li><a href="#rootdir">03a rootDir 工作区</a></li>
+  <li><a href="#use">04 使用</a></li>
+  <li><a href="#matrix">05 四语言矩阵</a></li>
+  <li><a href="#trouble">06 排障</a></li>
+  <li><a href="#safety">07 安全与边界</a></li>
+  <li><a href="#files">08 文件与验证</a></li>
+</ul></nav>
+
+<section id="quick"><h2><span class="num">00</span>快速开始</h2>
+<div class="grid g3">
+  <div class="card"><div class="k">Step 1</div><h3>装语言服务器</h3><p>按语言安装 gopls、pyright、typescript-language-server、jdtls。服务器不在 PATH 时，配置里写绝对路径。</p></div>
+  <div class="card"><div class="k">Step 2</div><h3>构建 go_hive</h3><p><code>make build</code> 产出 <code>dist/hive</code>；LSP 客户端只用 Go 标准库，不需要新依赖或 cgo。</p></div>
+  <div class="card"><div class="k">Step 3</div><h3>写 lsp.json</h3><p>用户级 <code>$HIVE_HOME/lsp.json</code> 或项目级 <code>&lt;cwd&gt;/.hive/lsp.json</code>，至少包含 <code>settings.enabled=true</code>。</p></div>
+  <div class="card"><div class="k">Step 4</div><h3>确定工作区根</h3><p>默认在会话 cwd 查找 root marker；queen 会话 cwd 是独立 session 目录时，在对应 server 上配置绝对 <code>rootDir</code> 指向项目根。</p></div>
+  <div class="card"><div class="k">Step 5</div><h3>先查 status</h3><p>调用 <code>{"action":"status"}</code>，确认目标服务器为 <code>available</code>，再执行 definition/references/diagnostics。</p></div>
+  <div class="card"><div class="k">Step 6</div><h3>改配置后重开会话</h3><p>v1 不暴露 <code>reload</code> 动作；修改 lsp.json 或 root marker 后重新建立会话。</p></div>
+</div>
+<div class="callout info"><b>注册条件：</b><code>lsp</code> 工具只在 <code>settings.enabled=true</code> 时进入会话工具目录，并且属于 lazy tier。关闭该开关后，工具面完全不出现。</div>
+</section>
+
+<section id="build"><h2><span class="num">01</span>构建环境</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:18%">依赖</th><th style="width:30%">用途</th><th style="width:52%">要求</th></tr></thead><tbody>
+<tr><td>Go</td><td>编译 go_hive</td><td>与仓库 <code>go.mod</code> 一致的 Go 工具链；实测 Go 1.26.x。LSP 客户端为纯标准库实现。</td></tr>
+<tr><td>Node.js / npm</td><td>Pyright 与 TypeScript 语言服务器</td><td>Node 20+ 可用即可；本手册使用用户目录前缀安装，避免写系统级 npm。</td></tr>
+<tr><td>JDK</td><td>Eclipse JDT LS</td><td>JDK 21+；Homebrew 的 <code>jdtls</code> 启动封装会自动指向 <code>/opt/homebrew/opt/openjdk</code>。</td></tr>
+<tr><td>语言服务器</td><td>真正的语义能力</td><td>不由 go_hive 捆绑；缺失时 <code>status</code> 显示 <code>missing</code>，不会伪造结果。</td></tr>
+</tbody></table></div>
+<h3>构建与测试</h3>
+<pre>cd go_hive/go-hive
+make build                 # 产出 dist/hive
+CGO_ENABLED=0 go build -o dist/hive ./cmd/hive
+make ci                    # fmt / vet / test / cross / parity / wiring 全量门禁</pre>
+<h3>只跑 LSP 相关测试</h3>
+<pre>go test ./internal/lsp/... ./internal/tools/builtin/... ./internal/cli/...</pre>
+<div class="callout"><b>发布边界：</b>go_hive 二进制只包含客户端。语言服务器由用户安装、由配置指定；服务器崩溃或缺失会返回可读失败，不会退回文本搜索冒充语义结果。</div>
+</section>
+
+<section id="install"><h2><span class="num">02</span>安装语言服务器</h2>
+<h3>macOS（Homebrew + 用户目录 npm）</h3>
+<pre># Go + Java
+brew install gopls jdtls
+
+# Python + JavaScript/TypeScript（装到用户目录，不动系统 npm）
+mkdir -p "$HOME/.hive/lsp-servers"
+npm install --prefix "$HOME/.hive/lsp-servers" \
+  pyright typescript@5.9 typescript-language-server</pre>
+<div class="callout bad"><b>TypeScript 版本：</b>请使用 <code>typescript@5.x</code>。TypeScript 7.x 的包布局不再包含语言服务器需要的 <code>lib/tsserver.js</code>，typescript-language-server 会在 <code>initialize</code> 阶段报 “Could not find a valid TypeScript installation”。</div>
+<h3>其他安装方式</h3>
+<pre># Go
+go install golang.org/x/tools/gopls@latest
+
+# Python（也可用 pipx）
+pipx install pyright
+
+# Java：任意 JDK 21+ 发行版；使用 brew 时 jdtls 会自动设置 JAVA_HOME
+brew install openjdk jdtls</pre>
+<h3>命令解析顺序</h3>
+<p>配置里的 <code>command</code> 只能是裸命令名或绝对路径，相对路径会被拒绝。解析顺序是项目本地目录优先，最后才查 <code>PATH</code>：</p>
+<pre>&lt;cwd&gt;/.hive/bin
+&lt;cwd&gt;/node_modules/.bin
+&lt;cwd&gt;/.venv/bin
+&lt;cwd&gt;/venv/bin
+&lt;cwd&gt;/bin
+PATH</pre>
+<p class="sub">如果服务器装在用户目录且不在 PATH（例如 <code>~/.hive/lsp-servers/node_modules/.bin</code>），请在配置中写绝对路径。</p>
+</section>
+
+<section id="config"><h2><span class="num">03</span>配置</h2>
+<h3>文件与优先级</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:13%">层级</th><th style="width:37%">路径</th><th style="width:50%">说明</th></tr></thead><tbody>
+<tr><td>built-in</td><td>嵌入的 <code>internal/lsp/defaults.json</code></td><td>始终加载，当前含 7 个定义：bashls、clangd、gopls、pyright、rust-analyzer、typescript-language-server、yamlls。</td></tr>
+<tr><td>user</td><td><code>$HIVE_HOME/lsp.json</code></td><td>由启动环境决定；本机实际为 <code>/Users/mac/.hive-go/lsp.json</code>，不是 <code>~/.hive_go</code>。</td></tr>
+<tr><td>project</td><td><code>&lt;cwd&gt;/.hive/lsp.json</code></td><td>随项目提交，团队共享。</td></tr>
+<tr><td>local</td><td><code>&lt;cwd&gt;/.hive/lsp.local.json</code></td><td>机器本地覆盖，建议加入 <code>.gitignore</code>。</td></tr>
+</tbody></table></div>
+<p><b>合并规则：</b>所有存在的文件都参与合并，不是 first-file-only。优先级 <code>built-in &lt; user &lt; project &lt; local</code>。每个服务器对象按字段浅合并；<code>settings</code>、<code>initOptions</code> 这类对象字段整体替换，不做深合并。高优先级文件未出现的服务器保留低优先级定义。</p>
+<h3>settings</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:22%">字段</th><th style="width:12%">默认</th><th style="width:66%">说明</th></tr></thead><tbody>
+<tr><td><code>enabled</code></td><td>true</td><td>总开关；false 时 <code>lsp</code> 工具不注册。</td></tr>
+<tr><td><code>lazy</code></td><td>true</td><td>工具定义进入 lazy tier；首次非 status 调用才创建服务器进程。</td></tr>
+<tr><td><code>requestTimeout</code></td><td>10</td><td>单请求秒数，允许 1..300；超出范围会告警并沿用默认。</td></tr>
+<tr><td><code>formatOnWrite</code></td><td>false</td><td>写盘后格式化。v1 只读，该开关不改变工具面。</td></tr>
+<tr><td><code>diagnosticsOnWrite</code></td><td>true</td><td>写盘后收集诊断；v1 只读，供后续写动作使用。</td></tr>
+<tr><td><code>diagnosticsOnEdit</code></td><td>false</td><td>编辑后收集诊断；v1 只读。</td></tr>
+<tr><td><code>shared</code></td><td>false</td><td>共享服务器进程；v1 默认每个 project + server 独立进程。</td></tr>
+<tr><td><code>idleTimeoutMs</code></td><td>300000</td><td>空闲客户端/文档回收时间，允许 1000..86400000。</td></tr>
+</tbody></table></div>
+<h3>服务器字段</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:22%">字段</th><th style="width:10%">必填</th><th style="width:68%">说明</th></tr></thead><tbody>
+<tr><td><code>command</code></td><td>是</td><td>裸命令名或绝对路径；拒绝相对路径、<code>..</code> 和 shell 元字符。</td></tr>
+<tr><td><code>fileTypes</code></td><td>是</td><td>扩展名数组，必须带点，如 <code>[".go",".mod"]</code>。</td></tr>
+<tr><td><code>rootMarkers</code></td><td>是</td><td>相对路径数组，只在当前工作目录查找，不向父目录遍历；配置 <code>rootDir</code> 时在该目录查找。</td></tr>
+<tr><td><code>rootDir</code></td><td>否</td><td>绝对、存在、无 <code>..</code> 的目录。设置后该 server 的工作区根固定到此目录；未设置时按 cwd-only <code>rootMarkers</code>。queen 会话隔离 cwd 时用它指向项目根。</td></tr>
+<tr><td><code>args</code></td><td>否</td><td>参数数组，最多 64 项，每项最多 2048 字节。</td></tr>
+<tr><td><code>languageId</code></td><td>否</td><td>LSP languageId；未设置时按扩展名推断。</td></tr>
+<tr><td><code>initOptions</code></td><td>否</td><td>initialize 时传给服务器的 initializationOptions，整体替换。</td></tr>
+<tr><td><code>settings</code></td><td>否</td><td>服务器专属设置，整体替换。</td></tr>
+<tr><td><code>disabled</code></td><td>否</td><td>禁用该服务器，保留定义便于快速恢复。</td></tr>
+<tr><td><code>warmupTimeoutMs</code></td><td>否</td><td>initialize 等待上限，0..60000，默认 5000。</td></tr>
+<tr><td><code>isLinter</code></td><td>否</td><td>标记为 linter；同一扩展名同时匹配多个服务器时优先非 linter。</td></tr>
+<tr><td><code>watchFiles</code></td><td>否</td><td>服务器关注的配置文件列表，用于变更检测。</td></tr>
+</tbody></table></div>
+<h3>完整示例（四语言，用户级）</h3>
+<pre>{
+  "schema_version": 1,
+  "settings": {
+    "enabled": true,
+    "lazy": true,
+    "requestTimeout": 30,
+    "diagnosticsOnWrite": true
+  },
+  "idleTimeoutMs": 300000,
+  "servers": {
+    "gopls": {
+      "command": "gopls",
+      "args": ["serve"],
+      "fileTypes": [".go", ".mod", ".sum", ".work"],
+      "rootMarkers": ["go.mod", "go.work", "go.sum"],
+      "languageId": "go",
+      "warmupTimeoutMs": 10000
+    },
+    "pyright": {
+      "command": "pyright-langserver",
+      "args": ["--stdio"],
+      "fileTypes": [".py", ".pyi"],
+      "rootMarkers": ["pyproject.toml", "pyrightconfig.json",
+                     "setup.py", "setup.cfg", "requirements.txt", "Pipfile"],
+      "languageId": "python",
+      "warmupTimeoutMs": 15000
+    },
+    "typescript-language-server": {
+      "command": "typescript-language-server",
+      "args": ["--stdio"],
+      "fileTypes": [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts"],
+      "rootMarkers": ["tsconfig.json", "jsconfig.json", "package.json"],
+      "languageId": "typescript",
+      "warmupTimeoutMs": 15000
+    },
+    "jdtls": {
+      "command": "jdtls",
+      "args": ["-data", ".hive/jdtls-workspace"],
+      "fileTypes": [".java"],
+      "rootMarkers": ["pom.xml", "build.gradle", "build.gradle.kts",
+                      "settings.gradle", "settings.gradle.kts",
+                      "gradlew", "mvnw", ".project", ".classpath"],
+      "languageId": "java",
+      "warmupTimeoutMs": 30000
+    }
+  }
+}</pre>
+<p class="sub">若命令不在 PATH，把 <code>command</code> 换成绝对路径，例如 <code>/opt/homebrew/bin/gopls</code> 或 <code>/Users/you/.hive/lsp-servers/node_modules/.bin/typescript-language-server</code>。</p>
+<div class="callout"><b>Java 工作区：</b><code>-data .hive/jdtls-workspace</code> 相对项目根生成，每个项目独立。建议把项目的 <code>.hive/</code> 加入 <code>.gitignore</code>。</div>
+</section>
+
+<section id="rootdir"><h2><span class="num">03a</span>rootDir 工作区</h2>
+<p>默认规则是 <b>cwd-only</b>：服务器只在会话当前目录查找 <code>rootMarkers</code>，不会向父目录遍历。queen DM 会话的 cwd 是它自己的 session 目录（例如 <code>~/.hive-go/queens/&lt;queen&gt;/sessions/&lt;id&gt;</code>），所以即使项目就在机器上，默认也会显示 <code>unrooted</code>。</p>
+<p>给单个 server 配置 <code>rootDir</code> 后，该 server 的发现、project-local bin、进程 cwd、<code>initialize</code> 的 <code>rootUri</code>、文档管理器和 workspace 扫描都改用这个根。不同 server 可以指向不同项目根；不要为 Go 和 TypeScript 强行共用一个根。</p>
+<pre>{
+  "servers": {
+    "gopls": {
+      "command": "/opt/homebrew/bin/gopls",
+      "rootDir": "/Users/you/work/repo/go_hive/go-hive",
+      "args": ["serve"],
+      "fileTypes": [".go", ".mod", ".sum", ".work"],
+      "rootMarkers": ["go.mod", "go.work", "go.sum"]
+    },
+    "pyright": {
+      "command": "/Users/you/.hive/lsp-servers/node_modules/.bin/pyright-langserver",
+      "rootDir": "/Users/you/work/repo",
+      "args": ["--stdio"],
+      "fileTypes": [".py", ".pyi"],
+      "rootMarkers": ["pyproject.toml", "pyrightconfig.json", "setup.py"]
+    },
+    "typescript-language-server": {
+      "command": "/Users/you/.hive/lsp-servers/node_modules/.bin/typescript-language-server",
+      "rootDir": "/Users/you/work/repo/core/frontend",
+      "args": ["--stdio"],
+      "fileTypes": [".ts", ".tsx", ".js", ".jsx"],
+      "rootMarkers": ["tsconfig.json", "jsconfig.json", "package.json"]
+    }
+  }
+}</pre>
+<div class="tablewrap"><table><thead><tr><th style="width:28%">规则</th><th style="width:72%">说明</th></tr></thead><tbody>
+<tr><td>绝对路径</td><td><code>rootDir</code> 必须是绝对路径；相对路径和 <code>..</code> 会被拒绝。</td></tr>
+<tr><td>必须存在</td><td>目录不存在时该 server 保持 <code>unrooted</code>，并给出 <code>rootDir ... does not exist</code> 原因，不会退回 session 根。</td></tr>
+<tr><td>每个 server 独立</td><td>根只作用于当前 server；三个语言可以各自指向 Go module、repo 根和 frontend 根。</td></tr>
+<tr><td>文件路径</td><td>请求里的相对 <code>file</code> 相对该 server 的 <code>rootDir</code>；绝对路径仍会校验必须落在该根内。</td></tr>
+<tr><td>workspace 扫描</td><td><code>file="*"</code> 的 diagnostics/symbols 只扫描该 server 的 <code>rootDir</code>，不会扫描整个 HIVE_HOME。</td></tr>
+<tr><td>配置生效</td><td>v1 不暴露 reload；修改 <code>rootDir</code> 后重新建立会话。已有会话若仍持有旧配置，以新会话为准。</td></tr>
+</tbody></table></div>
+<div class="callout info"><b>本机实测：</b>在 <code>/Users/mac/.hive-go/lsp.json</code> 中给 gopls 配 <code>/Users/mac/hive/go_hive/go-hive</code>、pyright 配 <code>/Users/mac/hive</code>、typescript-language-server 配 <code>/Users/mac/hive/core/frontend</code> 后，queen DM 会话 <code>lsp status</code> 显示 <b>3 available</b>，并可直接查到 Go/Python/TS 符号。</div>
+</section>
+
+<section id="use"><h2><span class="num">04</span>使用</h2>
+<p>入口是会话内的工具名 <code>lsp</code>，不是独立 CLI 子命令。工具定义由 CLI 会话目录注册，调用经 <code>internal/tools/builtin</code> 适配器进入 <code>internal/lsp</code> 服务。<code>lsp</code> 属于 lazy tier：会话里先用 <code>search_tools</code>（例如 query <code>select:lsp</code>）加载，之后才能调用。</p>
+<h3>动作与参数</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:16%">action</th><th style="width:34%">作用</th><th style="width:28%">必填</th><th style="width:22%">备注</th></tr></thead><tbody>
+<tr><td><code>status</code></td><td>配置来源、服务器状态、可用/运行/失败计数</td><td>无</td><td>不启动服务器</td></tr>
+<tr><td><code>capabilities</code></td><td>查看服务器协商出的 capabilities</td><td>无</td><td>可能启动服务器</td></tr>
+<tr><td><code>diagnostics</code></td><td>单文件或工作区诊断</td><td><code>file</code></td><td>工作区用 <code>file="*"</code></td></tr>
+<tr><td><code>definition</code></td><td>符号定义位置</td><td><code>file, line</code> + 符号或列</td><td>可传 <code>symbol</code></td></tr>
+<tr><td><code>type_definition</code></td><td>类型定义位置</td><td>同上</td><td></td></tr>
+<tr><td><code>implementation</code></td><td>实现位置</td><td>同上</td><td></td></tr>
+<tr><td><code>references</code></td><td>引用位置</td><td>同上</td><td>默认最多 50 条</td></tr>
+<tr><td><code>hover</code></td><td>悬停信息/类型签名</td><td>同上</td><td>文本上限 4000 字节</td></tr>
+<tr><td><code>symbols</code></td><td>文档符号或工作区符号</td><td><code>file</code></td><td>工作区用 <code>file="*"</code> + <code>query</code></td></tr>
+</tbody></table></div>
+<div class="tablewrap"><table><thead><tr><th style="width:18%">参数</th><th style="width:11%">类型</th><th style="width:71%">说明</th></tr></thead><tbody>
+<tr><td><code>action</code></td><td>string</td><td>必填；只接受上述 9 个只读动作，未知动作报 <code>invalid_argument</code>。</td></tr>
+<tr><td><code>file</code></td><td>string</td><td>工作区相对路径或绝对路径；<code>status</code>、<code>capabilities</code> 不需要；<code>*</code> 只用于 diagnostics 和 symbols。</td></tr>
+<tr><td><code>line</code></td><td>integer</td><td>1-based；位置类动作必填。</td></tr>
+<tr><td><code>column</code></td><td>integer</td><td>1-based；省略 <code>symbol</code> 时使用，默认 1。</td></tr>
+<tr><td><code>symbol</code></td><td>string</td><td>该行上的标识符；<code>name#2</code> 选择第 2 次出现；先区分大小写匹配，再忽略大小写。</td></tr>
+<tr><td><code>query</code></td><td>string</td><td>工作区符号查询词，配合 <code>file="*"</code> 的 <code>symbols</code>。</td></tr>
+<tr><td><code>timeout</code></td><td>integer</td><td>整体超时秒数，5..300，默认 20。</td></tr>
+</tbody></table></div>
+<h3>调用示例</h3>
+<pre>{"action": "status"}
+
+{"action": "definition", "file": "internal/lsp/service.go",
+ "line": 42, "symbol": "NewService"}
+
+{"action": "references", "file": "a.ts", "line": 1, "symbol": "x"}
+
+{"action": "hover", "file": "src/main/java/Demo.java",
+ "line": 3, "column": 20}
+
+{"action": "diagnostics", "file": "a.py"}
+
+{"action": "symbols", "file": "*", "query": "Colony"}
+
+{"action": "diagnostics", "file": "*", "timeout": 120}</pre>
+<h3>status 的服务器状态</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:22%">状态</th><th style="width:78%">含义与处理</th></tr></thead><tbody>
+<tr><td><span class="pill ok">available</span></td><td>已找到 root marker，或已配置有效的绝对 <code>rootDir</code>，且命令可执行，可以使用。</td></tr>
+<tr><td><span class="pill muted">running</span></td><td>进程已启动；括号内显示空闲时长。</td></tr>
+<tr><td><span class="pill warn">unrooted</span></td><td>当前 cwd 找不到该 server 的 root marker，且未配置有效 <code>rootDir</code>；在项目根启动会话，或为该 server 配置绝对 <code>rootDir</code>。</td></tr>
+<tr><td><span class="pill warn">missing</span></td><td>命令无法解析；安装服务器或在配置中写绝对路径。</td></tr>
+<tr><td><span class="pill muted">disabled</span></td><td>配置中 <code>disabled=true</code>；删除该字段或设为 false。</td></tr>
+<tr><td><span class="pill bad">failed</span></td><td>初始化失败并进入退避；查看 <code>lastError</code> 与服务器 stderr 尾部。</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="matrix"><h2><span class="num">05</span>四语言矩阵</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:12%">语言</th><th style="width:26%">服务器与安装</th><th style="width:34%">项目 root marker</th><th style="width:28%">备注</th></tr></thead><tbody>
+<tr><td>Go</td><td><code>gopls</code><br><code>brew install gopls</code><br><code>go install golang.org/x/tools/gopls@latest</code></td><td><code>go.mod</code>、<code>go.work</code>、<code>go.sum</code></td><td>参数 <code>serve</code>；模块内首次查询可能需要构建索引。</td></tr>
+<tr><td>Python</td><td><code>pyright-langserver</code><br><code>npm install --prefix ~/.hive/lsp-servers pyright</code><br>或 <code>pipx install pyright</code></td><td><code>pyproject.toml</code>、<code>pyrightconfig.json</code>、<code>setup.py</code>、<code>setup.cfg</code>、<code>requirements.txt</code>、<code>Pipfile</code></td><td>参数 <code>--stdio</code>；需要 Node 运行时（npm 安装形态）。</td></tr>
+<tr><td>JavaScript / TypeScript</td><td><code>typescript-language-server</code><br><code>npm install --prefix ~/.hive/lsp-servers typescript@5.9 typescript-language-server</code></td><td><code>tsconfig.json</code>、<code>jsconfig.json</code>、<code>package.json</code></td><td>参数 <code>--stdio</code>；TypeScript 必须为 5.x。</td></tr>
+<tr><td>Java</td><td><code>jdtls</code><br><code>brew install jdtls</code>（自动带 OpenJDK 封装）</td><td><code>pom.xml</code>、<code>build.gradle</code>、<code>build.gradle.kts</code>、<code>settings.gradle</code>、<code>settings.gradle.kts</code>、<code>gradlew</code>、<code>mvnw</code>、<code>.project</code>、<code>.classpath</code></td><td>参数 <code>-data .hive/jdtls-workspace</code>；需要 JDK 21+，首次导入 Maven/Gradle 项目较慢。</td></tr>
+</tbody></table></div>
+<div class="callout info"><b>同扩展名多服务器：</b>按 <code>fileTypes</code> 匹配；禁用的服务器不参与；同一扩展名同时命中多个定义时优先非 <code>isLinter</code> 的主服务器。</div>
+</section>
+
+<section id="trouble"><h2><span class="num">06</span>排障</h2>
+<h3>常见问题</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:30%">现象</th><th style="width:70%">处理</th></tr></thead><tbody>
+<tr><td><code>status</code> 显示 <code>unrooted</code></td><td>root marker 只在 cwd 查找。切换到含 <code>go.mod</code>/<code>pyproject.toml</code>/<code>package.json</code>/<code>pom.xml</code> 的项目根再启动会话，或为该 server 配置绝对 <code>rootDir</code>（推荐用于 queen 会话）；检查目录真实存在。</td></tr>
+<tr><td><code>status</code> 显示 <code>missing</code></td><td>命令不在 PATH。安装服务器，或在配置中把 <code>command</code> 写成绝对路径；确认文件有可执行权限。</td></tr>
+<tr><td>typescript：<code>Could not find a valid TypeScript installation</code></td><td>TypeScript 7.x 缺少 <code>lib/tsserver.js</code>。安装 <code>typescript@5.9</code>，并确保与 typescript-language-server 在同一前缀。</td></tr>
+<tr><td>jdtls 启动失败或找不到 Java</td><td>需要 JDK 21+。非 brew 安装时设置 <code>JAVA_HOME</code>；brew 的 <code>jdtls</code> 封装已自动处理。</td></tr>
+<tr><td>改了配置但行为没变</td><td>v1 不暴露 <code>reload</code>；重新建立会话。确认修改的是正确的层级，并检查 <code>status</code> 的 config 来源列表。</td></tr>
+<tr><td>项目里出现 <code>.hive/jdtls-workspace</code></td><td>这是 jdtls 的 per-project 数据目录；加入 <code>.gitignore</code>，或把 <code>-data</code> 改成项目外的绝对路径。</td></tr>
+<tr><td>首次请求很慢</td><td>lazy 模式下首次非 status 调用才启动服务器；gopls 与 jdtls 需要索引/导入项目。可把 <code>timeout</code> 调到 60..120。</td></tr>
+</tbody></table></div>
+<h3>错误码</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:28%">code</th><th style="width:72%">含义</th></tr></thead><tbody>
+<tr><td><code>invalid_argument</code></td><td>动作或字段非法，例如缺少 file/line、<code>file="*"</code> 用在了位置类动作。</td></tr>
+<tr><td><code>unsupported_action</code></td><td>动作属于设计中的写/控制面，v1 未暴露：rename、code_actions、rename_file、reload、request。</td></tr>
+<tr><td><code>disabled</code></td><td><code>settings.enabled=false</code>。</td></tr>
+<tr><td><code>no_server</code></td><td>没有匹配该文件的服务器，或匹配到的服务器不可用。</td></tr>
+<tr><td><code>server_unavailable</code></td><td>进程启动失败；消息含原因与有界 stderr 尾部。</td></tr>
+<tr><td><code>request_failed</code></td><td>服务器返回 JSON-RPC error。</td></tr>
+<tr><td><code>timeout</code></td><td>请求超过 <code>timeout</code> 或 <code>requestTimeout</code>。</td></tr>
+<tr><td><code>path_rejected</code></td><td>路径逃出工作区、不是普通文件、或符号链接检查失败。</td></tr>
+<tr><td><code>position_rejected</code></td><td>行号或符号无法解析；检查 1-based 行号与标识符拼写。</td></tr>
+<tr><td><code>unsupported_by_server</code></td><td>服务器协商能力不包含该动作，例如没有 referencesProvider。</td></tr>
+<tr><td><code>internal</code></td><td>本地意外失败；保留 <code>status</code> 输出与 stderr 以便排查。</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="safety"><h2><span class="num">07</span>安全与边界</h2>
+<div class="grid g2">
+  <div class="card"><div class="k">只读 v1</div><h3>没有写动作</h3><p>rename、code actions、文件重命名、原始 request 都不在工具 schema 内；模型无法通过这些路径改文件。所有暴露动作自动执行。</p></div>
+  <div class="card"><div class="k">命令信任边界</div><h3>模型不能选二进制</h3><p>服务器命令和参数只来自内置目录或用户/项目配置；模型输入只影响文件、行、符号、查询和超时。</p></div>
+  <div class="card"><div class="k">路径边界</div><h3>工作区内普通文件</h3><p>拒绝逃出工作区的路径、非普通文件和符号链接检查失败；不把 Go 字节偏移当作 LSP UTF-16 列。</p></div>
+  <div class="card"><div class="k">资源上限</div><h3>有界等待与输出</h3><p>请求与工具超时、进程数上限、结果条数与字节上限；服务器 stderr 只保留有界尾部，不进入正常结果。</p></div>
+</div>
+<div class="tablewrap"><table><thead><tr><th style="width:34%">上限</th><th style="width:14%">值</th><th style="width:52%">作用</th></tr></thead><tbody>
+<tr><td>工具超时</td><td>5..300s，默认 20s</td><td>单次 <code>lsp</code> 调用总预算。</td></tr>
+<tr><td>请求超时</td><td>1..300s，默认 10s</td><td><code>settings.requestTimeout</code>。</td></tr>
+<tr><td>references / symbols</td><td>50 / 200</td><td>单次返回的引用与文档符号上限。</td></tr>
+<tr><td>workspace symbols / files</td><td>200 / 20</td><td>工作区符号与扫描文件上限。</td></tr>
+<tr><td>diagnostics</td><td>200</td><td>单次诊断条数上限。</td></tr>
+<tr><td>hover / result</td><td>4000 B / 64 KiB</td><td>悬停文本与整体结果字节上限。</td></tr>
+<tr><td>running processes / checkers</td><td>8 / 2</td><td>同时运行的服务器与工作区检查器上限。</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="files"><h2><span class="num">08</span>文件与验证</h2>
+<h3>相关文件</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:44%">路径</th><th style="width:56%">内容</th></tr></thead><tbody>
+<tr><td><code>internal/lsp/doc.go</code></td><td>包边界、配置链、位置安全与 v1 只读说明。</td></tr>
+<tr><td><code>internal/lsp/defaults.json</code></td><td>嵌入的语言服务器目录。</td></tr>
+<tr><td><code>internal/lsp/config.go</code></td><td>四级配置合并、校验、缓存与 reload 控制 API。</td></tr>
+<tr><td><code>internal/lsp/discovery.go</code></td><td>root marker、可选 <code>rootDir</code> 与命令解析顺序。</td></tr>
+<tr><td><code>internal/lsp/request.go</code></td><td>动作枚举与参数校验。</td></tr>
+<tr><td><code>internal/tools/builtin/lsp.go</code></td><td>模型工具 schema、审批元数据与适配器。</td></tr>
+<tr><td><code>internal/cli/session_tools_code_intel.go</code></td><td>按 <code>settings.enabled</code> 注册会话工具。</td></tr>
+<tr><td><code>docs/lsp-design.html</code></td><td>需求—设计链与冻结契约。</td></tr>
+</tbody></table></div>
+<h3>本手册编写时的实测</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:16%">语言</th><th style="width:34%">版本</th><th style="width:20%">initialize</th><th style="width:30%">capabilities</th></tr></thead><tbody>
+<tr><td>Go</td><td>gopls 0.24.0</td><td><span class="pill ok">OK</span></td><td>24</td></tr>
+<tr><td>Python</td><td>Pyright 1.1.414</td><td><span class="pill ok">OK</span></td><td>16</td></tr>
+<tr><td>JS/TS</td><td>typescript-language-server 6.1.0 + TypeScript 5.9</td><td><span class="pill ok">OK</span></td><td>23</td></tr>
+<tr><td>Java</td><td>Eclipse JDT LS 1.63.0 + OpenJDK 27</td><td><span class="pill ok">OK</span></td><td>26</td></tr>
+</tbody></table></div>
+<p class="sub">验证方式：对四个服务器分别发送 LSP <code>initialize</code> 请求并读取响应；另用 go_hive 自身的 <code>LoadConfig</code>/<code>DiscoverServers</code> 在带四类 root marker 的临时项目上断言四者均为 <code>available</code>，测试 PASS。语言服务器版本会随安装时间变化，能力数量供参考。</p>
+<h3>2026-11-24 rootDir 真实会话实测</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:20%">会话 / 服务器</th><th style="width:34%">rootDir</th><th style="width:46%">结果</th></tr></thead><tbody>
+<tr><td>queen DM <code>lsp status</code></td><td>gopls / pyright / typescript</td><td><span class="pill ok">3 available</span>，8 configured；会话 cwd 仍是自己的 session 目录。</td></tr>
+<tr><td>gopls symbols</td><td><code>/Users/mac/hive/go_hive/go-hive</code></td><td><code>internal/version/version.go</code> 返回 2 个符号：<code>Version</code>、<code>Upstream</code>。</td></tr>
+<tr><td>pyright symbols</td><td><code>/Users/mac/hive</code></td><td><code>core/framework/server/queen_mail.py</code> 返回 205 个符号。</td></tr>
+<tr><td>typescript symbols</td><td><code>/Users/mac/hive/core/frontend</code></td><td><code>src/api/client.ts</code> 返回 85 个符号。</td></tr>
+<tr><td>jdtls symbols</td><td>临时 Maven 项目</td><td>返回 3 个符号：<code>demo</code>、<code>Hello</code>、<code>Hello.add</code>；当前真实 HIVE_HOME 没有 Java 项目，因此未设置 <code>rootDir</code>。</td></tr>
+</tbody></table></div>
+<p class="sub">实测环境：<code>/Users/mac/.hive-go/lsp.json</code>，serve 二进制 SHA256 <code>12f3a75770c0ce29dae98ce68c41ba10f4807b517a56d871f17d13fb9049171b</code>；真实会话 <code>session_20261124_111352_4a48a7a3</code>。临时探针已删除。</p>
+</section>
+
+<footer>go_hive · LSP usage manual · 2026-11-24 · 对应实现：<code>internal/lsp</code> read-only v1 · 设计契约见 <a href="lsp-design.html">lsp-design.html</a></footer>
+</div></body></html>

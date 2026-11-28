@@ -17,7 +17,7 @@
 
 | 目标 | 含义 | 验收证据（可复现命令/产物） |
 | --- | --- | --- |
-| **外观一致** | 模型/前端/脚本能看到的每一层字段级逐字：API/WS 字段、tool 定义（name/description/input schema）、skill 内容、env、configuration.json、CLI help/输出 | `contracts/*.json` + `docs/tool-contract-diff.md`、`api-contract-diff.md`、`env-config-contract-diff.md`、`sse-payload-parity.md`、`cli-surface.html`；`make compat-check` C1–C12 |
+| **外观一致** | 模型/前端/脚本能看到的每一层字段级逐字：API/WS 字段、tool 定义（name/description/input schema）、skill 内容、env、configuration.json、CLI help/输出 | `contracts/*.json` + `docs/tool-contract-diff.md`、`api-contract-diff.md`、`env-config-contract-diff.md`、`sse-payload-parity.md`、`cli-surface.html`；`make compat-check` C1–C13 |
 | **语义一致** | 同一输入产生同一行为与同一可观测结果：AgentLoop/Colony/playbook/memory/soul/queen-mail 全链路 | 逐文件 `// Parity:` 注解（`check_parity.sh`）+ 真实双跑证据（`docs/e2e-assets/**`） |
 | **功能一致** | 上游每个工具/路由/命令/机制在 Go 侧都存在且可被真实调用 | C12 模块清单 273 条登记 0 未登记；`docs/tool-parity-matrix.html`；缺口登记在 `docs/delivery-backlog.json` |
 | **特性一致** | 机制完整性：热重载、调度（cron/trigger/slot）、多模态、升级兼容、热插拔 skill、MCP 热重载等 | `docs/compatibility-policy.md` + `scripts/upgrade_compat_check.sh`（每 slot 自动跑）；各特性页 |
@@ -95,7 +95,7 @@ Go 代码与配套文档在 `go_hive/` 下：`go-hive/`（模块）、`contracts
 | parity 注解 | `make parity` | 退出码 0 | 通过：**5,816/5,816**（wave-73；refs 6,391 全解析） |
 | parity 引用 | `make parity-targets` | 退出码 0 | 通过：全解析，0 missing |
 | 接线 | `make wiring-check` | 退出码 0 | 通过 |
-| 升级兼容 | `make compat-check` | 12 项全过 | 通过（C1–C12；C12 = 273 条登记 0 未登记：ported 220 / partial 27 / out_of_scope 9 / unported 17（triage + coercion + sentinel/antigravity/GA 并集）；config 137 键 / 22 section） |
+| 升级兼容 | `make compat-check` | 13 项全过 | 通过（C1–C13；C12 = 273 条登记 0 未登记：ported 220 / partial 27 / out_of_scope 9 / unported 17（triage + coercion + sentinel/antigravity/GA 并集）；C13 = OpenAPI 226 操作 / 181 路径 / 107 快照全映射 + AsyncAPI 5 通道 / 24 操作 / 36 消息；config 137 键 / 22 section） |
 | 架构 | `make arch-check` | 7 生成物一致 | 通过（87 包 / 234 边 / 8 层 / 1 条 info warning；soul→queen 反向依赖已消除） |
 | 行为冻结 | `refactor_freeze.sh compare wave15-base` | OK（allowlist 逐条理由） | 通过（结构重构 lane 必跑） |
 | govulncheck | `govulncheck ./...` | 0 OSV | 通过（go1.26.11，连续 wave-66/67/69/70/72/73 复验） |

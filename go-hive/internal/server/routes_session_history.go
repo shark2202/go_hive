@@ -8,10 +8,6 @@ package server
 // Parity: framework/server/routes_sessions.py::handle_reveal_session_folder
 
 import (
-	"bytes"
-	"encoding/json"
-	"errors"
-	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -20,28 +16,6 @@ import (
 	"github.com/shark2202/go_hive/go-hive/internal/platform"
 	"github.com/shark2202/go_hive/go-hive/internal/session"
 )
-
-func decodeJSONValue(r *http.Request) (any, error) {
-	data, err := readLimitedBody(r, maxJSONBodyBytes)
-	if err != nil {
-		return nil, err
-	}
-	return decodeJSONBytes(data)
-}
-
-// decodeJSONBytes mirrors Python json.loads: one value, no trailing data.
-func decodeJSONBytes(data []byte) (any, error) {
-	decoder := json.NewDecoder(bytes.NewReader(data))
-	decoder.UseNumber()
-	var decoded any
-	if err := decoder.Decode(&decoded); err != nil {
-		return nil, err
-	}
-	if _, err := decoder.Token(); err != io.EOF {
-		return nil, errors.New("trailing data after JSON value")
-	}
-	return decoded, nil
-}
 
 // Parity: framework/server/routes_sessions.py::_validate_colony_id_segment
 func validateColonyIDSegment(raw string) string {

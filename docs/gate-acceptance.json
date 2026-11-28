@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-11-23 22:58:57 CST",
+  "accepted_code_point": "42f2b93215edddcd3f7f9ef5ca246162753e6d7b",
+  "deadlines": {
+    "G1": "2026-11-22",
+    "G2": "2026-11-22",
+    "G3": "2026-12-18"
+  },
+  "gates": {
+    "G1": {
+      "accepted": true,
+      "accepted_at": "2026-11-23",
+      "late_vs_deadline": true,
+      "conditions": "8/8 PASS with registered exceptions",
+      "report": "go_hive/docs/g1-acceptance-20261123.md",
+      "summary": "go_hive/docs/e2e-assets/g1-acceptance-20261123/summary.json",
+      "note": "Independent re-run at 42f2b932; condition 4 regenerated stale env/config contract artifacts only; no product code changed."
+    },
+    "G2": {
+      "accepted": true,
+      "accepted_at": "2026-11-23",
+      "late_vs_deadline": true,
+      "conditions": "13 PASS cases; v1-rich 50/50, v2-rich 99/99, rollback and upgrade drills pass",
+      "report": "go_hive/docs/g2-acceptance-20261123.md",
+      "summary": "go_hive/docs/e2e-assets/g2-acceptance-20261123/summary.json",
+      "decision": "P0-G2-1 = D2 option A: keep $HIVE_HOME/exports, register Python CWD difference, no product behavior change",
+      "note": "Evidence refreshed at 42f2b932; fake fixture credentials only, not real third-party credentials."
+    }
+  },
+  "remaining_release_gate": "G3",
+  "g3_external": [
+    "windows-real",
+    "actions-release"
+  ]
+}

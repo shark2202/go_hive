@@ -7,6 +7,7 @@ require (
 	github.com/go-rod/rod v0.116.2
 	github.com/go-rod/stealth v0.4.9
 	github.com/mattn/go-isatty v0.0.24
+	github.com/odvcencio/gotreesitter v0.57.0
 	gopkg.in/yaml.v3 v3.0.1
 	modernc.org/sqlite v1.60.1
 )

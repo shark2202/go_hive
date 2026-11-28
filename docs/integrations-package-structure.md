@@ -39,6 +39,10 @@ internal/tools/
     │   ├── catalog.go / actions.go
     │   ├── xlsx_package.go / xlsx_styles.go / xlsx_sheet.go / xlsx_write.go
     │   └── excel_test.go / digest_test.go
+    ├── image/               # ✅ 图像生成领域子包（w210/integrations-image）
+    │   ├── doc.go / kit.go / catalog.go / deps.go / register.go
+    │   ├── generate.go / postprocess.go / artifacts.go / references.go / ssrf.go
+    │   └── image_test.go / digest_test.go
     ├── devops/              # ✅ DevOps/hosting 领域子包（int-p2-devops）
     │   ├── doc.go / kit.go / register.go / common.go
     │   ├── gitlab.go / s3.go / vercel.go / dockerhub.go
@@ -87,6 +91,10 @@ internal/tools/
     └── commerce/               # ✅ 电商/财务领域子包（int-split-p3）
         ├── doc.go / kit.go / common.go / shared.go
         ├── finance_commerce.go / shopify.go / quickbooks.go / plaid.go / razorpay.go
+        └── *_test.go / digest_test.go
+    └── scrape/                 # ✅ web-scrape 领域子包（w213/integrations-scrape）
+        ├── doc.go / kit.go / deps.go / register.go
+        ├── catalog.go / scrape.go / html.go / browser.go / shared.go
         └── *_test.go / digest_test.go
 ```
 
@@ -140,7 +148,7 @@ internal/tools/
 | `google_workspace.go` | `calendar`, `gmail`, `google_docs`, `google_sheets` |
 | `greenhouse.go` | `greenhouse` |
 | `hubspot.go` | `hubspot` |
-| `image.go` | `image_generate` |
+| `image/（子包）` | `image_generate` |
 | `infra/（子包）` | `kafka`, `n8n`, `pagerduty`, `prometheus`, `terraform`, `tines` |
 | `intercom.go` | `intercom` |
 | `jira.go` | `jira` |
@@ -162,7 +170,7 @@ internal/tools/
 | `salesforce.go` | `salesforce` |
 | `sap.go` | `sap` |
 | `schedchat/（子包）` | `brevo`, `calcom`, `calendly`, `discord`, `mattermost` |
-| `scrape.go` | `web_scrape` |
+| `scrape/（子包）` | `web_scrape` |
 | `shopify.go` | `shopify` |
 | `snowflake.go` | `snowflake` |
 | `social/（子包）` | `pushover`, `reddit`, `twilio`, `twitter`, `youtube` |
@@ -181,6 +189,7 @@ internal/tools/
 | 领域 | 状态 | 备注 |
 | --- | --- | --- |
 | excel | ✅ 已迁入 `excel/`（本分支） | 6 actions；catalog digest 与迁移前一致；文件 ≤800 行 |
+| image | ✅ 已迁入 `image/`（w210/integrations-image） | 1 tool / 1 action；`{names, actions, entries}` digest 与迁移前逐字节一致（sha 04c8c45d…，640 bytes）；文件 ≤800 行；根包 `image_install.go` 薄入口，`newBatch3MediaRegistry` 继续同时装配 image 与 web_search；测试随实现迁入子包 |
 | cloudflare | ⏳ 第二阶段候选 #1 | 1973 行、73 个 lane 前缀 helper；结构最接近 excel |
 | devops | ✅ 已迁入 `devops/`（int-p2-devops） | 4 tools / 31 actions；catalog digest 与迁移前逐字节一致；文件 ≤800 行；根包 `devops_install.go` 薄入口 |
 | social | ✅ 已迁入 `social/`（int-p2-social） | 5 tools / 36 actions；`{names, actions, entries}` digest 与迁移前逐字节一致；文件 ≤800 行；根包 `social_install.go` 薄入口；测试随实现迁入子包 |
@@ -189,6 +198,7 @@ internal/tools/
 | infra | ✅ 已迁入 `infra/`（int-p2-infra） | 6 tools / 32 actions；`{names, actions, entries}` digest 与迁移前逐字节一致（sha aae7d29d…）；文件 ≤800 行；根包 `infra_install.go` 薄入口 |
 | webintel | ✅ 已迁入 `webintel/`（int-p2-webintel） | 3 tools / 42 actions；`{names, actions, entries}` digest 与迁移前逐字节一致（sha 59b37c4c…）；文件 ≤800 行；根包 `webintel_install.go` 薄入口；测试随实现迁入子包 |
 | schedchat | ✅ 已迁入 `schedchat/`（int-p2-schedchat） | 5 tools / 40 actions；`{names, actions, entries}` digest 与迁移前逐字节一致（sha b4f85f8c…）；文件 ≤800 行；根包 `schedchat_install.go` 薄入口 |
+| scrape | ✅ 已迁入 `scrape/`（w213/integrations-scrape） | 1 tool / 1 action；`{names, actions, entries}` digest 与迁移前逐字节一致（sha 8d80e3b1…，1936 bytes）；文件 ≤800 行；根包 `pdf_install.go` 薄入口，`newBatch3Registry` 继续同时装配 pdf_read 与 web_scrape；测试随实现迁入子包 |
 | 其余 40+ 领域文件 | ⏳ 第二阶段/第三阶段 | 按领域逐个迁出，根包只留装配 |
 | integrationkit | ✅ 内核已就位 | 新增 registry/params/httpx/files；行为零变化 |
 

@@ -82,6 +82,27 @@ func escalationStreamEligible(streamID string) bool {
 	return !strings.HasPrefix(streamID, "worker:")
 }
 
+// doomLoopEscalationEligible reports whether the automatic tool-doom-loop
+// producer may publish for this context. It is upstream's 6f' gate: the queen,
+// the judge and a synthetic/event-triggered turn have a direct human or no
+// live audience, so the escalation is suppressed; colony workers (including
+// parallel worker:<id> streams, which the escalate tool itself refuses) keep
+// this one automatic channel.
+//
+// Parity: framework/agent_loop/agent_loop.py::_execute_impl (6f' escalation
+// branch: not supports_direct_user_io, not event_triggered, stream not in
+// ("queen", "judge"), event bus present)
+func doomLoopEscalationEligible(agentCtx *AgentContext) bool {
+	if agentCtx == nil || agentCtx.EscalationSink == nil || agentCtx.EventTriggered {
+		return false
+	}
+	switch agentCtx.StreamID {
+	case "", "queen", "judge", "overseer":
+		return false
+	}
+	return true
+}
+
 // escalateDoomLoop publishes the automatic worker->queen escalation upstream
 // raises when the tool doom-loop detector trips. This is upstream's second
 // ESCALATION_REQUESTED producer (the first is the escalate tool), and the only
@@ -99,7 +120,15 @@ func escalationStreamEligible(streamID string) bool {
 // Parity: framework/agent_loop/agent_loop.py::_execute_impl (6f' tool doom loop
 // -> emit_escalation_requested, reason "Tool doom loop detected")
 func (l *AgentLoop) escalateDoomLoop(agentCtx *AgentContext, tool string, streak int) string {
-	if l == nil || agentCtx == nil || agentCtx.EscalationSink == nil {
+	return l.escalateDoomLoopDescription(agentCtx, tool, streak, doomLoopDescription(tool, streak))
+}
+
+// escalateDoomLoopDescription is the same producer with an explicit context
+// string, so the turn-level fingerprint window can send upstream's full
+// "Doom loop detected: N identical consecutive tool calls (...)" description
+// instead of the per-call streak wording.
+func (l *AgentLoop) escalateDoomLoopDescription(agentCtx *AgentContext, tool string, streak int, description string) string {
+	if l == nil || !doomLoopEscalationEligible(agentCtx) {
 		return ""
 	}
 	l.mu.Lock()
@@ -114,7 +143,7 @@ func (l *AgentLoop) escalateDoomLoop(agentCtx *AgentContext, tool string, streak
 		NodeID:      agentCtx.StreamID,
 		ExecutionID: agentCtx.ExecutionID,
 		Reason:      "Tool doom loop detected",
-		Context:     doomLoopDescription(tool, streak),
+		Context:     description,
 	})
 	if err != nil {
 		l.mu.Lock()

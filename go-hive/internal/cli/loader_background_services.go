@@ -31,7 +31,11 @@ func startServeBackgroundServices(r *Runner, home hivehome.Home, manager *hivese
 	// Installed turn-context packages start once for the serve process, like
 	// upstream's app.on_startup hook (framework/server/turn_context.py).
 	hiveserver.StartTurnContexts(home)
+	// Cloud-mode runtimes rotate their own managed streamToken; a
+	// desktop-hosted one returns a no-op stop.
+	stopStreamToken := hiveserver.StartStreamTokenRefresh(hiveserver.StreamTokenRefreshDeps{Home: home})
 	return func() {
+		stopStreamToken()
 		stopSoul()
 		stopBridge()
 		hiveserver.StopTurnContexts(home.Root)

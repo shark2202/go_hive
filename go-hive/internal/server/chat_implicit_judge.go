@@ -14,10 +14,9 @@ package server
 //
 // This port runs one bounded loop per turn, so the equivalent emission point
 // is the start of the next turn: the runtime remembers the turn that just
-// parked and publishes its verdict before committing the new message. A
-// session whose spec carries success criteria runs the loop's LLM judge
-// instead, which publishes its own "custom" verdicts per evaluation; the
-// implicit verdict would duplicate those and is skipped there.
+// parked and publishes its verdict before committing the new message. The
+// queen spec sets SkipJudge=true, so no loop LLM judge runs and the implicit
+// verdict is the only judge event a queen turn produces.
 //
 // Parity: framework/agent_loop/agent_loop.py::execute (step 6i)
 // Parity: framework/agent_loop/internals/judge_pipeline.py::judge_turn (Level 0 skip_judge)
@@ -45,9 +44,8 @@ func (r *ChatRuntime) noteImplicitJudgeVerdictDue(executionID string) {
 }
 
 // emitPendingImplicitJudgeVerdict publishes the verdict the previous turn owes
-// and clears the ledger. It is a no-op when no turn has finished yet, when the
-// runtime has no bus, or when a criteria judge is armed (that judge publishes
-// its own verdicts from the loop).
+// and clears the ledger. It is a no-op when no turn has finished yet or when
+// the runtime has no bus.
 func (r *ChatRuntime) emitPendingImplicitJudgeVerdict() {
 	if r == nil || r.bus == nil {
 		return
@@ -59,9 +57,6 @@ func (r *ChatRuntime) emitPendingImplicitJudgeVerdict() {
 	r.verdictPending = false
 	r.verdictMu.Unlock()
 	if !due {
-		return
-	}
-	if r.agentCtx != nil && agentloop.HasSuccessCriteria(r.agentCtx.AgentSpec) {
 		return
 	}
 	var execution *string

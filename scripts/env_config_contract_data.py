@@ -68,7 +68,7 @@ CONFIG_KEYS: list[dict] = [
     {
         "path": "gcu_enabled", "type": "bool", "default": True, "env": None,
         "py": [{"file": "core/framework/config.py", "contains": "return get_hive_config().get(\"gcu_enabled\", True)"}],
-        "go": [{"file": "go_hive/go-hive/internal/cli/browser_supervisor.go", "contains": "if enabled, present := config[\"gcu_enabled\"].(bool); present {"}],
+        "go": [{"file": "go_hive/go-hive/internal/cli/browser_supervisor_adapters.go", "contains": "if enabled, present := config[\"gcu_enabled\"].(bool); present {"}],
         "status": "aligned",
         "notes": "file only. Go additionally lets HIVE_BROWSER_BRIDGE force the bridge on/off (documented operator override, not a parity break).",
     },
@@ -250,7 +250,7 @@ CONFIG_KEYS: list[dict] = [
         "py": [{"file": "core/framework/config.py", "contains": "worker_llm = get_hive_config().get(\"worker_llm\", {})"},
                {"file": "core/framework/server/session_manager.py", "contains": "def build_worker_llm(self):"}],
         "go": [{"file": "go_hive/go-hive/internal/server/provider_library.go", "contains": "var RoleSections = []string{\"llm\", \"worker_llm\", \"vision_fallback\", \"judge\"}"},
-               {"file": "go_hive/go-hive/internal/colony/runtime.go", "contains": "worker_llm separately"},
+               {"file": "go_hive/go-hive/internal/colony/runtime_options.go", "contains": "worker_llm separately"},
                {"file": "go_hive/go-hive/internal/server/config_slots.go", "contains": "func WorkerLLMSection("},
                {"file": "go_hive/go-hive/internal/cli/loader_model_slots.go", "contains": "func workerChatProvider("},
         ],
@@ -541,13 +541,13 @@ CONFIG_KEYS: list[dict] = [
     {
         "path": "memory_reflection.every_turns", "type": "int >= 1", "default": 6, "env": None,
         "py": [{"file": "core/framework/config.py", "contains": "every_turns: int = 6"}],
-        "go": [{"file": "go_hive/go-hive/internal/server/chat_memory_wiring.go", "contains": "cfg.EveryTurns = positive(\"every_turns\", cfg.EveryTurns)"}],
+        "go": [{"file": "go_hive/go-hive/internal/server/chat_memory_wiring.go", "contains": "cfg.EveryTurns = reflectionPositiveInt(section[\"every_turns\"], cfg.EveryTurns)"}],
         "status": "aligned", "notes": "int (bool rejected), >=1; invalid keeps 6.",
     },
     {
         "path": "memory_reflection.long_every", "type": "int >= 1", "default": 4, "env": None,
         "py": [{"file": "core/framework/config.py", "contains": "long_every: int = 4"}],
-        "go": [{"file": "go_hive/go-hive/internal/server/chat_memory_wiring.go", "contains": "cfg.LongEvery = positive(\"long_every\", cfg.LongEvery)"}],
+        "go": [{"file": "go_hive/go-hive/internal/server/chat_memory_wiring.go", "contains": "cfg.LongEvery = reflectionPositiveInt(section[\"long_every\"], cfg.LongEvery)"}],
         "status": "aligned", "notes": "same validation as every_turns.",
     },
     {
@@ -1070,7 +1070,7 @@ CONFIG_KEYS: list[dict] = [
         "py": [{"file": "core/framework/host/colony_runtime.py", "contains": "stages_config = config.get(\"pipeline\", {}).get(\"stages\", [])"}],
         "go": [{"file": "go_hive/go-hive/internal/colony/trigger.go", "contains": "rawStages, present := section[\"stages\"]"}],
         "status": "aligned",
-        "notes": "Declarative trigger middleware (upstream framework/pipeline). Stages run in ascending order on every ColonyRuntime.trigger before a worker spawns; a reject short-circuits as PipelineRejectedError and spawns nothing; a missing/empty list is the no-op default (PipelineRunner([])). Go builds the same runner in internal/pipeline from the same type/order/config spec, reads it in NewColonyRuntime, and fails startup on an unknown type (upstream's KeyError). The seven built-in stage semantics and the Go-side applied-output subset are documented in docs/pipeline.md.",
+        "notes": "Declarative trigger middleware (upstream framework/pipeline). Stages run in ascending order on every ColonyRuntime.trigger before a worker spawns; a reject short-circuits as PipelineRejectedError and spawns nothing; a missing/empty list is the no-op default (PipelineRunner([])). Go builds the same runner in internal/pipeline from the same type/order/config spec, reads it in NewColonyRuntime, and fails startup on an unknown type (upstream's KeyError). The seven built-in stage semantics and the Go-side applied-output subset are documented in docs/pipeline.md. Production reachability: no production caller on either side — upstream's ColonyRuntime.trigger is only an embedding/timer API (register_trigger has no callers) and the server injects the queen node instead; see docs/pipeline.md §7.",
     },
 ]
 

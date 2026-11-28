@@ -1,5 +1,10 @@
 package server
 
+// Parity-exempt (Go-only opt-in): these tests manually start the dormant live
+// overseer; Hive 1.0.15 production never attaches one (the chat Queen is the
+// executor), so the shared-park behavior they pin is a Go-side extension. The
+// "Parity:" markers below cite upstream behavior, not a production Go caller.
+//
 // Parity: framework/host/colony_runtime.py::ColonyRuntime.start_overseer
 // Parity: framework/agent_loop/agent_loop.py::_run_turn_loop (ask_user branch)
 // Parity: framework/server/routes_sessions.py::handle_session_chat

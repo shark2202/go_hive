@@ -87,6 +87,13 @@ func (r *ChatRuntime) configureReminderProviders() {
 	r.agentCtx.MemoryRecallProvider = r.memoryRecallForMessage
 	r.agentCtx.MemoryIndexProvider = r.memoryIndexScopes
 	r.agentCtx.MemoryRecallSettingsProvider = r.memoryRecallSettings
+	// Past-conversation recall is the provider behind the
+	// past_conversations reminder source (SESSION_START and
+	// USER_PROMPT_SUBMIT): the hub decides when to ask, the provider only
+	// reads the session's own history scope.
+	//
+	// Parity: core/framework/server/queen_orchestrator.py::_recall_past_conversations
+	r.agentCtx.PastConversationRecallProvider = r.pastConversationRecall
 	// Turn context (framework/server/turn_context.py + queen_orchestrator.py):
 	// a queen stream gets the started packages' aggregator; a worker stream has
 	// no turn context. No installed+enabled package leaves the provider nil and
@@ -193,9 +200,17 @@ func (r *ChatRuntime) configureReminders(override *agentloop.IdleNudgeConfig) {
 	r.idleSource = agentloop.NewIdleNudgeSource(cfg)
 
 	hub := r.loop.Hub
+	// The session's hub is published here, before any source registers: the
+	// Sentinel source (armed below) resolves the live hub through it, and the
+	// REST mirror reads the same queue once construction finishes.
+	r.hub = hub
 	hub.Register(&taskReminderSourceAdapter{inner: tasks.NewTaskReminderSource()})
 	hub.Register(agentloop.NewColonyParallelNudgeSource())
 	hub.Register(agentloop.NewActiveWorkersReminderSource())
+	// Related excerpts of earlier conversations, ahead of each user turn
+	// (SESSION_START and USER_PROMPT_SUBMIT), queen-only while the recall
+	// provider is wired.
+	hub.Register(agentloop.NewPastConversationsReminderSource())
 	hub.Register(agentloop.NewTrackerSnapshotReminderSource())
 	// Queen fleet snapshot at tool-budget checkpoints: the queen learning what
 	// the rest of the colony is doing while she grinds through her own tools.
@@ -211,12 +226,19 @@ func (r *ChatRuntime) configureReminders(override *agentloop.IdleNudgeConfig) {
 	hub.Register(agentloop.NewMemoryIndexReminderSource())
 	hub.Register(agentloop.NewMemoryRecallReminderSource())
 	hub.Register(r.idleSource)
+	// Sentinel autopilot: for a colony queen whose colony opted in, this owns
+	// the parked-queen decision (nudge / escalate-to-human). It registers in
+	// upstream's slot — after the idle nudge, before the stream-stall source —
+	// on this session's own hub, and the idle-nudge source self-skips while it
+	// is active so the two never double-nudge.
+	//
+	// Parity: framework/agent_loop/agent_loop.py::__init__ (source order)
+	r.armSentinelSource(hub)
 	// Stream-stall recovery: the streaming completer's watchdog reports a trip
 	// as a typed error, and the loop consults this source at STREAM_STALLED
 	// before re-streaming the same turn.
 	hub.Register(agentloop.NewStreamStallSource(r.loop.Config.ContinueNudgeMaxPerTurn, r.loop.Config.ContinueNudgeEnabled))
 
-	r.hub = hub
 	ctx := agentloop.NewReminderAgentContext(r.agentCtx)
 	hub.Bind(ctx)
 	hub.Start(ctx, r.reminderSignals, r.wakeForReminder)
@@ -282,6 +304,7 @@ func (r *ChatRuntime) reminderSignals() *agentloop.LoopSignals {
 		IdleSeconds:    idle,
 		AwaitingInput:  awaiting,
 		ParkReason:     parkReason,
+		UserStopped:    r.userStopped.Load(),
 		StreamActive:   r.turnActive.Load(),
 		FirstEventSeen: r.firstEvent.Load(),
 	}

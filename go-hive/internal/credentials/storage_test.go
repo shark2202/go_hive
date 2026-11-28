@@ -344,6 +344,7 @@ func TestEncryptedStorageUsesPrivateModes(t *testing.T) {
 		t.Fatalf("save: %v", err)
 	}
 	checks := map[string]os.FileMode{
+		storage.BasePath(): 0o700,
 		filepath.Join(storage.BasePath(), "credentials"): 0o700,
 		filepath.Join(storage.BasePath(), "metadata"):    0o700,
 		storage.credPath("perm_test"):                    0o600,

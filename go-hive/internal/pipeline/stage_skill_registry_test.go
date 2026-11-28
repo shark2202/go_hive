@@ -1,8 +1,11 @@
 package pipeline
 
 import (
+	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 )
 
 // Parity-exempt: upstream ships no unit tests for framework/pipeline; the
@@ -24,6 +27,7 @@ func TestSkillRegistryLoadsManager(t *testing.T) {
 	if err := registry.Initialize(); err != nil {
 		t.Fatalf("initialize: %v", err)
 	}
+	t.Cleanup(registry.StopWatching)
 	if registry.SkillsManager == nil || !registry.SkillsManager.IsLoaded() {
 		t.Fatal("skills manager not loaded")
 	}
@@ -93,4 +97,63 @@ func TestSkillRegistryConfigParsing(t *testing.T) {
 	}); err == nil {
 		t.Fatal("non-object skills_config must fail")
 	}
+}
+
+func writeProjectSkill(t *testing.T, root, name, description string) string {
+	t.Helper()
+	dir := filepath.Join(root, ".agents", "skills", name)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatalf("mkdir skill: %v", err)
+	}
+	path := filepath.Join(dir, "SKILL.md")
+	content := "---\nname: " + name + "\ndescription: " + description + "\n---\n\nInstructions.\n"
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("write SKILL.md: %v", err)
+	}
+	return path
+}
+
+// Parity: framework/pipeline/stages/skill_registry.py::SkillRegistryStage.initialize
+// (start_watching): a SKILL.md edit reloads the manager and the next read of
+// the catalog prompt reflects the new discovery.
+func TestSkillRegistryWatcherReloadsCatalog(t *testing.T) {
+	_, home := testHome(t)
+	projectRoot := filepath.Join(home, "agent")
+	skillPath := writeProjectSkill(t, projectRoot, "watcher-alpha", "Original description.")
+
+	stage := &SkillRegistryStage{
+		BaseStage:     BaseStage{StageName: "skill_registry", StageOrder: 60},
+		ProjectRoot:   projectRoot,
+		Interactive:   false,
+		WatchInterval: 5 * time.Millisecond,
+		WatchDebounce: 0,
+	}
+	if err := stage.Initialize(); err != nil {
+		t.Fatalf("initialize: %v", err)
+	}
+	t.Cleanup(stage.StopWatching)
+	if stage.Watcher == nil {
+		t.Fatal("watcher not started")
+	}
+	if !strings.Contains(stage.SkillsCatalogPrompt(), "watcher-alpha") {
+		t.Fatalf("initial catalog missing the project skill: %s", stage.SkillsCatalogPrompt())
+	}
+
+	renamed := "---\nname: watcher-omega\ndescription: Renamed description.\n---\n\nInstructions.\n"
+	if err := os.WriteFile(skillPath, []byte(renamed), 0o644); err != nil {
+		t.Fatalf("rewrite SKILL.md: %v", err)
+	}
+
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		if strings.Contains(stage.SkillsCatalogPrompt(), "watcher-omega") {
+			stage.StopWatching()
+			if stage.Watcher != nil {
+				t.Fatal("StopWatching must clear the watcher")
+			}
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatalf("catalog did not reload after the SKILL.md change: %s", stage.SkillsCatalogPrompt())
 }

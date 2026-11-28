@@ -40,7 +40,9 @@ func (s *FileConversationStore) writeJSON(path string, data map[string]any) erro
 	if err != nil {
 		return err
 	}
-	return atomicfs.WriteFile(path, payload, 0o644)
+	// conversation_store.py writes parts/meta/cursor/partials through
+	// framework/utils/io.py::atomic_write (mkstemp 0600); match it.
+	return atomicfs.WriteFile(path, payload, 0o600)
 }
 
 func (s *FileConversationStore) readJSON(path string) *map[string]any {

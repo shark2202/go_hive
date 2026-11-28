@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/shark2202/go_hive/go-hive/internal/attachments"
+	"github.com/shark2202/go_hive/go-hive/internal/tools/integrations/pdf"
 )
 
 // Parity: framework/server/routes_sessions.py::handle_session_attachment (mime_map)
@@ -60,6 +61,29 @@ var attachmentMIMEMap = map[string]string{
 	".log":   "text/plain",
 }
 
+// attachmentContentType returns the response type for a saved attachment.
+// Text-shaped payloads carry charset=utf-8: the bytes are UTF-8, and without
+// an explicit charset Chromium falls back to Latin-1 for text/markdown and
+// renders Chinese as mojibake.
+//
+// Parity-exempt: upstream returns the bare MIME type; this charset parameter
+// is a Go correction for the browser-visible encoding bug.
+func attachmentContentType(path string) string {
+	contentType := attachmentMIMEMap[strings.ToLower(filepath.Ext(path))]
+	if contentType == "" {
+		return "application/octet-stream"
+	}
+	if strings.HasPrefix(contentType, "text/") {
+		return contentType + "; charset=utf-8"
+	}
+	switch contentType {
+	case "application/json", "application/x-ndjson", "application/yaml",
+		"application/toml", "application/xml":
+		return contentType + "; charset=utf-8"
+	}
+	return contentType
+}
+
 // Parity: framework/server/routes_sessions.py::handle_upload_attachment (ext_map)
 var uploadExtByContentType = map[string]string{
 	"application/pdf": ".pdf",
@@ -75,6 +99,11 @@ const textPreviewCapChars = 64 * 1024
 
 // Parity: framework/server/routes_sessions.py::handle_upload_attachment (_LARGE_PDF_THRESHOLD_BYTES)
 const largePDFThresholdBytes = 10 * 1024 * 1024
+
+// pdfAllPages tells the extractor to walk every page. Upstream's upload handler
+// has no page cap (only the 10 MB byte threshold); chat input later applies its
+// own 200-page cap.
+const pdfAllPages = 1 << 30
 
 func handleSessionAttachment(w http.ResponseWriter, r *http.Request, deps SessionRouteDeps) {
 	sessionID := r.PathValue("session_id")
@@ -120,10 +149,7 @@ func handleSessionAttachment(w http.ResponseWriter, r *http.Request, deps Sessio
 		return
 	}
 
-	contentType := attachmentMIMEMap[strings.ToLower(filepath.Ext(filepathFound))]
-	if contentType == "" {
-		contentType = "application/octet-stream"
-	}
+	contentType := attachmentContentType(filepathFound)
 	w.Header().Set("Content-Type", contentType)
 	http.ServeFile(w, r, filepathFound)
 }
@@ -240,7 +266,12 @@ func handleUploadAttachment(w http.ResponseWriter, r *http.Request, deps Session
 	extractedText := ""
 	switch {
 	case ext == ".pdf":
-		_ = largePDFThresholdBytes
+		// Upstream extracts PDF text only when the saved file is at most
+		// 10 MB; larger documents stay path-only and the agent reads them
+		// through pdf_read. Parse failures degrade to empty text.
+		if info, statErr := root.Stat(storedRel); statErr == nil && info.Size() <= largePDFThresholdBytes {
+			extractedText = withStoredAttachment(root, storedRel, pdfTextPreview)
+		}
 	case ext == ".csv":
 		extractedText = withStoredAttachment(root, storedRel, func(content io.Reader) string {
 			return csvPreview(content, originalName)
@@ -363,6 +394,21 @@ func withStoredAttachment(root *os.Root, rel string, read func(io.Reader) string
 	}
 	defer file.Close()
 	return read(file)
+}
+
+// pdfTextPreview renders a PDF the way upstream's upload handler does with
+// pdfplumber: every page's text prefixed with "[PDF page N]", joined by blank
+// lines. A document the parser cannot open produces no text (upstream's
+// broad except pass), never an error for the upload.
+//
+// Parity: framework/server/routes_sessions.py::handle_upload_attachment
+func pdfTextPreview(content io.Reader) string {
+	data, err := io.ReadAll(content)
+	if err != nil {
+		return ""
+	}
+	_, parts := pdf.ExtractTextPages(data, pdfAllPages)
+	return strings.Join(parts, "\n\n")
 }
 
 func csvPreview(content io.Reader, originalName string) string {

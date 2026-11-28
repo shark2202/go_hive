@@ -61,6 +61,41 @@ type QueenMailAdapter struct {
 	// one. replyMu guards it.
 	replyMu   sync.Mutex
 	replySubs map[string]*eventbus.EventBus
+
+	// locks serializes a thread's deliveries: one writer's letters to one
+	// queen go in one at a time, so two first letters open one session, and a
+	// stopped session is resumed once. Keyed like upstream's QueenMail._locks
+	// ("thread:<queen>:<writer>" for a letter, the session id for a reply).
+	locks keyedLocks
+}
+
+// keyedLocks hands out one mutex per key, created on first use. Upstream keeps
+// the same dict of asyncio.Lock (QueenMail._locks) and never prunes it: the
+// keys are thread pairs and session ids, so the map stays as small as the
+// conversations the process has seen.
+type keyedLocks struct {
+	mu    sync.Mutex
+	locks map[string]*sync.Mutex
+}
+
+// lock takes the mutex for key and returns its unlock function.
+func (k *keyedLocks) lock(key string) func() {
+	k.mu.Lock()
+	if k.locks == nil {
+		k.locks = map[string]*sync.Mutex{}
+	}
+	held, ok := k.locks[key]
+	if !ok {
+		held = &sync.Mutex{}
+		k.locks[key] = held
+	}
+	k.mu.Unlock()
+	held.Lock()
+	return held.Unlock
+}
+
+func queenMailThreadKey(toQueen, writer string) string {
+	return "thread:" + toQueen + ":" + writer
 }
 
 var _ QueenMailBackend = (*QueenMailAdapter)(nil)
@@ -83,7 +118,7 @@ func NewQueenMailAdapter(options QueenMailAdapterOptions) *QueenMailAdapter {
 		sessionDir:    options.SessionDir,
 		replySubs:     map[string]*eventbus.EventBus{},
 	}
-	adapter.mail = queenmail.New(home, queenmail.ConfigFromHive(HiveConfig(home)), adapter)
+	adapter.mail = queenmail.New(home, queenmail.LoadConfig(home), adapter)
 	adapter.claude = claudecode.NewStore(home)
 	adapter.mail.SetClaudeInboxes(adapter.claude)
 	adapter.claudeRunner = claudecode.NewRunner(adapter.mail, adapter.claude)
@@ -92,12 +127,18 @@ func NewQueenMailAdapter(options QueenMailAdapterOptions) *QueenMailAdapter {
 }
 
 // Close stops the process's Claude Code queen runner: no more turns start, and
-// the process trees of the running ones are killed.
-func (a *QueenMailAdapter) Close() {
+// the process trees of the running ones are killed. Queued letters get one
+// bounded last delivery attempt first; the returned error says why mail is
+// still waiting (the durable queue retries it on the next start).
+func (a *QueenMailAdapter) Close() error {
 	if a == nil || a.mail == nil {
-		return
+		return nil
 	}
-	a.mail.Close()
+	err := a.mail.Close()
+	if err != nil {
+		log.Printf("queen mail: closing with letters still queued: %v", err)
+	}
+	return err
 }
 
 // Mail is the service behind the adapter (tokens, inboxes, queue).
@@ -183,6 +224,10 @@ func (a *QueenMailAdapter) Deliver(ctx context.Context, toQueen, writer, fromRef
 	if a == nil || a.manager == nil {
 		return "", queenMailError(toQueen + " can't take letters now")
 	}
+	// One writer's letters to one queen go in one at a time: two first letters
+	// racing would both miss the thread and open two sessions with her.
+	unlock := a.locks.lock(queenMailThreadKey(toQueen, writer))
+	defer unlock()
 	threadID, threadExists := a.threadOf(toQueen, writer)
 	var session *Session
 	if threadID != "" {
@@ -229,6 +274,10 @@ func (a *QueenMailAdapter) DeliverReply(ctx context.Context, replyTo, queenID, w
 	if a == nil || a.manager == nil || replyTo == "" {
 		return "", queenMailError("the conversation is unreachable")
 	}
+	// Two replies that arrive together must resume one stopped session, not
+	// open two; upstream locks the session id for the same reason.
+	unlock := a.locks.lock(replyTo)
+	defer unlock()
 	session := a.manager.GetSession(replyTo)
 	if session == nil {
 		if a.createSession == nil {

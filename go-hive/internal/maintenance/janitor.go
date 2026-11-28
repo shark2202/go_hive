@@ -107,7 +107,7 @@ func WriteServerMarker(home hivehome.Home, port *int) {
 		log.Printf("janitor: failed to write server marker: %v", err)
 		return
 	}
-	if err := atomicfs.WriteFile(path, data, 0o644); err != nil {
+	if err := atomicfs.WriteFile(path, data, 0o600); err != nil {
 		log.Printf("janitor: failed to write server marker: %v", err)
 	}
 }
@@ -214,7 +214,7 @@ func SaveReport(home hivehome.Home, report *JanitorReport) error {
 	if err != nil {
 		return err
 	}
-	return atomicfs.WriteFile(path, data, 0o644)
+	return atomicfs.WriteFile(path, data, 0o600)
 }
 
 // Parity: framework/maintenance/janitor.py::_write_manifest

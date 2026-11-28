@@ -70,7 +70,7 @@ func writeTestFile(t *testing.T, path, body string) {
 // the same service NewApp wires.
 func dashboardMux(t *testing.T, home hivehome.Home) *http.ServeMux {
 	t.Helper()
-	mail := queenmail.New(home, queenmail.ConfigFromHive(HiveConfig(home)), nil)
+	mail := queenmail.New(home, queenmail.LoadConfig(home), nil)
 	store := claudecode.NewStore(home)
 	mail.SetClaudeInboxes(store)
 	return claudeCodeTestMux(NewClaudeCodeQueenRouteDeps(mail, store, nil))
@@ -258,5 +258,33 @@ func TestNewAppServesTheConfiguredClaudeCodeQueens(t *testing.T) {
 	app.ServeHTTP(traversal, httptest.NewRequest(http.MethodGet, "/api/claude-code-queens/../queens", nil))
 	if traversal.Code != http.StatusBadRequest {
 		t.Fatalf("dot-segment status = %d, body = %s", traversal.Code, traversal.Body.String())
+	}
+}
+
+// Parity: framework/server/tests/test_claude_code_queens.py — the dashboard
+// lists the configured Claude Code queens in configuration order, matching
+// config.claude_code.values().
+func TestClaudeQueenListKeepsConfigurationOrder(t *testing.T) {
+	home, err := hivehome.ResolveAt(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeTestFile(t, home.ConfigurationFile(), `{"queen_mail": {"enabled": true, "claude_code": {
+		"queen_zulu": {"name": "Zulu"},
+		"queen_alpha": {"name": "Alpha"},
+		"queen_mike": {"name": "Mike"}
+	}}}`)
+	mail := queenmail.New(home, queenmail.LoadConfig(home), nil)
+	deps := NewClaudeCodeQueenRouteDeps(mail, claudecode.NewStore(home), nil)
+	if deps.Queens == nil {
+		t.Fatal("queen view not built")
+	}
+	var ids []string
+	for _, queen := range deps.Queens() {
+		ids = append(ids, queen.ID)
+	}
+	want := []string{"queen_zulu", "queen_alpha", "queen_mike"}
+	if strings.Join(ids, ",") != strings.Join(want, ",") {
+		t.Fatalf("queen order = %v, want %v", ids, want)
 	}
 }

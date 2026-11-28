@@ -147,6 +147,67 @@ func TestBuildNotesForHomeReflectsInOrderAndCaches(t *testing.T) {
 	}
 }
 
+// Parity: core/tests/e2e/longmemeval.py::build_notes and
+// core/framework/agents/queen/reflection_agent.py::reflect_on_messages — a
+// seeded session is replayed as if it ended at its own haystack date (upstream
+// passes now=parse_date(date)), so the reflection's prompt and every note it
+// writes carry that day, not the day the benchmark happens to run.
+func TestBuildNotesForHomeStampsWritesWithTheSessionDate(t *testing.T) {
+	writer := &scriptedNotesWriter{}
+	cfg := NotesConfig{
+		Writer:   writer,
+		CacheDir: filepath.Join(t.TempDir(), "notes_cache"),
+		Model:    "fake-notes-model",
+		Variant:  VariantS,
+		QueenID:  "queen_technology",
+	}
+	item := notesFixtureItem()
+	home := t.TempDir()
+	if _, err := BuildNotesForHome(context.Background(), cfg, home, item); err != nil {
+		t.Fatalf("BuildNotesForHome: %v", err)
+	}
+	if len(writer.seen) != 2 {
+		t.Fatalf("reflections = %d, want 2", len(writer.seen))
+	}
+	if !strings.Contains(writer.seen[0], "Timestamp: 2023-05-20T09:00") {
+		t.Fatalf("early reflection prompt stamped with the wrong time: %q", writer.seen[0])
+	}
+
+	queenDir := memory.QueenMemoryDir(home, "queen_technology")
+	cases := []struct {
+		file string
+		day  string
+	}{
+		{"note-1.md", "2023-05-20"}, // the early session, reflected on first
+		{"note-2.md", "2023-05-30"}, // the late session
+	}
+	for _, tc := range cases {
+		data, err := os.ReadFile(filepath.Join(queenDir, tc.file))
+		if err != nil {
+			t.Fatalf("read %s: %v", tc.file, err)
+		}
+		fm := memory.ParseFrontmatter(string(data))
+		if fm["learned"] != tc.day {
+			t.Fatalf("%s learned = %q, want %q (frontmatter: %v)", tc.file, fm["learned"], tc.day, fm)
+		}
+		if confirmed, ok := memory.ConfirmedOn(string(data)); !ok || confirmed != tc.day {
+			t.Fatalf("%s confirmed = %q (%v), want %q", tc.file, confirmed, ok, tc.day)
+		}
+	}
+
+	// The memory log records the same replay instant as the notes, so the
+	// cached history reads as if it had been written during the sessions.
+	logData, err := os.ReadFile(filepath.Join(queenDir, "log.jsonl"))
+	if err != nil {
+		t.Fatalf("read memory log: %v", err)
+	}
+	for _, day := range []string{"2023-05-20", "2023-05-30"} {
+		if !strings.Contains(string(logData), `"at": "`+day+`T`) {
+			t.Fatalf("memory log has no write at %s: %s", day, logData)
+		}
+	}
+}
+
 // Parity-exempt: runner-only telemetry over the recall header that the
 // longmemeval report reads; upstream e2e keeps no equivalent counter.
 func TestNotesTelemetryReadsTheConversation(t *testing.T) {

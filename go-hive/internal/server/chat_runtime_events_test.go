@@ -102,7 +102,10 @@ func (r *chatEventRecorder) types() []string {
 
 func waitForChatEvents(t *testing.T, recorder *chatEventRecorder, want eventbus.EventType, count int) []*eventbus.AgentEvent {
 	t.Helper()
-	deadline := time.Now().Add(5 * time.Second)
+	// The long-turn integration tests emit ~50 event frames; under a loaded
+	// full-suite run five seconds is not enough even though the turn completes.
+	// Keep the wait bounded but give the async bus room to drain.
+	deadline := time.Now().Add(15 * time.Second)
 	for time.Now().Before(deadline) {
 		if matches := recorder.ofType(want); len(matches) >= count {
 			return matches
@@ -392,6 +395,10 @@ func TestChatSessionEventsStreamAndHistory(t *testing.T) {
 		t.Fatalf("events stream status = %d, want 200", response.StatusCode)
 	}
 	waitForSubscriber(t, bus)
+	// The live subscriber must be visible to Sentinel as an attached UI.
+	if got := session.SSEClientCount.Load(); got != 1 {
+		t.Fatalf("SSEClientCount = %d while streaming, want 1", got)
+	}
 	reader := bufio.NewReader(response.Body)
 
 	status, body := postChat(t, server.URL, sessionID, map[string]any{"message": "stream me"})
@@ -439,6 +446,17 @@ func TestChatSessionEventsStreamAndHistory(t *testing.T) {
 	}
 	if terminal["type"] != "execution_completed" {
 		t.Fatalf("third SSE frame type = %#v, want execution_completed", terminal["type"])
+	}
+
+	// Disconnecting must drop the attached-UI count back to zero, or Sentinel
+	// keeps believing a human is watching after the dashboard closed.
+	response.Body.Close()
+	deadline := time.Now().Add(2 * time.Second)
+	for session.SSEClientCount.Load() != 0 && time.Now().Before(deadline) {
+		time.Sleep(10 * time.Millisecond)
+	}
+	if got := session.SSEClientCount.Load(); got != 0 {
+		t.Fatalf("SSEClientCount = %d after disconnect, want 0", got)
 	}
 
 	// /events/history reads the same events.jsonl the bus wrote during the

@@ -18,9 +18,10 @@ import (
 )
 
 const (
-	parkPendingInputKey = "pending_input"
-	parkReasonKey       = "park_reason"
-	parkParkedAtKey     = "parked_at"
+	parkPendingInputKey  = "pending_input"
+	parkReasonKey        = "park_reason"
+	parkParkedAtKey      = "parked_at"
+	userStoppedCursorKey = "user_stopped"
 )
 
 // persistParkState mirrors the runtime's park onto <conversation>/cursor.json.

@@ -2,8 +2,8 @@ package colony
 
 // Colony improvement signals.
 //
-// A missed success criterion or a judge RETRY is only useful if something can
-// act on it. This file turns both into durable, structured records:
+// A missed success criterion is only useful if something can act on it. This
+// file turns it into a durable, structured record:
 //
 //   - <colony>/improvement/signals.jsonl — append-only ledger the improvement
 //     loop (reflection, skill authoring, a re-dispatch decision) reads.
@@ -50,8 +50,6 @@ const (
 	// ImprovementKindUnmetCriterion marks a success criterion that did not
 	// pass (or could not be executed).
 	ImprovementKindUnmetCriterion = "unmet_criterion"
-	// ImprovementKindJudgeRetry marks a judge RETRY/ESCALATE verdict.
-	ImprovementKindJudgeRetry = "judge_retry"
 	// ImprovementKindEmptyTracker marks a registered tracker table with no rows.
 	ImprovementKindEmptyTracker = "empty_tracker"
 )
@@ -230,28 +228,6 @@ func (r *ColonyRuntime) recordGoalImprovementSignals(worker *Worker, evaluation 
 		}
 	}
 	r.detectEmptyTrackerColumns(worker)
-}
-
-// recordJudgeImprovementSignal turns a non-accepting judge verdict into a
-// signal. RETRY stays in the loop (the critique is injected as feedback) and
-// ESCALATE ends the turn; both are misses the improvement loop should see.
-func (r *ColonyRuntime) recordJudgeImprovementSignal(worker *Worker, verdict agentloop.JudgeVerdict, iteration int) {
-	if r == nil || worker == nil || verdict.Action == agentloop.JudgeAccept {
-		return
-	}
-	summary := fmt.Sprintf("judge returned %s for worker %s", verdict.Action, worker.ID)
-	if feedback := strings.TrimSpace(verdict.Feedback); feedback != "" {
-		summary += ": " + feedback
-	}
-	signal := ImprovementSignal{
-		Kind:      ImprovementKindJudgeRetry,
-		WorkerID:  worker.ID,
-		Supported: true,
-		Summary:   summary,
-		Feedback:  verdict.Feedback,
-		Iteration: iteration,
-	}
-	worker.appendImprovementSignal(r.RecordImprovementSignal(signal))
 }
 
 // detectEmptyTrackerColumns records one empty_tracker signal per registered

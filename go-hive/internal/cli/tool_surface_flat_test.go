@@ -336,9 +336,10 @@ func TestFlatSurfaceGroupedSwitch(t *testing.T) {
 // TestFlatSurfaceExecutionRoutes checks that the flat names execute through
 // the existing implementations: the playbook-control trio maps onto the
 // run_playbook actions (with the actionable no-colony error, not an unknown
-// tool), and the three not-yet-ported names answer with an explicit
-// not_implemented envelope instead of failing silently. sentinel_setup has its
-// own execution route now — see TestSentinelSetupExecutesThroughFlatSurface.
+// tool), credentials serves its help/attach actions instead of failing, and
+// the one remaining unported name answers with an explicit not_implemented
+// envelope instead of failing silently. sentinel_setup has its own execution
+// route now — see TestSentinelSetupExecutesThroughFlatSurface.
 //
 // Parity-exempt: routing check over the frozen contract; the actions it maps
 // onto are covered by their own parity tests.
@@ -359,7 +360,7 @@ func TestFlatSurfaceExecutionRoutes(t *testing.T) {
 		}
 	}
 
-	for _, name := range []string{"collect_result", "credentials", "suggest_colony"} {
+	for _, name := range []string{"suggest_colony"} {
 		content, isError, err := catalogue.Execute(ctx, name, map[string]any{})
 		if err != nil {
 			t.Fatalf("%s: unexpected error %v", name, err)
@@ -369,7 +370,43 @@ func TestFlatSurfaceExecutionRoutes(t *testing.T) {
 		}
 	}
 
-	content, isError, err := catalogue.Execute(ctx, "search_tools", map[string]any{"query": "inventory"})
+	// credentials executes now: no action returns the usage text, and
+	// attach/detach pin against the catalogue's session root.
+	content, isError, err := catalogue.Execute(ctx, "credentials", map[string]any{})
+	if err != nil {
+		t.Fatalf("credentials: unexpected error %v", err)
+	}
+	if isError || !strings.Contains(content, "Actions:") {
+		t.Fatalf("credentials help: isError=%v content=%s", isError, content)
+	}
+	content, isError, err = catalogue.Execute(ctx, "credentials", map[string]any{"action": "attach", "credential_id": "stripe"})
+	if err != nil {
+		t.Fatalf("credentials attach: unexpected error %v", err)
+	}
+	if isError || !strings.Contains(content, "Attached 'stripe' (account 'default')") {
+		t.Fatalf("credentials attach: isError=%v content=%s", isError, content)
+	}
+	if strings.Contains(content, "not_implemented") {
+		t.Fatalf("credentials still routes to the not_implemented shim: %s", content)
+	}
+
+	// collect_result is loop-owned now: the catalogue must not claim the
+	// feature is missing, and a direct catalogue call explains where it runs.
+	content, isError, err = catalogue.Execute(ctx, "collect_result", map[string]any{"handle": "bg_1"})
+	if err != nil {
+		t.Fatalf("collect_result: unexpected error %v", err)
+	}
+	if !isError || !strings.Contains(content, "loop_owned_tool") {
+		t.Fatalf("collect_result: want the loop-owned envelope, got isError=%v content=%s", isError, content)
+	}
+	if strings.Contains(content, "not_implemented") || strings.Contains(content, "no background tool handles") {
+		t.Fatalf("collect_result: stale not-implemented claim: %s", content)
+	}
+	if !strings.Contains(content, "agent loop") || !strings.Contains(content, "bg_*") {
+		t.Fatalf("collect_result: envelope must point at the loop registry and handles: %s", content)
+	}
+
+	content, isError, err = catalogue.Execute(ctx, "search_tools", map[string]any{"query": "inventory"})
 	if err != nil || isError {
 		t.Fatalf("search_tools inventory fallback: err=%v isError=%v", err, isError)
 	}

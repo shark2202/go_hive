@@ -12,7 +12,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/shark2202/go_hive/go-hive/internal/colony"
@@ -51,8 +50,23 @@ type sessionToolCatalogue struct {
 	// agent_path.name). Empty for a plain session catalogue; colony workers set
 	// it so their spawned subprocesses carry HIVE_AGENT_NAME.
 	agentName string
-	defs      []llm.ToolDef
-	installed int
+	// astGrepTool and lspToolbox are the independent code-intelligence
+	// adapters (internal/astgrep, internal/lsp). They are not integration
+	// registry tools: the catalogue owns them, advertises their definitions
+	// only through the lazy tier, and routes calls explicitly. astGrepTool is
+	// nil unless ast_grep.json enabled=true; lspToolbox is nil unless
+	// lsp.json settings.enabled is true.
+	astGrepTool *builtin.AstGrepTool
+	lspToolbox  *builtin.LSPToolbox
+	// httpToolbox is the native HTTP family (internal/nativehttp). It is
+	// per-session: its cookie jar is never shared with another session or
+	// colony worker, and WithRoot starts a fresh one.
+	httpToolbox *builtin.HTTPToolbox
+	// astAnalyzeTool is the read-only repository AST analyzer
+	// (internal/astanalyze). WithRoot re-roots it per worker.
+	astAnalyzeTool *builtin.AstAnalyzeToolbox
+	defs           []llm.ToolDef
+	installed      int
 }
 
 // SetAgentName records the agent package this catalogue belongs to and mirrors
@@ -264,6 +278,19 @@ func newSessionToolCatalogue(root string, toolbox *builtin.Toolbox, home hivehom
 			ConcurrencySafe: tool.ConcurrencySafe,
 		})
 	}
+	// Independent code-intelligence adapters (internal/astgrep, internal/lsp).
+	// They run after the registry so a colliding integration name is skipped
+	// rather than advertised twice; the explicit routes in execute still run
+	// first, preserving the builtin-wins collision rule. Neither definition
+	// joins the frozen 39-name default surface: both reach the model through
+	// the lazy tier, and both are gated by their own config (ast_grep.json /
+	// lsp.json settings.enabled).
+	catalogue.registerCodeIntelligenceTools()
+	// Native HTTP family (internal/nativehttp). Go-only and lazy-tier; the
+	// per-session cookie jar is owned by this catalogue and never shared.
+	catalogue.registerHTTPTools()
+	// Repository AST analysis (internal/astanalyze). Read-only and lazy-tier.
+	catalogue.registerAstAnalyzeTools()
 	// Freeze the model-visible description/schema of the same-name core tools
 	// to the Python contract (see tool_contract_parity.go). This is the last
 	// step so every owner — builtin, task, search, chart, integration — is
@@ -343,9 +370,10 @@ var sessionIntegrationInstallers = []struct {
 	{"batch7-lane8", integrations.InstallBatch7Lane8, nil},
 	{"batch7-lane9", integrations.InstallBatch7Lane9, nil},
 	{"batch8-final", integrations.InstallBatch8Final, nil},
-	// Upstream per-tool spreadsheet names on top of the aggregate csv/excel
+	// Upstream per-tool names on top of the aggregate csv/excel and similarweb
 	// tools, and the browser discovery tool.
 	{"spreadsheet-aliases", integrations.InstallSpreadsheetAliases, nil},
+	{"similarweb-aliases", integrations.InstallSimilarWebAliases, nil},
 	{"browser-setup", integrations.InstallBrowserSetup, nil},
 	// The 22 active browser tools (gcu FastMCP surface) are a lazy-tier
 	// extension of the Go bridge, not part of the reference registry: only
@@ -378,6 +406,33 @@ func browserToolsEnabled(home hivehome.Home) bool {
 
 // Defs returns the tool definitions advertised to the model.
 func (c *sessionToolCatalogue) Defs() []llm.ToolDef { return c.defs }
+
+// WithRoot returns a copy of the catalogue whose execution root is root: the
+// builtin sandbox, the injected session_cwd (terminal and attach_file context
+// params) and the session task list all follow it. The integration registry,
+// its definitions and its MCP transports stay shared with the parent
+// catalogue, so a colony worker can run its own tools inside
+// <colony>/workers/<id> without reinstalling the session catalogue per worker.
+//
+// Parity: framework/host/worker.py::Worker.run (a worker's execution context
+// carries session_cwd=str(storage_path); the worker storage directory is
+// <colony>/workers/<id>)
+func (c *sessionToolCatalogue) WithRoot(root string) *sessionToolCatalogue {
+	if c == nil {
+		return nil
+	}
+	clone := *c
+	clone.root = strings.TrimSpace(root)
+	clone.toolbox = builtin.New(clone.root)
+	clone.taskTools = newTaskToolSet(clone.root, c.home)
+	if clone.httpToolbox != nil {
+		clone.httpToolbox = clone.httpToolbox.WithRoot(clone.root)
+	}
+	if clone.astAnalyzeTool != nil {
+		clone.astAnalyzeTool = clone.astAnalyzeTool.WithRoot(clone.root)
+	}
+	return &clone
+}
 
 // Execute runs one tool call, dispatching builtins to their sandbox, session
 // task tools to the session's task list, and integration tools to the registry
@@ -483,11 +538,14 @@ func (c *sessionToolCatalogue) execute(ctx context.Context, name string, input m
 	}
 	// Tracker tools resolve their binding per call: the catalogue is built
 	// before a colony attaches, so the session's bound runtime is the only
-	// source of truth for which tracker.db this turn writes.
+	// source of truth for which tracker.db this turn writes. scope='global'
+	// is the exception (Python checks _scope_of before _require_binding): the
+	// cloud DB needs a signed-in session, not a colony, so it must not be
+	// refused with the no-colony-context error here.
 	if c.trackerTools != nil {
 		if _, registered := c.trackerTools.Get(name); registered {
 			binding := colony.TrackerBindingFromContext(ctx)
-			if binding == nil {
+			if binding == nil && tracker.ScopeOf(input) != "global" {
 				return tracker.ErrNoBinding.Error(), true, nil, nil
 			}
 			result, _ := c.trackerTools.WithResolver(tracker.StaticResolver(binding)).Execute(name, input)
@@ -510,6 +568,21 @@ func (c *sessionToolCatalogue) execute(ctx context.Context, name string, input m
 	// generic unknown-tool error.
 	if content, isError, handled := c.executeHarnessPlaceholder(name); handled {
 		return content, isError, nil, nil
+	}
+	// Independent code-intelligence adapters: ast_grep (lazy tier, opt-in
+	// ast_grep.json) and lsp (registered only when settings.enabled). They
+	// route before the integration registry so a same-named integration can
+	// never shadow them.
+	if content, isError, handled, err := c.executeCodeIntelligenceTool(ctx, name, input); handled {
+		return content, isError, nil, err
+	}
+	// Native HTTP family: same routing rule as the code-intelligence adapters.
+	if content, isError, handled, err := c.executeHTTPTool(ctx, name, input); handled {
+		return content, isError, nil, err
+	}
+	// Repository AST analysis: same explicit routing rule.
+	if content, isError, handled, err := c.executeAstAnalyzeTool(ctx, name, input); handled {
+		return content, isError, nil, err
 	}
 	result, err := c.registry.GetExecutor().Execute(ctx, tools.ToolUse{
 		Name:  name,
@@ -586,22 +659,5 @@ func (c *sessionToolCatalogue) skillToolDirs(ctx context.Context) skills.ToolDir
 	return dirs
 }
 
-// queenScopeFromSessionRoot recovers the queen a chat session belongs to from
-// its on-disk tree (…/queens/<queen>/sessions/<id>). A catalogue built for a
-// non-standard root (tests, a colony path) falls back to the shared "default"
-// queen, which is the same identity the loader uses for queen_name="".
-func queenScopeFromSessionRoot(home hivehome.Home, root string) string {
-	rel, err := filepath.Rel(home.QueensDir(), filepath.Clean(root))
-	if err != nil || rel == "." || rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
-		return "default"
-	}
-	parts := strings.Split(filepath.ToSlash(rel), "/")
-	if len(parts) == 0 {
-		return "default"
-	}
-	queen := strings.TrimSpace(parts[0])
-	if queen == "" || queen == "." || queen == ".." || strings.ContainsAny(queen, `/\`) {
-		return "default"
-	}
-	return queen
-}
+// queenScopeFromSessionRoot lives in toolcatalog/search.go (delegating to
+// toolcatalog) so the skill tools and the history-search scope stay aligned.

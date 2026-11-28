@@ -205,16 +205,20 @@ func handleSessionStats(w http.ResponseWriter, r *http.Request, deps SessionRout
 		return
 	}
 
-	// Upstream answers colony.get_stats() verbatim. A session whose colony has
-	// not spawned still owes the client the same field set, so the session
-	// baseline is rendered first and colony values overlay it field-by-field.
-	var colonyStats map[string]any
-	if session.Colony != nil {
-		if provider, ok := session.Colony.(colonyStatsProvider); ok {
-			colonyStats = provider.GetStats()
-		}
+	// Upstream answers colony.get_stats() verbatim, or {} when the session has
+	// no colony (framework/server/routes_sessions.py::handle_session_stats).
+	// A colony-less queen used to get a synthesized baseline here, which put
+	// keys on the wire that the Python server never sends.
+	if session.Colony == nil {
+		writeJSON(w, http.StatusOK, map[string]any{})
+		return
 	}
-	writeJSON(w, http.StatusOK, buildSessionStats(session, colonyStats))
+	provider, ok := session.Colony.(colonyStatsProvider)
+	if !ok {
+		writeJSON(w, http.StatusOK, map[string]any{})
+		return
+	}
+	writeJSON(w, http.StatusOK, buildSessionStats(session, provider.GetStats()))
 }
 
 func handleListTriggers(w http.ResponseWriter, r *http.Request, deps SessionRouteDeps) {

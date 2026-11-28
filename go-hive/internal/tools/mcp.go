@@ -351,6 +351,11 @@ func writePythonJSON(b *strings.Builder, v any) {
 			writePythonJSON(b, value[k])
 		}
 		b.WriteByte('}')
+	case *mcpOrderedObject:
+		// HTTP tool results keep the server's key order (L3 closure): Python
+		// json.dumps emits the dict json.loads built, so the model-visible
+		// bytes must follow the response, not a sort.
+		writeMCPOrderedObject(b, value)
 	default:
 		encoded, err := json.Marshal(value)
 		if err != nil {

@@ -72,6 +72,12 @@ type Host struct {
 	subs    map[string]*subscription
 	nextSub int64
 	wg      sync.WaitGroup
+
+	// bridgeMu guards the embedded Python bridge file, written lazily on the
+	// first entry_point channel and removed by Stop.
+	bridgeMu   sync.Mutex
+	bridgePath string
+	bridgeDir  string
 }
 
 // NewHost builds a host; Start does the work.
@@ -139,8 +145,15 @@ func (h *Host) startOne(ctx context.Context, plugin PluginConfig) {
 		h.failStart(plugin.Name, plugin.ConfigError)
 		return
 	}
-	if len(plugin.Argv()) == 0 {
-		h.failStart(plugin.Name, "no command configured (Go host uses stdio plugins; Python hive.channels entry points need the Python adapter)")
+	argv, env, launchErr := h.launch(plugin)
+	if launchErr != nil {
+		h.failStart(plugin.Name, launchErr.Error())
+		return
+	}
+	if len(argv) == 0 {
+		h.failStart(plugin.Name, "no command or entry_point configured (set channels."+plugin.Name+
+			".command for a Go stdio plugin, or channels."+plugin.Name+
+			".entry_point for a Python hive.channels plugin)")
 		return
 	}
 	if h.options.BackendFor == nil {
@@ -166,9 +179,9 @@ func (h *Host) startOne(ctx context.Context, plugin PluginConfig) {
 
 	process, err := startPluginProcess(
 		plugin.Name,
-		plugin.Argv(),
+		argv,
 		plugin.Cwd,
-		plugin.Env,
+		env,
 		processOptions{
 			maxFrame:    h.options.MaxFrameBytes,
 			callTimeout: h.options.CallTimeout,
@@ -276,6 +289,7 @@ func (h *Host) Stop() {
 	if h.stopped || !h.started {
 		h.stopped = true
 		h.mu.Unlock()
+		h.cleanupBridge()
 		return
 	}
 	h.stopped = true
@@ -292,6 +306,7 @@ func (h *Host) Stop() {
 	}
 	h.closeSubscriptions(func(*subscription) bool { return true })
 	h.wg.Wait()
+	h.cleanupBridge()
 }
 
 func (h *Host) processExited(runtime *channelRuntime, exitErr error) {

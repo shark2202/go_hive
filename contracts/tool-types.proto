@@ -162,6 +162,7 @@ message CsvWriteRowsItem {
 message DeleteMemoryFileInput {
   string filename = 1; // The filename to delete.
   optional string scope = 2; // Memory scope: 'global' or 'queen'. Defaults to 'global'.
+  optional string reason = 3; // Why it goes, e.g. 'merged into user-diet.md' or 'the user said it no longer holds'.
 }
 
 // edit_file — python:mcp_catalog:files-tools

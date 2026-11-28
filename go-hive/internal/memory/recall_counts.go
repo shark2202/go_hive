@@ -5,6 +5,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"unicode/utf8"
 )
 
 // Process-wide memo of the per-turn term frequencies the recall path scores
@@ -46,8 +47,8 @@ type recallCountsHome struct {
 // recallTermFreqs is one turn's term counts in scoring form: terms sorted
 // ascending, each with its count. It is kept pointer-free on purpose (a NUL
 // separated blob plus scalar slices), so many cached turns scan cheaply in
-// the garbage collector. length is the total token count (the sum of the
-// counts), the BM25 document length.
+// the garbage collector. length is BM25's document length in the reference's
+// unit — characters, with the user text counted twice — not a token total.
 type recallTermFreqs struct {
 	blob    string   // sorted terms, each followed by '\x00'
 	offsets []uint32 // offsets[i] = start of term i in blob
@@ -70,11 +71,25 @@ func (f recallTermFreqs) search(term string) int {
 	return sort.Search(len(f.offsets), func(i int) bool { return f.termAt(i) >= term })
 }
 
-// recallTermFreqsFromCounts converts a term->count map to the sorted scoring
-// form. Counts are per-turn token multiplicities, far below the int32 range;
+// recallDocumentLength is BM25's document length exactly as the reference
+// stores it: the user text twice plus the reply once, in characters — Python
+// str length, i.e. Unicode code points — not a token total. Scoring with the
+// token count would weigh long CJK turns differently from upstream
+// (turn_index.py:200, recall.py::_score).
+//
+// Parity: tools/src/memory_tools/turn_index.py::_put_turn
+func recallDocumentLength(user, reply string) int {
+	return 2*utf8.RuneCountInString(user) + utf8.RuneCountInString(reply)
+}
+
+// recallTermFreqsFromTurn converts one turn's (user, reply) text to the sorted
+// scoring form. It computes both the term counts and BM25's document length
+// from the same text, so a caller cannot pair one turn's counts with another's
+// length. Counts are per-turn token multiplicities, far below the int32 range;
 // terms never contain NUL (they are [a-z0-9]+ runs or Han/Kana pairs), so the
 // blob separator is unambiguous.
-func recallTermFreqsFromCounts(counts map[string]int) recallTermFreqs {
+func recallTermFreqsFromTurn(user, reply string) recallTermFreqs {
+	counts := pastRecallTurnCounts(user, reply)
 	type pair struct {
 		term  string
 		count int
@@ -87,6 +102,7 @@ func recallTermFreqsFromCounts(counts map[string]int) recallTermFreqs {
 	freqs := recallTermFreqs{
 		offsets: make([]uint32, len(pairs)),
 		counts:  make([]int32, len(pairs)),
+		length:  recallDocumentLength(user, reply),
 	}
 	var blob strings.Builder
 	for i, item := range pairs {
@@ -94,7 +110,6 @@ func recallTermFreqsFromCounts(counts map[string]int) recallTermFreqs {
 		blob.WriteString(item.term)
 		blob.WriteByte(0)
 		freqs.counts[i] = int32(item.count)
-		freqs.length += item.count
 	}
 	freqs.blob = blob.String()
 	return freqs
@@ -154,7 +169,7 @@ func recallTurnFreqsFor(homeRoot string, ref ScopeRef, eventsSize int64, session
 		sessionCache = &recallCountsSession{eventsSize: eventsSize, turns: map[int]recallTermFreqs{}}
 		cache.sessions[session] = sessionCache
 	}
-	freqs := recallTermFreqsFromCounts(pastRecallTurnCounts(user, reply))
+	freqs := recallTermFreqsFromTurn(user, reply)
 	sessionCache.turns[ordinal] = freqs
 	cache.turns++
 	return freqs

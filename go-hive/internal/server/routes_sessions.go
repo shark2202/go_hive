@@ -58,19 +58,34 @@ func RegisterSessionRoutes(mux *http.ServeMux, deps SessionRouteDeps) {
 	mux.HandleFunc("GET /api/sessions/history", func(w http.ResponseWriter, r *http.Request) {
 		handleSessionHistory(w, r, deps)
 	})
+	// DELETE /api/sessions/{session_id}/colony — Python registers this path
+	// explicitly for DELETE (core/framework/server/routes_sessions.py:3214)
+	// next to its POST sibling. ServeMux ranks the pattern above the generic
+	// {first}/{second} alias below (a literal segment outranks a wildcard), so
+	// the alias can no longer swallow the unload semantics.
+	//
+	// It cannot be paired with an explicit
+	// "DELETE /api/sessions/history/{session_id}" pattern instead: those two
+	// conflict (both match /api/sessions/history/colony, neither is more
+	// specific) and http.ServeMux panics on registration. That is why history
+	// stays folded into the generic alias, and why handleDeleteSessionColony
+	// reproduces aiohttp's first-match-wins order on the /history/colony
+	// overlap.
+	mux.HandleFunc("DELETE /api/sessions/{session_id}/colony", func(w http.ResponseWriter, r *http.Request) {
+		handleDeleteSessionColony(w, r, deps)
+	})
+	// Go compatibility alias: the one shape ServeMux cannot express alongside
+	// the colony pattern — "DELETE /api/sessions/history/{session_id}" — folded
+	// into a generic two-segment pattern. Colony has its own pattern above.
 	mux.HandleFunc("DELETE /api/sessions/{first}/{second}", func(w http.ResponseWriter, r *http.Request) {
 		first := r.PathValue("first")
 		second := r.PathValue("second")
-		switch {
-		case first == "history":
-			r.SetPathValue("session_id", second)
-			handleDeleteHistorySession(w, r, deps)
-		case second == "colony":
-			r.SetPathValue("session_id", first)
-			handleUnloadColony(w, r, deps)
-		default:
+		if first != "history" {
 			http.NotFound(w, r)
+			return
 		}
+		r.SetPathValue("session_id", second)
+		handleDeleteHistorySession(w, r, deps)
 	})
 	mux.HandleFunc("GET /api/sessions/{session_id}", func(w http.ResponseWriter, r *http.Request) {
 		handleGetLiveSession(w, r, deps)

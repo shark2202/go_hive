@@ -3,15 +3,22 @@ package channels
 // Plugin discovery and configuration. Upstream finds channels through the
 // ``hive.channels`` entry-point group and starts the ones whose
 // ``configuration.json`` section carries a truthy ``enabled``. Go has no
-// entry points, so a plugin is declared by a Go stdio extension in the same
-// section: ``command`` (argv array, or the executable as a string), optional
-// ``args``, ``cwd`` and ``env``.
+// in-process Python loader, so a section declares one of two runtimes:
+//
+//	entry_point  run an installed Python ``hive.channels`` entry point through
+//	             the embedded bridge (opt-in; see python.go and doc.go)
+//	command      run a Go stdio plugin: argv (array, or the executable as a
+//	             string), optional args, cwd and env
+//
+// The two are mutually exclusive. Python plumbing (interpreter, python_path)
+// is only read when entry_point is set, so a plugin without Python keeps
+// working with no interpreter configured.
 //
 // Parity: framework/server/channels.py::start_channels (the section shape and
 // the enabled gate)
-// Parity-exempt: command/args/cwd/env are the Go stdio-plugin extension; an
-// enabled section without one is reported failed by the host instead of being
-// silently dropped.
+// Parity-exempt: command/args/cwd/env and the entry_point bridge are the Go
+// extension; an enabled section with neither is reported failed by the host
+// instead of being silently dropped.
 
 import (
 	"fmt"
@@ -30,6 +37,15 @@ type PluginConfig struct {
 	Cwd     string
 	Env     []string
 	Section map[string]any
+
+	// EntryPoint is the installed hive.channels entry point to run through
+	// the Python bridge. Empty means a Go stdio command plugin.
+	EntryPoint string
+	// Interpreter is the Python argv for a bridge plugin. Empty resolves
+	// HIVE_PYTHON, then python3, then python on PATH.
+	Interpreter []string
+	// PythonPath entries are prepended to the bridge's PYTHONPATH.
+	PythonPath []string
 
 	// ConfigError is set when Enabled is true but the Go extension fields
 	// are malformed (for example command holds a non-string element). The
@@ -86,13 +102,44 @@ func Plugins(config map[string]any) []PluginConfig {
 			plugin.Env, envErr = stringListField(section, "env", false)
 			plugin.ConfigError = envErr
 		}
+		if plugin.ConfigError == "" {
+			plugin.EntryPoint, plugin.ConfigError = stringField(section, "entry_point")
+		}
+		if plugin.ConfigError == "" {
+			var interpreterErr string
+			plugin.Interpreter, interpreterErr = stringListField(section, "interpreter", false)
+			plugin.ConfigError = interpreterErr
+		}
+		if plugin.ConfigError == "" {
+			var pathErr string
+			plugin.PythonPath, pathErr = stringListField(section, "python_path", false)
+			plugin.ConfigError = pathErr
+		}
 		if cwd, isString := section["cwd"].(string); isString {
 			plugin.Cwd = strings.TrimSpace(cwd)
 		}
-		if plugin.ConfigError == "" && plugin.Enabled && len(plugin.Command) == 0 && len(plugin.Args) > 0 {
+		if plugin.ConfigError == "" && plugin.EntryPoint != "" {
+			// One section, one runtime. command/args belong to the stdio
+			// plugin contract and are never silently ignored.
+			switch {
+			case len(plugin.Command) > 0:
+				plugin.ConfigError = "command and entry_point are mutually exclusive"
+			case len(plugin.Args) > 0:
+				plugin.ConfigError = "args is only valid with command"
+			}
+		}
+		if plugin.ConfigError == "" && plugin.EntryPoint == "" {
+			switch {
+			case len(plugin.Interpreter) > 0:
+				plugin.ConfigError = "interpreter is only valid with entry_point"
+			case len(plugin.PythonPath) > 0:
+				plugin.ConfigError = "python_path is only valid with entry_point"
+			}
+		}
+		if plugin.ConfigError == "" && plugin.Enabled && plugin.EntryPoint == "" && len(plugin.Command) == 0 && len(plugin.Args) > 0 {
 			plugin.ConfigError = "args given without command"
 		}
-		if argv := plugin.Argv(); plugin.ConfigError == "" && plugin.Enabled && len(argv) > 0 && strings.TrimSpace(argv[0]) == "" {
+		if argv := plugin.Argv(); plugin.ConfigError == "" && plugin.Enabled && plugin.EntryPoint == "" && len(argv) > 0 && strings.TrimSpace(argv[0]) == "" {
 			plugin.ConfigError = "command[0] is empty"
 		}
 		if plugin.ConfigError != "" {
@@ -101,6 +148,25 @@ func Plugins(config map[string]any) []PluginConfig {
 		out = append(out, plugin)
 	}
 	return out
+}
+
+// stringField reads an optional string field. Present-but-empty or a
+// non-string value is an error rather than a silent default: a section that
+// says entry_point but cannot name one must fail loudly.
+func stringField(section map[string]any, key string) (string, string) {
+	raw, present := section[key]
+	if !present || raw == nil {
+		return "", ""
+	}
+	text, isString := raw.(string)
+	if !isString {
+		return "", key + " must be a string"
+	}
+	trimmed := strings.TrimSpace(text)
+	if trimmed == "" {
+		return "", key + " is empty"
+	}
+	return trimmed, ""
 }
 
 // stringListField reads a field that may be a string or an array of strings.

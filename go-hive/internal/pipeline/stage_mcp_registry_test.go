@@ -129,3 +129,25 @@ func TestMCPRegistryConfigParsing(t *testing.T) {
 		t.Fatal("non-list server_refs must fail")
 	}
 }
+
+// Parity: framework/host/colony_runtime.py::ColonyRuntime._apply_pipeline_results
+// (the runtime adopts the registry's tools in registration order)
+func TestToolDefsFromRegistryPreservesRegistrationOrder(t *testing.T) {
+	registry := tools.NewToolRegistry()
+	registry.Register("first_tool", tools.Tool{Name: "first_tool", Description: "First."}, nil)
+	registry.Register("second_tool", tools.Tool{Name: "second_tool", Description: "Second."}, nil)
+
+	defs := ToolDefsFromRegistry(registry)
+	if len(defs) != 2 {
+		t.Fatalf("defs = %+v, want 2", defs)
+	}
+	if defs[0].Name != "first_tool" || defs[1].Name != "second_tool" {
+		t.Fatalf("def order = %q, %q", defs[0].Name, defs[1].Name)
+	}
+	if defs[0].Description != "First." {
+		t.Fatalf("description = %q", defs[0].Description)
+	}
+	if got := ToolDefsFromRegistry(nil); got != nil {
+		t.Fatalf("nil registry defs = %+v", got)
+	}
+}

@@ -51,7 +51,6 @@ WIRING: tuple[WiringPoint, ...] = (
         path="internal/server/chat_runtime.go",
         description="Chat 运行时：每轮 recall 注入 + 会话事件日志 + vision 兜底",
         requirements=(
-            Requirement("injectRecall 定义", r"func \(r \*ChatRuntime\) injectRecall\("),
             Requirement("injectRecall 调用点", r"\.injectRecall\("),
             Requirement("会话日志打开 SetSessionLog", r"SetSessionLog\("),
             Requirement("会话日志关闭 CloseSessionLog", r"CloseSessionLog\("),
@@ -60,15 +59,28 @@ WIRING: tuple[WiringPoint, ...] = (
         ),
     ),
     WiringPoint(
+        path="internal/server/chat_runtime_recall.go",
+        description="Chat 运行时：每轮 recall 注入实现（从 chat_runtime.go 拆出守文件规模预算）",
+        requirements=(
+            Requirement("injectRecall 定义", r"func \(r \*ChatRuntime\) injectRecall\("),
+        ),
+    ),
+    WiringPoint(
         path="internal/cli/loader.go",
-        description="会话装配：ChatRuntimeDeps 的事件总线、会话身份与 queen 模型槽位",
+        description="会话装配：queen 模型槽位感知 provider 调用",
+        requirements=(
+            Requirement("queen_llm 感知 provider 调用", r"queenAwareChatProvider\(home, requestedModel, queenScope\)"),
+        ),
+    ),
+    WiringPoint(
+        path="internal/cli/loader_session_runtime.go",
+        description="会话装配：ChatRuntimeDeps 的事件总线、会话身份与 vision 接线（从 loader.go 拆出）",
         requirements=(
             Requirement("NewChatRuntime 调用", r"NewChatRuntime\("),
             Requirement("Bus 字段", r"\bBus:\s*\S"),
             Requirement("SessionID 字段", r"\bSessionID:\s*\S"),
             Requirement("QueenName 字段", r"\bQueenName:\s*\S"),
             Requirement("HomeRoot 字段", r"\bHomeRoot:\s*\S"),
-            Requirement("queen_llm 感知 provider 调用", r"queenAwareChatProvider\(home, requestedModel, queenScope\)"),
             # vision_fallback 现在逐次 caption 重读槽位（visionCaptionerFor 内的
             # resolver 每次读 configuration.json），构造时不再需要会话 provider，
             # 所以接线只剩 home 参数。
@@ -130,6 +142,12 @@ WIRING: tuple[WiringPoint, ...] = (
             Requirement("escalate 拦截", r"l\.executeEscalateTool\(agentCtx, req\)"),
             Requirement("doom-loop 自动升级", r"l\.escalateDoomLoop\(agentCtx,"),
             Requirement("升级去重锁存", r"l\.doomLoopEscalated"),
+        ),
+    ),
+    WiringPoint(
+        path="internal/agentloop/loop_turn_steps.go",
+        description="Worker 升级通道：回合内停车等待调用（从 loop.go 拆出守文件规模预算）",
+        requirements=(
             Requirement("停车等待调用", r"l\.settleQueenInputPark\(ctx, agentCtx\)"),
         ),
     ),
@@ -177,22 +195,22 @@ WIRING: tuple[WiringPoint, ...] = (
             Requirement("ConfigureJudge 定义", r"func \(l \*AgentLoop\) ConfigureJudge\("),
             Requirement("criteria/skip_judge 门控", r"spec\.SkipJudge \|\| !hasSuccessCriteria\(spec\)"),
             Requirement("默认 LLM judge 适配器接线", r"NewLLMJudgeAdapterFromCompleter\(completer\)"),
-            Requirement("判定事件 judge_type", r"\"custom\","),
+            Requirement("判定事件 judge_type", r'judgeType\s*:=\s*"custom"|"custom",'),
             Requirement("RETRY 无反馈兜底", r"Custom judge returned RETRY\."),
             Requirement("失败回落契约（_judge_turn）", r"func \(l \*AgentLoop\) evaluateJudgeWithRetry\("),
             Requirement("瞬态分类（is_transient_error 移植）", r"func isTransientJudgeError\("),
         ),
     ),
     WiringPoint(
-        path="internal/agentloop/loop.go",
-        description="Judge 面：回合内判定步骤入口（判定实现见 loop_judge.go::runJudgeStep）",
+        path="internal/agentloop/loop_turn_steps.go",
+        description="Judge 面：回合内判定步骤入口（从 loop.go 拆出；判定实现见 loop_judge.go::runJudgeStep）",
         requirements=(
-            Requirement("判定步骤入口", r"l\.runJudgeStep\(ctx, agentCtx, conv, completion, records, inner, toolFailure, loggedCalls, iterLatencyMS, &result\)"),
+            Requirement("判定步骤入口", r"l\.runJudgeStep\(ctx, agentCtx, conv, completion, records, inner, toolFailure, loggedCalls, iterLatencyMS, result\)"),
         ),
     ),
     WiringPoint(
-        path="internal/agentloop/loop.go",
-        description="工具派发前的 tool input coercion（与上游 agent_loop.py::_run_turn_loop 的 coerce_tool_input 同点位）",
+        path="internal/agentloop/loop_turn_steps.go",
+        description="工具派发前的 tool input coercion（从 loop.go 拆出；与上游 agent_loop.py::_run_turn_loop 的 coerce_tool_input 同点位）",
         requirements=(
             Requirement("coerceToolCallInput 调用点", r"coerceToolCallInputs?\("),
         ),
@@ -214,19 +232,11 @@ WIRING: tuple[WiringPoint, ...] = (
         ),
     ),
     WiringPoint(
-        path="internal/colony/runtime.go",
-        description="Judge 面：worker/overseer 的 judge 接线与 goal criteria 回落",
+        path="internal/server/chat_runtime.go",
+        description="Judge 面：女王 spec 固定 skip_judge；colony 绑定不再继承 goal criteria，也不接 loop judge",
         requirements=(
-            Requirement("judge 接线调用", r"loop\.ConfigureJudge\(judgeSpec, r\.workerCompleter\(\), r\.judgeEventWriter\(\)\)", minimum=2),
-            Requirement("goal criteria 回落", r"agentloop\.GoalCriteriaText\(r\.goal\)", minimum=2),
-        ),
-    ),
-    WiringPoint(
-        path="internal/server/chat_runtime_colony.go",
-        description="Judge 面：chat 会话的 criteria judge 接线与 colony criteria 继承（2026-11-22 从 chat_runtime.go 拆出守文件规模预算）",
-        requirements=(
-            Requirement("criteria judge 接线", r"r\.loop\.ConfigureJudge\(r\.agentCtx\.AgentSpec, r\.deps\.LLM, r\.bus\)"),
-            Requirement("colony criteria 继承入口", r"func \(r \*ChatRuntime\) inheritColonyCriteria\("),
+            Requirement("queen skip_judge", r"SkipJudge:\s*true,"),
+            Requirement("criteria 字段保留为通用 AgentSpec 契约", r"SuccessCriteria:\s*deps\.SuccessCriteria,"),
         ),
     ),
     WiringPoint(

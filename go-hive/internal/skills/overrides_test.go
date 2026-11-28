@@ -160,3 +160,18 @@ func TestOverrideEntryFromDict(t *testing.T) {
 		t.Fatalf("created_at = %v", entry.CreatedAt)
 	}
 }
+
+// Parity: core/framework/skills/overrides.py::OverrideEntry.to_dict --
+// datetime.isoformat() writes a numeric offset ("+00:00"), never RFC3339's "Z".
+func TestOverrideCreatedAtUsesPythonOffset(t *testing.T) {
+	utc := time.Date(2026, 4, 21, 0, 0, 0, 0, time.UTC)
+	entry := &OverrideEntry{Provenance: ProvenanceFramework, CreatedAt: &utc}
+	if got := entry.ToDict()["created_at"]; got != "2026-04-21T00:00:00+00:00" {
+		t.Fatalf("created_at = %v", got)
+	}
+	withMicros := time.Date(2026, 4, 21, 0, 0, 0, 123456000, time.UTC)
+	entry.CreatedAt = &withMicros
+	if got := entry.ToDict()["created_at"]; got != "2026-04-21T00:00:00.123456+00:00" {
+		t.Fatalf("created_at = %v", got)
+	}
+}

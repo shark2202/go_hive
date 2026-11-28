@@ -1,0 +1,368 @@
+{
+  "schema_version": 1,
+  "feature": "ast_grep",
+  "status": "design",
+  "decision": "Implement ast_grep in Go with github.com/odvcencio/gotreesitter; keep CGO_ENABLED=0. Model path inputs are absolute-only and must resolve inside the workspace root.",
+  "package_layout": {
+    "package": "internal/astgrep",
+    "adapter": "internal/tools/builtin/ast_grep.go",
+    "doc": "internal/astgrep/doc.go",
+    "rule": "The core package owns parsing, language detection, the structural matcher, path safety and result rendering. It must not import internal/server, internal/cli or internal/tools/builtin. The tool schema, registration and model-facing adapter live in the adapter package.",
+    "maintenance": "Maintain astgrep as an independent Go package: its own API, doc.go, package tests, gofmt/size/lane-prefix gates, and a caller contract that can be exercised without a session or tool registry."
+  },
+  "source_refs": [
+    {
+      "label": "oh-my-pi ast_grep tool contract",
+      "url": "https://github.com/can1357/oh-my-pi/blob/main/docs/tools/ast-grep.md",
+      "use": "input fields, pattern grammar, supported languages, output shape"
+    },
+    {
+      "label": "gotreesitter v0.57.0",
+      "url": "https://github.com/odvcencio/gotreesitter",
+      "use": "pure-Go tree-sitter runtime, grammars registry, parser/query API"
+    },
+    {
+      "label": "oh-my-pi native crates",
+      "url": "https://github.com/can1357/oh-my-pi/blob/main/docs/native-crates.md",
+      "use": "omp-ast role: tree-sitter/ast-grep registry, matching/editing, summarization"
+    }
+  ],
+  "problem": {
+    "statement": "go_hive has no model-facing structural code search tool. Regex search cannot match AST shape, captured metavariables, or multi-line syntax.",
+    "user_value": [
+      "Find code by structure rather than exact text.",
+      "Use one tool across Go, Python, TypeScript, Rust, JSON, YAML and other supported grammars.",
+      "Keep the six-platform pure-Go build: no C toolchain, no cgo, no browser or Node sidecar."
+    ],
+    "why_not_now": "This is a post-1.0, opt-in capability. Hive upstream has no ast_grep tool, so it is not part of the current parity surface."
+  },
+  "requirements": [
+    {
+      "id": "R1",
+      "priority": "P0",
+      "statement": "Expose a model-facing tool named ast_grep with the oh-my-pi input fields pat, path, lang and skip.",
+      "acceptance": "Tool schema and tool-definition golden match; empty pat is rejected; path defaults to the workspace root.",
+      "traces": [
+        "D3",
+        "A1",
+        "A2"
+      ]
+    },
+    {
+      "id": "R2",
+      "priority": "P0",
+      "statement": "The Go core and all six release targets build with CGO_ENABLED=0.",
+      "acceptance": "Cross-build and test matrix pass with cgo off; no C compiler is required.",
+      "traces": [
+        "D2",
+        "A3"
+      ]
+    },
+    {
+      "id": "R3",
+      "priority": "P0",
+      "statement": "Support ast-grep metavariables $NAME, $_, $$$NAME and $$$, including repeated-variable equality and lazy variadic matching.",
+      "acceptance": "Golden matcher cases cover captures, wildcards, repeated captures, zero-or-more captures, multi-line matches and backtracking.",
+      "traces": [
+        "D5",
+        "A4"
+      ]
+    },
+    {
+      "id": "R4",
+      "priority": "P0",
+      "statement": "Infer language from the path, or use an explicit lang override when the extension is ambiguous.",
+      "acceptance": "Language matrix covers .go, .py, .ts/.tsx, .rs, .json, .yaml, .md and an explicit .h -> cpp override.",
+      "traces": [
+        "D4",
+        "A5"
+      ]
+    },
+    {
+      "id": "R5",
+      "priority": "P0",
+      "statement": "Preserve the model-visible result shape: grouped paths, line anchors, match text, optional metavariable metadata and explicit no-match/limit notices.",
+      "acceptance": "Text golden matches the chosen display mode; Go tests pin grouping, indentation, continuation lines, skip and cap behavior.",
+      "traces": [
+        "D6",
+        "A6"
+      ]
+    },
+    {
+      "id": "R6",
+      "priority": "P0",
+      "statement": "Never escape the allowed workspace roots, follow symlinks outside them, or read unbounded/ binary files.",
+      "acceptance": "Path traversal, symlink escape, binary, oversized file and semicolon-list tests fail closed with a typed error.",
+      "traces": [
+        "D7",
+        "A7"
+      ]
+    },
+    {
+      "id": "R7",
+      "priority": "P1",
+      "statement": "Bound scan work: result cap, per-file byte cap, per-file parse budget, cancellation and parser/tree cleanup.",
+      "acceptance": "Fifty-result cap, skip paging, cancelled context, large-repo smoke and goroutine/tree leak checks pass.",
+      "traces": [
+        "D8",
+        "A8"
+      ]
+    },
+    {
+      "id": "R8",
+      "priority": "P1",
+      "statement": "Keep the dependency surface explicit and small: one new Go module plus only the grammar packages compiled into the tool.",
+      "acceptance": "go.mod diff contains only gotreesitter; binary-size and import audit recorded; no runtime download of grammars.",
+      "traces": [
+        "D2",
+        "D4",
+        "A9"
+      ]
+    },
+    {
+      "id": "R9",
+      "priority": "P0",
+      "statement": "模型输入 path 必须是绝对路径且在 workspace root 内；相对路径返回 path must be absolute；绝对越界/../symlink 仍 path escape。",
+      "acceptance": "相对 path 被拒绝；绝对根内通过；越界/../symlink 逃逸被拒绝；semicolon 列表逐项校验。",
+      "traces": [
+        "D9",
+        "A11"
+      ]
+    }
+  ],
+  "non_goals": [
+    "Do not port omp-ast's editor/rewrite/staging engine in v1; read-only search only.",
+    "Do not support internal URLs or fetched web URLs in v1; start with local workspace paths and globs.",
+    "Do not promise byte-exact tree-sitter recovery on malformed source; gotreesitter publishes a measured parity scope, not universal equivalence.",
+    "Do not add ast_grep to the 1.0 parity claim; it is an opt-in post-1.0 capability."
+  ],
+  "options": [
+    {
+      "id": "O1",
+      "name": "cgo tree-sitter (smacker/go-tree-sitter or tree-sitter/go-tree-sitter)",
+      "verdict": "rejected",
+      "reason": "Requires a C toolchain per target, violates CGO_ENABLED=0 and the six-platform static build invariant."
+    },
+    {
+      "id": "O2",
+      "name": "Rust omp-ast / ast-grep sidecar",
+      "verdict": "fallback",
+      "reason": "Highest behavioral fidelity, but adds a native process and per-platform binaries. Keep as fallback if pure-Go matching fails acceptance."
+    },
+    {
+      "id": "O3",
+      "name": "github.com/odvcencio/gotreesitter",
+      "verdict": "chosen",
+      "reason": "Pure-Go runtime, 206 grammar registry, parser/query/incremental APIs, no cgo. Sufficient base for a read-only structural matcher; ast-grep-specific pattern semantics must be implemented above it."
+    },
+    {
+      "id": "O4",
+      "name": "tree-sitter compiled to WASM + wazero",
+      "verdict": "deferred",
+      "reason": "Preserves pure Go, but adds a WASM build pipeline and a second matching engine; more complex than gotreesitter for no v1 benefit."
+    }
+  ],
+  "design": {
+    "D1": {
+      "title": "Tool registration",
+      "text": "ast_grep is opt-in and default-off. Registration is gated by ASTGrepEnabled(home), which reads only <home>/ast_grep.json (user; an empty home falls back to HIVE_HOME). There is no project/session-level file: the session directory is the file tools' sandbox root and is agent-writable, so reading <sessionDir>/.hive/ast_grep.json would let the model opt itself into a tool the operator left off (see go_hive/docs/config-roots.html). The file is a JSON object with a top-level boolean enabled; missing config means disabled, and malformed or unreadable config fails closed. There is no environment-variable override. When enabled, the model sees a normal tool definition in the lazy tier; a build tag is considered only if binary size becomes a problem."
+    },
+    "D2": {
+      "title": "Dependency boundary",
+      "text": "Add github.com/odvcencio/gotreesitter v0.57.x to go.mod. Import the grammar registry or selected grammar packages; never import a C binding. Keep a small language set in the default binary and make additional grammars opt-in if size demands it."
+    },
+    "D3": {
+      "title": "Input contract",
+      "text": "pat: string, required, trimmed, non-empty. path: absolute file, directory, glob, or semicolon-separated list inside the workspace root; default the workspace root. Relative paths are rejected. lang: optional canonical language override. skip: non-negative integer offset, default 0. No limit field in v1; the implementation caps visible results at 50 and pages with skip."
+    },
+    "D4": {
+      "title": "Language registry",
+      "text": "Resolve explicit lang through a canonical alias table. Otherwise infer from the filename through grammars.DetectLanguage. Unknown language or unsupported extension is a typed unsupported-language result, never a silent skip. .cu/.cuh map to cpp; .h needs an explicit lang when ambiguous."
+    },
+    "D5": {
+      "title": "Pattern matcher",
+      "text": "Parse the pattern with the same grammar as the candidate. Compile the pattern AST into a small matcher IR: node kind, field names, literal text, metavariable captures, wildcard, and variadic sequence. Walk candidate nodes with backtracking; repeated $NAME compares the captured source text; $$$NAME greedily consumes zero or more sibling nodes but backtracks to the next satisfiable match. Do not treat tree-sitter query syntax as ast-grep pattern syntax."
+    },
+    "D6": {
+      "title": "Result renderer",
+      "text": "Group by path, sort by path and byte offset, slice by skip, cap at 50. Render the same line-anchor shape as oh-my-pi: path header, *LINE:text anchors, continuation lines, optional meta: NAME=value, then a limit notice. No matches returns the explicit no-match string. Parse errors are reported separately and deduplicated."
+    },
+    "D7": {
+      "title": "Safety boundary",
+      "text": "Resolve every path under the session workspace; reject .. after cleaning; evaluate symlinks and reject targets outside the root. Skip binary files, files above the per-file cap, and VCS/cache directories. Semicolon entries are validated independently; one bad entry fails the request rather than silently dropping it."
+    },
+    "D8": {
+      "title": "Execution model",
+      "text": "Walk candidate files with a bounded worker pool; parse with a per-file timeout; retain only the current tree; release trees explicitly; stop on context cancellation. Cache compiled patterns per (language, pattern) within one call. Return a typed error for timeout, cancellation, parse-failure threshold and unsupported language."
+    },
+    "D9": {
+      "title": "Path input is absolute",
+      "text": "go_hive has no project cwd, so the model-facing path is absolute-only: the adapter splits the semicolon list, rejects an empty entry, and requires filepath.IsAbs on every entry before calling astgrep.Search. The core still resolves relative paths for standalone library callers and its own tests, but the tool contract does not. Absolute paths are resolved through symlinks before root containment so a symlinked workspace root (macOS /var -> /private/var) is accepted while a target outside the root is rejected."
+    }
+  },
+  "pipeline": [
+    "normalize and validate pat/path/lang/skip",
+    "resolve paths and infer languages",
+    "compile pattern against the selected grammar",
+    "walk candidates, parse with gotreesitter, run structural matcher",
+    "capture metavariables and source ranges",
+    "sort, dedupe, apply skip and 50-result cap",
+    "render text + structured details",
+    "release trees and return"
+  ],
+  "tool_contract": {
+    "name": "ast_grep",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "pat": {
+          "type": "string",
+          "description": "Single structural pattern using $NAME, $_, $$$NAME or $$$."
+        },
+        "path": {
+          "type": "string",
+          "description": "Absolute file, directory, glob or semicolon-separated list inside the workspace root; defaults to the workspace root. Relative paths are rejected."
+        },
+        "lang": {
+          "type": "string",
+          "description": "Optional canonical language override."
+        },
+        "skip": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Match offset; defaults to 0."
+        }
+      },
+      "required": [
+        "pat"
+      ]
+    },
+    "result_fields": {
+      "text": "model-facing grouped matches, no-match or parse-error notice",
+      "details": [
+        "matchCount",
+        "fileCount",
+        "filesSearched",
+        "limitReached",
+        "parseErrors",
+        "parseErrorsTotal",
+        "scopePath",
+        "searchPath"
+      ]
+    }
+  },
+  "acceptance": [
+    {
+      "id": "A1",
+      "test": "Tool definition exact",
+      "pass": "name, description and input_schema match the frozen ast_grep contract."
+    },
+    {
+      "id": "A2",
+      "test": "Empty/invalid input",
+      "pass": "empty pat, negative/fractional skip and malformed semicolon list return typed errors."
+    },
+    {
+      "id": "A3",
+      "test": "No-cgo matrix",
+      "pass": "CGO_ENABLED=0 go test + six GOOS/GOARCH builds pass."
+    },
+    {
+      "id": "A4",
+      "test": "Pattern semantics",
+      "pass": "golden matcher corpus covers capture, wildcard, repeated, variadic, multi-line and backtracking."
+    },
+    {
+      "id": "A5",
+      "test": "Language matrix",
+      "pass": "Go/Python/TypeScript/Rust/JSON/YAML/Markdown and .h override pass."
+    },
+    {
+      "id": "A6",
+      "test": "Result golden",
+      "pass": "grouping, line anchors, skip, cap, no-match and parse-error text match goldens."
+    },
+    {
+      "id": "A7",
+      "test": "Safety",
+      "pass": "traversal, symlink escape, binary and oversized files fail closed."
+    },
+    {
+      "id": "A8",
+      "test": "Bounds",
+      "pass": "50-result cap, cancellation, timeout and tree-release checks pass."
+    },
+    {
+      "id": "A9",
+      "test": "Dependency audit",
+      "pass": "go.mod has only gotreesitter added; no runtime grammar download; binary size recorded."
+    },
+    {
+      "id": "A10",
+      "test": "Differential smoke",
+      "pass": "on the fixture corpus, pure-Go results agree with ast-grep CLI for supported patterns; differences are registered."
+    },
+    {
+      "id": "A11",
+      "test": "Absolute path",
+      "pass": "relative path returns path must be absolute; absolute under a symlinked root passes; outside/../symlink escape rejected; semicolon entries validated independently."
+    }
+  ],
+  "risks": [
+    {
+      "risk": "gotreesitter recovery parity is measured, not universal",
+      "impact": "malformed-source matches may differ from C tree-sitter",
+      "mitigation": "register as an acceptance exception; test clean fixtures first; report parse issues instead of hiding them."
+    },
+    {
+      "risk": "ast-grep metavariable semantics are nontrivial",
+      "impact": "variadic/repeated captures can diverge",
+      "mitigation": "build a matcher IR and differential fixture corpus before wiring the tool into the model surface."
+    },
+    {
+      "risk": "206 grammar blobs increase binary size",
+      "impact": "six-platform archives grow",
+      "mitigation": "start with a curated 12--17 grammar set; opt-in build tags for the rest."
+    },
+    {
+      "risk": "arbitrary file scan can escape workspace or be abusive",
+      "impact": "data exposure / resource exhaustion",
+      "mitigation": "workspace-rooted path checks, symlink resolution, per-file cap, cancellation and result cap."
+    },
+    {
+      "risk": "output format drift from oh-my-pi",
+      "impact": "model-facing behavior differs",
+      "mitigation": "freeze golden text before enabling by default; use the display mode explicitly."
+    }
+  ],
+  "open_questions": [
+    "Should the first release expose hashline or line-number rendering by default?",
+    "Is a 12-grammar default set acceptable, or must all 17 omp-ast linked grammars ship in the first cut?",
+    "Should internal URLs and fetched web URLs be out of scope for v1?",
+    "Do we want a read-only tool only, or a later rewrite/edit phase?",
+    "Should the core astgrep package also reject relative paths, or only the model-facing adapter?"
+  ],
+  "implementation_plan": [
+    {
+      "phase": "P0",
+      "work": "freeze requirements/contract and add dependency spike; prove gotreesitter parses the seven-language matrix with CGO_ENABLED=0."
+    },
+    {
+      "phase": "P1",
+      "work": "implement path/language resolution, parser pool and structural matcher with golden tests."
+    },
+    {
+      "phase": "P2",
+      "work": "implement result renderer, safety limits, cancellation and parse-error reporting."
+    },
+    {
+      "phase": "P3",
+      "work": "differential corpus vs ast-grep CLI, six-platform build, binary-size audit, opt-in config gate."
+    },
+    {
+      "phase": "P4",
+      "work": "promote from design to shipped only after A1-A11 pass on the release code point."
+    }
+  ]
+}

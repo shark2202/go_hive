@@ -1,5 +1,7 @@
 # Python Playbook（`.play.py`）支持
 
+> 可视化原语参考：[playbook-primitives.html](playbook-primitives.html)（8 个运行时原语、worker/converge/lane 选项、工具与生命周期面、Go 原生 JSON 子集、语义边界）。
+
 > 适用：`go_hive`（纯 Go 主二进制，`CGO_ENABLED=0`）  
 > 上游契约：`core/framework/host/playbook/runner.py`（`PlaybookRun`）、`core/framework/tools/playbook_tools.py`（`run_playbook`）  
 > 实现：`internal/playbook/python.go`、内嵌 `internal/playbook/python_bootstrap.py`、`internal/colony/playbook_tools.go`、`internal/colony/playbook_verbatim.go`、`internal/colony/playbook_notify.go`、`internal/colony/worker_slots.go`  

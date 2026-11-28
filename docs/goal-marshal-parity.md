@@ -46,13 +46,15 @@ Go 旧 `MarshalJSON` 无条件 `if p.Weight == 0 { p.Weight = 1.0 }`，把显式
   `id` 自查 4be61ebf 建文件起就存在）。缺 `id` 构造直接 `ValidationError: missing`，不会输出「无 id」的 JSON。
 - 真实 colony 装载路径 `AgentLoader.load`（worker.json，2 criteria + 1 constraint）输出：
   `"id":"colony_fixture-goal"`、criteria `sc-0`/`sc-1`、constraint `c-0`、`"weight":1.0`。
-- 会话级 colony goal（`session_manager.py:1713`）输出 `"id":"colony_goal_sess1"`。
+- 会话级 colony goal（`session_manager.py:1741`）输出 `"id":"colony_goal_sess1"`。
 - `goal_progress.criteria_status` 的 Python 生产者现在是 stub（`outcome_aggregator.py:18`）：
   `{"progress": 0.0, "criteria_status": {}}`；历史实现（`3c9911c2^:framework/runtime/outcome_aggregator.py:254`）
   以 `criterion.id` 为键，值为 `{description, met, progress, evidence}`。
 
-策略（按实测决定）：三个 `id` 字段加 `omitempty` —— Python 侧缺 id 是校验错误、显式空 id 才输出 `"id":""`，
-所以 Go 之前为「没设 id」伪造的 `"id":""` 是 Go-only 产物，删掉它；id 有值时输出与 Python 一致，内部键
+策略（2026-11-25 修订）：三个 `id` 字段**不加** `omitempty` —— Python 侧 `id` 是必填（缺 id 直接
+`ValidationError: missing`，显式空 id 才输出 `"id":""`），所以 Go 必须始终输出 `id` 键：零值输出
+`"id":""`（Python 接受的值），缺失/null id 在解析时按必填拒绝。此前「删掉空 id」的写法会让 Go 产物在
+Python 侧被当成缺必填字段，已回退。id 有值时输出与 Python 一致，内部键
 （`criterionStatusMap` 以 `criterion.ID` 为键）不受影响。
 
 同场景 JSON 对拍（同一 worker.json，Python loader 与 Go `LoadAgentSpec`）：
@@ -66,16 +68,17 @@ Go 旧 `MarshalJSON` 无条件 `if p.Weight == 0 { p.Weight = 1.0 }`，把显式
 
 差异只有 `weight` 数字文本与时间戳两项（残差 1、2），键集合、键序、取值逐项一致（测试做 map 深比较）。
 
-Go-only 边界样例（Python 无法构造）：
+Go-only 边界样例：
 
 | 输入 | Go 输出 |
 | --- | --- |
-| criterion 无 `id` 键 | `{"description":"d","metric":"llm_judge","type":"success_rate","target":"","weight":1,"met":false}`（无 `id`） |
-| criterion `"id":""` | `{"description":"d","id":"","met":false,…}`（保留空 id，与 Python `id=""` 同值） |
+| criterion 零值（程序化构造） | `{"id":"","description":"d","metric":"llm_judge","type":"success_rate","target":"","weight":1,"met":false}`（与 Python `id=""` 同值；不再省略键） |
+| criterion `"id":""` | `{"id":"","description":"d",…}`（保留空 id，与 Python `id=""` 同值） |
 | criterion `"id":"sc-0"` | `{"id":"sc-0","description":"d",…}`（与 Python 逐字节同序） |
+| criterion 输入缺 `id` / `"id":null` | 解析错误（Python 同为 `ValidationError`） |
 
 测试：`internal/agents/goal_marshal_parity_test.go::TestLoadAgentSpecGoalJSONMatchesPythonColonyPath`、
-`internal/schemas/goal_test.go::TestGoalIDOmittedWhenUnset`。
+`internal/schemas/goal_test.go::TestGoalIDsAreAlwaysSerialized`、`TestGoalIDsAreRequiredOnRead`。
 
 ## 3. context 键序保序
 
@@ -115,7 +118,7 @@ Go：122 bytes，sha256 同上（逐字节一致）。Go 侧 marshal 的 `contex
 3. **criteria_status**：Python 当前是 stub（恒 `{}`），Go 的 `{"sc-0":{…}}` 是 Go 侧执行层产出，
    `goal_outcome.go` 已标 `Parity-exempt`；键仍来自 `criterion.ID`。
 4. **Extra 透传会重排键**（既有行为）：带未知字段的 goal/criterion 经 `mergeExtras` 走 map 再序列化，
-   键序变字母序 —— 显式 `"id":""` 的往返命中的就是这条路径（取值保留，键序与 Python 不同）。
+   键序变字母序。`id` 现在是有 tag 的声明字段，不再走这条路径（显式 `"id":""` 的往返保持声明顺序）。
 5. **context 值渲染**：`fmt %v` vs Python `str()`，布尔/None/嵌套 dict 的文本不同（如 `map[a:1]` vs `{'a': 1}`）；
    本车道只对齐顶层键序，字符串值逐字节一致。
 

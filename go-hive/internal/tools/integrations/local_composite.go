@@ -8,14 +8,15 @@ import (
 	"strings"
 )
 
-// registerREST attaches the declarative provider specs.
+// registerREST attaches the declarative provider specs together with the
+// upstream response envelope each action returns (audit item A34).
 func registerREST(r *Registry) {
-	r.AddSpecs("stripe", stripeSpecs())
-	r.AddSpecs("slack", slackSpecs())
-	r.AddSpecs("github", githubSpecs())
-	r.AddSpecs("telegram", telegramSpecs())
-	r.AddSpecs("trello", trelloSpecs())
-	r.AddSpecs("airtable", airtableSpecs())
+	r.AddSpecs("stripe", withShapes(stripeSpecs(), stripeShapes()))
+	r.AddSpecs("slack", withShapes(slackSpecs(), slackShapes()))
+	r.AddSpecs("github", withShapes(githubSpecs(), githubShapes()))
+	r.AddSpecs("telegram", withShapes(telegramSpecs(), telegramShapes()))
+	r.AddSpecs("trello", withShapes(trelloSpecs(), trelloShapes()))
+	r.AddSpecs("airtable", withShapes(airtableSpecs(), airtableShapes()))
 }
 
 // registerLocal attaches the hand-written implementations: local file tools,
@@ -36,6 +37,7 @@ func registerLocal(r *Registry) {
 	r.AddImpl("slack", "slack_upload_file", slackUploadFile)
 	r.AddImpl("slack", "slack_get_messages_for_analysis", slackMessagesForAnalysis)
 	r.AddImpl("slack", "slack_get_conversation_context", slackConversationContext)
+	r.AddImpl("slack", "slack_get_team_stats", slackTeamStats)
 	r.AddImpl("slack", "slack_trigger_workflow", slackTriggerWorkflow)
 
 	r.AddImpl("github", "github_list_repos", githubListRepos)
@@ -89,14 +91,13 @@ func slackSendDM(ctx context.Context, rt *Runtime, input map[string]any) (any, e
 }
 
 // slackUploadFile implements Slack's external upload flow:
-// files.getUploadURLExternal -> PUT bytes -> files.completeUploadExternal.
+// files.getUploadURLExternal -> POST bytes -> files.completeUploadExternal.
 func slackUploadFile(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	channel := stringArg(input, "channel")
 	content := stringArg(input, "content")
+	channel := stringArg(input, "channel")
 	filename := stringArg(input, "filename")
-	if channel == "" || filename == "" {
-		return map[string]any{"error": "channel and filename are required"}, nil
-	}
+	title := stringArg(input, "title")
+	comment := stringArg(input, "comment")
 	opened, ok := slackCall(ctx, rt, "files.getUploadURLExternal", map[string]any{
 		"filename": filename,
 		"length":   len(content),
@@ -113,29 +114,69 @@ func slackUploadFile(ctx context.Context, rt *Runtime, input map[string]any) (an
 	if err != nil {
 		return map[string]any{"error": "Failed to build upload request: " + err.Error()}, nil
 	}
-	response, err := rt.HTTP.Do(request)
+	request.Header.Set("Content-Type", "application/octet-stream")
+	upload, err := rt.HTTP.Do(request)
 	if err != nil {
 		return map[string]any{"error": "Network error: " + err.Error()}, nil
 	}
-	response.Body.Close()
-
-	file := map[string]any{"id": fileID}
-	if title := stringArg(input, "title"); title != "" {
-		file["title"] = title
+	upload.Body.Close()
+	if upload.StatusCode != http.StatusOK {
+		return map[string]any{"error": fmt.Sprintf("File upload failed: %d", upload.StatusCode)}, nil
 	}
-	complete := map[string]any{"files": []any{file}, "channel_id": channel}
-	if comment := stringArg(input, "comment"); comment != "" {
+
+	entry := map[string]any{"id": fileID, "title": title}
+	if title == "" {
+		entry["title"] = filename
+	}
+	complete := map[string]any{"files": []any{entry}}
+	if channel != "" {
+		complete["channel_id"] = channel
+	}
+	if comment != "" {
 		complete["initial_comment"] = comment
 	}
 	completed, ok := slackCall(ctx, rt, "files.completeUploadExternal", complete)
 	if !ok {
 		return completed, nil
 	}
-	return map[string]any{"success": true, "file": completed["files"]}, nil
+	files, _ := completed["files"].([]any)
+	var file map[string]any
+	if len(files) > 0 {
+		file, _ = files[0].(map[string]any)
+	}
+	return map[string]any{"success": true, "file": map[string]any{
+		"id":        shapeText(file["id"]),
+		"name":      shapeText(file["name"]),
+		"title":     shapeText(file["title"]),
+		"permalink": shapeText(file["permalink"]),
+	}}, nil
 }
 
-// slackMessagesForAnalysis returns structured history for the model to reason
-// over (the upstream tool is intentionally analysis-free).
+// slackTeamStats ports the two-call upstream aggregate: team.info then a
+// one-row users.list sample for the member-count note.
+func slackTeamStats(ctx context.Context, rt *Runtime, _ map[string]any) (any, error) {
+	team, ok := slackCall(ctx, rt, "team.info", map[string]any{})
+	if !ok {
+		return team, nil
+	}
+	users, usersOK := slackCall(ctx, rt, "users.list", map[string]any{"limit": 1})
+	info := shapeDict(team, "team")
+	members := []any{}
+	if usersOK {
+		members = shapeList(users, "members")
+	}
+	return map[string]any{
+		"team_name":           shapeText(info["name"]),
+		"team_domain":         shapeText(info["domain"]),
+		"team_id":             shapeText(info["id"]),
+		"member_count_sample": len(members),
+		"note":                "For exact member count, paginate through users.list",
+	}, nil
+}
+
+// slackMessagesForAnalysis mirrors slack_get_messages_for_analysis: it
+// enriches each history row (bot flag, reactions, thread markers) and appends
+// thread replies when asked, leaving the interpretation to the model.
 func slackMessagesForAnalysis(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 	channel := stringArg(input, "channel")
 	if channel == "" {
@@ -149,16 +190,70 @@ func slackMessagesForAnalysis(ctx context.Context, rt *Runtime, input map[string
 	if !ok {
 		return history, nil
 	}
-	messages, _ := history["messages"].([]any)
+	messages := shapeList(history, "messages")
+	if len(messages) == 0 {
+		return map[string]any{"channel": channel, "messages": []any{}, "count": 0}, nil
+	}
+	includeThreads := boolArg(input, "include_threads", true)
+	enriched := make([]any, 0, len(messages))
+	for _, item := range messages {
+		message := shapeMap(item)
+		reactions := make([]any, 0)
+		for _, raw := range shapeList(message, "reactions") {
+			reaction := shapeMap(raw)
+			count := reaction["count"]
+			if count == nil {
+				count = float64(0)
+			}
+			reactions = append(reactions, map[string]any{
+				"emoji": shapeText(reaction["name"]),
+				"count": count,
+			})
+		}
+		replyCount := shapeNumber(message, "reply_count")
+		hasReplies := shapeInt(replyCount) > 0
+		row := map[string]any{
+			"text":             shapeText(message["text"]),
+			"user":             shapeText(message["user"]),
+			"ts":               shapeText(message["ts"]),
+			"is_bot":           shapeTruthy(message["bot_id"]),
+			"reactions":        reactions,
+			"reply_count":      replyCount,
+			"is_thread_parent": shapeTruthy(message["thread_ts"]) && hasReplies,
+			"is_thread_reply":  shapeTruthy(message["parent_user_id"]),
+		}
+		if includeThreads && hasReplies {
+			thread, ok := slackCall(ctx, rt, "conversations.replies", map[string]any{
+				"channel": channel,
+				"ts":      stringArg(message, "ts"),
+			})
+			if ok {
+				replies := shapeList(thread, "messages")
+				projected := make([]any, 0, len(replies))
+				for _, rawReply := range replies[1:] {
+					reply := shapeMap(rawReply)
+					projected = append(projected, map[string]any{
+						"text": shapeText(reply["text"]),
+						"user": shapeText(reply["user"]),
+					})
+				}
+				row["thread_replies"] = projected
+			}
+		}
+		enriched = append(enriched, row)
+	}
 	return map[string]any{
 		"channel":  channel,
-		"messages": messages,
-		"count":    len(messages),
+		"count":    len(enriched),
+		"messages": enriched,
+		"note": "Use your intelligence to analyze this data. " +
+			"Look for patterns, unanswered questions, " +
+			"engagement levels, sentiment and anything user asks for.",
 	}, nil
 }
 
-// slackConversationContext augments history with the user directory entries
-// referenced by those messages.
+// slackConversationContext mirrors slack_get_conversation_context: resolve
+// user ids to real names in first-appearance order and report the roster.
 func slackConversationContext(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
 	channel := stringArg(input, "channel")
 	if channel == "" {
@@ -169,26 +264,51 @@ func slackConversationContext(ctx context.Context, rt *Runtime, input map[string
 	if !ok {
 		return history, nil
 	}
-	messages, _ := history["messages"].([]any)
-	users := map[string]any{}
-	if boolArg(input, "include_user_info", true) {
-		seen := map[string]bool{}
-		for _, item := range messages {
-			message, ok := item.(map[string]any)
-			if !ok {
-				continue
-			}
-			userID := stringArg(message, "user")
-			if userID == "" || seen[userID] {
-				continue
-			}
-			seen[userID] = true
-			if info, ok := slackCall(ctx, rt, "users.info", map[string]any{"user": userID}); ok {
-				users[userID] = info["user"]
-			}
+	messages := shapeList(history, "messages")
+	includeUsers := boolArg(input, "include_user_info", true)
+	cache := map[string]string{}
+	order := []string{}
+	projected := make([]any, 0, len(messages))
+	for _, item := range messages {
+		message := shapeMap(item)
+		userID := stringArg(message, "user")
+		if userID == "" {
+			userID = "unknown"
 		}
+		name := userID
+		if includeUsers && userID != "unknown" {
+			if _, seen := cache[userID]; !seen {
+				name = userID
+				if info, ok := slackCall(ctx, rt, "users.info", map[string]any{"user": userID}); ok {
+					if user, ok := info["user"].(map[string]any); ok {
+						if realName := stringArg(user, "real_name"); realName != "" {
+							name = realName
+						}
+					}
+				}
+				cache[userID] = name
+				order = append(order, userID)
+			}
+			name = cache[userID]
+		}
+		projected = append(projected, map[string]any{
+			"user_id":     userID,
+			"user_name":   name,
+			"text":        shapeText(message["text"]),
+			"ts":          shapeText(message["ts"]),
+			"has_replies": shapeInt(shapeNumber(message, "reply_count")) > 0,
+		})
 	}
-	return map[string]any{"channel": channel, "messages": messages, "users": users, "count": len(messages)}, nil
+	users := make([]any, 0, len(order))
+	for _, userID := range order {
+		users = append(users, cache[userID])
+	}
+	return map[string]any{
+		"channel":               channel,
+		"message_count":         len(projected),
+		"messages":              projected,
+		"users_in_conversation": users,
+	}, nil
 }
 
 // slackTriggerWorkflow posts to a user-supplied Workflow Builder webhook.
@@ -217,8 +337,8 @@ func slackTriggerWorkflow(ctx context.Context, rt *Runtime, input map[string]any
 		return map[string]any{"error": "Network error: " + err.Error()}, nil
 	}
 	defer response.Body.Close()
-	if response.StatusCode >= 400 {
-		return map[string]any{"error": fmt.Sprintf("Workflow webhook returned HTTP %d", response.StatusCode)}, nil
+	if response.StatusCode != http.StatusOK {
+		return map[string]any{"error": fmt.Sprintf("Workflow trigger failed: %d", response.StatusCode)}, nil
 	}
 	return map[string]any{"success": true, "status_code": response.StatusCode}, nil
 }
@@ -229,11 +349,57 @@ func githubListRepos(ctx context.Context, rt *Runtime, input map[string]any) (an
 	if username := stringArg(input, "username"); username != "" {
 		spec.Path = "/users/{username}/repos"
 	}
-	return rt.CallHelper(ctx, "github_tool", "GitHub", spec, input)
+	result, err := rt.CallHelper(ctx, "github_tool", "GitHub", spec, input)
+	if err != nil {
+		return result, err
+	}
+	return githubSuccess(result, input), nil
 }
 
+// githubUserEmails mirrors github_get_user_emails: the profile lookup is made
+// first (upstream reads its raw "email" key, which the {"success","data"}
+// envelope never carries), then public PushEvent commits supply the addresses.
 func githubUserEmails(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
-	return rt.CallHelper(ctx, "github_tool", "GitHub", RestSpec{Method: http.MethodGet, Path: "/user/emails"}, input)
+	username := stringArg(input, "username")
+	if username == "" {
+		return map[string]any{"error": "username is required"}, nil
+	}
+	// The upstream profile call contributes no address: it inspects
+	// profile.get("email") on the wrapped {"success","data"} document. The
+	// request is still made so request traces match.
+	_, _ = rt.CallHelper(ctx, "github_tool", "GitHub", RestSpec{
+		Method: http.MethodGet,
+		Path:   "/users/{username}",
+	}, input)
+
+	events, _ := rt.CallHelper(ctx, "github_tool", "GitHub", RestSpec{
+		Method:    http.MethodGet,
+		Path:      "/users/{username}/events/public",
+		Constants: map[string]any{"per_page": 30},
+	}, input)
+	emails := []githubEmailEntry{}
+	seen := map[string]bool{}
+	for _, value := range shapeArray(events) {
+		event := shapeMap(value)
+		if stringArg(event, "type") != "PushEvent" {
+			continue
+		}
+		for _, rawCommit := range shapeList(shapeDict(event, "payload"), "commits") {
+			commit := shapeMap(rawCommit)
+			address := stringArg(shapeDict(commit, "author"), "email")
+			if address == "" || !strings.Contains(address, "@") ||
+				strings.Contains(strings.ToLower(address), "noreply") || seen[address] {
+				continue
+			}
+			seen[address] = true
+			emails = append(emails, githubEmailEntry{Email: address, Source: "commit"})
+		}
+	}
+	out := make([]any, 0, len(emails))
+	for _, entry := range emails {
+		out = append(out, map[string]any{"email": entry.Email, "source": entry.Source})
+	}
+	return map[string]any{"username": username, "emails": out, "total": len(out)}, nil
 }
 
 func githubWorkflowRuns(ctx context.Context, rt *Runtime, input map[string]any) (any, error) {
@@ -241,5 +407,9 @@ func githubWorkflowRuns(ctx context.Context, rt *Runtime, input map[string]any) 
 	if workflow := stringArg(input, "workflow_id"); workflow != "" {
 		spec.Path = "/repos/{owner}/{repo}/actions/workflows/{workflow_id}/runs"
 	}
-	return rt.CallHelper(ctx, "github_tool", "GitHub", spec, input)
+	result, err := rt.CallHelper(ctx, "github_tool", "GitHub", spec, input)
+	if err != nil {
+		return result, err
+	}
+	return githubSuccess(result, input), nil
 }

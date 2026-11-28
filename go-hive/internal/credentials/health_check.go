@@ -92,6 +92,70 @@ func CheckCredentialHealth(credentialName, credentialValue, healthCheckEndpoint,
 	}
 }
 
+// HasHealthChecker reports whether a dedicated checker is registered for
+// credentialName — the Go projection of upstream
+// “credential_id in HEALTH_CHECKERS“ used by the local-save route to decide
+// whether to run a health check at all.
+//
+// Parity: tools/src/aden_tools/credentials/health_check.py::HEALTH_CHECKERS
+func HasHealthChecker(credentialName string) bool {
+	_, ok := healthCheckers[credentialName]
+	return ok
+}
+
+// CheckCredentialHealthWithExtra mirrors check_credential_health(name, value,
+// **kwargs): the local registry passes extra form fields (cse_id today) to the
+// checker. Without extras it behaves exactly like CheckCredentialHealth with
+// no spec fallback endpoint, which is what upstream's local save does.
+//
+// Parity: tools/src/aden_tools/credentials/health_check.py::check_credential_health
+func CheckCredentialHealthWithExtra(credentialName, credentialValue string, extraKeys map[string]string) HealthCheckResult {
+	if credentialName == "google_search" {
+		if cseID := extraKeys["cse_id"]; cseID != "" {
+			return runGoogleCustomSearchHealthCheck(credentialValue, cseID)
+		}
+	}
+	return CheckCredentialHealth(credentialName, credentialValue, "", "")
+}
+
+// googleCustomSearchEndpoint is a variable so tests can point the checker at a
+// local server.
+var googleCustomSearchEndpoint = "https://www.googleapis.com/customsearch/v1"
+
+// runGoogleCustomSearchHealthCheck is GoogleSearchHealthChecker.check with a
+// CSE ID supplied: the API key alone only proves the format.
+//
+// Parity: tools/src/aden_tools/credentials/health_check.py::GoogleSearchHealthChecker.check
+func runGoogleCustomSearchHealthCheck(apiKey, cseID string) HealthCheckResult {
+	status, _, reqErr := performHealthRequest(healthRequestConfig{
+		endpoint:       googleCustomSearchEndpoint,
+		serviceName:    "Google",
+		authType:       healthAuthQuery,
+		authQueryParam: "key",
+		extraParams: map[string]string{
+			"cx":  cseID,
+			"q":   "test",
+			"num": "1",
+		},
+	}, apiKey)
+	if reqErr != nil {
+		if reqErr.timeout {
+			return HealthCheckResult{Valid: false, Message: "Google API request timed out", Details: map[string]any{"error": "timeout"}}
+		}
+		return HealthCheckResult{Valid: false, Message: "Failed to connect to Google API: " + reqErr.text, Details: map[string]any{"error": reqErr.text}}
+	}
+	switch status {
+	case 200:
+		return HealthCheckResult{Valid: true, Message: "Google Custom Search credentials valid"}
+	case 400:
+		return HealthCheckResult{Valid: false, Message: "Google Custom Search: Invalid CSE ID", Details: map[string]any{"status_code": 400}}
+	case 403:
+		return HealthCheckResult{Valid: false, Message: "Google API key is invalid or quota exceeded", Details: map[string]any{"status_code": 403}}
+	default:
+		return HealthCheckResult{Valid: false, Message: fmt.Sprintf("Google API returned status %d", status), Details: map[string]any{"status_code": status}}
+	}
+}
+
 // --- HTTP plumbing ----------------------------------------------------------
 
 type healthAuthType int

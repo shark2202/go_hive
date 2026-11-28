@@ -1301,7 +1301,7 @@ def render_errors_markdown(ledger: dict) -> str:
         "| E-01 | JSON Content-Type 的 charset 参数 | reference `application/json; charset=utf-8` vs target `application/json`（26 条探测均同） | 保留：HTTP 规范允许两种；改 Go 侧 `writeJSON` 会触及全部路由与已冻结契约 |",
         "| E-02 | terminal 非零退出的信封与错误标记 | reference：JSON envelope（`semantic_status=error`，无 `ERROR: ` 前缀，is_error=false）；target：文本报告 + `ERROR: `（is_error=true）；`exit_code` 两侧同为 7 | 保留：terminal 输出形态是 terminal lane 的冻结契约（tool-output golden 已记录 envelope 差异），本页只保证 exit_code 语义相等 |",
         "| E-03 | `image_generate` 凭据缺失错误的额外键 | 两侧 error 文案逐字相同；target 多 `status: 503` | 保留：Go 附加字段（additive），不影响上游键集 |",
-        "| E-04 | 框架 Agent 保护的符号链接路径 | HIVE_HOME 经符号链接（`/tmp`→`/private/tmp`）时：reference 解析后与未解析的 `$HIVE_HOME/agents` 比较，保护失效（实测 200 并删除）；target 解析两侧后 403 | 保留：Go 的有意加固（见 `internal/server/routes_agents.go` 注释）；非符号链接夹具下两侧同为 403 |",
+        "| E-04 | 框架 Agent 保护的符号链接路径 | HIVE_HOME 经符号链接（`/tmp`→`/private/tmp`）时：reference 解析后与未解析的 `$HIVE_HOME/agents` 比较，保护失效（实测 200 并删除）；target 解析两侧后 403 | 保留：Go 的有意加固（见 `internal/server/routesagents/routes_agents.go` 注释）；非符号链接夹具下两侧同为 403 |",
         "| E-05 | 文件工具其余 `fail()` 分支的 is_error | 静态对照：上游同族返回纯文本；本页 5 个分支已修，其余未纳入探针 | 保留待逐分支核对（见「本轮修复」末段） |",
         "",
         "## 复现",

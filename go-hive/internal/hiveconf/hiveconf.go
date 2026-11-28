@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -50,21 +51,77 @@ func Section(home hivehome.Home, name string) map[string]any {
 	return section
 }
 
-// JSONInt reports the value as an int only when it is a JSON integer: Python's
-// readers compare against int, so 7 counts while 7.0, true and "7" do not.
+// JSONInt reports the value as an int when Python's readers would treat it as
+// a number: JSON integers, integral floats (8192.0) and booleans (True is an
+// int subclass upstream, so true reads as 1). A missing key, a string, null
+// and a fractional float still fall through to the caller's default.
 func JSONInt(value any) (int, bool) {
-	number, ok := value.(json.Number)
-	if !ok {
-		switch v := value.(type) {
-		case int:
-			return v, true
-		case int64:
-			return int(v), true
+	switch typed := value.(type) {
+	case json.Number:
+		if parsed, err := strconv.Atoi(typed.String()); err == nil {
+			return parsed, true
 		}
+		asFloat, err := typed.Float64()
+		if err != nil || math.Trunc(asFloat) != asFloat {
+			return 0, false
+		}
+		return int(asFloat), true
+	case int:
+		return typed, true
+	case int64:
+		return int(typed), true
+	case float64:
+		if math.Trunc(typed) != typed {
+			return 0, false
+		}
+		return int(typed), true
+	case float32:
+		asFloat := float64(typed)
+		if math.Trunc(asFloat) != asFloat {
+			return 0, false
+		}
+		return int(asFloat), true
+	case bool:
+		if typed {
+			return 1, true
+		}
+		return 0, true
+	}
+	return 0, false
+}
+
+// MaxToolResultChars is the global spillover threshold for tool results
+// (loop.max_tool_result_chars), or the caller's fallback when the key is unset.
+//
+// Python reads the raw value and hands it to an int field, so integers,
+// integral floats, bools and numeric strings ("4096") all take effect. A
+// missing key, an empty value (null, "", whitespace) or a value that int field
+// cannot accept (fractional float, non-numeric text) keeps the caller's
+// fallback: falling back to 0 would silently disable the cap.
+//
+// Parity: framework/config.py::get_max_tool_result_chars
+func MaxToolResultChars(home hivehome.Home, fallback int) int {
+	if section := Section(home, "loop"); section != nil {
+		if value, ok := numericConfigInt(section["max_tool_result_chars"]); ok {
+			return value
+		}
+	}
+	return fallback
+}
+
+// numericConfigInt is JSONInt plus the numeric-string spelling Python's int
+// field accepts ("4096", " 4096 "). Empty or whitespace-only text, null and
+// non-numeric spellings report ok=false, so the caller keeps its fallback.
+func numericConfigInt(value any) (int, bool) {
+	if parsed, ok := JSONInt(value); ok {
+		return parsed, true
+	}
+	text, ok := value.(string)
+	if !ok {
 		return 0, false
 	}
-	text := number.String()
-	if strings.ContainsAny(text, ".eE") {
+	text = strings.TrimSpace(text)
+	if text == "" {
 		return 0, false
 	}
 	parsed, err := strconv.Atoi(text)
@@ -72,19 +129,6 @@ func JSONInt(value any) (int, bool) {
 		return 0, false
 	}
 	return parsed, true
-}
-
-// MaxToolResultChars is the global spillover threshold for tool results
-// (loop.max_tool_result_chars), or the caller's fallback when the key is unset.
-//
-// Parity: framework/config.py::get_max_tool_result_chars
-func MaxToolResultChars(home hivehome.Home, fallback int) int {
-	if section := Section(home, "loop"); section != nil {
-		if value, ok := JSONInt(section["max_tool_result_chars"]); ok {
-			return value
-		}
-	}
-	return fallback
 }
 
 // WorkerMaxContextTokens is the context window a colony worker's loop budgets

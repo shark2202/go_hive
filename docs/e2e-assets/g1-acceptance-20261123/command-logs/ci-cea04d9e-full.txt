@@ -1,0 +1,201 @@
+gofmt: OK
+CGO_ENABLED=0 GOPROXY=off GOSUMDB=off GOFLAGS=-mod=mod go vet ./...
+CGO_ENABLED=0 GOPROXY=off GOSUMDB=off GOFLAGS=-mod=mod go test -count=1 ./...
+?   	github.com/shark2202/go_hive/go-hive/cmd/hive	[no test files]
+?   	github.com/shark2202/go_hive/go-hive/cmd/hive-browser	[no test files]
+?   	github.com/shark2202/go_hive/go-hive/cmd/hive-cred	[no test files]
+?   	github.com/shark2202/go_hive/go-hive/cmd/hive-longmemeval	[no test files]
+?   	github.com/shark2202/go_hive/go-hive/e2e/cmd/memgw	[no test files]
+?   	github.com/shark2202/go_hive/go-hive/e2e/cmd/recordproxy	[no test files]
+?   	github.com/shark2202/go_hive/go-hive/e2e/cmd/runtimelogs	[no test files]
+?   	github.com/shark2202/go_hive/go-hive/e2e/cmd/stallgw	[no test files]
+?   	github.com/shark2202/go_hive/go-hive/e2e/cmd/storagecompat	[no test files]
+?   	github.com/shark2202/go_hive/go-hive/e2e/escalationgw	[no test files]
+?   	github.com/shark2202/go_hive/go-hive/e2e/memgw	[no test files]
+?   	github.com/shark2202/go_hive/go-hive/e2e/recordproxy	[no test files]
+?   	github.com/shark2202/go_hive/go-hive/e2e/soulgw	[no test files]
+?   	github.com/shark2202/go_hive/go-hive/e2e/stallgw	[no test files]
+ok  	github.com/shark2202/go_hive/go-hive/internal/agentloop	6.839s
+ok  	github.com/shark2202/go_hive/go-hive/internal/agents	0.897s
+ok  	github.com/shark2202/go_hive/go-hive/internal/arghelp	1.200s
+ok  	github.com/shark2202/go_hive/go-hive/internal/atomicfs	1.758s
+ok  	github.com/shark2202/go_hive/go-hive/internal/attachments	1.862s
+ok  	github.com/shark2202/go_hive/go-hive/internal/channels	2.714s
+ok  	github.com/shark2202/go_hive/go-hive/internal/charts	10.009s
+ok  	github.com/shark2202/go_hive/go-hive/internal/claudecode	31.137s
+ok  	github.com/shark2202/go_hive/go-hive/internal/cli	29.461s
+ok  	github.com/shark2202/go_hive/go-hive/internal/colony	30.448s
+ok  	github.com/shark2202/go_hive/go-hive/internal/credentials	5.324s
+ok  	github.com/shark2202/go_hive/go-hive/internal/envcontract	3.808s
+ok  	github.com/shark2202/go_hive/go-hive/internal/eventbus	3.845s
+ok  	github.com/shark2202/go_hive/go-hive/internal/globaldb	3.663s
+?   	github.com/shark2202/go_hive/go-hive/internal/hiveclock	[no test files]
+?   	github.com/shark2202/go_hive/go-hive/internal/hiveconf	[no test files]
+ok  	github.com/shark2202/go_hive/go-hive/internal/hivehome	3.200s
+ok  	github.com/shark2202/go_hive/go-hive/internal/host	2.836s
+ok  	github.com/shark2202/go_hive/go-hive/internal/llm	6.831s
+ok  	github.com/shark2202/go_hive/go-hive/internal/llmjudge	2.016s
+ok  	github.com/shark2202/go_hive/go-hive/internal/logging	1.911s
+ok  	github.com/shark2202/go_hive/go-hive/internal/longmemeval	2.320s
+ok  	github.com/shark2202/go_hive/go-hive/internal/maintenance	2.599s
+ok  	github.com/shark2202/go_hive/go-hive/internal/mcpregistry	8.107s
+ok  	github.com/shark2202/go_hive/go-hive/internal/mcpregistry/nativecli	40.214s
+ok  	github.com/shark2202/go_hive/go-hive/internal/memory	4.302s
+ok  	github.com/shark2202/go_hive/go-hive/internal/orchestrator	1.882s
+ok  	github.com/shark2202/go_hive/go-hive/internal/pipeline	1.969s
+?   	github.com/shark2202/go_hive/go-hive/internal/platform	[no test files]
+ok  	github.com/shark2202/go_hive/go-hive/internal/playbook	10.348s
+ok  	github.com/shark2202/go_hive/go-hive/internal/pyenv	1.081s
+ok  	github.com/shark2202/go_hive/go-hive/internal/quality	2.402s
+ok  	github.com/shark2202/go_hive/go-hive/internal/queen	0.988s
+ok  	github.com/shark2202/go_hive/go-hive/internal/queenmail	1.644s
+ok  	github.com/shark2202/go_hive/go-hive/internal/ratelimit	2.386s
+ok  	github.com/shark2202/go_hive/go-hive/internal/release	1.398s
+ok  	github.com/shark2202/go_hive/go-hive/internal/resources	1.582s
+ok  	github.com/shark2202/go_hive/go-hive/internal/runtimehealth	1.642s
+ok  	github.com/shark2202/go_hive/go-hive/internal/runtimelogs	2.053s
+ok  	github.com/shark2202/go_hive/go-hive/internal/schemas	1.324s
+ok  	github.com/shark2202/go_hive/go-hive/internal/senders	2.676s
+ok  	github.com/shark2202/go_hive/go-hive/internal/sentinel	3.769s
+ok  	github.com/shark2202/go_hive/go-hive/internal/server	26.491s
+ok  	github.com/shark2202/go_hive/go-hive/internal/server/uiembed	2.144s
+ok  	github.com/shark2202/go_hive/go-hive/internal/session	4.247s
+ok  	github.com/shark2202/go_hive/go-hive/internal/sessionreport	1.078s
+ok  	github.com/shark2202/go_hive/go-hive/internal/skills	4.486s
+ok  	github.com/shark2202/go_hive/go-hive/internal/soul	2.993s
+ok  	github.com/shark2202/go_hive/go-hive/internal/storage	2.524s
+ok  	github.com/shark2202/go_hive/go-hive/internal/tasks	6.515s
+ok  	github.com/shark2202/go_hive/go-hive/internal/toolgolden	0.605s
+ok  	github.com/shark2202/go_hive/go-hive/internal/tools	2.749s
+ok  	github.com/shark2202/go_hive/go-hive/internal/tools/builtin	9.859s
+ok  	github.com/shark2202/go_hive/go-hive/internal/tools/integrationkit	0.847s
+ok  	github.com/shark2202/go_hive/go-hive/internal/tools/integrations	4.696s
+ok  	github.com/shark2202/go_hive/go-hive/internal/tools/integrations/ai	1.059s
+ok  	github.com/shark2202/go_hive/go-hive/internal/tools/integrations/cloudflare	1.077s
+ok  	github.com/shark2202/go_hive/go-hive/internal/tools/integrations/collab	0.988s
+ok  	github.com/shark2202/go_hive/go-hive/internal/tools/integrations/commerce	0.822s
+ok  	github.com/shark2202/go_hive/go-hive/internal/tools/integrations/crm	1.222s
+ok  	github.com/shark2202/go_hive/go-hive/internal/tools/integrations/data	1.216s
+ok  	github.com/shark2202/go_hive/go-hive/internal/tools/integrations/devops	1.008s
+ok  	github.com/shark2202/go_hive/go-hive/internal/tools/integrations/enrichment	0.618s
+ok  	github.com/shark2202/go_hive/go-hive/internal/tools/integrations/excel	0.988s
+ok  	github.com/shark2202/go_hive/go-hive/internal/tools/integrations/gworkspace	1.016s
+ok  	github.com/shark2202/go_hive/go-hive/internal/tools/integrations/infra	1.057s
+ok  	github.com/shark2202/go_hive/go-hive/internal/tools/integrations/pdf	1.440s
+ok  	github.com/shark2202/go_hive/go-hive/internal/tools/integrations/schedchat	1.440s
+ok  	github.com/shark2202/go_hive/go-hive/internal/tools/integrations/social	1.529s
+ok  	github.com/shark2202/go_hive/go-hive/internal/tools/integrations/webintel	2.111s
+ok  	github.com/shark2202/go_hive/go-hive/internal/tracker	2.906s
+ok  	github.com/shark2202/go_hive/go-hive/internal/triggers	3.537s
+?   	github.com/shark2202/go_hive/go-hive/internal/version	[no test files]
+ok  	github.com/shark2202/go_hive/go-hive/internal/visionfallback	2.678s
+== darwin/amd64 ==
+  -> dist/hive-darwin-amd64
+== darwin/arm64 ==
+  -> dist/hive-darwin-arm64
+== linux/amd64 ==
+  -> dist/hive-linux-amd64
+== linux/arm64 ==
+  -> dist/hive-linux-arm64
+== windows/amd64 ==
+  -> dist/hive-windows-amd64.exe
+== windows/arm64 ==
+  -> dist/hive-windows-arm64.exe
+cross: 全部平台编译通过（无 main 包时不产出二进制）
+package                                    tests  annotated  missing
+---------------------------------------- ------- ---------- --------
+e2e                                            7          7        0
+internal/agentloop                           485        485        0
+internal/agents                               56         56        0
+internal/arghelp                               4          4        0
+internal/atomicfs                              7          7        0
+internal/attachments                           5          5        0
+internal/channels                             17         17        0
+internal/charts                               28         28        0
+internal/claudecode                           27         27        0
+internal/cli                                 360        360        0
+internal/colony                              236        236        0
+internal/credentials                          88         88        0
+internal/envcontract                           3          3        0
+internal/eventbus                            117        117        0
+internal/globaldb                             23         23        0
+internal/hivehome                              3          3        0
+internal/host                                 11         11        0
+internal/llm                                 284        284        0
+internal/llmjudge                             25         25        0
+internal/logging                               5          5        0
+internal/longmemeval                          40         40        0
+internal/maintenance                          42         42        0
+internal/mcpregistry                         172        172        0
+internal/mcpregistry/nativecli                46         46        0
+internal/memory                              138        138        0
+internal/orchestrator                         40         40        0
+internal/pipeline                             50         50        0
+internal/playbook                             58         58        0
+internal/pyenv                                 4          4        0
+internal/quality                              12         12        0
+internal/queen                                21         21        0
+internal/queenmail                            28         28        0
+internal/ratelimit                            32         32        0
+internal/release                               2          2        0
+internal/resources                             9          9        0
+internal/runtimehealth                         3          3        0
+internal/runtimelogs                          37         37        0
+internal/schemas                              14         14        0
+internal/senders                              55         55        0
+internal/sentinel                            124        124        0
+internal/server                             1065       1065        0
+internal/server/uiembed                        1          1        0
+internal/session                              23         23        0
+internal/sessionreport                        10         10        0
+internal/skills                              241        241        0
+internal/soul                                 29         29        0
+internal/storage                              60         60        0
+internal/tasks                               123        123        0
+internal/toolgolden                            4          4        0
+internal/tools                               183        183        0
+internal/tools/builtin                       153        153        0
+internal/tools/integrationkit                  8          8        0
+internal/tools/integrations                  653        653        0
+internal/tools/integrations/ai                 1          1        0
+internal/tools/integrations/cloudflare         1          1        0
+internal/tools/integrations/collab           107        107        0
+internal/tools/integrations/commerce          62         62        0
+internal/tools/integrations/crm              206        206        0
+internal/tools/integrations/data             115        115        0
+internal/tools/integrations/devops             1          1        0
+internal/tools/integrations/enrichment         1          1        0
+internal/tools/integrations/excel             51         51        0
+internal/tools/integrations/gworkspace        57         57        0
+internal/tools/integrations/infra              1          1        0
+internal/tools/integrations/pdf                1          1        0
+internal/tools/integrations/schedchat          1          1        0
+internal/tools/integrations/social            12         12        0
+internal/tools/integrations/webintel          21         21        0
+internal/tracker                              37         37        0
+internal/triggers                             23         23        0
+internal/visionfallback                       10         10        0
+---------------------------------------- ------- ---------- --------
+TOTAL                                       5979       5979        0
+
+check_parity: OK — 5979 个测试全部带有 parity 注解或豁免说明。
+----------------------------------------
+test parity refs: 4773 checked, 0 missing files, 0 missing tests, 828 shorthand/prose
+prod parity refs: 1916 checked, 0 missing files, 0 missing symbols, 113 shorthand/prose
+parity refs checked: 6689  missing: 0
+check_parity_targets: OK
+wiring_check: OK —— 21 个接线文件、68 项要求全部命中（root=/Users/mac/hive/go_hive/go-hive）
+[PASS] C1 env/config manifests self-consistent — 131 env names, inventory 131; config schema_version=1
+[PASS] C2 env audit counts reproduce the pinned expectation — {"common": 84, "go": 125, "go_only": 41, "python": 90, "python_only": 6}
+[PASS] C3 configuration.json reader anchors resolve — 137 config keys, every reader anchor resolves
+[PASS] C4 storage contract self-consistent — 19 file classes, fields/presence vocabulary ok, inventory partition ok
+[PASS] C5 DB schema versions agree (python vs go) — tracker schema_version=3 both sides; bootstrap tables=['_tracker_changes', '_tracker_meta', '_tracker_registry']
+[PASS] C6 API routes frozen (export_api_routes --check) — [routes] manifest is current
+[PASS] C7 API response shapes <-> proto (check_api_proto) — [proto]   warn  unmapped-endpoint: config_llm_put | [proto]   warn  unmapped-endpoint: config_llm_put_invalid_json
+[PASS] C8 tool definitions frozen (freeze_tool_contract check) — OK: 59 reference tools, 103 go-only tools, manifest/proto/doc consistent
+[PASS] C9 api-responses corpus self-consistent — 107 endpoints, index/diff/files agree
+[PASS] C10 tool-face extras (tool-surface/browser-tools/tool-output) — 3 checks clean (uv)
+[PASS] C11 CLI 外观逐 slot（旧构建 vs 新构建 vs Python） — 基线 00eeecc8 旧/新构建与 Python 三方一致：hive 47 路径、hive-browser 27 路径；4 个 usage slot、路径与 flag 集合 0 漂移；hive-cred 旧/新/Python 对齐
+[PASS] C12 模块清单：core/framework 每个 .py 都有归属登记（未登记即失败） — total=273 registered=273 unregistered=0 ported=220 partial=27 out_of_scope=9 unported=17
+compat-check: pass=12 fail=0 skip=0 verdict=PASS
+一致：7 个生成物与 model.yaml + go list 完全一致（commit 472c53ad7d1b）

@@ -246,7 +246,7 @@ go b.Start(ctx)</pre>
 </section>
 
 <section id="goparity"><h2><span class="num">07</span>Go 移植现状（诚实版）</h2>
-<p class="sub">Go 侧 <code>go_hive/browserbridge</code> 是一个<b>独立 module、零外部依赖</b>的实现，覆盖 L0/L1/L2/L3：WS 传输、hello/多 profile、路由/错误、核心命令、context/tab-group 注册表、adopt/release、事件消费、30s 清扫、健康、telemetry、限流、side-panel HTTP，以及 <code>cmd/browserbridge</code> 入口与 14831 control RPC。它由 <code>hive serve</code> 托管拉起（<code>internal/cli/browser_supervisor.go</code>），发布四件套之一。逐项状态以 <code>go_hive/browserbridge/PARITY.md</code> 与 <a href="browser-bridge-surface-audit.html">外观审计页</a>为准。</p>
+<p class="sub">Go 侧 <code>go_hive/browserbridge</code> 是一个<b>独立 module、零外部依赖</b>的实现，覆盖 L0/L1/L2/L3：WS 传输、hello/多 profile、路由/错误、核心命令、context/tab-group 注册表、adopt/release、事件消费、30s 清扫、健康、telemetry、限流、side-panel HTTP，以及 <code>cmd/browserbridge</code> 入口与 14831 control RPC。它由 <code>hive serve</code> 托管拉起（<code>internal/cli/browsersupervisor/supervisor.go</code>），发布四件套之一。逐项状态以 <code>go_hive/browserbridge/PARITY.md</code> 与 <a href="browser-bridge-surface-audit.html">外观审计页</a>为准。</p>
 <div class="tablewrap"><table><thead><tr><th style="width:24%">维度</th><th style="width:30%">Python（上游）</th><th style="width:26%">Go browserbridge</th><th>判定</th></tr></thead><tbody>
 <tr><td>扩展源码</td><td>1.7.4 / protocol 6</td><td>逐字节复制</td><td><span class="pill ok">已对齐</span></td></tr>
 <tr><td>WS 传输 / 多 profile / 心跳</td><td>完整</td><td>完整（fake-extension 测试）</td><td><span class="pill ok">已移植</span></td></tr>

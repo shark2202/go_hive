@@ -1,4 +1,6 @@
-# unported 逐条分诊（51 条 → 21 条）
+# unported 逐条分诊（51 条 → 0 unported / 10 out_of_scope）
+
+> 2026-11-27 同步：机器账本 `contracts/module-inventory.json`（baseline `00eeecc8`）为 **273 = 239 ported / 24 partial / 10 out_of_scope / 0 unported**；本文下方 addenda 中较早的「19/20/21 unported」是历史叙事，冲突时以账本为准。最后一族 `testing/*` 的收口见文末 lane `w192/testing-parity`；w201 删除 Go-only `internal/orchestrator` 后，`safe_eval.py`/`validator.py` 转为 `out_of_scope`。
 
 > 范围：`contracts/module-inventory.json`（C12）中 `core/framework` 的 51 条 `unported`（基线 c80dd898）。
 > 方法：对每条做 ① Python 顶层符号（ast）↔ Go 树标识符（归一化）对撞；② 同 basename / `// Parity:` 注解 / 调用点 grep；③ 阅读两侧实现确认语义与接线。命令与产物可复现（见文末）。
@@ -24,7 +26,7 @@
 | `core/framework/__main__.py` | unported | **ported** | `cmd/hive/main.go:10`（Parity: framework/cli.py::main；与 console script `hive=framework.cli:main` 同入口） | CURATED → ported |
 | `core/framework/agent_loop/__init__.py` | unported | partial（surface） | 类型 re-export（:8）+ `__getattr__`（:17）；`internal/agentloop/types.go`+`loop.go` 导出面 | CURATED → partial/surface |
 | `core/framework/agent_loop/internals/sentinel_tool.py` | unported | 真未移植 | `internal/cli/tool_surface_flat.go:174` 明示「not implemented as a model tool (desktop connector)」；:536 返回 not_implemented 文案 | 保留 unported；P2 |
-| `core/framework/agent_loop/internals/stall_detector.py` | unported | partial | `internal/agentloop/doom_loop.go:48` ToolCallFingerprint / `:61` DoomLoopDetector（Parity-exempt 替代规则）；n-gram 失速（`ngram_similarity`/`is_stalled`）无 Go 对应 | CURATED → partial/call_chain |
+| `core/framework/agent_loop/internals/stall_detector.py` | unported | partial | `internal/agentloop/stall_detector.go` NgramSimilarity / IsResponseStalled + `loop.go` ExecuteTurn 6f（已接线）；`internal/agentloop/doom_loop.go` ToolCallFingerprint / DoomLoopDetector；工具指纹的 warn/escalate/park 语义仍与 Python 不同 | CURATED → partial/call_chain |
 | `core/framework/agent_loop/internals/tool_input_coercer.py` | unported | partial | `internal/tools/coerce.go:12` CoerceToolInput 全量移植，但全库仅 `coerce_test.go` 调用（Python 侧 `agent_loop.py:4805` 派发前调用）——未接线 | CURATED → partial/call_chain；P1 backlog（接线） |
 | `core/framework/agents/__init__.py` | unported | partial（surface） | `list_framework_agents`（:8）无运行时调用方；Go 框架 agent 面内嵌在 `internal/queen` + colony worker 定义 | CURATED → partial/surface |
 | `core/framework/agents/queen/__init__.py` | unported | partial（surface） | re-export .agent/.config（:3）；Go `internal/queen/identity.go` + colony/worker_definition.go | CURATED → partial/surface |
@@ -46,7 +48,7 @@
 | `core/framework/host/__init__.py` | unported | partial（surface） | `_EXPORTS`（:31）懒 re-export；Go colony/runtime.go + eventbus/bus.go + colony/worker.go 导出面 | CURATED → partial/surface |
 | `core/framework/host/isolation.py` | unported | partial（surface） | `internal/schemas/agent_config.go:242` IsolationLevel string（默认 shared，无枚举校验）；三值/缓冲语义只在图宿主 | CURATED → partial/surface |
 | `core/framework/host/shared_state.py` | unported | out_of_scope | 模块自述 stub（shared state removed）；唯一生产调用方 `host/execution_manager.py:966` cleanup_execution（图宿主） | CURATED → out_of_scope |
-| `core/framework/host/stream_runtime.py` | unported | 真未移植 | 无 StreamDecisionTracker/StreamRuntimeAdapter；决策记录子系统（`schemas/decision.go`/`run.go` 数据模型已移植，但无 runtime 写入口） | 保留 unported；P2 |
+| `core/framework/host/stream_runtime.py` | unported | **ported** | `internal/tracker/stream_runtime.go:11` StreamDecisionTracker/StreamRuntimeAdapter（per-execution registry + runs/<run_id>.json）；生产接线 `internal/colony/decision_runtime.go:89` buildContext → AgentContext.Runtime（worker/overseer，上游 _make_runtime_adapter 同点位）；证据 `stream_runtime_test.go` | CURATED → ported |
 | `core/framework/llm/__init__.py` | unported | partial（surface） | provider/stream 事件 re-export（:3）；`internal/llm/` 导出面 | CURATED → partial/surface |
 | `core/framework/llm/antigravity.py` | unported | 真未移植 | Go 只有 token/config 骨架（`server/llm_config.go:282` antigravityToken）与显式错误（`server/main_slot.go:39` ErrAntigravityUnsupported）；无 provider/Gemini schema/SSE 解析 | 保留 unported；P2 backlog |
 | `core/framework/llm/key_check.py` | unported | **ported** | `internal/llm/keycheck.go:491` CheckKey（checkAnthropic:292 / checkOpenRouter:339 / checkGemini:467 等逐函数）；caller `server/routes_credentials.go:628` | CURATED → ported |
@@ -56,20 +58,20 @@
 | `core/framework/loader/preload_validation.py` | unported | out_of_scope | `agent_loader.py:1230` run_preload_validation → `preload_validation.py:38` GraphSpec.validate + GCU subagent-only 检查；Go loader 停在图之前（agent_spec.go:9） | CURATED → out_of_scope |
 | `core/framework/orchestrator/__init__.py` | unported | partial（surface） | `__getattr__`（:7）再导出图类型（out_of_scope 家族）+ Goal（schemas/goal.go） | CURATED → partial/surface |
 | `core/framework/skills/skill_errors.py` | unported | **ported** | `internal/skills/errors.go:8` SkillErrorCode（7 码一致）/ `:35` LogSkillError；caller `skills/discovery.go:281`；errors_test.go 自报上游 Parity | CURATED → ported |
-| `core/framework/testing/approval_cli.py` | unported | 真未移植 | 无 interactive/batch approval CLI；全库无 ApprovalAction/ApprovalRequest | 保留 unported；P3 |
-| `core/framework/testing/approval_types.py` | unported | 真未移植 | 无审批类型；仅 `framework/testing/__init__.py` re-export | 保留 unported；P3 |
-| `core/framework/testing/categorizer.py` | unported | 真未移植 | 无 ErrorCategorizer/错误分类 | 保留 unported；P3 |
-| `core/framework/testing/debug_tool.py` | unported | 真未移植 | 无 DebugTool/DebugInfo | 保留 unported；P3 |
-| `core/framework/testing/test_case.py` | unported | 真未移植 | 无 Test/ApprovalStatus/TestType 运行时模型 | 保留 unported；P3 |
-| `core/framework/testing/test_result.py` | unported | 真未移植 | 无 TestResult/TestSuiteResult/ErrorCategory | 保留 unported；P3 |
-| `core/framework/testing/test_storage.py` | unported | 真未移植 | 无 TestStorage 文件存储 | 保留 unported；P3 |
+| `core/framework/testing/approval_cli.py` | unported | **ported** | `internal/testframework/approval_cli.go`（InteractiveApproval / BatchApproval；a/r/e/s、`$EDITOR` 回退、batch 计数与文案逐字）；caller 隐藏 dev 命令 `internal/cli/test_approval.go:137`；证据 `approval_cli_test.go` | ported（lane `w192/testing-parity`） |
+| `core/framework/testing/approval_types.py` | unported | **ported** | `internal/testframework/approval_types.go`（ApprovalAction/Request/Result/Batch* + validate_action 文案）；caller `approval_cli.go`；证据 `approval_types_test.go` | ported（lane `w192/testing-parity`） |
+| `core/framework/testing/categorizer.py` | unported | **ported** | `internal/testframework/categorizer.go`（三组模式表、logic>impl>edge 优先级、confidence、fix/iteration guidance）；caller `debug_tool.go`；证据 `categorizer_test.go` | ported（lane `w192/testing-parity`） |
+| `core/framework/testing/debug_tool.py` | unported | **ported** | `internal/testframework/debug_tool.go`（DebugInfo 全字段、Runtime loader、failure summary）；caller 隐藏 dev 命令 `internal/cli/test_approval.go:109`；证据 `debug_tool_test.go` | ported（lane `w192/testing-parity`） |
+| `core/framework/testing/test_case.py` | unported | **ported** | `internal/testframework/test_case.go`（Test/ApprovalStatus/TestType、approve/modify/reject/record_result、naive isoformat 与 extra=allow）；caller `test_storage.go`；证据 `test_case_test.go` | ported（lane `w192/testing-parity`） |
+| `core/framework/testing/test_result.py` | unported | **ported** | `internal/testframework/test_result.go`（TestResult/TestSuiteResult/ErrorCategory、summary_dict/pass_rate/failed + category 过滤）；caller `categorizer.go`；证据 `test_result_test.go` | ported（lane `w192/testing-parity`） |
+| `core/framework/testing/test_storage.py` | unported | **ported** | `internal/testframework/test_storage.go`（四索引 + 结果历史/latest + stats；Go 侧互斥与原子写）；caller `debug_tool.go`；证据 `test_storage_test.go` | ported（lane `w192/testing-parity`） |
 | `core/framework/tools/browser_tools.py` | unported | **ported** | `internal/tools/integrations/browser_setup.go:59` InstallBrowserSetup；caller `cli/session_tools.go:349`；“静态发现载荷”逐字落该文件（browser_setup_test.go:32 自述） | CURATED → ported |
 | `core/framework/tools/harness_tools.py` | unported | **ported** | `internal/tools/mcp.go:80` HarnessTool / `:94` HarnessGroups / `:112` ContextParams；caller `tools/mcp_registry.go:632`；组执行器由 builtin 工具箱 + `cli/session_tools_harness_groups.go:80` 承担 | CURATED → ported |
 | `core/framework/tools/queen_lifecycle/context.py` | unported | partial（surface） | Python 工具上下文 dataclass（:18，含 update_meta）；Go 工具直取会话：`server/queen_lifecycle_tools.go` + `queen_phase_state.go:132` MetaPath | CURATED → partial/surface |
-| `core/framework/tracker/decision_tracker.py` | unported | 真未移植 | 无 DecisionTracker 运行时类（start_run/decide/record_outcome）；schemas/decision.go、run.go、storage/concurrent.go 数据层已移植但无写入驱动器 | 保留 unported；P3 |
+| `core/framework/tracker/decision_tracker.py` | unported | **ported** | `internal/tracker/decision_tracker.go:11` DecisionTracker（start/end、decide/record_outcome/report_problem、decide_and_execute、runs/<run_id>.json）；每个 execution 由 `stream_runtime.go:172` 复用同一 current-run 运行时；证据 `decision_tracker_test.go` | CURATED → ported |
 | `core/framework/utils/io.py` | unported | **ported** | `internal/atomicfs/atomicfs.go:12` WriteFile（tempfile+rename 原子写）；caller `mcpregistry/registry.go:141`（全库通用） | CURATED → ported |
-| `core/framework/utils/python_env.py` | unported | 真未移植 | 无 `UV_INTERNAL__PYTHONHOME` 处理（grep 0）；仅 Python/uv launcher 继承场景需要，Go 宿主不是 uv 启动的 Python 解释器 | 保留 unported；P3（建议 wontfix） |
-| `core/framework/utils/task_registry.py` | unported | 真未移植 | 无 TaskRegistry；Python 侧无运行时消费方（仅 `utils/__init__` re-export）；Go goroutine 原语等价 | 保留 unported；P3 |
+| `core/framework/utils/python_env.py` | unported | **ported** | `internal/pyenv/pyenv.go:53` DropLauncherPythonHome（PYTHONHOME + UV_INTERNAL__PYTHONHOME 成对删除，用户自设值保留）；caller `cli/cli.go:278` Runner.Run（启动子进程前）；语义测试 `pyenv_test.go` / `cli/python_env_test.go` | CURATED → ported |
+| `core/framework/utils/task_registry.py` | unported | **ported** | `internal/tasks/task_registry.go:26` Tracker（生命周期/查找/替换/清理/取消，panic 转错误上报）；caller `colony/queen_tools.go:658` WatchBatchTimeouts（上游 `_background_tasks` 对应 watcher），`colony/runtime.go:721` Stop CancelAll；测试 `task_registry_test.go` + colony 接线测试 | CURATED → ported |
 | `core/framework/utils/text.py` | unported | partial | `internal/server/routes_colonies.go:479` humanizeSlug 注记 mirrors humanize_slug（含 str.title() 词边界）；仅同文件 :460 使用，C12 跨文件调用规则不命中 | CURATED → partial/call_chain |
 
 ## 误标修正清单（30 条）
@@ -92,13 +94,9 @@
 | P2 | `llm/antigravity.py` | Settings 的订阅列表含 Antigravity；Go 运行期显式报「runtime does not implement」（main_slot.go:39） | 12h |
 | P2 | `agents/queen/tools_ga_migration.py` | 升级后已有 sidecar 不会自动获得新 GA 工具（工具库需手动开） | 4h |
 | P2 | `credentials/aden/client.py` | Aden 连接的账号不会同步/刷新（UI 有 Aden 入口） | 12h |
-| P2 | `host/stream_runtime.py` | 决策记录不落盘（无 UI，Builder 分析面） | 10h |
-| P3 | `tracker/decision_tracker.py` | 同上（同一决策记录子系统） | 8h |
 | P3 | `credentials/oauth2/{base_provider,hubspot_provider,lifecycle,zoho_provider}.py` | OSS 扩展 API；运行时无调用方（工具侧 refresh 已另行实现） | 12h |
-| P3 | `testing/*`（7 个） | Python 测试生成框架；Python 侧 CLI 也未接线（无 `test-run` 命令） | 16h |
+| P3 | `testing/*`（7 个） | **已闭环**（lane `w192/testing-parity`）：`internal/testframework` + 隐藏 dev 命令 `hive test-approval`；Python 侧无 CLI 入口，故不注册用户命令/模型工具 | 0 |
 | P3 | `global_db/cli.py` | `python -m framework.global_db.cli` 运维 CLI，无入口注册 | 6h |
-| P3 | `utils/python_env.py` | Python/uv launcher 专用；Go 宿主不产生该场景（建议 wontfix） | 1h |
-| P3 | `utils/task_registry.py` | 无运行时消费方；Go goroutine 原语等价 | 2h |
 
 ## delivery-backlog（已登记前 5）
 
@@ -113,7 +111,6 @@
 ## 残余观察（不在 51 条范围内，未改动）
 
 - `credentials/aden/provider.py`、`credentials/aden/storage.py` 登记为 ported，但 Go 侧只有通用 `credentials/provider.go`/`storage.go`，没有 Aden 同步 provider/缓存存储（`AdenSyncProvider`/`AdenCachedStorage` grep 0 命中）。属于「文件级 ported 掩盖子系统缺失」的潜在假标，建议下一轮 inventory lane 复核。
-- `host/stream_runtime.py` 与 `tracker/decision_tracker.py` 是同一决策记录子系统的两半；若决定不移植，应合并登记为范围外，而不是长期留在 unported。
 
 ## 后续变更（2026-11-22 晚，lane `cred-check`）
 
@@ -142,12 +139,30 @@
 - 验证：`go test -count=1 ./internal/{tools,server,cli,queen}` 全 `ok`；`make parity`（5,769/5,769）/`make parity-targets`（6,299 refs，0 missing）；`bash go_hive/scripts/merge_postcheck.sh` 四关全过（gofmt / wiring 21 文件 68 项 / C12 verdict=PASS / arch `--check`）；`make tool-surface-check`/`make tool-output-check` 无漂移。
 - 说明：Google Analytics 工具族（7 action）早已由 batch-7 移植（`internal/tools/integrations/google_analytics*.go`，冻结契约 `go_hive/contracts/tool-definitions.json` go_only_tools[35] 逐字一致），本项中「GA」指 generally-available 工具晋升，非 Google Analytics。
 
+## 后续变更（2026-11-25，lane `w169/stream-runtime`）
+
+- **P2 `host/stream_runtime.py` + P3 `tracker/decision_tracker.py` 已闭环**：同一决策记录子系统的两半一起移植。
+  - `internal/tracker/decision_tracker.go`：DecisionTracker 单 run 运行时——start_run/end_run、decide、record_outcome、report_problem、decide_and_execute、quick_decision；落盘沿用 `internal/storage.ConcurrentStorage`（`runs/<run_id>.json`，字段与 Python `model_dump_json` 对齐，含 computed `duration_ms`/`was_successful`/`success_rate`）。空 storage 路径直接拒绝（`ErrDecisionStorageRequired`），避免把 run 写进进程 cwd。
+  - `internal/tracker/stream_runtime.go`：StreamDecisionTracker（per-execution run registry、node context、get_active_executions/get_stats 插入序）+ StreamRuntimeAdapter（execution_id/current_run/storage、node 回退）；每个 execution 由独立 DecisionTracker 承载，共享一个 StreamLedger 的 ConcurrentStorage。EndRun 先原子摘除 execution 再同步落盘：与上游 fire-and-forget + `finally` 清理可观察结果一致（晚到 decide 返回空串、run 文件在 EndRun 返回时已存在），同时消除「决定已接受但不会落盘」的窗口。
+  - **生产接线**：`internal/colony/decision_runtime.go::buildContext` 给 worker/overseer 的 `AgentContext.Runtime` 装上 `worker:<id>` / `worker:overseer:<colony>` 流（上游 `_make_runtime_adapter` 同点位）；只有显式配置了 `RuntimeOptions.StoragePath` 的 colony 才接线，无 storage root 的 runtime 保持 nil（负向回归在 `decision_runtime_test.go`）。
+  - **测试**：`decision_tracker_test.go`（生命周期/决定/结果/问题/ledger round-trip/取消后 graceful/并发 decide）、`stream_runtime_test.go`（start/stop、执行隔离、取消、decide↔EndRun race 不丢不重、重复 start、adapter node 回退、storage guard）、`decision_runtime_test.go`（接线必需 + ledger round-trip + overseer stream id/shared storage）。均为确定性测试，无真实 LLM/网络/多进程。
+- **登记册变化**：两模块 unported → ported（kind=parity；counterpart `internal/tracker/{stream_runtime,decision_tracker}.go`；caller `internal/colony/decision_runtime.go:89` / `internal/tracker/stream_runtime.go:172`）；`core/framework/__init__.py` 导出面注记同步。重生后 **273 = 227 ported / 27 partial / 9 out_of_scope / 10 unported**（`contracts/module-inventory.json`，C12 PASS）。
+- **残余**：queen 级 `DecisionTracker(queen_dir)` 实例化点（`framework/server/queen_orchestrator.py:1669`）在 Go server chat 宿主，本车道未改 `internal/server`（w165 在途）；Go agent loop 目前没有图节点式的 decide 调用方，worker/overseer 的 runtime 接线与上游一致但生产决策写入仍依赖未来调用方。
+
 ## 复现
 
 ```sh
 # 符号对撞（本 lane 探针）：ast 取 Python 顶层 def/class → 归一化（lower/去非字母数字）
 # ↔ go_hive/go-hive 非测试 Go 标识符集合；输出同 basename / 共享符号候选，再逐条读调用点确认。
-python3 scripts/gen_module_inventory.py --dry-run     # 矩阵：files=273 ported=216 partial=28 out_of_scope=9 unported=20（本分支实测）
+python3 scripts/gen_module_inventory.py --dry-run     # 矩阵：files=273 ported=239 partial=26 out_of_scope=8 unported=0（本分支实测）
 python3 scripts/check_module_inventory.py --check     # verdict=PASS，无 WARN
 python3 scripts/check_module_inventory.py --report    # 按领域矩阵 + Top unported
 ```
+
+## 后续变更（2026-11-26，lane `w192/testing-parity`）
+
+- **P3 `testing/*` 7 个模块已闭环**：`approval_cli`、`approval_types`、`categorizer`、`debug_tool`、`test_case`、`test_result`、`test_storage` 全量移植到 `internal/testframework`，加上既有 `llm_judge.py → internal/llmjudge`，testing 域 **8/8 ported、0 unported**。
+- **接线**：上游没有可注册的 CLI 入口（`framework/testing/__init__.py` 文档里的 `test-run`/`test-debug`/`test-list` 并未在 `framework/cli.py` 实现），因此新增隐藏 dev 命令 `hive test-approval`（`internal/cli/test_approval.go`，`Hidden: true`）作为唯一生产调用方：interactive review / `--batch` / `--debug`，退出码 0/1/2。不注册模型工具，冻结的 C11 CLI 面对拍不变。
+- **行为与 Go 侧改进**：类型/snake_case/naive isoformat/extra=allow、审批转换、四索引与 latest-result、模式表与 confidence、DebugInfo 字段、a/r/e/s 与 batch 文案均按上游；Go 侧增加存储互斥 + `internal/atomicfs` 原子写、可注入时钟与 IO/editor 接缝。详见 `go_hive/docs/testing-framework.md`。
+- **测试**：`internal/testframework` 七组测试（持久化/索引更新、并发、审批转换、分类器、debug 字段、approval CLI、损坏存储、负向回归）+ `internal/cli/test_approval_test.go`（解析/退出码/隐藏面）。
+- **登记册**：`testing` 8 ported；总计 **273 = 239 ported / 24 partial / 10 out_of_scope / 0 unported**（C12 PASS；w201 后 orchestrator 两项转 out_of_scope）。

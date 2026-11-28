@@ -1,0 +1,347 @@
+{
+ "schema": "hive-g1-acceptance/1",
+ "generated_at": "2026-11-23T22:56:11+08:00",
+ "accepted": true,
+ "head": "42f2b93215edddcd3f7f9ef5ca246162753e6d7b",
+ "branch": "w91/g1-acceptance",
+ "worktree": "/Users/mac/hive/.wt/w91-g1-acceptance",
+ "evidence_path_base": "go_hive/docs/e2e-assets/g1-acceptance-20261123/",
+ "reference_report": {
+  "path": "go_hive/docs/g1-closure-report.md",
+  "baseline": "main 059f4afe",
+  "method": "independent re-run of every optional/reproducible G1 condition in a clean worktree; read-only review where the condition is snapshot-based"
+ },
+ "freeze": {
+  "head_at_start": "42f2b93215edddcd3f7f9ef5ca246162753e6d7b",
+  "working_tree_clean_at_start": true,
+  "head_is_current_main": true,
+  "environment": "environment.txt",
+  "command_log": "command-logs/final-verification.txt",
+  "no_full_make_ci": true
+ },
+ "last_full_ci": {
+  "code_point": "cea04d9e9ba2f2b011d38dc99479f2e9a5af7499",
+  "code_point_subject": "fix(cloud): run M3 Python harness from repo uv environment",
+  "tests": 5979,
+  "parity_refs": 6689,
+  "compat_checks": "12/12 pass, 0 fail, verdict=PASS",
+  "ci_rc": 0,
+  "ci_rc_source": "integrator-provided CI_RC=0; the archived log contains no FAIL and every gate reports PASS",
+  "log": "command-logs/ci-cea04d9e-full.txt",
+  "relationship_to_head": "cea04d9e is an ancestor of HEAD; cea04d9e..HEAD touches only go_hive/docs/reports/INDEX.md and go_hive/docs/reports/slot-20261123-22.md (no product code, tests, contracts or generated product artifacts)",
+  "distinction": "current HEAD = 42f2b932 (docs-only delta from the last full-CI code point); last full CI code point = cea04d9e"
+ },
+ "conditions": [
+  {
+   "id": 1,
+   "name": "first-turn LLM input verbatim",
+   "status": "PASS",
+   "commands": [
+    "uv run --offline python go_hive/scripts/prompt_system_parity.py",
+    "uv run --offline python go_hive/scripts/prompt_catalog_parity.py"
+   ],
+   "exit_codes": {
+    "prompt_system_parity": 0,
+    "prompt_catalog_parity": 0
+   },
+   "result": {
+    "system_prompt": "IDENTICAL 21584/21584 chars",
+    "opening_messages": "IDENTICAL 4344/4344 chars",
+    "skills_catalog_block": "IDENTICAL 3985/3985 chars",
+    "searchable_manifest": "IDENTICAL 307/307 chars",
+    "turn_context": "python_injected=True go_injected=True body IDENTICAL",
+    "catalog_rendering": "10/10 cases IDENTICAL"
+   },
+   "evidence": [
+    "command-logs/final-verification.txt",
+    "go_hive/docs/e2e-assets/prompt-catalog/",
+    "go_hive/docs/skills-parity-report.json"
+   ],
+   "exceptions": [
+    "P-06 overseer catalog relay (colony session path, not queen static prompt)",
+    "P-07 credentials block refresh timing (Go snapshots at session build/resume)",
+    "P-08 colony-phase base prompt has no live capture"
+   ]
+  },
+  {
+   "id": 2,
+   "name": "tool surface (first turn 24 + deferred 51 + same-name definitions)",
+   "status": "PASS",
+   "commands": [
+    "uv run --no-project python <scratch>/g1_tool_capture.py /tmp/g1-tool-capture-final (fake gateway + dist/hive, CGO_ENABLED=0)",
+    "go test -count=1 ./internal/cli -run 'TestFlatSurface*|TestSameNameToolDescriptionsMatchFrozenContract|TestQueenLifecycle*|TestRunPlaybookDescriptionMatchesFrozenContract|TestToolContractFreeze|TestToolContractParity'"
+   ],
+   "exit_codes": {
+    "live_capture": 0,
+    "definition_tests": 0
+   },
+   "result": {
+    "first_turn_tools": 24,
+    "first_tools_sha256": "0658b3081e61328717d543fa4539d6201b50b5828ec22b004959218c62040f41",
+    "sha_matches_frozen_record": true,
+    "first_names_match_python_eager_order": true,
+    "after_loading": 75,
+    "deferred_loaded": 51,
+    "loading_complete": true,
+    "same_name_description": "48/48 verbatim",
+    "same_name_schema_normalized": "48/48",
+    "same_name_schema_raw": "40/48 (8 pure-representation differences absorbed by normalization)"
+   },
+   "evidence": [
+    "condition2-live-capture.json",
+    "condition2-first-tools.json",
+    "command-logs/final-verification.txt",
+    "go_hive/docs/tool-contract-recheck.json (round 3 capture sha; round 9 current numbers)",
+    "go_hive/docs/tool-contract-diff.md §18.6/§18.8"
+   ],
+   "exceptions": [
+    "session_cwd 4 layer differences (request layer strips them on both sides)",
+    "exa_search structural mismatch (Go 7-action aggregate vs Python flat; separate lane)",
+    "get_worker_health_summary is Go-only (colony-phase tool, registered upstream fact)",
+    "run_playbook folded-parameter exception retired in round 9: schema normalized 48/48"
+   ]
+  },
+  {
+   "id": 3,
+   "name": "API/SSE value-level + routes",
+   "status": "PASS",
+   "commands": [
+    "uv run --no-project python go_hive/scripts/api_response_values.py --check",
+    "uv run --no-project python go_hive/scripts/sse_frames_canonical.py --check",
+    "uv run --no-project python go_hive/scripts/export_api_routes.py --check",
+    "uv run --no-project python go_hive/scripts/surface_audit.py --strict"
+   ],
+   "exit_codes": {
+    "api_response_values": 0,
+    "sse_frames_canonical": 0,
+    "export_api_routes": 0,
+    "surface_audit": 0
+   },
+   "result": {
+    "rest": "107 endpoints / 8716 value paths / 46 declared differences / 0 undeclared / 0 endpoint-level exceptions / verdict=PASS",
+    "sse": "113 reference / 148 target frames; live 34/34, replay 17/17, history 42/42 EQUAL; stop 18/17 informational; 9 declared exceptions all observed; verdict=PASS",
+    "routes": "python 222 / go 225; missing_in_target_effective=0 (2 served by alias); extra_in_target=5 (annotated extensions/aliases); method_mismatch=1",
+    "surface": "frontend->Go missing 0; Python->Go missing 0; hygiene 0; verdict=PASS"
+   },
+   "evidence": [
+    "go_hive/contracts/api-responses/value-golden.json",
+    "go_hive/contracts/sse-frames/diff.json",
+    "go_hive/contracts/api-routes.json",
+    "go_hive/docs/api-ws-golden.md",
+    "go_hive/docs/surface-audit.md",
+    "command-logs/final-verification.txt"
+   ],
+   "exceptions": [
+    "10 REST value-level exception rules (0 endpoint-level)",
+    "9 SSE frame-level exceptions",
+    "SPA fallback 200 HTML vs 404 (evidence only, behaviour unchanged)"
+   ]
+  },
+  {
+   "id": 4,
+   "name": "env/config contract",
+   "status": "PASS",
+   "as_found": "FAIL — freeze_env_config_contract.py --check and check_env_config_contract.py --strict both exit 1; env-vars.json, config-keys.json and env-config-contract-diff.md were stale (chat_memory_wiring.go line drift 325/326/327 -> 313/314/315; HIVE_PAST_RECALL_TIMEOUT read point moved and parse type changed; mention counts drift).",
+   "fix": "Re-ran the canonical generator freeze_env_config_contract.py (3 artifacts) and regenerated configuration.html from the new config-keys sha. No product code touched.",
+   "commands": [
+    "uv run --no-project python go_hive/scripts/freeze_env_config_contract.py --check",
+    "uv run --no-project python go_hive/scripts/check_env_config_contract.py --strict",
+    "uv run --no-project python go_hive/scripts/gen_configuration_html.py --check"
+   ],
+   "exit_codes": {
+    "freeze_check_as_found": 1,
+    "strict_as_found": 1,
+    "freeze_check_after_fix": 0,
+    "strict_after_fix": 0,
+    "configuration_html_check_after_fix": 0
+   },
+   "result": {
+    "env_audit": "python 90 / go 125 / common 84 / python_only 6 / go_only 41 (reproduced MATCH)",
+    "config": "137 keys: aligned 131 / go_only 4 / go_partial 1 / unread 1; python_only 0; type/default/parse differences 0",
+    "go_only_keys": [
+     "mcp.enabled",
+     "mcp.namespace",
+     "mcp.timeout_seconds",
+     "mcp.servers"
+    ],
+    "unread_key": "created_at"
+   },
+   "evidence": [
+    "go_hive/contracts/env-vars.json",
+    "go_hive/contracts/config-keys.json",
+    "go_hive/docs/env-config-contract-diff.md",
+    "go_hive/docs/configuration.html",
+    "command-logs/cond4-freeze-as-found.txt",
+    "command-logs/cond4-strict-as-found.txt",
+    "command-logs/cond4-regenerate.txt",
+    "command-logs/cond4-freeze-after.txt",
+    "command-logs/cond4-strict-after.txt"
+   ],
+   "exceptions": [
+    "mcp.* 4 go_only keys",
+    "1 go_partial key",
+    "1 unread key (created_at)"
+   ]
+  },
+  {
+   "id": 5,
+   "name": "storage fields + credentials cross-read",
+   "status": "PASS",
+   "mode": "read-only snapshot recheck (storage_compat_run.sh not re-run because it rewrites tracked evidence)",
+   "commands": [
+    "read-only review of docs/storage-compat/summary.md, credentials-crossread.json, contracts/storage-fields.json; corroborated by CI @ cea04d9e C4/C5"
+   ],
+   "exit_codes": {
+    "read_only_review": 0
+   },
+   "result": {
+    "v1": "20/20 files (18 identical + 2 opaque), 0 JSON field diffs, 0 SQLite schema/row mismatch",
+    "v2": "59/59 files (56 identical + 3 opaque), 0 JSON field diffs, 0 SQLite schema/row mismatch",
+    "colony_fork": "32/32 files (30 identical + 2 opaque), 0 JSON field diffs, 0 SQLite schema/row mismatch",
+    "probes": "14/14 files; 10 changed files are the known session-id/value-format design differences (registered in docs/storage-contract-diff.md §5)",
+    "credentials": "go_reads_python 2 rows; python_reads_go credentials/ids/index present; fixed Fernet key",
+    "contract_classes": "observed 10 / code 9"
+   },
+   "evidence": [
+    "docs/storage-compat/summary.md",
+    "docs/storage-compat/credentials-crossread.json",
+    "contracts/storage-fields.json",
+    "condition5-storage-readonly.json",
+    "command-logs/ci-cea04d9e-full.txt"
+   ],
+   "exceptions": [
+    "value-format-level differences (timestamp rendering / JSON layout) registered in docs/storage-contract-diff.md §5",
+    "probes group session-id directory/value differences are the designed fixtures"
+   ]
+  },
+  {
+   "id": 6,
+   "name": "skills / builtin assets",
+   "status": "PASS",
+   "commands": [
+    "uv run --no-project python go_hive/scripts/gen_builtin_skills_manifest.py --check",
+    "uv run --no-project python go_hive/scripts/gen_builtin_skills_manifest.py --verify-tree go_hive/go-hive/internal/skills"
+   ],
+   "exit_codes": {
+    "manifest_check": 0,
+    "verify_tree": 0
+   },
+   "result": {
+    "files": 25,
+    "bytes": 229354,
+    "sha256": "all match on both sides",
+    "manifest_sha256": "c0ae86d4a5eb04ec25a54fb916372a30f102e6b36dcd275d3a5c0e6c76f15ece",
+    "catalog_rendering": "10/10 identical"
+   },
+   "evidence": [
+    "go_hive/contracts/builtin-skills.json",
+    "command-logs/final-verification.txt",
+    "go_hive/docs/skills-parity-report.json"
+   ],
+   "exceptions": []
+  },
+  {
+   "id": 7,
+   "name": "exception inventories complete",
+   "status": "PASS",
+   "commands": [
+    "machine-vs-doc cross-check of six faces (API, SSE, tool definitions/output, prompt, browser, integrations)"
+   ],
+   "exit_codes": {
+    "crosscheck": 0
+   },
+   "result": {
+    "api": "10 REST rules / 46 declared / 9 SSE exceptions / 0 endpoint-level — machine and docs agree",
+    "sse": "9 exceptions — agree",
+    "tool_output": "18 recorded exceptions, 0 unattributed differences — agree",
+    "tool_definitions": "current list §18.6/§18.8 (48/48 desc, 48/48 normalized, 8 raw representation residuals); §13.6 is historical",
+    "prompt": "machine structural_exceptions = P-06/P-07/P-08; docs list P-01..P-08 with fixes recorded",
+    "browser": "R01..R20 present in the audit page",
+    "integrations": "A12 / B91 / C0 / D1 / E0 — machine and docs agree"
+   },
+   "doc_corrections": [
+    "go_hive/docs/api-ws-golden.md: stale summary rows '105 + 2 endpoint-level declared' corrected to '107/107 all PASS, 46 value-level declared, 0 endpoint-level' (machine totals.endpoint_exceptions=0); two lines."
+   ],
+   "evidence": [
+    "condition7-exceptions-crosscheck.json",
+    "go_hive/docs/api-ws-golden.md",
+    "go_hive/docs/sse-payload-parity.md",
+    "go_hive/docs/tool-output-contract.md",
+    "go_hive/docs/prompt-parity.md",
+    "go_hive/docs/browser-bridge-surface-audit.html",
+    "go_hive/docs/integrations-evidence-audit.md"
+   ],
+   "exceptions": []
+  },
+  {
+   "id": 8,
+   "name": "full CI + QC evidence",
+   "status": "PASS",
+   "commands": [
+    "read-only review of /tmp/go_hive_ci_cea04d9e.log (archived as command-logs/ci-cea04d9e-full.txt)",
+    "bash go_hive/scripts/check_parity.sh",
+    "bash go_hive/scripts/check_parity_targets.sh",
+    "gofmt -l .",
+    "go vet ./internal/cli ./internal/skills ./internal/agentloop ./internal/envcontract",
+    "go test -count=1 ./internal/cli ./internal/skills ./internal/agentloop ./internal/envcontract",
+    "bash go_hive/scripts/smoke.sh <free port> (main tree with UI assets, read-only build to temp)"
+   ],
+   "exit_codes": {
+    "parity": 0,
+    "parity_targets": 0,
+    "gofmt": 0,
+    "vet": 0,
+    "targeted_tests": 0,
+    "smoke": 0
+   },
+   "result": {
+    "last_full_ci": "cea04d9e: gofmt OK, go vet clean, go test ./... all packages ok, 5,979/5,979 parity-annotated, 6,689 parity refs / 0 missing, compat-check 12/12 PASS, CI_RC=0",
+    "current_head_local": "5,979/5,979 parity-annotated; 6,725 refs / 0 missing; gofmt clean; vet clean; cli/skills/agentloop/envcontract all ok; smoke 13/13 PASS",
+    "distinction": "the full ./... suite was NOT re-run at HEAD (integrator will run make ci); HEAD's product code is byte-identical to cea04d9e (docs-only delta)"
+   },
+   "evidence": [
+    "command-logs/ci-cea04d9e-full.txt",
+    "command-logs/final-verification.txt",
+    "command-logs/cond8-smoke.txt"
+   ],
+   "exceptions": [
+    "QC '8/8' wording refers to the default 8-check set (C1/C3 need --full --smoke); full CI is the authoritative gate and was read, not re-run"
+   ]
+  }
+ ],
+ "changes": [
+  {
+   "file": "go_hive/contracts/env-vars.json",
+   "why": "stale generated contract (condition 4 as-found FAIL); regenerated by freeze_env_config_contract.py"
+  },
+  {
+   "file": "go_hive/contracts/config-keys.json",
+   "why": "stale generated contract (line drift); regenerated by freeze_env_config_contract.py"
+  },
+  {
+   "file": "go_hive/docs/env-config-contract-diff.md",
+   "why": "stale generated diff doc; regenerated by freeze_env_config_contract.py"
+  },
+  {
+   "file": "go_hive/docs/configuration.html",
+   "why": "config-keys sha changed; regenerated by gen_configuration_html.py"
+  },
+  {
+   "file": "go_hive/docs/api-ws-golden.md",
+   "why": "condition 7 stale summary count (2 endpoint-level -> 0) corrected to match value-golden.json totals"
+  }
+ ],
+ "blockers": [],
+ "evidence_index": {
+  "environment": "environment.txt",
+  "final_command_log": "command-logs/final-verification.txt",
+  "ci_log": "command-logs/ci-cea04d9e-full.txt",
+  "tool_capture": [
+   "condition2-live-capture.json",
+   "condition2-first-tools.json"
+  ],
+  "storage": "condition5-storage-readonly.json",
+  "exceptions": "condition7-exceptions-crosscheck.json",
+  "report": "go_hive/docs/g1-acceptance-20261123.md"
+ }
+}

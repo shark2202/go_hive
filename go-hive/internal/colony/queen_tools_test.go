@@ -330,6 +330,42 @@ func TestWatchBatchTimeoutsSoftInjectsStragglers(t *testing.T) {
 	}
 }
 
+// Parity-exempt: Go-side tracker wiring for the watcher (upstream's
+// _background_tasks set); the Python test only pins the soft-inject behaviour,
+// and this pins that Stop cancels the watcher instead of leaving it sleeping.
+func TestWatchBatchTimeoutsTracksWatcherUntilStop(t *testing.T) {
+	runtime := NewColonyRuntime(RuntimeOptions{
+		EventBus:    eventbus.NewEventBus(),
+		StreamID:    "colony_alpha",
+		StoragePath: t.TempDir(),
+	})
+	if err := runtime.Start(context.Background()); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	defer runtime.Stop()
+
+	const workerID = "worker:idle"
+	runtime.WatchBatchTimeouts([]string{workerID}, time.Hour, 2*time.Hour)
+
+	handle, ok := runtime.background.Lookup("batch-timeout:" + workerID)
+	if !ok {
+		t.Fatal("batch-timeout watcher was not tracked")
+	}
+	if runtime.background.Len() != 1 {
+		t.Fatalf("tracked watchers = %d, want 1", runtime.background.Len())
+	}
+
+	runtime.Stop()
+	waitCtx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	if err := handle.Wait(waitCtx); err == nil {
+		t.Fatal("watcher Wait = nil after Stop, want cancellation")
+	}
+	if runtime.background.Len() != 0 {
+		t.Fatalf("tracked watchers after Stop = %d, want 0", runtime.background.Len())
+	}
+}
+
 func decodeToolPayload(t *testing.T, output string) map[string]any {
 	t.Helper()
 	payload := map[string]any{}

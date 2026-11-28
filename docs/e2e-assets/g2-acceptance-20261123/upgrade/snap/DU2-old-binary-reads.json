@@ -1,0 +1,16 @@
+{
+  "probe": "g2-rollback-diff",
+  "before": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback-rerun/snap/U1-after-new-serve.json",
+  "after": "/Users/mac/.hermes/profiles/omh-tui/cache/scratch/g2-rollback-rerun/snap/U2-after-old-binary.json",
+  "added": [],
+  "removed": [],
+  "modified": [],
+  "sqlite_changes": {},
+  "marker_changes": {},
+  "summary": {
+    "added": 0,
+    "removed": 0,
+    "modified": 0,
+    "sqlite_changed": 0
+  }
+}

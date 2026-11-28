@@ -59,22 +59,37 @@ func derefString(value *string) string {
 	return *value
 }
 
-// Parity-exempt: upstream has no standalone test for truncate_tool_result's under-threshold pass-through; the port pins the no-write branch here.
-func TestToolResultUnderThresholdWritesNoSpill(t *testing.T) {
+// Parity: framework/agent_loop/internals/tool_result_handler.py::truncate_tool_result
+//
+// Upstream writes EVERY non-error result to the spillover directory when one is
+// configured — the disk copy is for debugging — but leaves a small result's
+// LLM-visible content unchanged and adds no "[Saved to ...]" trailer (the
+// trailer is the autocomplete poison pattern the upstream comment describes).
+func TestToolResultUnderThresholdStillSpillsWithoutTrailer(t *testing.T) {
 	result, part := spilloverToolResult(t, "short payload", 100)
 	dir := part["dir"].(string)
 	if result.Content != "short payload" {
 		t.Fatalf("content = %q, want the untouched payload", result.Content)
 	}
-	if result.SpilloverPath != "" {
-		t.Fatalf("spillover path = %q, want empty under the threshold", result.SpilloverPath)
+	if strings.Contains(result.Content, "Saved to") || strings.Contains(result.Content, "Full result at:") {
+		t.Fatalf("small result grew a spill trailer: %q", result.Content)
+	}
+	if result.SpilloverPath == "" {
+		t.Fatal("spillover path is empty; upstream writes every non-error result")
 	}
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("ReadDir: %v", err)
 	}
-	if len(entries) != 0 {
-		t.Fatalf("spill directory = %v, want empty under the threshold", entries)
+	if len(entries) != 1 {
+		t.Fatalf("spill directory = %v, want exactly one debugging copy", entries)
+	}
+	data, err := os.ReadFile(result.SpilloverPath)
+	if err != nil {
+		t.Fatalf("ReadFile spill: %v", err)
+	}
+	if string(data) != "short payload" {
+		t.Fatalf("spill file = %q, want the full payload", data)
 	}
 }
 

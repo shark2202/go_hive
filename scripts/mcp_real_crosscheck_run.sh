@@ -70,7 +70,7 @@ PY
 
 wait_mcp_http() { # wait_mcp_http <url> <seconds>: initialize must answer 200
   local url="$1" seconds="${2:-60}" waited=0 code=""
-  local body='{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"readiness","version":"1"}}}'
+  local body='{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"readiness","version":"1"}}}'
   while (( waited < seconds )); do
     code="$(curl -s -o /dev/null -m 3 -w '%{http_code}' -X POST "$url" \
       -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' \

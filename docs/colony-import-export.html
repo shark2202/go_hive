@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Colony 导入导出：能力、用法与缺口</title>
+<style>
+:root{--bg:#0b0f14;--panel:#121923;--panel2:#0f1620;--line:#233041;--text:#e6edf3;--muted:#8b9bb0;--accent:#f0b429;--accent2:#58a6ff;--ok:#3fb950;--warn:#d29922;--bad:#f85149;--code:#0a0e13}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#0b0f14,#0d131b 55%,#0b0f14);color:var(--text);font:14.5px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;overflow-wrap:anywhere}
+a{color:var(--accent2);text-decoration:none}a:hover{text-decoration:underline}.wrap{max-width:1280px;margin:0 auto;padding:44px 26px 80px}
+header{border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:28px}.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+h1{font-size:30px;line-height:1.25;margin:10px 0;letter-spacing:-.02em}h1 span{color:var(--accent)}.lede{color:var(--muted);max-width:1040px;font-size:15px}
+.meta{display:flex;gap:12px;flex-wrap:wrap;margin-top:16px}.pill{display:inline-block;border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:5px 10px;color:var(--muted);font-size:12px}.pill b{color:var(--text)}.pill.warn{border-color:#59451c;color:#efd089;background:#1a1509}
+section{margin:38px 0}h2{font-size:22px;margin:0 0 8px}h2 .num{color:var(--accent);font-size:14px;margin-right:8px}h3{font-size:15.5px;margin:22px 0 8px;color:#cfdae6}p{color:#c6d2df;margin:8px 0}.sub{color:var(--muted);font-size:12.5px}
+.grid{display:grid;gap:12px}.g4{grid-template-columns:repeat(4,minmax(0,1fr))}.g2{grid-template-columns:repeat(2,minmax(0,1fr))}.grid>*{min-width:0}
+@media(max-width:900px){.g4,.g2{grid-template-columns:1fr 1fr}}@media(max-width:560px){.g4,.g2{grid-template-columns:1fr}.wrap{padding:30px 16px 60px}h1{font-size:24px}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:15px;min-width:0}.card .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700}.card .v{font-size:20px;font-weight:800;margin-top:5px;letter-spacing:-.01em}.card .d{color:var(--muted);font-size:12px;margin-top:5px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:14px 0;background:var(--panel2);max-width:100%}table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed}th,td{border-bottom:1px solid var(--line);padding:9px 10px;vertical-align:top;text-align:left;overflow-wrap:anywhere;word-break:break-word}th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;background:#0d141d}tr:hover td{background:#121a25}tr:last-child td{border-bottom:0}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--code);border:1px solid #1e2937;border-radius:5px;padding:1px 4px;color:#d7e3f0;overflow-wrap:anywhere}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#cfe0f2;max-width:100%}
+.callout{border-left:3px solid var(--accent);background:#161207;padding:11px 14px;border-radius:0 9px 9px 0;margin:14px 0;color:#e8d9b4;overflow-wrap:anywhere}.callout.bad{border-color:var(--bad);background:#1a0f0f;color:#f2c7c7}.callout.info{border-color:var(--accent2);background:#0d1622;color:#cfe3ff}
+.toc{display:flex;flex-wrap:wrap;gap:7px;margin-top:18px}.toc a{font-size:12px;border:1px solid var(--line);background:var(--panel);padding:5px 9px;border-radius:999px;color:var(--muted)}.toc a:hover{color:var(--text);text-decoration:none}
+ul,ol{margin:7px 0 7px 20px;padding:0}li{margin:4px 0;color:#c6d2df}footer{margin-top:44px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:12px}
+@media(max-width:560px){table{font-size:12px}th,td{padding:7px 6px}.toc a{padding:8px 12px;font-size:13px;min-height:44px;display:inline-flex;align-items:center}}
+</style></head><body><div class="wrap">
+<header>
+<div class="eyebrow">Hive · Colony Import / Export</div>
+<h1>Colony 导入导出 <span>能力、用法与缺口</span></h1>
+<p class="lede">导入服务端完整、前端/CLI 没有入口；导出尚未实现。本文是可复用的 API 操作手册与现状快照。</p>
+<div class="meta"><span class="pill warn"><b>状态</b> import implemented · export absent · UI/CLI import entry absent</span><span class="pill"><b>口径</b> 以当前 Go 源码与 API 为准</span><span class="pill"><b>产物</b> HTML + JSON</span></div>
+<div class="toc"><a href="#s00">总览</a><a href="#s01">导入路由</a><a href="#s02">一次性导入</a><a href="#s03">分片上传</a><a href="#s04">归档与限额</a><a href="#s05">错误</a><a href="#s06">UI/CLI 缺口</a><a href="#s07">导出</a><a href="#s08">代码索引</a><a href="#s09">维护</a></div>
+</header>
+
+<section id="s00"><h2><span class="num">00</span>总览</h2>
+<div class="grid g4"><div class="card"><div class="k">导入</div><div class="v">6 条 HTTP 路由</div><div class="d">小包 one-shot multipart；大包 init → chunk → finalize</div></div><div class="card"><div class="k">前端入口</div><div class="v">0 处调用</div><div class="d">frontend/src 没有 colonies/import 调用</div></div><div class="card"><div class="k">CLI 入口</div><div class="v">0 个子命令</div><div class="d">hive colony 只有 list / info / delete</div></div><div class="card"><div class="k">导出</div><div class="v">0 条路由</div><div class="d">没有 export API；只有 reveal 打开 Finder</div></div></div>
+<div class="callout info"><b>一句话：</b>导入是服务端完整能力，但目前只有 HTTP API；前端和 CLI 都没有入口。导出完全没做，不能把 <code>reveal</code> 当成导出。</div>
+</section>
+
+<section id="s01"><h2><span class="num">01</span>导入路由</h2>
+<p>注册位置：<code>internal/server/routes_colonies.go:42-58</code>。六条路由对应 <code>routes_colonies_import.go</code> 的六个 handler。</p>
+<div class="tablewrap"><table><thead><tr><th style="width:9%">方法</th><th style="width:40%">路径</th><th style="width:23%">handler</th><th style="width:28%">用途</th></tr></thead><tbody><tr><td><code>POST</code></td><td><code>/api/colonies/import</code></td><td><code>handleImportColony</code></td><td>一次性 multipart 导入，返回 201</td></tr><tr><td><code>POST</code></td><td><code>/api/colonies/import/init</code></td><td><code>handleInitUpload</code></td><td>初始化分片上传，返回 upload_id 和 received=0</td></tr><tr><td><code>PUT</code></td><td><code>/api/colonies/import/chunk/{upload_id}?offset=N</code></td><td><code>handleChunkUpload</code></td><td>按 offset 顺序写入分片，单片 ≤128 MiB</td></tr><tr><td><code>GET</code></td><td><code>/api/colonies/import/status/{upload_id}</code></td><td><code>handleUploadStatus</code></td><td>查询已接收字节数，可断点续传</td></tr><tr><td><code>POST</code></td><td><code>/api/colonies/import/finalize/{upload_id}</code></td><td><code>handleFinalizeUpload</code></td><td>校验 sha256、解包并落盘，返回 201</td></tr><tr><td><code>DELETE</code></td><td><code>/api/colonies/import/{upload_id}</code></td><td><code>handleCancelUpload</code></td><td>取消未完成的上传并清理 staging</td></tr></tbody></table></div>
+</section>
+
+<section id="s02"><h2><span class="num">02</span>小包：一次性 multipart</h2>
+<p>适合不需要断点续传的小归档。先打 tar，再 POST；归档里保留一个顶层 colony 目录。</p>
+<pre>tar -czf /tmp/mycolony.tar.gz -C /Users/mac/hive/go_hive/.hive_go/colonies mycolony
+
+curl -sS -X POST &#x27;http://127.0.0.1:8787/api/colonies/import&#x27; \
+  -F &#x27;file=@/tmp/mycolony.tar.gz&#x27; \
+  -F &#x27;name=mycolony_imported&#x27; \
+  -F &#x27;replace_existing=false&#x27;</pre>
+<p>成功返回 <code>201</code>：</p>
+<pre>{
+  &quot;name&quot;: &quot;mycolony_imported&quot;,
+  &quot;path&quot;: &quot;/Users/mac/hive/go_hive/.hive_go/colonies/mycolony_imported&quot;,
+  &quot;files_imported&quot;: 123,
+  &quot;replaced&quot;: false
+}</pre>
+<h3>字段</h3>
+<div class="tablewrap"><table><thead><tr><th style="width:18%">字段</th><th style="width:12%">必填</th><th style="width:70%">说明</th></tr></thead><tbody><tr><td><code>file</code></td><td>必填</td><td>归档文件；tar / tar.gz / tar.bz2，最大 2 GiB</td></tr><tr><td><code>name</code></td><td>可选</td><td>导入后的 colony slug；不传就用归档顶层目录名</td></tr><tr><td><code>replace_existing</code></td><td>可选</td><td>true 覆盖已存在的目标；false 时冲突返回 409</td></tr></tbody></table></div>
+</section>
+
+<section id="s03"><h2><span class="num">03</span>大包：分片上传</h2>
+<p>超过单次上限、网络不稳定或需要断点续传时使用。分片必须按 offset 顺序发送；服务端检查 <code>Content-Length</code> 和累计字节数。</p>
+<ol><li>POST /api/colonies/import/init，提交 filename / total_bytes / sha256 / name / replace_existing。</li><li>PUT /api/colonies/import/chunk/{upload_id}?offset=N 逐片上传；offset 必须等于服务端已接收字节数。</li><li>GET /api/colonies/import/status/{upload_id} 查询进度。</li><li>POST /api/colonies/import/finalize/{upload_id} 校验 sha256 并解包。</li><li>DELETE /api/colonies/import/{upload_id} 可取消未完成上传。</li></ol>
+<h3>1. 初始化</h3><pre>curl -sS -X POST &#x27;http://127.0.0.1:8787/api/colonies/import/init&#x27; \
+  -H &#x27;Content-Type: application/json&#x27; \
+  -d &#x27;{
+    &quot;filename&quot;: &quot;mycolony.tar.gz&quot;,
+    &quot;total_bytes&quot;: 123456789,
+    &quot;sha256&quot;: &quot;&lt;64 位十六进制 sha256&gt;&quot;,
+    &quot;name&quot;: &quot;mycolony_imported&quot;,
+    &quot;replace_existing&quot;: false
+  }&#x27;</pre>
+<h3>2. 上传分片</h3><pre>curl -sS -X PUT \
+  &#x27;http://127.0.0.1:8787/api/colonies/import/chunk/&lt;upload_id&gt;?offset=0&#x27; \
+  -H &#x27;Content-Type: application/octet-stream&#x27; \
+  --data-binary &#x27;@/tmp/chunk-000&#x27;</pre>
+<h3>3. 查询与完成</h3><pre>curl -sS &#x27;http://127.0.0.1:8787/api/colonies/import/status/&lt;upload_id&gt;&#x27;
+
+curl -sS -X POST \
+  &#x27;http://127.0.0.1:8787/api/colonies/import/finalize/&lt;upload_id&gt;&#x27;</pre>
+<h3>4. 取消</h3><pre>curl -sS -X DELETE &#x27;http://127.0.0.1:8787/api/colonies/import/&lt;upload_id&gt;&#x27;</pre>
+</section>
+
+<section id="s04"><h2><span class="num">04</span>归档布局与限额</h2>
+<div class="grid g2">
+<div class="card"><div class="k">单 colony</div><pre>mycolony/
+  metadata.json
+  worker.json
+  tools.json
+  skills/
+  ...</pre><div class="d">顶层目录名默认作为 colony id；可用 name 覆盖。</div></div>
+<div class="card"><div class="k">多根布局</div><pre>colonies/mycolony/...
+queens/...
+memories/...</pre><div class="d">多根导入要求存在 colonies/&lt;name&gt;/。</div></div>
+</div>
+<div class="tablewrap"><table><thead><tr><th style="width:18%">限制</th><th style="width:24%">值</th><th style="width:58%">说明</th></tr></thead><tbody><tr><td>归档上限</td><td><b>2 GiB</b></td><td>单次一次性上传的最大字节数</td></tr><tr><td>分片上限</td><td><b>128 MiB</b></td><td>单次 PUT 的 Content-Length 上限</td></tr><tr><td>并发上传</td><td><b>32</b></td><td>超过限制返回 429</td></tr><tr><td>staging TTL</td><td><b>24 小时</b></td><td>超时未完成的上传会被回收</td></tr><tr><td>支持格式</td><td><b>tar / tar.gz / tar.bz2</b></td><td>xz / zstd 明确拒绝</td></tr></tbody></table></div>
+</section>
+
+<section id="s05"><h2><span class="num">05</span>常见错误</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:10%">状态</th><th style="width:42%">含义</th><th style="width:48%">处理</th></tr></thead><tbody><tr><td><code>409</code></td><td>目标 colony 已存在</td><td>加 replace_existing=true，或换 name</td></tr><tr><td><code>400</code></td><td>归档格式/路径非法、缺少 file、字段非法</td><td>检查 multipart 字段和 tar 内容</td></tr><tr><td><code>413</code></td><td>归档或分片超过上限</td><td>使用分片上传或缩小归档</td></tr><tr><td><code>429</code></td><td>并发上传达到 32</td><td>完成或取消一个上传后重试</td></tr><tr><td><code>415</code></td><td>不是 multipart/form-data</td><td>一次性导入必须用 multipart，不要直接 PUT tar</td></tr><tr><td><code>500</code></td><td>staging 或解包 IO 失败</td><td>查看 serve 日志；失败会回滚目标目录</td></tr></tbody></table></div>
+<div class="callout"><b>覆盖语义：</b>目标存在且没有 <code>replace_existing=true</code> 时返回 <code>409</code>，不会隐式覆盖。覆盖会先删除目标；解包失败会回滚，不留下半成品。</div>
+</section>
+
+<section id="s06"><h2><span class="num">06</span>为什么没有入口</h2>
+<div class="grid g2">
+<div class="card"><div class="k">前端</div><ul><li>frontend/src/api/colonies.ts 没有 import 方法</li><li>frontend/src 没有 /api/colonies/import 调用</li><li>Sidebar / colony 页面没有 Import 按钮</li></ul></div>
+<div class="card"><div class="k">CLI</div><ul><li>contracts/cli-surface.json 的 hive colony 只有 list / info / delete</li><li>没有 hive colony import 这样的命令；不要按伪命令操作</li></ul></div>
+</div>
+<div class="callout bad"><b>不要把 API 能力当成产品入口：</b>服务端能导入，不代表用户在页面上能点到。当前只能 curl / API，或让 queen 用 <code>terminal_exec</code> 执行 curl。</div>
+</section>
+
+<section id="s07"><h2><span class="num">07</span>导出：不存在，不是未接线</h2>
+<p>路由、CLI、前端三层都没有 export/download；唯一接近的是 <code>POST /api/colonies/{id}/reveal</code>，它只在 Finder 打开目录，不产生可下载字节。</p>
+<ul><li>没有 export / download 路由</li><li>没有 CLI export</li><li>没有前端导出入口</li><li>POST /api/colonies/{id}/reveal 只是在 Finder 打开目录，不产生可下载字节</li><li>要导出只能自行 tar/zip 目录，或后续新增 export 能力</li></ul>
+<div class="callout info"><b>结论：</b>当前是“能进不能出”。要真正导出，需要新增服务端 tar/zip 下载路由（含权限、大小、路径过滤），再补 CLI/UI；仅靠前端按钮无法完成。</div>
+</section>
+
+<section id="s08"><h2><span class="num">08</span>代码索引与验证</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:12%">层</th><th style="width:43%">文件</th><th style="width:45%">内容</th></tr></thead><tbody><tr><td>实现</td><td><code>go_hive/go-hive/internal/server/routes_colonies_import.go</code></td><td>6 个 handler、格式、限额、安全解包</td></tr><tr><td>路由</td><td><code>go_hive/go-hive/internal/server/routes_colonies.go:42-58</code></td><td>import 路由注册</td></tr><tr><td>测试</td><td><code>go_hive/go-hive/internal/server/routes_colonies_import_test.go</code></td><td>45 个 Test</td></tr><tr><td>前端 API</td><td><code>go_hive/go-hive/frontend/src/api/colonies.ts</code></td><td>只有 list/scaffold/getTools/updateTools/rename/delete</td></tr><tr><td>旧审计</td><td><code>go_hive/docs/queen-tools-and-colony-import-export.md</code></td><td>导入/导出四层审计</td></tr><tr><td>契约</td><td><code>go_hive/contracts/api-routes.json</code></td><td>6 条 import 路由已冻结</td></tr></tbody></table></div>
+<h3>验证锚点</h3>
+<ul><li>internal/server/routes_colonies.go 注册 6 条 import 路由</li><li>internal/server/routes_colonies_import_test.go 有 45 个 Test 函数</li><li>contracts/api-routes.json 收录 6 条 import 路由</li><li>frontend/src 对 colonies/import 的调用为 0</li><li>hive colony CLI 面没有 import 子命令</li><li>全仓没有 export / download 的 colony 路由</li></ul>
+</section>
+
+<section id="s09"><h2><span class="num">09</span>维护与复用</h2>
+<ol>
+<li><b>生成：</b><code>python3 go_hive/scripts/gen_colony_import_export_doc.py</code></li>
+<li><b>防漂移：</b><code>python3 go_hive/scripts/gen_colony_import_export_doc.py --check</code>；HTML 或 JSON 与 DATA 不一致时退出 1。</li>
+<li><b>改代码后：</b>更新 DATA 中的路由、限额或缺口，重跑生成器并提交 HTML + JSON。</li>
+<li><b>相关：</b><a href="queen-tools-and-colony-import-export.md">Colony 导入导出审计</a> · <a href="colony-fork-clone.md">Colony fork 与 clone</a> · <a href="colony-suggestion-dispatch.md">Colony 建议与 pivot</a> · <a href="../contracts/api-routes.json">API 路由契约</a></li>
+</ol>
+</section>
+
+<footer><p>生成器：<code>go_hive/scripts/gen_colony_import_export_doc.py</code> · 数据：<a href="colony-import-export.json">colony-import-export.json</a> · 本文不替代 API 契约；以源码与 contracts 为准。</p></footer>
+</div></body></html>

@@ -37,7 +37,10 @@ func (r *ColonyRuntime) workerDoomLoopSink(worker *Worker) agentloop.DoomLoopSin
 	if streamID == "" {
 		return nil
 	}
-	return func(tool string, streak int) {
+	return func(tool string, streak int, description string) {
+		if description == "" {
+			description = agentloop.DoomLoopDescription(tool, streak)
+		}
 		event := eventbus.NewAgentEvent(eventbus.EventNodeToolDoomLoop, streamID)
 		event.NodeID = eventbus.StrPtr(streamID)
 		if executionID := workerExecutionID(worker); executionID != "" {
@@ -46,7 +49,7 @@ func (r *ColonyRuntime) workerDoomLoopSink(worker *Worker) agentloop.DoomLoopSin
 		colonyID := r.streamID
 		event.ColonyID = &colonyID
 		event.Data = map[string]any{
-			"description": agentloop.DoomLoopDescription(tool, streak),
+			"description": description,
 		}
 		r.bus.Publish(event)
 	}
@@ -62,4 +65,25 @@ func workerExecutionID(worker *Worker) string {
 		return worker.Context.ExecutionID
 	}
 	return worker.ID
+}
+
+// workerNodeStalledSink publishes the response-text stall guard's node_stalled
+// event on the worker's colony bus, with the same stream/node/execution stamps
+// the worker's other lifecycle events carry. Nil when there is no bus.
+func (r *ColonyRuntime) workerNodeStalledSink(worker *Worker) agentloop.NodeStalledSink {
+	if r == nil || r.bus == nil || worker == nil || worker.StreamID == "" {
+		return nil
+	}
+	streamID := worker.StreamID
+	return func(reason string) {
+		event := eventbus.NewAgentEvent(eventbus.EventNodeStalled, streamID)
+		event.NodeID = eventbus.StrPtr(streamID)
+		if executionID := workerExecutionID(worker); executionID != "" {
+			event.ExecutionID = &executionID
+		}
+		colonyID := r.streamID
+		event.ColonyID = &colonyID
+		event.Data = map[string]any{"reason": reason}
+		r.bus.Publish(event)
+	}
 }

@@ -2,6 +2,22 @@ package agentloop
 
 import "math"
 
+// ContextCompactionStarted carries the data payload of the
+// CONTEXT_COMPACTION_STARTED event upstream publishes at the start of every
+// compaction pass. The debug panel and any "agent is busy" indicator use it so
+// a multi-minute compaction window is not mistaken for a frozen agent.
+//
+// Parity: framework/agent_loop/internals/compaction.py::compact
+type ContextCompactionStarted struct {
+	// UsageBefore is the pre-compaction usage percentage (round(ratio*100)).
+	UsageBefore int
+	// MessageCount is len(conversation.messages) at pass start.
+	MessageCount int
+	// LLMCompactionSkipped reports that the failure circuit breaker is open,
+	// so this pass will not spend an LLM summary call.
+	LLMCompactionSkipped bool
+}
+
 // ContextCompacted carries the data payload of the CONTEXT_COMPACTED event
 // upstream publishes once a compaction pass finishes. The chat runtime maps it
 // onto a session event; the queen's reflection subscriber turns that event into

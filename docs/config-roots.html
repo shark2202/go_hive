@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>go_hive · 配置根与 cwd 语义</title>
+<style>
+:root{--bg:#0b0f14;--panel:#121923;--panel2:#0f1620;--line:#233041;--text:#e6edf3;--muted:#8b9bb0;--accent:#f0b429;--accent2:#58a6ff;--ok:#3fb950;--warn:#d29922;--bad:#f85149;--code:#0a0e13}
+*{box-sizing:border-box} body{margin:0;background:linear-gradient(180deg,#0b0f14,#0d131b 55%,#0b0f14);color:var(--text);font:14.5px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;overflow-wrap:anywhere}
+a{color:var(--accent2);text-decoration:none} a:hover{text-decoration:underline}
+.wrap{max-width:1180px;margin:0 auto;padding:44px 26px 80px}
+header{border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:28px}
+.eyebrow{color:var(--accent);font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700}
+h1{font-size:30px;line-height:1.25;margin:10px 0;letter-spacing:-.02em} h1 span{color:var(--accent)}
+.lede{color:var(--muted);max-width:980px;font-size:15px} .meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:15px;color:var(--muted);font-size:12.5px} .meta b{color:var(--text)}
+section{margin:38px 0} h2{font-size:22px;margin:0 0 8px} h2 .num{color:var(--accent);font-size:14px;margin-right:8px} h3{font-size:15.5px;margin:16px 0 8px;color:#cfdae6}
+p{color:#c6d2df;margin:8px 0} .sub{color:var(--muted);font-size:12.5px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;margin:14px 0;background:var(--panel2);max-width:100%}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed} th,td{border-bottom:1px solid var(--line);padding:9px 10px;vertical-align:top;text-align:left;overflow-wrap:anywhere;word-break:break-word} th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;background:#0d141d} tr:hover td{background:#121a25} tr:last-child td{border-bottom:0}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;background:var(--code);border:1px solid #1e2937;border-radius:5px;padding:1px 4px;color:#d7e3f0;overflow-wrap:anywhere}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#cfe0f2;white-space:pre-wrap}
+.callout{border-left:3px solid var(--accent);background:#161207;padding:11px 14px;border-radius:0 9px 9px 0;margin:14px 0;color:#e8d9b4} .callout.info{border-color:var(--accent2);background:#0d1622;color:#cfe3ff} .callout.bad{border-color:var(--bad);background:#1a0f0f;color:#f2c7c7}
+ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{margin-top:44px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:12px}
+@media(max-width:560px){table{font-size:12px}th,td{padding:7px 6px}.wrap{padding:30px 16px 60px}h1{font-size:24px}}
+</style></head><body><div class="wrap">
+<header><div class="eyebrow">GO_HIVE · CONFIG ROOTS · CWD SEMANTICS</div>
+<h1>配置根与 <span>cwd 语义</span></h1>
+<p class="lede">go_hive 没有“项目 cwd”这个概念。代码里的 <code>cwd</code> 参数实际是<b>会话沙箱根</b>（session directory），不是 <code>hive serve</code> 的进程 cwd，也不是 queen/colony 根。本文冻结这条知识，并记录 2026-11-27 的行为修正：<code>ast_grep.json</code> 与 <code>lsp.json</code> 只从 <code>$HIVE_HOME</code> 读取，不再读取会话目录下的 <code>.hive/*.json</code>。</p>
+<div class="meta"><span>状态：<b>已实施</b></span><span>日期：<b>2026-11-27</b></span><span>范围：<b>ast_grep · lsp · http_request 家族</b></span></div></header>
+
+<section id="conclusion"><h2><span class="num">00</span>结论</h2>
+<div class="callout bad"><b>没有项目 cwd。</b>不要把 <code>&lt;cwd&gt;/.hive/*.json</code> 理解成“项目级配置”。在 go_hive 中，这个 <code>cwd</code> 就是当前 Hive 会话的沙箱根；会话目录对 agent 的文件工具可写，因此它不能作为安全门控。</div>
+<p>目录概念有六个，含义各不相同：</p>
+<div class="tablewrap"><table><thead><tr><th style="width:22%">名称</th><th style="width:40%">路径</th><th style="width:38%">用途</th></tr></thead><tbody>
+<tr><td>进程 cwd</td><td><code>os.Getwd()</code>（<code>hive serve</code> 启动目录）</td><td>仅少量回退：零值 <code>Toolbox</code>、MCP CLI、<code>attach_file</code> 回退、旧凭据路径。不是配置根。</td></tr>
+<tr><td><code>HIVE_HOME</code></td><td><code>home.Root</code>（如 <code>~/.hive</code>）</td><td>全局状态：<code>configuration.json</code>、凭证、<code>mcp_registry</code>、<code>queens/</code>、<code>colonies/</code>。配置只应从这里读。</td></tr>
+<tr><td>queen home</td><td><code>&lt;HIVE_HOME&gt;/queens/&lt;queen&gt;</code></td><td>queen 级状态与 profile。</td></tr>
+<tr><td>colony 根</td><td><code>&lt;HIVE_HOME&gt;/colonies/&lt;colony&gt;</code></td><td>colony 级状态、worker 目录、queen 会话树。</td></tr>
+<tr><td>会话目录（<code>c.root</code>）</td><td><code>&lt;HIVE_HOME&gt;/queens/&lt;queen&gt;/sessions/&lt;id&gt;</code> 或 <code>&lt;HIVE_HOME&gt;/colonies/&lt;colony&gt;/queens/&lt;queen&gt;/sessions/&lt;id&gt;</code></td><td>文件工具沙箱根、注入的 <code>session_cwd</code>、ast_grep/LSP 的 workspace 根。<b>agent 可写。</b></td></tr>
+<tr><td>worker 目录</td><td><code>&lt;colony&gt;/workers/&lt;id&gt;</code></td><td>colony worker 的沙箱根；<code>WithRoot</code> 重新挂根。</td></tr>
+</tbody></table></div></section>
+
+<section id="evidence"><h2><span class="num">01</span>代码证据</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:38%">代码点</th><th style="width:62%">说明</th></tr></thead><tbody>
+<tr><td><code>internal/cli/loader.go:975</code> <code>chatSessionDir</code></td><td>返回 <code>home.QueenSessionDir(queen, sessionID)</code>；旧会话回退到 <code>queens/default/sessions/&lt;id&gt;</code>。</td></tr>
+<tr><td><code>internal/hivehome/home.go:151</code> <code>QueenSessionDir</code></td><td><code>&lt;HIVE_HOME&gt;/queens/&lt;queen&gt;/sessions/&lt;id&gt;</code>；colony 预加载/恢复用 <code>ColonyQueenSessionDir</code>。</td></tr>
+<tr><td><code>internal/cli/loader.go:579</code></td><td><code>newSessionToolCatalogue(sessionDir, ...)</code>：会话目录成为 <code>c.root</code>。</td></tr>
+<tr><td><code>internal/cli/session_tools.go:409</code> <code>WithRoot</code></td><td>colony worker 的 <code>c.root</code> 改为 worker 存储目录。</td></tr>
+<tr><td><code>internal/tools/builtin/paths.go</code></td><td>文件工具以 <code>c.root</code> 为沙箱根；<code>write_file</code> 可创建根内任意新文件（含 <code>.hive/</code>）。</td></tr>
+<tr><td><code>internal/tools/builtin/ast_grep_config.go</code></td><td>修正后只读 <code>&lt;home&gt;/ast_grep.json</code>；<code>cwd</code> 参数已删除。</td></tr>
+<tr><td><code>internal/lsp/config.go</code> <code>ConfigSources</code></td><td>修正后只有 built-in + <code>&lt;home&gt;/lsp.json</code>；<code>.hive/lsp.json</code> 与 <code>.hive/lsp.local.json</code> 不再读取。</td></tr>
+</tbody></table></div></section>
+
+<section id="defect"><h2><span class="num">02</span>为什么原设计是缺陷</h2>
+<p>原设计（<code>ast-grep-design.html</code> / <code>lsp-design.html</code>）把 <code>&lt;cwd&gt;/.hive/*.json</code> 称为“project”配置，并允许它覆盖用户级配置。问题在于：</p>
+<ul>
+<li><b>会话目录可写。</b>agent 的 <code>write_file</code> 能以会话目录为根创建 <code>.hive/ast_grep.json</code> 或 <code>.hive/lsp.json</code>；新建文件不触发“先读后写”守卫。</li>
+<li><b>恢复会话会重读配置。</b>会话恢复会重建 catalogue，于是 agent 写的文件生效。</li>
+<li><b>ast_grep</b>：agent 可自行开启/关闭工具，与“operator opt-in”矛盾（危害较小，只读搜索）。</li>
+<li><b>LSP</b>：<code>lsp.json</code> 可写 <code>command</code>/<code>args</code>，等于<b>模型可写文件 → 进程启动</b>，与“Server command and args never come from model input”直接冲突（危害严重）。</li>
+<li><b>HTTP 工具</b>：若照搬该模式，agent 可写 <code>enabled=false</code> 或 <code>allow_private_hosts=true</code>，放宽 SSRF 策略（提权）。</li>
+</ul></section>
+
+<section id="contract"><h2><span class="num">03</span>修正后的契约</h2>
+<div class="tablewrap"><table><thead><tr><th style="width:20%">能力</th><th style="width:42%">配置来源（只读）</th><th style="width:38%">workspace 来源</th></tr></thead><tbody>
+<tr><td>ast_grep</td><td><code>&lt;HIVE_HOME&gt;/ast_grep.json</code></td><td>会话目录（<code>c.root</code>）</td></tr>
+<tr><td>lsp</td><td><code>&lt;HIVE_HOME&gt;/lsp.json</code></td><td>会话目录；定义可 pin 绝对 <code>rootDir</code></td></tr>
+<tr><td>http 工具家族</td><td><code>&lt;HIVE_HOME&gt;/http_tools.json</code></td><td>会话根；所有路径输入必须是绝对路径且在根内；自动落盘在根内；cookie jar 按会话隔离</td></tr>
+</tbody></table></div>
+<div class="callout info"><b>规则：</b>配置与 workspace 是两个维度。配置决定“能不能用、能用多大、能连哪里”；workspace 决定“相对路径落在哪”。前者只能从会话沙箱之外读取；后者必须是会话目录（或显式 pin 的 <code>rootDir</code>）。</div>
+<h3>明确不支持</h3>
+<ul>
+<li><code>&lt;sessionDir&gt;/.hive/ast_grep.json</code>、<code>&lt;sessionDir&gt;/.hive/lsp.json</code>、<code>&lt;sessionDir&gt;/.hive/lsp.local.json</code>：一律不读。</li>
+<li>没有“项目 cwd 自动发现”，没有父目录向上查找。</li>
+<li>低信任层不允许放宽策略；v1 也没有项目级覆盖（需要时用显式绝对路径环境变量）。</li>
+</ul></section>
+
+<section id="migration"><h2><span class="num">04</span>迁移</h2>
+<ul>
+<li>把原会话目录下的 <code>.hive/ast_grep.json</code> 移到 <code>&lt;HIVE_HOME&gt;/ast_grep.json</code>。</li>
+<li>把原会话目录下的 <code>.hive/lsp.json</code> / <code>.hive/lsp.local.json</code> 合并到 <code>&lt;HIVE_HOME&gt;/lsp.json</code>；<code>settings.enabled</code>、<code>servers</code>、<code>rootDir</code> 语义不变。</li>
+<li>会话恢复后不再继承旧位置配置；这是有意的安全收紧。</li>
+<li>测试：<code>go test ./internal/lsp ./internal/tools/builtin ./internal/cli</code> 覆盖“会话目录配置被忽略”的回归用例。</li>
+</ul></section>
+
+<section id="trust"><h2><span class="num">05</span>信任边界</h2>
+<p><code>terminal_exec</code> 仍可写 <code>HIVE_HOME</code>（它不经过文件工具沙箱），所以本文描述的是<b>防误用护栏</b>，不是沙箱边界。高安全部署应同时限制 terminal 工具，或把 <code>HIVE_HOME</code> 设为 agent 不可写。真正的隔离来自：</p>
+<ul>
+<li>配置只从会话沙箱之外读取；</li>
+<li>LSP 的 <code>command</code>/<code>args</code> 只来自 operator 级配置；</li>
+<li>HTTP 的 SSRF/上限策略只由 operator 级配置放宽；</li>
+<li>cookie jar 按 Hive 会话隔离（见 <a href="http-tools-design.html">http_tools 设计</a>）。</li>
+</ul></section>
+
+<section id="related"><h2><span class="num">06</span>相关文档</h2>
+<ul>
+<li><a href="ast-grep-design.html">ast_grep 设计</a>（配置链已改为 <code>$HIVE_HOME</code> 单层）</li>
+<li><a href="lsp-design.html">lsp 设计</a>（配置链已改为 <code>$HIVE_HOME</code> 单层）</li>
+<li><a href="http-tools-design.html">http_tools 设计</a>（<code>$HIVE_HOME/http_tools.json</code> + 按会话隔离的 cookie jar）</li>
+<li><a href="http-tools-usage.html">HTTP 工具使用与配置</a>（配置字段、加载方式、调用示例、排错）</li>
+<li><a href="ast-analyze-design.html">ast_analyze 设计</a>（只读仓库 AST 分析：unit/依赖图/wave/风险/评分）</li>
+</ul></section>
+
+<footer>config roots · 配置根与 cwd 语义 · 手写 HTML（非生成物）· 2026-11-27 · 行为变更已随代码与测试落地</footer>
+</div></body></html>

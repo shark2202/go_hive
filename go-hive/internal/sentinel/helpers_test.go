@@ -113,3 +113,32 @@ func (s *noopSink) OnInbound(_ context.Context, channel, senderID, text string, 
 	defer s.mu.Unlock()
 	s.inbound = append(s.inbound, inboundCall{channel: channel, senderID: senderID, text: text, threadRef: threadRef, source: source})
 }
+
+// inboundCount and inboundSnapshot read the sink safely while a listener
+// goroutine is still running.
+func (s *noopSink) inboundCount() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return len(s.inbound)
+}
+
+func (s *noopSink) inboundSnapshot() []inboundCall {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := make([]inboundCall, len(s.inbound))
+	copy(out, s.inbound)
+	return out
+}
+
+// waitFor polls cond until it is true or the deadline passes.
+func waitFor(t *testing.T, timeout time.Duration, what string, cond func() bool) {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		if cond() {
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	t.Fatalf("timed out waiting for %s", what)
+}

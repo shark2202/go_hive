@@ -1,6 +1,6 @@
 # 接口与契约（生成物，勿手改）
 
-> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` 的 `contracts:` / `disk_formats:`，加上 `internal/server` 路由注册与 `internal/eventbus` 常量生成。commit: `5154313071a3`
+> 由 `python3 scripts/gen_arch.py` 从 `architecture/model.yaml` 的 `contracts:` / `disk_formats:`，加上 `internal/server` 路由注册与 `internal/eventbus` 常量生成。commit: `d90acd8b4e9d`
 > 契约是模块之间「靠什么约束交互」的清单：谁提供、谁消费、定义在哪、保证什么、失败怎么表现、变更属于加法还是破坏、由什么机制强制。
 > `providers` / `consumers` 里的 `ext:` 前缀表示外部消费面（前端、运维、MCP server、外部调用方），不是仓库内的包。
 
@@ -16,7 +16,7 @@
 | 其中 磁盘格式（`disk`） | 8 |
 | 其中 工具 schema（`tool-schema`） | 2 |
 | 其中 CLI 命令（`cli`） | 3 |
-| HTTP 路由（`internal/server`，method+path） | 225 |
+| HTTP 路由（`internal/server`，method+path） | 226 |
 | EventType 常量 | 77 |
 | 磁盘格式（人工维护） | 8 |
 
@@ -425,7 +425,7 @@
 - **提供方**：`internal/cli`、`internal/server`
 - **消费方**：`ext:operator`
 - **保证**：默认绑定 127.0.0.1:8787；支持 --host / --port / --colony(可重复) / --model / --open / --verbose / --debug；启动 HTTP+SSE 并阻塞到信号；退出码 0 正常、非 0 启动失败。
-- **失败行为**：端口占用或监听失败打印错误并返回非 0；非 loopback 且未设 HIVE_DESKTOP_TOKEN 时拒绝启动返回 1；SIGINT/SIGTERM 触发优雅停止。
+- **失败行为**：端口占用或监听失败打印错误并返回非 0；命名非 loopback 且未设 HIVE_DESKTOP_TOKEN 时打印警告；显式 0.0.0.0/:: 通配绑定允许不设 token；SIGINT/SIGTERM 触发优雅停止。
 - **兼容规则**：`additive`
 - **强制手段**：单元、集成或 e2e 测试
 - **所属层**：`assembly`
@@ -434,105 +434,105 @@
 
 从 `internal/server` 的非测试文件里正则提取 `mux.HandleFunc("METHOD /path", handler)`：**只覆盖标准库 ServeMux 的「方法 + 路径」式注册**。handler 列取注册闭包中第一个具名调用（优先 `handle*`），纯内联逻辑写 `(inline)`；它只用于阅读，不作为门禁判断。`http.*` 契约是按治理职责划分的族群，不是互斥路由集合；同一条路由可以同时属于一个族群与另一族群的语义边界，全量以本表为准。
 
-共 **225** 条：DELETE 19、GET 92、PATCH 11、POST 85、PUT 18
+共 **226** 条：DELETE 20、GET 92、PATCH 11、POST 85、PUT 18
 
 | 方法 | 路径 | handler | 来源 |
 | --- | --- | --- | --- |
-| GET | `/` | `app.handleSPA` | `internal/server/app.go:335` |
-| DELETE | `/api/agents` | `handleDeleteAgent` | `internal/server/routes_agents.go:35` |
-| PATCH | `/api/agents/metadata` | `handleUpdateAgentMetadata` | `internal/server/routes_agents.go:38` |
-| GET | `/api/browser/contexts` | `handleBrowserPanelContexts` | `internal/server/routes_browser_panel.go:86` |
-| POST | `/api/browser/contexts/close` | `handleBrowserPanelClose` | `internal/server/routes_browser_panel.go:92` |
-| GET | `/api/browser/status` | `handleBrowserStatus` | `internal/server/routes_app_extra.go:149` |
-| GET | `/api/browser/status/stream` | `handleBrowserStatusStream` | `internal/server/routes_app_extra.go:152` |
-| POST | `/api/browser/tab/reveal` | `handleBrowserTabReveal` | `internal/server/routes_app_extra.go:155` |
-| GET | `/api/browser/tabs` | `handleBrowserPanelTabs` | `internal/server/routes_browser_panel.go:89` |
+| GET | `/` | `app.handleSPA` | `internal/server/app.go:220` |
+| DELETE | `/api/agents` | `handleDeleteAgent` | `internal/server/routesagents/routes_agents.go:63` |
+| PATCH | `/api/agents/metadata` | `handleUpdateAgentMetadata` | `internal/server/routesagents/routes_agents.go:66` |
+| GET | `/api/browser/contexts` | `handleBrowserPanelContexts` | `internal/server/routesbrowser/routes_browser_panel.go:91` |
+| POST | `/api/browser/contexts/close` | `handleBrowserPanelClose` | `internal/server/routesbrowser/routes_browser_panel.go:97` |
+| GET | `/api/browser/status` | `handleBrowserStatus` | `internal/server/routesapp/routes_app_extra.go:152` |
+| GET | `/api/browser/status/stream` | `handleBrowserStatusStream` | `internal/server/routesapp/routes_app_extra.go:155` |
+| POST | `/api/browser/tab/reveal` | `handleBrowserTabReveal` | `internal/server/routesapp/routes_app_extra.go:158` |
+| GET | `/api/browser/tabs` | `handleBrowserPanelTabs` | `internal/server/routesbrowser/routes_browser_panel.go:94` |
 | GET | `/api/channels` | `handleListChannels` | `internal/server/routes_credentials_channels.go:18` |
 | GET | `/api/claude-code-queens` | `handleClaudeCodeQueenList` | `internal/server/routes_queens_claude_code.go:136` |
 | GET | `/api/claude-code-queens/{queen_id}/conversations/{session_id}` | `handleClaudeCodeQueenTranscript` | `internal/server/routes_queens_claude_code.go:139` |
-| POST | `/api/colonies/import` | `handleImportColony` | `internal/server/routes_colonies.go:41` |
-| PUT | `/api/colonies/import/chunk/{upload_id}` | `handleChunkUpload` | `internal/server/routes_colonies.go:47` |
-| POST | `/api/colonies/import/finalize/{upload_id}` | `handleFinalizeUpload` | `internal/server/routes_colonies.go:53` |
-| POST | `/api/colonies/import/init` | `handleInitUpload` | `internal/server/routes_colonies.go:44` |
-| GET | `/api/colonies/import/status/{upload_id}` | `handleUploadStatus` | `internal/server/routes_colonies.go:50` |
-| DELETE | `/api/colonies/import/{upload_id}` | `handleCancelUpload` | `internal/server/routes_colonies.go:56` |
+| POST | `/api/colonies/import` | `handleImportColony` | `internal/server/routes_colonies.go:42` |
+| PUT | `/api/colonies/import/chunk/{upload_id}` | `handleChunkUpload` | `internal/server/routes_colonies.go:48` |
+| POST | `/api/colonies/import/finalize/{upload_id}` | `handleFinalizeUpload` | `internal/server/routes_colonies.go:54` |
+| POST | `/api/colonies/import/init` | `handleInitUpload` | `internal/server/routes_colonies.go:45` |
+| GET | `/api/colonies/import/status/{upload_id}` | `handleUploadStatus` | `internal/server/routes_colonies.go:51` |
+| DELETE | `/api/colonies/import/{upload_id}` | `handleCancelUpload` | `internal/server/routes_colonies.go:57` |
 | GET | `/api/colonies/tools-index` | `handleListColoniesToolsIndex` | `internal/server/routes_colony_tools.go:47` |
-| DELETE | `/api/colonies/{colony_id}` | `handleDeleteColony` | `internal/server/routes_colonies.go:62` |
-| GET | `/api/colonies/{colony_id}/active-session` | `handleActiveColonySession` | `internal/server/routes_sessions.go:141` |
+| DELETE | `/api/colonies/{colony_id}` | `handleDeleteColony` | `internal/server/routes_colonies.go:63` |
+| GET | `/api/colonies/{colony_id}/active-session` | `handleActiveColonySession` | `internal/server/routes_sessions.go:156` |
 | GET | `/api/colonies/{colony_id}/data/changes` | `handleColonyTableChanges` | `internal/server/routes_colony_workers_data.go:915` |
 | GET | `/api/colonies/{colony_id}/data/tables` | `handleColonyListTables` | `internal/server/routes_colony_workers_data.go:912` |
 | GET | `/api/colonies/{colony_id}/data/tables/{table}/rows` | `handleColonyTableRows` | `internal/server/routes_colony_workers_data.go:918` |
 | PATCH | `/api/colonies/{colony_id}/data/tables/{table}/rows` | `handleColonyUpdateRow` | `internal/server/routes_colony_workers_data.go:921` |
-| POST | `/api/colonies/{colony_id}/rename` | `handleRenameColony` | `internal/server/routes_colonies.go:68` |
-| POST | `/api/colonies/{colony_id}/reveal` | `handleRevealColonyFolder` | `internal/server/routes_colonies.go:65` |
-| POST | `/api/colonies/{colony_id}/scaffold` | `handleScaffoldColony` | `internal/server/routes_colonies.go:59` |
-| GET | `/api/colonies/{colony_id}/sessions` | `handleListColonySessions` | `internal/server/routes_sessions.go:138` |
-| GET | `/api/colonies/{colony_id}/worker_profiles` | `handleListWorkerProfiles` | `internal/server/routes_colonies.go:71` |
-| POST | `/api/colonies/{colony_id}/worker_profiles` | `handleUpsertWorkerProfile` | `internal/server/routes_colonies.go:74` |
-| DELETE | `/api/colonies/{colony_id}/worker_profiles/{profile_name}` | `handleDeleteWorkerProfile` | `internal/server/routes_colonies.go:77` |
-| GET | `/api/colony/{colony_id}/notifications` | `handleGetNotifications` | `internal/server/routes_sentinel.go:104` |
-| PUT | `/api/colony/{colony_id}/notifications` | `handlePutNotifications` | `internal/server/routes_sentinel.go:107` |
-| POST | `/api/colony/{colony_id}/notifications/test` | `handleTestNotification` | `internal/server/routes_sentinel.go:110` |
+| POST | `/api/colonies/{colony_id}/rename` | `handleRenameColony` | `internal/server/routes_colonies.go:69` |
+| POST | `/api/colonies/{colony_id}/reveal` | `handleRevealColonyFolder` | `internal/server/routes_colonies.go:66` |
+| POST | `/api/colonies/{colony_id}/scaffold` | `handleScaffoldColony` | `internal/server/routes_colonies.go:60` |
+| GET | `/api/colonies/{colony_id}/sessions` | `handleListColonySessions` | `internal/server/routes_sessions.go:153` |
+| GET | `/api/colonies/{colony_id}/worker_profiles` | `handleListWorkerProfiles` | `internal/server/routes_colonies.go:72` |
+| POST | `/api/colonies/{colony_id}/worker_profiles` | `handleUpsertWorkerProfile` | `internal/server/routes_colonies.go:75` |
+| DELETE | `/api/colonies/{colony_id}/worker_profiles/{profile_name}` | `handleDeleteWorkerProfile` | `internal/server/routes_colonies.go:78` |
+| GET | `/api/colony/{colony_id}/notifications` | `handleGetNotifications` | `internal/server/routes_sentinel.go:117` |
+| PUT | `/api/colony/{colony_id}/notifications` | `handlePutNotifications` | `internal/server/routes_sentinel.go:120` |
+| POST | `/api/colony/{colony_id}/notifications/test` | `handleTestNotification` | `internal/server/routes_sentinel.go:123` |
 | GET | `/api/colony/{colony_id}/tools` | `handleGetColonyTools` | `internal/server/routes_colony_tools.go:50` |
 | PATCH | `/api/colony/{colony_id}/tools` | `handlePatchColonyTools` | `internal/server/routes_colony_tools.go:53` |
-| GET | `/api/config/external-skills` | `handleGetExternalSkills` | `internal/server/routes_config.go:296` |
-| PUT | `/api/config/external-skills` | `handlePutExternalSkills` | `internal/server/routes_config.go:297` |
-| GET | `/api/config/features` | `handleGetFeatures` | `internal/server/routes_config.go:279` |
-| PUT | `/api/config/features` | `handleUpdateFeatures` | `internal/server/routes_config.go:280` |
-| GET | `/api/config/llm` | `handleGetLLMConfig` | `internal/server/routes_config.go:285` |
-| PUT | `/api/config/llm` | `handleUpdateLLMConfig` | `internal/server/routes_config.go:286` |
-| GET | `/api/config/llm-sections` | `handleGetLLMSections` | `internal/server/routes_config.go:283` |
-| PUT | `/api/config/llm-sections` | `handlePutLLMSection` | `internal/server/routes_config.go:284` |
-| GET | `/api/config/memory` | `handleGetMemorySettings` | `internal/server/routes_config.go:281` |
-| PUT | `/api/config/memory` | `handleUpdateMemorySettings` | `internal/server/routes_config.go:282` |
-| GET | `/api/config/models` | `handleGetModels` | `internal/server/routes_config.go:276` |
-| GET | `/api/config/profile` | `handleGetProfile` | `internal/server/routes_config.go:292` |
-| PUT | `/api/config/profile` | `handleUpdateProfile` | `internal/server/routes_config.go:293` |
-| GET | `/api/config/profile/avatar` | `handleGetAvatar` | `internal/server/routes_config.go:295` |
-| POST | `/api/config/profile/avatar` | `handleUploadAvatar` | `internal/server/routes_config.go:294` |
-| GET | `/api/config/provider-library` | `handleGetProviderLibrary` | `internal/server/routes_config.go:287` |
-| PUT | `/api/config/provider-library` | `handlePutProviderLibrary` | `internal/server/routes_config.go:288` |
-| POST | `/api/config/provider-library/apply` | `handleApplyProviderLibrary` | `internal/server/routes_config.go:289` |
-| GET | `/api/config/rate-limits` | `handleGetRateLimits` | `internal/server/routes_config.go:290` |
-| PUT | `/api/config/rate-limits` | `handleUpdateRateLimits` | `internal/server/routes_config.go:291` |
-| GET | `/api/config/sentinel` | `handleGetSentinel` | `internal/server/routes_config.go:277` |
-| PUT | `/api/config/sentinel` | `handleUpdateSentinel` | `internal/server/routes_config.go:278` |
-| GET | `/api/credentials` | `routes.handleListCredentials` | `internal/server/routes_credentials.go:89` |
-| POST | `/api/credentials` | `routes.handleSaveCredential` | `internal/server/routes_credentials.go:90` |
-| POST | `/api/credentials/check-agent` | `handleCheckAgent` | `internal/server/routes_agents.go:41` |
+| GET | `/api/config/external-skills` | `handleGetExternalSkills` | `internal/server/routes_config.go:290` |
+| PUT | `/api/config/external-skills` | `handlePutExternalSkills` | `internal/server/routes_config.go:291` |
+| GET | `/api/config/features` | `handleGetFeatures` | `internal/server/routes_config.go:273` |
+| PUT | `/api/config/features` | `handleUpdateFeatures` | `internal/server/routes_config.go:274` |
+| GET | `/api/config/llm` | `handleGetLLMConfig` | `internal/server/routes_config.go:279` |
+| PUT | `/api/config/llm` | `handleUpdateLLMConfig` | `internal/server/routes_config.go:280` |
+| GET | `/api/config/llm-sections` | `handleGetLLMSections` | `internal/server/routes_config.go:277` |
+| PUT | `/api/config/llm-sections` | `handlePutLLMSection` | `internal/server/routes_config.go:278` |
+| GET | `/api/config/memory` | `handleGetMemorySettings` | `internal/server/routes_config.go:275` |
+| PUT | `/api/config/memory` | `handleUpdateMemorySettings` | `internal/server/routes_config.go:276` |
+| GET | `/api/config/models` | `handleGetModels` | `internal/server/routes_config.go:270` |
+| GET | `/api/config/profile` | `handleGetProfile` | `internal/server/routes_config.go:286` |
+| PUT | `/api/config/profile` | `handleUpdateProfile` | `internal/server/routes_config.go:287` |
+| GET | `/api/config/profile/avatar` | `handleGetAvatar` | `internal/server/routes_config.go:289` |
+| POST | `/api/config/profile/avatar` | `handleUploadAvatar` | `internal/server/routes_config.go:288` |
+| GET | `/api/config/provider-library` | `handleGetProviderLibrary` | `internal/server/routes_config.go:281` |
+| PUT | `/api/config/provider-library` | `handlePutProviderLibrary` | `internal/server/routes_config.go:282` |
+| POST | `/api/config/provider-library/apply` | `handleApplyProviderLibrary` | `internal/server/routes_config.go:283` |
+| GET | `/api/config/rate-limits` | `handleGetRateLimits` | `internal/server/routes_config.go:284` |
+| PUT | `/api/config/rate-limits` | `handleUpdateRateLimits` | `internal/server/routes_config.go:285` |
+| GET | `/api/config/sentinel` | `handleGetSentinel` | `internal/server/routes_config.go:271` |
+| PUT | `/api/config/sentinel` | `handleUpdateSentinel` | `internal/server/routes_config.go:272` |
+| GET | `/api/credentials` | `routes.handleListCredentials` | `internal/server/routes_credentials.go:91` |
+| POST | `/api/credentials` | `routes.handleSaveCredential` | `internal/server/routes_credentials.go:92` |
+| POST | `/api/credentials/check-agent` | `handleCheckAgent` | `internal/server/routesagents/routes_agents.go:69` |
 | POST | `/api/credentials/local` | `routes.handleSaveLocalCredential` | `internal/server/routes_credentials_local.go:59` |
 | DELETE | `/api/credentials/local/{credential_id}/{alias}` | `routes.handleDeleteLocalCredential` | `internal/server/routes_credentials_local.go:60` |
-| GET | `/api/credentials/oauth-status` | `routes.handleOAuthStatus` | `internal/server/routes_credentials.go:86` |
-| POST | `/api/credentials/resync` | `routes.handleResync` | `internal/server/routes_credentials.go:87` |
-| GET | `/api/credentials/specs` | `routes.handleListSpecs` | `internal/server/routes_credentials.go:85` |
-| POST | `/api/credentials/validate-key` | `routes.handleValidateKey` | `internal/server/routes_credentials.go:88` |
-| DELETE | `/api/credentials/{credential_id}` | `routes.handleDeleteCredential` | `internal/server/routes_credentials.go:96` |
-| GET | `/api/credentials/{credential_id}` | `routes.handleGetCredential` | `internal/server/routes_credentials.go:95` |
+| GET | `/api/credentials/oauth-status` | `routes.handleOAuthStatus` | `internal/server/routes_credentials.go:88` |
+| POST | `/api/credentials/resync` | `routes.handleResync` | `internal/server/routes_credentials.go:89` |
+| GET | `/api/credentials/specs` | `routes.handleListSpecs` | `internal/server/routes_credentials.go:87` |
+| POST | `/api/credentials/validate-key` | `routes.handleValidateKey` | `internal/server/routes_credentials.go:90` |
+| DELETE | `/api/credentials/{credential_id}` | `routes.handleDeleteCredential` | `internal/server/routes_credentials.go:98` |
+| GET | `/api/credentials/{credential_id}` | `routes.handleGetCredential` | `internal/server/routes_credentials.go:97` |
 | POST | `/api/crm/changed` | `handleCRMChanged` | `internal/server/routes_events.go:74` |
-| POST | `/api/crm/claim` | `handleCRMProxy` | `internal/server/routes_colony_workers_global.go:787` |
-| GET | `/api/crm/grid/schema` | `handleCRMProxy` | `internal/server/routes_colony_workers_global.go:752` |
-| POST | `/api/crm/grid/{entity}` | `handleCRMProxy` | `internal/server/routes_colony_workers_global.go:768` |
-| POST | `/api/crm/grid/{entity}/group-counts` | `handleCRMProxy` | `internal/server/routes_colony_workers_global.go:759` |
-| POST | `/api/crm/grid/{entity}/query` | `handleCRMProxy` | `internal/server/routes_colony_workers_global.go:755` |
-| DELETE | `/api/crm/grid/{entity}/{id}` | `handleCRMProxy` | `internal/server/routes_colony_workers_global.go:777` |
-| GET | `/api/crm/grid/{entity}/{id}` | `handleCRMProxy` | `internal/server/routes_colony_workers_global.go:763` |
-| PATCH | `/api/crm/grid/{entity}/{id}` | `handleCRMProxy` | `internal/server/routes_colony_workers_global.go:772` |
-| POST | `/api/crm/grid/{entity}/{id}/stage` | `handleCRMProxy` | `internal/server/routes_colony_workers_global.go:782` |
-| POST | `/api/crm/release` | `handleCRMProxy` | `internal/server/routes_colony_workers_global.go:790` |
-| GET | `/api/discover` | `handleDiscoverAgents` | `internal/server/routes_agents.go:32` |
+| POST | `/api/crm/claim` | `handleCRMProxy` | `internal/server/routes_colony_workers_global.go:786` |
+| GET | `/api/crm/grid/schema` | `handleCRMProxy` | `internal/server/routes_colony_workers_global.go:751` |
+| POST | `/api/crm/grid/{entity}` | `handleCRMProxy` | `internal/server/routes_colony_workers_global.go:767` |
+| POST | `/api/crm/grid/{entity}/group-counts` | `handleCRMProxy` | `internal/server/routes_colony_workers_global.go:758` |
+| POST | `/api/crm/grid/{entity}/query` | `handleCRMProxy` | `internal/server/routes_colony_workers_global.go:754` |
+| DELETE | `/api/crm/grid/{entity}/{id}` | `handleCRMProxy` | `internal/server/routes_colony_workers_global.go:776` |
+| GET | `/api/crm/grid/{entity}/{id}` | `handleCRMProxy` | `internal/server/routes_colony_workers_global.go:762` |
+| PATCH | `/api/crm/grid/{entity}/{id}` | `handleCRMProxy` | `internal/server/routes_colony_workers_global.go:771` |
+| POST | `/api/crm/grid/{entity}/{id}/stage` | `handleCRMProxy` | `internal/server/routes_colony_workers_global.go:781` |
+| POST | `/api/crm/release` | `handleCRMProxy` | `internal/server/routes_colony_workers_global.go:789` |
+| GET | `/api/discover` | `handleDiscoverAgents` | `internal/server/routesagents/routes_agents.go:60` |
 | GET | `/api/events/global` | `handleGlobalEvents` | `internal/server/routes_events.go:71` |
-| GET | `/api/global/crm/status` | `handleGlobalCRMStatus` | `internal/server/routes_colony_workers_global.go:722` |
-| GET | `/api/global/data/changes` | `handleGlobalChanges` | `internal/server/routes_colony_workers_global.go:728` |
-| GET | `/api/global/data/foreign-keys` | `handleGlobalForeignKeys` | `internal/server/routes_colony_workers_global.go:731` |
-| GET | `/api/global/data/tables` | `handleGlobalListTables` | `internal/server/routes_colony_workers_global.go:725` |
-| POST | `/api/global/data/tables/{table}/group-counts` | `handleGlobalTableGroupCounts` | `internal/server/routes_colony_workers_global.go:740` |
-| POST | `/api/global/data/tables/{table}/query` | `handleGlobalTableQuery` | `internal/server/routes_colony_workers_global.go:737` |
-| DELETE | `/api/global/data/tables/{table}/rows` | `handleGlobalDeleteRow` | `internal/server/routes_colony_workers_global.go:749` |
-| GET | `/api/global/data/tables/{table}/rows` | `handleGlobalTableRows` | `internal/server/routes_colony_workers_global.go:734` |
-| PATCH | `/api/global/data/tables/{table}/rows` | `handleGlobalUpdateRowRoute` | `internal/server/routes_colony_workers_global.go:746` |
-| POST | `/api/global/data/tables/{table}/rows` | `handleGlobalInsertRow` | `internal/server/routes_colony_workers_global.go:743` |
-| GET | `/api/health` | `app.handleHealth` | `internal/server/app.go:179` |
-| GET | `/api/health/resources` | `handleHealthResources` | `internal/server/routes_app_extra.go:146` |
+| GET | `/api/global/crm/status` | `handleGlobalCRMStatus` | `internal/server/routes_colony_workers_global.go:721` |
+| GET | `/api/global/data/changes` | `handleGlobalChanges` | `internal/server/routes_colony_workers_global.go:727` |
+| GET | `/api/global/data/foreign-keys` | `handleGlobalForeignKeys` | `internal/server/routes_colony_workers_global.go:730` |
+| GET | `/api/global/data/tables` | `handleGlobalListTables` | `internal/server/routes_colony_workers_global.go:724` |
+| POST | `/api/global/data/tables/{table}/group-counts` | `handleGlobalTableGroupCounts` | `internal/server/routes_colony_workers_global.go:739` |
+| POST | `/api/global/data/tables/{table}/query` | `handleGlobalTableQuery` | `internal/server/routes_colony_workers_global.go:736` |
+| DELETE | `/api/global/data/tables/{table}/rows` | `handleGlobalDeleteRow` | `internal/server/routes_colony_workers_global.go:748` |
+| GET | `/api/global/data/tables/{table}/rows` | `handleGlobalTableRows` | `internal/server/routes_colony_workers_global.go:733` |
+| PATCH | `/api/global/data/tables/{table}/rows` | `handleGlobalUpdateRowRoute` | `internal/server/routes_colony_workers_global.go:745` |
+| POST | `/api/global/data/tables/{table}/rows` | `handleGlobalInsertRow` | `internal/server/routes_colony_workers_global.go:742` |
+| GET | `/api/health` | `app.handleHealth` | `internal/server/app.go:236` |
+| GET | `/api/health/resources` | `handleHealthResources` | `internal/server/routesapp/routes_app_extra.go:149` |
 | GET | `/api/maintenance/janitor/report` | `handleJanitorReport` | `internal/server/routes_maintenance.go:80` |
 | POST | `/api/maintenance/janitor/run` | `handleJanitorRun` | `internal/server/routes_maintenance.go:77` |
 | POST | `/api/mcp/reload` | `handleReloadMCP` | `internal/server/routes_mcp.go:92` |
@@ -543,14 +543,14 @@
 | POST | `/api/mcp/servers/{name}/enable` | `handleEnableMCPServer` | `internal/server/routes_mcp.go:80` |
 | POST | `/api/mcp/servers/{name}/health` | `handleMCPHealth` | `internal/server/routes_mcp.go:86` |
 | POST | `/api/mcp/servers/{name}/mode` | `handleSetMCPMode` | `internal/server/routes_mcp.go:89` |
-| GET | `/api/memories` | `handleListMemories` | `internal/server/routes_memories_extra.go:24` |
-| DELETE | `/api/memories/file` | `handleDeleteMemory` | `internal/server/routes_memories_extra.go:36` |
-| GET | `/api/memories/file` | `handleGetMemory` | `internal/server/routes_memories_extra.go:27` |
-| POST | `/api/memories/file` | `handleCreateMemory` | `internal/server/routes_memories_extra.go:30` |
-| PUT | `/api/memories/file` | `handleUpdateMemory` | `internal/server/routes_memories_extra.go:33` |
-| GET | `/api/memories/history` | `handleMemoryHistory` | `internal/server/routes_memories_extra.go:39` |
-| POST | `/api/memories/restore` | `handleRestoreMemory` | `internal/server/routes_memories_extra.go:42` |
-| GET | `/api/memories/retired` | `handleRetiredMemories` | `internal/server/routes_memories_extra.go:45` |
+| GET | `/api/memories` | `handleListMemories` | `internal/server/routes_memories_extra.go:29` |
+| DELETE | `/api/memories/file` | `handleDeleteMemory` | `internal/server/routes_memories_extra.go:41` |
+| GET | `/api/memories/file` | `handleGetMemory` | `internal/server/routes_memories_extra.go:32` |
+| POST | `/api/memories/file` | `handleCreateMemory` | `internal/server/routes_memories_extra.go:35` |
+| PUT | `/api/memories/file` | `handleUpdateMemory` | `internal/server/routes_memories_extra.go:38` |
+| GET | `/api/memories/history` | `handleMemoryHistory` | `internal/server/routes_memories_extra.go:44` |
+| POST | `/api/memories/restore` | `handleRestoreMemory` | `internal/server/routes_memories_extra.go:47` |
+| GET | `/api/memories/retired` | `handleRetiredMemories` | `internal/server/routes_memories_extra.go:50` |
 | POST | `/api/messages/classify` | `handleClassifyMessage` | `internal/server/routes_messages_extra.go:66` |
 | POST | `/api/messages/classify-colony` | `handleClassifyColony` | `internal/server/routes_messages_extra.go:69` |
 | DELETE | `/api/models/endpoints/{name}` | `handleDeleteModelEndpoint` | `internal/server/routes_models.go:143` |
@@ -565,25 +565,25 @@
 | PATCH | `/api/prompts/{prompt_id}` | `handleUpdatePrompt` | `internal/server/routes_prompts_extra.go:56` |
 | POST | `/api/queen-mail/letters` | `handleQueenMailLetter` | `internal/server/routes_queens_mail.go:100` |
 | GET | `/api/queen-mail/queens` | `handleQueenMailQueens` | `internal/server/routes_queens_mail.go:97` |
-| POST | `/api/queen/create` | `handleQueenCreate` | `internal/server/routes_queens.go:1050` |
-| POST | `/api/queen/initialize-preferences` | `handleQueenInitializePreferences` | `internal/server/routes_queens.go:1053` |
-| GET | `/api/queen/profiles` | `handleQueenListProfiles` | `internal/server/routes_queens.go:1044` |
-| GET | `/api/queen/removed` | `handleQueenListRemoved` | `internal/server/routes_queens.go:1047` |
-| DELETE | `/api/queen/{queen_id}/avatar` | `handleQueenDeleteAvatar` | `internal/server/routes_queens.go:1100` |
-| GET | `/api/queen/{queen_id}/avatar` | `handleQueenGetAvatar` | `internal/server/routes_queens.go:1097` |
-| POST | `/api/queen/{queen_id}/avatar` | `handleQueenUploadAvatar` | `internal/server/routes_queens.go:1094` |
-| GET | `/api/queen/{queen_id}/llm` | `handleQueenGetLLM` | `internal/server/routes_queens.go:1079` |
-| PUT | `/api/queen/{queen_id}/llm` | `handleQueenPutLLM` | `internal/server/routes_queens.go:1082` |
-| GET | `/api/queen/{queen_id}/overview` | `handleQueenOverview` | `internal/server/routes_queens.go:1091` |
-| GET | `/api/queen/{queen_id}/persona` | `handleQueenGetPersona` | `internal/server/routes_queens.go:1085` |
-| PUT | `/api/queen/{queen_id}/persona` | `handleQueenPutPersona` | `internal/server/routes_queens.go:1088` |
-| GET | `/api/queen/{queen_id}/profile` | `handleQueenGetProfile` | `internal/server/routes_queens.go:1073` |
-| PATCH | `/api/queen/{queen_id}/profile` | `handleQueenUpdateProfile` | `internal/server/routes_queens.go:1076` |
-| POST | `/api/queen/{queen_id}/remove` | `handleQueenGetProfile` | `internal/server/routes_queens.go:1065` |
-| POST | `/api/queen/{queen_id}/restore` | `handleQueenGetProfile` | `internal/server/routes_queens.go:1069` |
-| POST | `/api/queen/{queen_id}/session` | `handleQueenSession` | `internal/server/routes_queens.go:1056` |
-| POST | `/api/queen/{queen_id}/session/new` | `handleQueenNewSession` | `internal/server/routes_queens.go:1062` |
-| POST | `/api/queen/{queen_id}/session/select` | `handleQueenSelectSession` | `internal/server/routes_queens.go:1059` |
+| POST | `/api/queen/create` | `handleQueenCreate` | `internal/server/routes_queens.go:1068` |
+| POST | `/api/queen/initialize-preferences` | `handleQueenInitializePreferences` | `internal/server/routes_queens.go:1071` |
+| GET | `/api/queen/profiles` | `handleQueenListProfiles` | `internal/server/routes_queens.go:1062` |
+| GET | `/api/queen/removed` | `handleQueenListRemoved` | `internal/server/routes_queens.go:1065` |
+| DELETE | `/api/queen/{queen_id}/avatar` | `handleQueenDeleteAvatar` | `internal/server/routes_queens.go:1118` |
+| GET | `/api/queen/{queen_id}/avatar` | `handleQueenGetAvatar` | `internal/server/routes_queens.go:1115` |
+| POST | `/api/queen/{queen_id}/avatar` | `handleQueenUploadAvatar` | `internal/server/routes_queens.go:1112` |
+| GET | `/api/queen/{queen_id}/llm` | `handleQueenGetLLM` | `internal/server/routes_queens.go:1097` |
+| PUT | `/api/queen/{queen_id}/llm` | `handleQueenPutLLM` | `internal/server/routes_queens.go:1100` |
+| GET | `/api/queen/{queen_id}/overview` | `handleQueenOverview` | `internal/server/routes_queens.go:1109` |
+| GET | `/api/queen/{queen_id}/persona` | `handleQueenGetPersona` | `internal/server/routes_queens.go:1103` |
+| PUT | `/api/queen/{queen_id}/persona` | `handleQueenPutPersona` | `internal/server/routes_queens.go:1106` |
+| GET | `/api/queen/{queen_id}/profile` | `handleQueenGetProfile` | `internal/server/routes_queens.go:1091` |
+| PATCH | `/api/queen/{queen_id}/profile` | `handleQueenUpdateProfile` | `internal/server/routes_queens.go:1094` |
+| POST | `/api/queen/{queen_id}/remove` | `handleQueenGetProfile` | `internal/server/routes_queens.go:1083` |
+| POST | `/api/queen/{queen_id}/restore` | `handleQueenGetProfile` | `internal/server/routes_queens.go:1087` |
+| POST | `/api/queen/{queen_id}/session` | `handleQueenSession` | `internal/server/routes_queens.go:1074` |
+| POST | `/api/queen/{queen_id}/session/new` | `handleQueenNewSession` | `internal/server/routes_queens.go:1080` |
+| POST | `/api/queen/{queen_id}/session/select` | `handleQueenSelectSession` | `internal/server/routes_queens.go:1077` |
 | GET | `/api/queen/{queen_id}/skills` | `deps.handleListQueenSkills` | `internal/server/routes_skills.go:62` |
 | POST | `/api/queen/{queen_id}/skills` | `deps.handleCreateQueenSkill` | `internal/server/routes_skills.go:63` |
 | POST | `/api/queen/{queen_id}/skills/reload` | `deps.handleReloadQueenSkills` | `internal/server/routes_skills.go:69` |
@@ -595,66 +595,67 @@
 | GET | `/api/queen/{queen_id}/soul` | `routes.handleGetSoul` | `internal/server/routes_credentials_soul.go:42` |
 | PUT | `/api/queen/{queen_id}/soul` | `routes.handlePutSoul` | `internal/server/routes_credentials_soul.go:43` |
 | POST | `/api/queen/{queen_id}/soul/proposals/{proposal_id}/decide` | `routes.handleDecideSoulProposal` | `internal/server/routes_credentials_soul.go:44` |
-| POST | `/api/queen/{queen_id}/soul/proposals/{proposal_id}/probe` | `routes.handleProbeSoulProposal` | `internal/server/routes_soul_probe.go:42` |
+| POST | `/api/queen/{queen_id}/soul/proposals/{proposal_id}/probe` | `routes.handleProbeSoulProposal` | `internal/server/routes_soul_probe.go:43` |
 | POST | `/api/queen/{queen_id}/soul/reflect` | `routes.handleReflectSoul` | `internal/server/routes_credentials_soul.go:46` |
 | POST | `/api/queen/{queen_id}/soul/rollback` | `routes.handleRollbackSoul` | `internal/server/routes_credentials_soul.go:45` |
 | DELETE | `/api/queen/{queen_id}/tools` | `handleQueenDeleteTools` | `internal/server/routes_queens_tools.go:735` |
 | GET | `/api/queen/{queen_id}/tools` | `handleQueenGetTools` | `internal/server/routes_queens_tools.go:729` |
 | PATCH | `/api/queen/{queen_id}/tools` | `handleQueenPatchTools` | `internal/server/routes_queens_tools.go:732` |
 | GET | `/api/runtime-logs` | `routes.handleRuntimeLogs` | `internal/server/routes_runtime_logs.go:170` |
-| GET | `/api/sentinel/credentials` | `handleSentinelCredentialStatus` | `internal/server/routes_sentinel.go:113` |
-| POST | `/api/sentinel/slack/validate` | `handleSlackValidate` | `internal/server/routes_sentinel.go:122` |
-| POST | `/api/sentinel/telegram/detect-chat` | `handleTelegramDetectChat` | `internal/server/routes_sentinel.go:119` |
-| POST | `/api/sentinel/telegram/validate` | `handleTelegramValidate` | `internal/server/routes_sentinel.go:116` |
+| GET | `/api/sentinel/credentials` | `handleSentinelCredentialStatus` | `internal/server/routes_sentinel.go:126` |
+| POST | `/api/sentinel/slack/validate` | `handleSlackValidate` | `internal/server/routes_sentinel.go:135` |
+| POST | `/api/sentinel/telegram/detect-chat` | `handleTelegramDetectChat` | `internal/server/routes_sentinel.go:132` |
+| POST | `/api/sentinel/telegram/validate` | `handleTelegramValidate` | `internal/server/routes_sentinel.go:129` |
 | GET | `/api/sessions` | `handleCreateSession` | `internal/server/routes_sessions.go:45` |
 | POST | `/api/sessions` | `handleCreateSession` | `internal/server/routes_sessions.go:52` |
 | GET | `/api/sessions/history` | `handleSessionHistory` | `internal/server/routes_sessions.go:58` |
 | GET | `/api/sessions/live` | `handleLiveSessionsStream` | `internal/server/routes_sessions.go:55` |
-| DELETE | `/api/sessions/{first}/{second}` | `handleDeleteHistorySession` | `internal/server/routes_sessions.go:61` |
-| DELETE | `/api/sessions/{session_id}` | `handleStopSession` | `internal/server/routes_sessions.go:78` |
-| GET | `/api/sessions/{session_id}` | `handleGetLiveSession` | `internal/server/routes_sessions.go:75` |
-| GET | `/api/sessions/{session_id}/attachment/{filename}` | `handleSessionAttachment` | `internal/server/routes_sessions.go:90` |
+| DELETE | `/api/sessions/{first}/{second}` | `handleDeleteHistorySession` | `internal/server/routes_sessions.go:80` |
+| DELETE | `/api/sessions/{session_id}` | `handleStopSession` | `internal/server/routes_sessions.go:93` |
+| GET | `/api/sessions/{session_id}` | `handleGetLiveSession` | `internal/server/routes_sessions.go:90` |
+| GET | `/api/sessions/{session_id}/attachment/{filename}` | `handleSessionAttachment` | `internal/server/routes_sessions.go:105` |
 | POST | `/api/sessions/{session_id}/cancel-queen` | `handleCancelQueen` | `internal/server/routes_execution.go:55` |
-| POST | `/api/sessions/{session_id}/chat` | `handleSessionChat` | `internal/server/chat_routes.go:34` |
-| POST | `/api/sessions/{session_id}/colony` | `handleLoadColony` | `internal/server/routes_sessions.go:114` |
-| POST | `/api/sessions/{session_id}/colony/resolve_missed` | `handleResolveMissedTriggers` | `internal/server/routes_sessions.go:120` |
-| GET | `/api/sessions/{session_id}/colony/skills` | `handleListColonySkills` | `internal/server/routes_colony_workers.go:652` |
-| GET | `/api/sessions/{session_id}/colony/tools` | `handleListColonyTools` | `internal/server/routes_colony_workers.go:655` |
+| POST | `/api/sessions/{session_id}/chat` | `handleSessionChat` | `internal/server/chat_routes.go:67` |
+| DELETE | `/api/sessions/{session_id}/colony` | `handleDeleteSessionColony` | `internal/server/routes_sessions.go:74` |
+| POST | `/api/sessions/{session_id}/colony` | `handleLoadColony` | `internal/server/routes_sessions.go:129` |
+| POST | `/api/sessions/{session_id}/colony/resolve_missed` | `handleResolveMissedTriggers` | `internal/server/routes_sessions.go:135` |
+| GET | `/api/sessions/{session_id}/colony/skills` | `handleListColonySkills` | `internal/server/routes_colony_workers.go:660` |
+| GET | `/api/sessions/{session_id}/colony/tools` | `handleListColonyTools` | `internal/server/routes_colony_workers.go:663` |
 | POST | `/api/sessions/{session_id}/compact-and-fork` | `handleCompactAndFork` | `internal/server/routes_execution.go:64` |
-| POST | `/api/sessions/{session_id}/credential-form` | `routes.handleCredentialForm` | `internal/server/routes_credentials.go:94` |
-| POST | `/api/sessions/{session_id}/dismiss-colony-pivot` | `handleDismissColonyPivot` | `internal/server/routes_sessions.go:117` |
-| GET | `/api/sessions/{session_id}/events` | `handleSessionEventsStream` | `internal/server/chat_routes.go:37` |
-| GET | `/api/sessions/{session_id}/events/history` | `handleSessionEventsHistory` | `internal/server/routes_sessions.go:123` |
-| POST | `/api/sessions/{session_id}/fork` | `handleForkSession` | `internal/server/routes_sessions.go:129` |
-| GET | `/api/sessions/{session_id}/live_tools` | `handleSessionLiveTools` | `internal/server/routes_sessions.go:81` |
+| POST | `/api/sessions/{session_id}/credential-form` | `routes.handleCredentialForm` | `internal/server/routes_credentials.go:96` |
+| POST | `/api/sessions/{session_id}/dismiss-colony-pivot` | `handleDismissColonyPivot` | `internal/server/routes_sessions.go:132` |
+| GET | `/api/sessions/{session_id}/events` | `handleSessionEventsStream` | `internal/server/chat_routes.go:70` |
+| GET | `/api/sessions/{session_id}/events/history` | `handleSessionEventsHistory` | `internal/server/routes_sessions.go:138` |
+| POST | `/api/sessions/{session_id}/fork` | `handleForkSession` | `internal/server/routes_sessions.go:144` |
+| GET | `/api/sessions/{session_id}/live_tools` | `handleSessionLiveTools` | `internal/server/routes_sessions.go:96` |
 | POST | `/api/sessions/{session_id}/mark-colony-spawned` | `handleMarkColonySpawned` | `internal/server/routes_execution.go:61` |
 | POST | `/api/sessions/{session_id}/presence` | `handleSessionPresence` | `internal/server/routes_execution.go:58` |
 | POST | `/api/sessions/{session_id}/queen-context` | `handleQueenContext` | `internal/server/routes_execution.go:49` |
 | POST | `/api/sessions/{session_id}/record-message` | `handleRecordUserMessage` | `internal/server/routes_execution.go:52` |
 | DELETE | `/api/sessions/{session_id}/reminders` | `handleDismissSessionReminders` | `internal/server/routes_reminders.go:361` |
 | GET | `/api/sessions/{session_id}/reminders` | `handleGetSessionReminders` | `internal/server/routes_reminders.go:358` |
-| POST | `/api/sessions/{session_id}/report-bundle` | `handleReportSessionBundle` | `internal/server/routes_sessions.go:135` |
-| POST | `/api/sessions/{session_id}/reveal` | `handleRevealSession` | `internal/server/routes_sessions.go:132` |
+| POST | `/api/sessions/{session_id}/report-bundle` | `handleReportSessionBundle` | `internal/server/routes_sessions.go:150` |
+| POST | `/api/sessions/{session_id}/reveal` | `handleRevealSession` | `internal/server/routes_sessions.go:147` |
 | GET | `/api/sessions/{session_id}/skill-installs` | `deps.handleListSkillInstalls` | `internal/server/routes_skills.go:71` |
 | POST | `/api/sessions/{session_id}/skill-installs/{request_id}` | `deps.handleDecideSkillInstall` | `internal/server/routes_skills.go:72` |
-| GET | `/api/sessions/{session_id}/snapshot` | `handleGetSessionSnapshot` | `internal/server/routes_sessions.go:87` |
-| GET | `/api/sessions/{session_id}/stats` | `handleSessionStats` | `internal/server/routes_sessions.go:84` |
+| GET | `/api/sessions/{session_id}/snapshot` | `handleGetSessionSnapshot` | `internal/server/routes_sessions.go:102` |
+| GET | `/api/sessions/{session_id}/stats` | `handleSessionStats` | `internal/server/routes_sessions.go:99` |
 | GET | `/api/sessions/{session_id}/tasks` | `handleGetTaskList` | `internal/server/routes_tasks.go:39` |
 | POST | `/api/sessions/{session_id}/tasks/clear-completed` | `handleClearCompletedTasks` | `internal/server/routes_tasks.go:45` |
 | POST | `/api/sessions/{session_id}/tasks/unarchive` | `handleUnarchiveTaskList` | `internal/server/routes_tasks.go:42` |
-| PATCH | `/api/sessions/{session_id}/title` | `handleSetSessionTitle` | `internal/server/routes_sessions.go:126` |
-| GET | `/api/sessions/{session_id}/triggers` | `handleListTriggers` | `internal/server/routes_sessions.go:96` |
-| POST | `/api/sessions/{session_id}/triggers` | `handleCreateTrigger` | `internal/server/routes_sessions.go:99` |
-| PATCH | `/api/sessions/{session_id}/triggers/{trigger_id}` | `handleUpdateTrigger` | `internal/server/routes_sessions.go:102` |
-| POST | `/api/sessions/{session_id}/triggers/{trigger_id}/activate` | `handleActivateTrigger` | `internal/server/routes_sessions.go:108` |
-| POST | `/api/sessions/{session_id}/triggers/{trigger_id}/deactivate` | `handleDeactivateTrigger` | `internal/server/routes_sessions.go:111` |
-| POST | `/api/sessions/{session_id}/triggers/{trigger_id}/run` | `handleRunTrigger` | `internal/server/routes_sessions.go:105` |
-| POST | `/api/sessions/{session_id}/upload-attachment` | `handleUploadAttachment` | `internal/server/routes_sessions.go:93` |
-| GET | `/api/sessions/{session_id}/workers` | `handleListColonyWorkers` | `internal/server/routes_colony_workers.go:643` |
+| PATCH | `/api/sessions/{session_id}/title` | `handleSetSessionTitle` | `internal/server/routes_sessions.go:141` |
+| GET | `/api/sessions/{session_id}/triggers` | `handleListTriggers` | `internal/server/routes_sessions.go:111` |
+| POST | `/api/sessions/{session_id}/triggers` | `handleCreateTrigger` | `internal/server/routes_sessions.go:114` |
+| PATCH | `/api/sessions/{session_id}/triggers/{trigger_id}` | `handleUpdateTrigger` | `internal/server/routes_sessions.go:117` |
+| POST | `/api/sessions/{session_id}/triggers/{trigger_id}/activate` | `handleActivateTrigger` | `internal/server/routes_sessions.go:123` |
+| POST | `/api/sessions/{session_id}/triggers/{trigger_id}/deactivate` | `handleDeactivateTrigger` | `internal/server/routes_sessions.go:126` |
+| POST | `/api/sessions/{session_id}/triggers/{trigger_id}/run` | `handleRunTrigger` | `internal/server/routes_sessions.go:120` |
+| POST | `/api/sessions/{session_id}/upload-attachment` | `handleUploadAttachment` | `internal/server/routes_sessions.go:108` |
+| GET | `/api/sessions/{session_id}/workers` | `handleListColonyWorkers` | `internal/server/routes_colony_workers.go:651` |
 | POST | `/api/sessions/{session_id}/workers/stop-all` | `handleStopAllLiveWorkers` | `internal/server/routes_workers.go:94` |
 | GET | `/api/sessions/{session_id}/workers/stream` | `handleLiveWorkersStream` | `internal/server/routes_workers.go:91` |
-| GET | `/api/sessions/{session_id}/workers/{worker_id}` | `handleGetColonyWorker` | `internal/server/routes_colony_workers.go:646` |
-| GET | `/api/sessions/{session_id}/workers/{worker_id}/conversation` | `handleGetColonyWorkerConversation` | `internal/server/routes_colony_workers.go:649` |
+| GET | `/api/sessions/{session_id}/workers/{worker_id}` | `handleGetColonyWorker` | `internal/server/routes_colony_workers.go:654` |
+| GET | `/api/sessions/{session_id}/workers/{worker_id}/conversation` | `handleGetColonyWorkerConversation` | `internal/server/routes_colony_workers.go:657` |
 | GET | `/api/sessions/{session_id}/workers/{worker_id}/reap-timeline` | `handleWorkerReapTimeline` | `internal/server/routes_workers.go:100` |
 | POST | `/api/sessions/{session_id}/workers/{worker_id}/stop` | `handleStopLiveWorker` | `internal/server/routes_workers.go:97` |
 | GET | `/api/skills` | `deps.handleListAllSkills` | `internal/server/routes_skills.go:74` |
@@ -662,7 +663,7 @@
 | GET | `/api/skills/scopes` | `deps.handleListScopes` | `internal/server/routes_skills.go:75` |
 | POST | `/api/skills/upload` | `deps.handleUploadSkill` | `internal/server/routes_skills.go:77` |
 | GET | `/api/skills/{skill_name}` | `deps.handleGetSkillDetail` | `internal/server/routes_skills.go:78` |
-| GET | `/api/startup-status` | `app.handleStartupStatus` | `internal/server/app.go:180` |
+| GET | `/api/startup-status` | `app.handleStartupStatus` | `internal/server/app.go:237` |
 
 > 覆盖说明：未被路由表覆盖的 HandleFunc 注册（无方法前缀或跨行写法）：mux.HandleFunc("/", s.handleRequest)
 
@@ -769,6 +770,6 @@
 
 ## 覆盖边界
 
-- HTTP 路由表只统计带方法前缀的 `mux.HandleFunc`，共 225 条（含 `GET /` SPA 兜底）；`internal/server/webhook_server.go` 里独立的 `mux.HandleFunc("/", ...)` webhook 入口不在表内。
+- HTTP 路由表只统计带方法前缀的 `mux.HandleFunc`，共 226 条（含 `GET /` SPA 兜底）；`internal/server/webhook_server.go` 里独立的 `mux.HandleFunc("/", ...)` webhook 入口不在表内。
 - SSE 端点没有单独一张表；它们的帧形状写在 `sse.*` 契约明细里，路由本身仍在 HTTP 路由表中。
 - `contracts:` 是人工维护的治理视图，不是从代码自动推导的依赖图；生成器只校验字段完整性、包名与类别，不能证明每条保证在运行期成立。

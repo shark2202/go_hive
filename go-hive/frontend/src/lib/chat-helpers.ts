@@ -298,6 +298,32 @@ export function sseEventToChatMessage(
       };
     }
 
+    case "payment_required": {
+      // A 402 classified by the LLM layer (EventBus.EmitPaymentRequired).
+      // Render as a dedicated billing/upgrade card rather than a plain
+      // system row so the user gets the way to fix it. Stable id keyed on
+      // the execution so live SSE and disk replay upsert the same row.
+      const rawMessage = event.data?.message;
+      const message =
+        typeof rawMessage === "string" && rawMessage.trim()
+          ? rawMessage.trim()
+          : "The LLM provider returned payment required.";
+      const rawStatus = event.data?.upstream_status;
+      const upstreamStatus = typeof rawStatus === "number" ? rawStatus : null;
+      return {
+        id: `payment-required-${event.execution_id || event.timestamp || "session"}`,
+        agent: "System",
+        agentColor: "",
+        content: JSON.stringify({ message, upstream_status: upstreamStatus }),
+        timestamp: "",
+        type: "payment_required",
+        thread,
+        createdAt,
+        streamId: event.stream_id || undefined,
+        executionId: event.execution_id || undefined,
+      };
+    }
+
     case "trigger_fired": {
       // Surface each scheduler/webhook fire as a banner in the chat, so the
       // user can see exactly when the queen was invoked by a trigger vs. by

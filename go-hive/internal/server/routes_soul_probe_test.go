@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
+	"github.com/shark2202/go_hive/go-hive/internal/memory"
 	soulstore "github.com/shark2202/go_hive/go-hive/internal/soul"
 )
 
@@ -110,6 +111,57 @@ func TestSoulProbeRoutesRunsInBackgroundAndStoresAnswers(t *testing.T) {
 	}
 	if view["probing"] != false {
 		t.Fatalf("probing after finish = %v", view["probing"])
+	}
+}
+
+// Parity: framework/agents/queen/soul_probes.py::related_memories
+//
+// The probe answers with the same memories recall would put beside a live
+// message: a question whose header carries a speaker id is answered with that
+// speaker's memory files, so the soul is judged on how she treats a person she
+// knows, not on how she treats a stranger.
+func TestSoulProbeRouteInjectsRecalledMemories(t *testing.T) {
+	home := soulTestHome(t)
+	saveSoulProposal(t, home, soulTestQueen, "2026-10-21-040000", "pending")
+	writeSoulProbes(t, home, soulTestQueen, `[{"q":"[Ann(12345)]: what are you drawing?"}]`)
+	writeChatMemoryFile(t,
+		filepath.Join(memory.QueenMemoryDir(home.Root, soulTestQueen), "ann.md"),
+		"Ann is the person at 12345.\n")
+
+	systems := make(chan string, 2)
+	done := make(chan struct{})
+	mux := soulProbeTestMux(t, home, SoulProbeRouteDeps{
+		AnswerFor: func(string, *soulstore.SoulConfig) (soulstore.ProbeAnswerFunc, error) {
+			return func(system, question string) (string, error) {
+				systems <- system
+				return "answered", nil
+			}, nil
+		},
+		RunBackground: func(run func()) {
+			go func() {
+				run()
+				close(done)
+			}()
+		},
+	})
+
+	recorder, body := doSessionJSON(t, mux, http.MethodPost,
+		"/api/queen/queen_x/soul/proposals/2026-10-21-040000/probe", "")
+	if recorder.Code != http.StatusAccepted {
+		t.Fatalf("probe status = %d, body = %#v", recorder.Code, body)
+	}
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("probe did not finish")
+	}
+
+	for side := 0; side < 2; side++ {
+		system := <-systems
+		if !strings.Contains(system, "<recalled_memories>\n### ann.md\n") ||
+			!strings.Contains(system, "Ann is the person at 12345.\n</recalled_memories>") {
+			t.Fatalf("probe answer (side %d) has no recalled memories: %q", side, system)
+		}
 	}
 }
 

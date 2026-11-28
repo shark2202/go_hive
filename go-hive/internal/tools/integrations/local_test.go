@@ -304,3 +304,50 @@ func TestAccountTokenSelectsAlias(t *testing.T) {
 		t.Fatalf("unknown alias on github = %q, %v", token, handled)
 	}
 }
+
+// Parity: tools/tests/tools/test_csv_tool.py::TestCsvAppend::test_append_file_not_found,
+// TestCsvAppend::test_append_non_csv_extension -- upstream checks os.path.exists
+// before path.lower().endswith(".csv"), so a missing non-.csv path is "File not found".
+func TestCSVAppendMissingPathBeatsExtensionCheck(t *testing.T) {
+	root := t.TempDir()
+	registry := localRegistry(t, root)
+	missing := filepath.Join(root, "not-there.txt")
+	result, err := registry.Execute(context.Background(), "csv", map[string]any{
+		"action": "csv_append", "path": missing,
+		"rows": []any{map[string]any{"a": 1}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	problem := result.(map[string]any)
+	message, _ := problem["error"].(string)
+	if !strings.HasPrefix(message, "File not found: ") {
+		t.Fatalf("error = %v", problem)
+	}
+}
+
+// Parity: tools/tests/tools/test_csv_tool.py::TestCsvAppend::test_append_filters_extra_columns
+// -- upstream recounts non-empty records after writing; a row whose keys are all
+// outside the header writes an empty record and leaves total_rows unchanged.
+func TestCSVAppendTotalRowsRecountsFile(t *testing.T) {
+	root := t.TempDir()
+	registry := localRegistry(t, root)
+	path := filepath.Join(root, "data.csv")
+	if _, err := registry.Execute(context.Background(), "csv", map[string]any{
+		"action": "csv_write", "path": path, "columns": []any{"name"},
+		"rows": []any{map[string]any{"name": "apple"}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	result, err := registry.Execute(context.Background(), "csv", map[string]any{
+		"action": "csv_append", "path": path,
+		"rows": []any{map[string]any{"bogus": "x"}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	appended := result.(map[string]any)
+	if appended["rows_appended"] != 1 || appended["total_rows"] != 1 {
+		t.Fatalf("append = %v", appended)
+	}
+}

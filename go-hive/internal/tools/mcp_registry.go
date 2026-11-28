@@ -175,12 +175,10 @@ func (r *ToolRegistry) LoadMCPConfig(configPath string) {
 			}
 		}
 	} else {
-		names := make([]string, 0, len(config))
-		for name := range config {
-			names = append(names, name)
-		}
-		sort.Strings(names)
-		for _, name := range names {
+		// Python's dict-form loader builds the server list from config.items(),
+		// so file order decides which server's same-named tool wins first. Walk
+		// the raw object instead of a Go map to keep that order.
+		for _, name := range topLevelJSONKeyOrder(data) {
 			var spec MCPServerSpec
 			if err := json.Unmarshal(config[name], &spec); err != nil {
 				continue
@@ -451,7 +449,6 @@ func (r *ToolRegistry) registerMCPServerInner(spec MCPServerSpec, opts RegisterM
 		if libraryAdmit(remoteName) && !hasName(serverCatalogNames, registeredName) && !catalogShadowed {
 			r.mcpFullCatalog[serverName] = append(r.mcpFullCatalog[serverName], map[string]any{
 				"name":         registeredName,
-				"server_tool":  remoteName,
 				"description":  mcpTool.Description,
 				"input_schema": mcpTool.InputSchema,
 				"provider":     providerValue(toolProviderMap, remoteName),
@@ -1376,4 +1373,37 @@ func callProbe(probe interface{ ProbeLiveness() bool }) (alive bool) {
 		}
 	}()
 	return probe.ProbeLiveness()
+}
+
+// topLevelJSONKeyOrder returns the keys of one flat JSON object in source
+// order. LoadMCPConfig uses it for the dict-shaped mcp_servers.json form,
+// where Python iterates config.items() and Go's map would otherwise lose the
+// file order that decides cross-server first-wins attribution.
+func topLevelJSONKeyOrder(raw []byte) []string {
+	decoder := json.NewDecoder(strings.NewReader(string(raw)))
+	token, err := decoder.Token()
+	if err != nil {
+		return nil
+	}
+	delim, ok := token.(json.Delim)
+	if !ok || delim != '{' {
+		return nil
+	}
+	keys := []string{}
+	for decoder.More() {
+		keyToken, err := decoder.Token()
+		if err != nil {
+			return keys
+		}
+		key, ok := keyToken.(string)
+		if !ok {
+			return keys
+		}
+		var value json.RawMessage
+		if err := decoder.Decode(&value); err != nil {
+			return keys
+		}
+		keys = append(keys, key)
+	}
+	return keys
 }

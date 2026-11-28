@@ -288,8 +288,43 @@ func TestBatch3PDFReadLongPageNoVisionFlag(t *testing.T) {
 }
 
 // Parity: tools/tests/tools/test_pdf_read_tool.py::TestPdfReadFailFast::test_scanned_pdf_response_includes_terminal_hint
+// A mixed text/scanned document keeps its extracted text but must route the
+// flagged pages through attach_file/vision first, with OCR only as the
+// non-vision fallback — the upstream next_step priority (no OCR or image
+// rendering needed).
+func TestBatch3PDFReadVisionPagesNextStepPrefersAttachFile(t *testing.T) {
+	long := strings.Repeat("lorem ipsum ", 50)
+	path := batch3WritePDFFixture(t, []string{"", long}, nil)
+	registry := batch3TestRegistry(t, "")
+
+	result := batch3Execute(t, registry, "pdf_read", map[string]any{"file_path": path})
+	if _, failed := result["error"]; failed {
+		t.Fatalf("result = %v", result)
+	}
+	pages, _ := result["needs_vision_pages"].([]int)
+	if len(pages) != 1 || pages[0] != 1 {
+		t.Fatalf("needs_vision_pages = %v", result["needs_vision_pages"])
+	}
+	nextStep, _ := result["next_step"].(string)
+	if !strings.Contains(nextStep, "attach_file") {
+		t.Fatalf("next_step = %q, want attach_file", nextStep)
+	}
+	if !strings.Contains(nextStep, "no OCR") {
+		t.Fatalf("next_step = %q, want 'no OCR'", nextStep)
+	}
+	if attachIndex, ocrIndex := strings.Index(nextStep, "attach_file"), strings.Index(nextStep, "OCR"); attachIndex > ocrIndex {
+		t.Fatalf("next_step must put attach_file/vision before OCR: %q", nextStep)
+	}
+	if !strings.Contains(fmt.Sprint(result["terminal_hint"]), "pdfimages") {
+		t.Fatalf("terminal_hint = %v", result["terminal_hint"])
+	}
+}
+
+// Parity: tools/tests/tools/test_pdf_read_tool.py::TestPdfReadFailFast::test_scanned_pdf_response_includes_terminal_hint
 // The Go port is stricter than upstream: an all-empty document is an explicit
 // error, while still carrying needs_vision_pages / next_step / terminal_hint.
+// The guidance must match upstream's priority: attach_file/vision first, OCR
+// only as the non-vision fallback.
 func TestBatch3PDFReadScannedReturnsExplicitError(t *testing.T) {
 	path := batch3WritePDFFixture(t, []string{"", ""}, nil)
 	registry := batch3TestRegistry(t, "")
@@ -299,6 +334,12 @@ func TestBatch3PDFReadScannedReturnsExplicitError(t *testing.T) {
 	if !strings.Contains(strings.ToLower(message), "scanned") {
 		t.Fatalf("error = %v", result["error"])
 	}
+	if !strings.Contains(message, "attach_file") {
+		t.Fatalf("error must route through attach_file: %v", result["error"])
+	}
+	if strings.Contains(message, "Render the pages") {
+		t.Fatalf("error still renders/OCRs first: %v", result["error"])
+	}
 	if result["needs_vision"] != true {
 		t.Fatalf("needs_vision = %v", result["needs_vision"])
 	}
@@ -306,8 +347,16 @@ func TestBatch3PDFReadScannedReturnsExplicitError(t *testing.T) {
 	if len(pages) != 2 || pages[0] != 1 || pages[1] != 2 {
 		t.Fatalf("needs_vision_pages = %v", result["needs_vision_pages"])
 	}
-	if !strings.Contains(fmt.Sprint(result["next_step"]), "vision") {
-		t.Fatalf("next_step = %v", result["next_step"])
+	nextStep, _ := result["next_step"].(string)
+	if !strings.Contains(nextStep, "attach_file") {
+		t.Fatalf("next_step = %v, want attach_file", result["next_step"])
+	}
+	if !strings.Contains(nextStep, "no OCR") {
+		t.Fatalf("next_step = %v, want 'no OCR'", result["next_step"])
+	}
+	attachIndex, ocrIndex := strings.Index(nextStep, "attach_file"), strings.Index(nextStep, "OCR")
+	if attachIndex < 0 || ocrIndex < 0 || attachIndex > ocrIndex {
+		t.Fatalf("next_step must put attach_file/vision before OCR: %q", nextStep)
 	}
 	if !strings.Contains(fmt.Sprint(result["terminal_hint"]), "pdftotext") {
 		t.Fatalf("terminal_hint = %v", result["terminal_hint"])

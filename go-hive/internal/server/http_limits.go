@@ -1,7 +1,6 @@
 package server
 
 import (
-	"errors"
 	"io"
 	"net/http"
 )
@@ -9,12 +8,13 @@ import (
 // Request bodies cross a process boundary before any handler sees them. JSON
 // APIs get a generous but finite cap; streaming upload paths have their own.
 const (
-	maxJSONBodyBytes         int64 = 8 << 20  // 8 MiB
+	// Upstream aiohttp configures client_max_size=20 MiB for the whole app
+	// (framework/server/app.py::create_app); a JSON body past it is refused
+	// with 413 before the handler parses it.
+	maxJSONBodyBytes         int64 = 20 << 20 // 20 MiB
 	maxWebhookBodyBytes      int64 = 10 << 20 // 10 MiB
 	maxAttachmentUploadBytes int64 = 100 << 20
 )
-
-var errBodyTooLarge = errors.New("request body too large")
 
 // readLimitedBody reads at most limit bytes and reports errBodyTooLarge rather
 // than truncating silently. Callers that stream (multipart) use

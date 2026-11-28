@@ -51,8 +51,26 @@ func (rt *Runtime) CallREST(ctx context.Context, tool *Tool, action Action, spec
 	if spec.Pagination != nil {
 		return rt.callRESTPages(ctx, tool, spec, input)
 	}
-	result, _, _, err := rt.callRESTOnce(ctx, tool, spec, input, false, "")
-	return result, err
+	result, status, _, err := rt.callRESTOnce(ctx, tool, spec, input, false, "")
+	if err != nil {
+		return result, err
+	}
+	return shapeSuccess(spec, result, input, status), nil
+}
+
+// shapeSuccess applies the spec's upstream response envelope to a successful
+// result. Provider error values and non-2xx statuses pass through untouched so
+// an action's error dict keeps its provider-specific text.
+func shapeSuccess(spec RestSpec, result any, input map[string]any, status int) any {
+	if spec.Shape == nil || (status != 0 && status >= 400) {
+		return result
+	}
+	if object, ok := result.(map[string]any); ok {
+		if _, failed := object["error"]; failed {
+			return result
+		}
+	}
+	return spec.Shape(result, input)
 }
 
 // callRESTPages walks the provider's pagination contract, concatenating the
@@ -80,7 +98,7 @@ func (rt *Runtime) callRESTPages(ctx context.Context, tool *Tool, spec RestSpec,
 		}
 		items, found := pageItems(result, pagination.ItemsPath)
 		if !found {
-			return result, nil
+			return shapeSuccess(spec, result, input, status), nil
 		}
 		if envelope == nil {
 			envelope = result
@@ -133,11 +151,11 @@ func (rt *Runtime) callRESTPages(ctx context.Context, tool *Tool, spec RestSpec,
 			// has_more described a single page; the merged envelope is the walk.
 			delete(first, "has_more")
 		}
-		return first, nil
+		return shapeSuccess(spec, first, input, 0), nil
 	case []any:
-		return merged, nil
+		return shapeSuccess(spec, merged, input, 0), nil
 	default:
-		return envelope, nil
+		return shapeSuccess(spec, envelope, input, 0), nil
 	}
 }
 
@@ -359,10 +377,27 @@ func (rt *Runtime) callRESTOnce(ctx context.Context, tool *Tool, spec RestSpec, 
 		return providerError(tool, resp.StatusCode, parsed, raw), resp.StatusCode, "", nil
 	}
 	if object, ok := parsed.(map[string]any); ok && tool.ID == "slack_tool" {
-		if success, present := object["ok"].(bool); present && !success {
-			code := fmt.Sprint(object["error"])
-			return map[string]any{"error": slackErrorMessage(code), "error_code": code}, resp.StatusCode, "", nil
+		success, _ := object["ok"].(bool)
+		if !success {
+			code := "unknown_error"
+			if value, ok := object["error"].(string); ok {
+				code = value
+			}
+			message := slackErrorMessage(code)
+			if code == "missing_scope" {
+				needed := "unknown"
+				if value, ok := object["needed"].(string); ok && value != "" {
+					needed = value
+				}
+				message = "Missing required scope: " + needed
+			}
+			return map[string]any{"error": message, "error_code": code}, resp.StatusCode, "", nil
 		}
+	}
+	if spec.Shape != nil {
+		// The formatter owns the envelope; Unwrap/ListKey/FirstOf would
+		// otherwise hand it an already-projected body.
+		return parsed, resp.StatusCode, linkNext, nil
 	}
 	return shapeResponse(spec, parsed, raw), resp.StatusCode, linkNext, nil
 }
@@ -594,43 +629,81 @@ func scalarString(value any) string {
 }
 
 // providerError maps non-2xx responses onto upstream error dicts.
-
 func providerError(tool *Tool, status int, parsed any, raw []byte) map[string]any {
-	if object, ok := parsed.(map[string]any); ok {
-		switch tool.ID {
-		case "stripe_tool":
-			if detail, ok := object["error"].(map[string]any); ok {
-				message := fmt.Sprint(detail["message"])
-				out := map[string]any{"error": message}
-				if kind, ok := detail["type"].(string); ok && kind != "" {
-					out["type"] = kind
-				}
-				return out
+	object, _ := parsed.(map[string]any)
+	text := string(raw)
+	switch tool.ID {
+	case "stripe_tool":
+		if detail, ok := object["error"].(map[string]any); ok {
+			message := fmt.Sprint(detail["message"])
+			out := map[string]any{"error": message}
+			if kind, ok := detail["type"].(string); ok && kind != "" {
+				out["type"] = kind
 			}
-		case "slack_tool":
-			code := fmt.Sprint(object["error"])
-			if code != "" && code != "<nil>" {
-				return map[string]any{"error": slackErrorMessage(code), "error_code": code}
-			}
-		case "github_tool":
-			switch status {
-			case http.StatusUnauthorized:
-				return map[string]any{"error": "Invalid or expired GitHub token"}
-			case http.StatusForbidden:
-				return map[string]any{"error": "Forbidden - check token permissions or rate limit"}
-			case http.StatusNotFound:
-				return map[string]any{"error": "Resource not found"}
-			}
-			if message, ok := object["message"].(string); ok && message != "" {
-				return map[string]any{"error": message}
-			}
-		case "telegram_tool":
-			if description, ok := object["description"].(string); ok && description != "" {
-				return map[string]any{"error": description}
-			}
+			return out
 		}
+	case "slack_tool":
+		// Slack's client checks the HTTP status before parsing Slack's own
+		// ok/error envelope, so every non-200 keeps the raw body text.
+		return map[string]any{"error": fmt.Sprintf("HTTP error %d: %s", status, text)}
+	case "github_tool":
+		switch status {
+		case http.StatusUnauthorized:
+			return map[string]any{"error": "Invalid or expired GitHub token"}
+		case http.StatusForbidden:
+			return map[string]any{"error": "Forbidden - check token permissions or rate limit"}
+		case http.StatusNotFound:
+			return map[string]any{"error": "Resource not found"}
+		}
+		detail, present := object["message"].(string)
+		if !present {
+			detail = text
+		}
+		if status == http.StatusUnprocessableEntity {
+			if !present {
+				detail = "Validation failed"
+			}
+			return map[string]any{"error": "Validation error: " + detail}
+		}
+		return map[string]any{"error": fmt.Sprintf("GitHub API error (HTTP %d): %s", status, detail)}
+	case "telegram_tool":
+		detail, present := object["description"].(string)
+		if !present {
+			detail = text
+		}
+		switch status {
+		case http.StatusUnauthorized:
+			return map[string]any{"error": "Invalid Telegram bot token"}
+		case http.StatusBadRequest:
+			return map[string]any{"error": "Bad request: " + detail}
+		case http.StatusForbidden:
+			return map[string]any{"error": "Bot was blocked by the user or lacks permissions"}
+		case http.StatusNotFound:
+			return map[string]any{"error": "Chat not found"}
+		case http.StatusTooManyRequests:
+			return map[string]any{"error": "Rate limit exceeded. Try again later."}
+		}
+		return map[string]any{"error": fmt.Sprintf("Telegram API error (HTTP %d): %s", status, detail)}
+	case "trello_tool":
+		switch status {
+		case http.StatusUnauthorized:
+			return map[string]any{"error": "Invalid Trello API key or token"}
+		case http.StatusForbidden:
+			return map[string]any{"error": "Insufficient permissions. Check your Trello token scopes."}
+		case http.StatusNotFound:
+			return map[string]any{"error": "Resource not found"}
+		case http.StatusTooManyRequests:
+			return map[string]any{"error": "Trello rate limit exceeded. Try again later."}
+		}
+		detail, present := object["message"].(string)
+		if !present {
+			detail = text
+		}
+		return map[string]any{"error": fmt.Sprintf("Trello API error (HTTP %d): %s", status, detail)}
+	case "airtable_tool":
+		return map[string]any{"error": fmt.Sprintf("HTTP %d: %s", status, truncateRunes(text, 500))}
 	}
-	snippet := strings.TrimSpace(string(raw))
+	snippet := strings.TrimSpace(text)
 	if len(snippet) > 200 {
 		snippet = snippet[:200]
 	}
@@ -638,6 +711,18 @@ func providerError(tool *Tool, status int, parsed any, raw []byte) map[string]an
 		return map[string]any{"error": fmt.Sprintf("HTTP %d from %s", status, tool.DisplayName)}
 	}
 	return map[string]any{"error": fmt.Sprintf("HTTP %d: %s", status, snippet)}
+}
+
+// truncateRunes applies Python's text[:n] slice to a UTF-8 string.
+func truncateRunes(text string, limit int) string {
+	if limit <= 0 {
+		return ""
+	}
+	runes := []rune(text)
+	if len(runes) <= limit {
+		return text
+	}
+	return string(runes[:limit])
 }
 
 // shapeResponse applies the spec's envelope rules.
@@ -709,7 +794,9 @@ func flattenForm(values url.Values, prefix string, value any) {
 // slackErrorMessage mirrors the upstream human-readable error map.
 func slackErrorMessage(code string) string {
 	messages := map[string]string{
-		"channel_not_found": "Channel not found",
+		"invalid_auth":      "Invalid Slack bot token",
+		"token_revoked":     "Slack bot token has been revoked",
+		"channel_not_found": "Channel not found or bot is not a member",
 		"not_in_channel":    "Bot is not a member of this channel",
 		"is_archived":       "Channel is archived",
 		"msg_too_long":      "Message text is too long",

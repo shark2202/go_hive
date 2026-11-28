@@ -1,9 +1,9 @@
 {
- "wave": 84,
- "at": "2026-11-23 12:38",
- "head": "88f05ff7",
+ "wave": 95,
+ "at": "2026-11-25 18:47",
+ "head": "afa12eafe",
  "ci": 0,
- "qc": 0,
- "publish": 0,
- "note": "channels host stdio + docs merged; CI 0, QC 11/11, journey 6/6"
+ "qc": 9,
+ "publish": -1,
+ "note": "full make ci RC=0 at code HEAD afa12eafe; tests 6594/6594; parity refs 7640/0; compat 13/13; wiring 70/70; C12 225/27/9/12; C1-C13 PASS; QC 9/9; publish not run"
 }

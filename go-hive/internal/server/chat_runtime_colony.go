@@ -1,7 +1,7 @@
 package server
 
-// Colony binding for the chat runtime: attaching, inheriting and rebinding a
-// colony runtime. Split out of chat_runtime.go to keep that file inside the
+// Colony binding for the chat runtime: attaching and rebinding a colony
+// runtime. Split out of chat_runtime.go to keep that file inside the
 // repository's size budget (no behavior change).
 
 import (
@@ -33,42 +33,6 @@ func (r *ChatRuntime) BindColony(runtime ColonyRuntime) {
 	}
 }
 
-// configureCriteriaJudge arms the loop judge for a chat session whose
-// AgentSpec carries success criteria. No criteria (or no completer) leaves the
-// judge off, so an ordinary chat turn still costs exactly one model call.
-//
-// Parity: framework/agent_loop/internals/judge_pipeline.py::judge_turn
-func (r *ChatRuntime) configureCriteriaJudge() bool {
-	if r == nil || r.loop == nil || r.agentCtx == nil {
-		return false
-	}
-	return r.loop.ConfigureJudge(r.agentCtx.AgentSpec, r.deps.LLM, r.bus)
-}
-
-// inheritColonyCriteria gives a colony-bound queen the colony goal's criteria
-// when the session arrived without any of its own. A plain chat session has no
-// goal and keeps its judge off; a session created with a colony inherits the
-// criteria its workers are judged against, so the queen's turn is evaluated
-// the same way.
-//
-// Parity-exempt: Go-only inheritance seam. Upstream's queen spec carries an
-// empty success_criteria list; this port derives the paragraph from the
-// colony goal for a session bound to one.
-func (r *ChatRuntime) inheritColonyCriteria(concrete *colony.ColonyRuntime) {
-	if r == nil || r.agentCtx == nil || concrete == nil {
-		return
-	}
-	if agentloop.HasSuccessCriteria(r.agentCtx.AgentSpec) {
-		return
-	}
-	criteria := agentloop.GoalCriteriaText(concrete.Goal())
-	if criteria == nil {
-		return
-	}
-	r.agentCtx.AgentSpec.SuccessCriteria = criteria
-	r.configureCriteriaJudge()
-}
-
 // bindColony stores the concrete runtime and reports whether it changed.
 func (r *ChatRuntime) bindColony(concrete *colony.ColonyRuntime) bool {
 	r.colonyMu.Lock()
@@ -81,9 +45,6 @@ func (r *ChatRuntime) bindColony(concrete *colony.ColonyRuntime) bool {
 		r.colonyUnsub = nil
 	}
 	r.colonyRuntime = concrete
-	// The binding is the first point a create-with-colony session can see its
-	// goal, so the judge is armed here rather than waiting for a load pass.
-	r.inheritColonyCriteria(concrete)
 	if concrete == nil {
 		r.setBoundColonyID(nil)
 		return true

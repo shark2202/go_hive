@@ -160,8 +160,9 @@ func (r *ColonyRuntime) StopAllLiveWorkers() map[string]any {
 //
 // Dispatch stays blocked for the duration of the sweep so a concurrent queen
 // turn cannot start a worker that survives the stop. When blockDispatch is
-// true the block is held afterwards until UnblockDispatch (or the next spawn,
-// which is a new work request).
+// true the block is held afterwards until UnblockDispatch (the next user turn);
+// a spawn never re-opens it — SpawnBatch refuses while the gate is closed,
+// matching Python's _dispatch_blocked admission check.
 func (r *ColonyRuntime) StopWorkers(blockDispatch bool) (map[string]any, error) {
 	if r == nil {
 		return nil, errors.New("colony: nil colony runtime")
@@ -184,31 +185,46 @@ func (r *ColonyRuntime) stopWorkerSet(targets []*Worker) map[string]any {
 			continue
 		}
 		wasQueued := worker.Status() == WorkerQueued
-		if !r.StopWorker(worker.ID) {
+		stoppedWorker, cancelled := r.cancelWorker(worker.ID)
+		if !cancelled {
 			continue
 		}
 		if wasQueued {
 			queuedCancelled++
 		}
 		stopped = append(stopped, worker.ID)
-		waiting = append(waiting, worker)
+		waiting = append(waiting, stoppedWorker)
 	}
 
-	deadline := time.Now().Add(DefaultStopWorkersTimeout)
+	timeout := r.effectiveStopTimeout()
+	deadline := time.Now().Add(timeout)
 	for _, worker := range waiting {
 		remaining := time.Until(deadline)
 		if remaining <= 0 {
 			timedOut = append(timedOut, worker.ID)
+			r.forceStopWorker(worker, timeout)
 			continue
 		}
 		timer := time.NewTimer(remaining)
 		select {
 		case <-worker.Done():
 		case <-timer.C:
+			// A worker that swallowed the cancel is force-marked terminal,
+			// upstream's Worker.stop timeout branch: anything left
+			// non-terminal is an orphan the scheduler can still promote.
 			timedOut = append(timedOut, worker.ID)
+			r.forceStopWorker(worker, timeout)
 		}
 		timer.Stop()
 	}
+
+	// Release the stopped workers' browser tab groups once, concurrently,
+	// after the bounded wait — upstream's _reap_worker_browsers step. Doing it
+	// here (not per StopWorker) keeps an unresponsive bridge from multiplying
+	// its 5 s budget by the batch size.
+	//
+	// Parity: framework/host/colony_runtime.py::ColonyRuntime._reap_worker_browsers
+	r.reapWorkerBrowsers(waiting)
 
 	sort.Strings(stopped)
 	sort.Strings(timedOut)

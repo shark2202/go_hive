@@ -51,7 +51,7 @@
    `colonyPivotDismissMessage` (`routes_session_colony.go`) and clears the
    pivot, waking the parked turn.
 5. Accept: the frontend POSTs `/api/sessions` with `colony_id` +
-   `source_session_id`; see §4 for the current gap.
+   `source_session_id`; see §5 (Colony pivot accept) for the lean-handoff path.
 
 ## 2. Error texts (byte-exact)
 
@@ -119,8 +119,10 @@ Stashed payloads:
 | DM dismiss (normal chat message) | works |
 | Colony pivot dismiss route | works (`handleDismissColonyPivot`, pending pivot cleared) |
 | DM accept fork (`POST /api/sessions` + `source_session_id`) | fork exists; wake-up injection and `COLONY_CREATED` added here |
-| DM accept: compact source transcript into the queen seed | **not ported** — the colony is created from `initial_prompt`; the source conversation is not compacted |
-| Colony pivot accept (lean handoff: sibling colony seeded from `goal`/`handoff`/`tasks`, no compaction, no spawn lock) | **not implemented** — `CreateColonyFromSource` refuses with 501 after the pending-pivot check (409 when the pivot is missing) instead of routing the pivot through the DM fork |
+| DM accept: compact source transcript into the queen seed | **implemented** — `colony_fork_seed.go` copytree-merges the source queen session, rewrites `meta.json`, schedules a bounded background compaction into the colony's `seed_conversation`, and awaits the marker before opening the session; fail-soft to the raw copied transcript (`gap:dm_fork_seed_compaction` fixed, commit `2f73bbfd`) |
+| Colony pivot accept (lean handoff: sibling colony seeded from `goal`/`handoff`/`tasks`, no compaction, no spawn lock) | **implemented** — `colony_pivot_lean.go` creates the sibling colony, seeds the handoff-only queen transcript and the task plan, leaves the source colony live and unlocked, and wakes the source queen (`gap:colony_pivot_lean_handoff` fixed, commit `96e64c62`) |
+
+> 2026-11-24 更新：上述残余已在 `de827224` 修复。DM fork 的 `worker.json` 通过 `colony.BuildMeta` 继承 live queen 的 tool snapshot、phase-filtered skills catalog、protocols、skill dirs、loop_config、queen phase/id、tracker binding、searchable_tools 与 spawned_from/at；源会话 meta 写入 `agent_path`/`agent_name` 和 source binding/ColonyID；没有 live queen 时在创建 colony 目录前返回 503。`gap:dm_fork_worker_surface` 已标 fixed。
 
 ## 6. Tests
 
@@ -143,7 +145,9 @@ Stashed payloads:
 | `server/TestToolsForTurnAdvertisesSuggestColonyOnlyInIndependentPhase` | `_phase_tools` |
 | `cli/TestEnableColonyTaskPivotAdvertisesNewColonyAndStubRefusesExecution` | `_request_new_colony_with_plan`, `PivotHandler` |
 | `cli/TestCreateColonyFromSourceWakesSourceQueenAndPublishesColonyCreated` | `_inject_colony_confirmation`, `COLONY_CREATED` |
-| `cli/TestCreateColonyFromSourceRefusesColonyPivotAcceptPath` | `_create_colony_from_source` phase branches |
+| `cli/TestCreateColonyFromSourceCopiesQueenSessionAndRewritesMeta` | `fork_session_into_colony` (copytree + meta) |
+| `cli/TestCreateColonyFromSourceAwaitsCompactionBeforeInitialPrompt` | `fork_session_into_colony` (compaction await) |
+| `cli/TestCreateColonyFromSourceSpawnsLeanHandoffSibling` | `_create_sibling_colony_from_colony` (lean handoff) |
 
 ## 7. Gates
 

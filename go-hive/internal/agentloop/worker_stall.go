@@ -125,6 +125,11 @@ func (l *AgentLoop) workerStallKindFor(agentCtx *AgentContext) workerStallKind {
 // Parity: framework/agent_loop/agent_loop.py::_run_turn_loop (6h then 6i)
 // Parity: framework/agent_loop/agent_loop.py::execute (llm_turn_complete after _run_turn_loop)
 func (l *AgentLoop) settleTextOnlyTurn(ctx context.Context, agentCtx *AgentContext, conv *NodeConversation, reminderCtx *ReminderAgentContext, messages []map[string]any, completion llm.Completion, inner int, tools []llm.ToolDef, result *TurnResult, iterStart time.Time) (done bool, err error) {
+	// A text-only turn breaks both repetition chains. Upstream's 6f' clears
+	// recent_tool_fingerprints in the empty-batch branch; the per-call port
+	// guard restarts from this turn too so a text interlude is real progress.
+	l.DoomLoop.Reset()
+	l.clearDoomWindow(conv)
 	if agentCtx.Observer != nil {
 		agentCtx.Observer.LLMTurnComplete(completion, inner+1)
 	}
@@ -149,7 +154,11 @@ func (l *AgentLoop) settleTextOnlyTurn(ctx context.Context, agentCtx *AgentConte
 	result.FinalText = completion.Content
 	result.InnerTurns = inner + 1
 	if l.shouldJudge(agentCtx, inner, true, false) {
-		verdict, judgeErr := l.evaluateJudge(ctx, agentCtx, conv, completion.Content, result.ToolResults, inner)
+		// A text-only turn has no tool results of its own. Upstream's judge
+		// receives the current iteration's real_tool_results, so passing the
+		// accumulated turn history here would make the implicit Level 2 gate
+		// see a tool-continue and skip the output-key check forever.
+		verdict, judgeErr := l.evaluateJudge(ctx, agentCtx, conv, completion.Content, nil, inner)
 		if judgeErr != nil {
 			// Parity: framework/agent_loop/agent_loop.py::_judge_turn — a
 			// non-transient judge failure ends the turn with that error.
@@ -190,6 +199,9 @@ func (l *AgentLoop) settleTextOnlyTurn(ctx context.Context, agentCtx *AgentConte
 			result.Success = false
 			return true, fmt.Errorf("agent loop: judge escalated: %s", verdict.Feedback)
 		default:
+			if verdict.Silent {
+				return false, nil
+			}
 			if err := injectJudgeFeedback(conv, verdict); err != nil {
 				result.Success = false
 				return true, err

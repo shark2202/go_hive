@@ -97,8 +97,11 @@ func NotesCachePath(cfg NotesConfig, questionID string) string {
 
 // BuildNotesForHome equips homeRoot with the item's memory notes: it copies
 // the question's cache when one exists and otherwise reflects on each seeded
-// session (oldest first) and caches the result. It is the Go side of
-// HIVE_LME_NOTES=1 and the build step the runner performs before asking.
+// session (oldest first) and caches the result. Each reflection replays as if
+// its session had just ended at the session's haystack date, so the notes it
+// writes are stamped with that day instead of the wall clock's. It is the Go
+// side of HIVE_LME_NOTES=1 and the build step the runner performs before
+// asking.
 func BuildNotesForHome(ctx context.Context, cfg NotesConfig, homeRoot string, item Item) (NotesResult, error) {
 	if cfg.Writer == nil {
 		return NotesResult{}, fmt.Errorf("notes %s: no notes model configured", item.QuestionID)
@@ -140,13 +143,20 @@ func BuildNotesForHome(ctx context.Context, cfg NotesConfig, homeRoot string, it
 	}
 	system := memory.BuildUnifiedShortReflectSystem(cfg.QueenID)
 	order := notesSessionOrder(item)
+	times := notesSessionTimes(item)
 	failed := 0
 	for _, index := range order {
-		userMsg, ok := notesReflectionMessage(item, index)
+		// A replay reflects as if the session had just ended at its own
+		// haystack date (upstream passes now=parse_date(date)), so the
+		// notes it writes carry that day's learned/confirmed dates rather
+		// than the wall clock's. A date that doesn't parse stays zero and
+		// keeps the live clock.
+		when := times[index]
+		userMsg, ok := notesReflectionMessage(item, index, when)
 		if !ok {
 			continue
 		}
-		result := memory.ReflectionLoop(ctx, cfg.Writer, system, userMsg, dirs, maxTurns, maxTokens, cfg.QueenID)
+		result := memory.ReflectionLoopAt(ctx, cfg.Writer, system, userMsg, dirs, maxTurns, maxTokens, cfg.QueenID, when)
 		if !result.Success {
 			// Upstream's reflection returns without raising when one call
 			// fails; the session's notes are lost, the question continues.
@@ -167,6 +177,19 @@ func BuildNotesForHome(ctx context.Context, cfg NotesConfig, homeRoot string, it
 	return NotesResult{Count: count, Cached: false, Failed: failed}, nil
 }
 
+// notesSessionTimes parses each haystack session's date: the "now" a replay of
+// that session reflects as of, and the sort key for oldest first. A date that
+// doesn't parse stays zero, which keeps the wall clock.
+func notesSessionTimes(item Item) []time.Time {
+	times := make([]time.Time, len(item.HaystackDates))
+	for i, raw := range item.HaystackDates {
+		if parsed, err := ParseDate(raw); err == nil {
+			times[i] = parsed
+		}
+	}
+	return times
+}
+
 // notesSessionOrder sorts the haystack sessions oldest first, the order a
 // session's reflection would have run in history.
 func notesSessionOrder(item Item) []int {
@@ -174,14 +197,7 @@ func notesSessionOrder(item Item) []int {
 	for i := range order {
 		order[i] = i
 	}
-	dates := make([]time.Time, len(item.HaystackDates))
-	for i, raw := range item.HaystackDates {
-		parsed, err := ParseDate(raw)
-		if err != nil {
-			parsed = time.Time{}
-		}
-		dates[i] = parsed
-	}
+	dates := notesSessionTimes(item)
 	sort.SliceStable(order, func(a, b int) bool { return dates[order[a]].Before(dates[order[b]]) })
 	return order
 }
@@ -190,8 +206,9 @@ func notesSessionOrder(item Item) []int {
 // upstream's reflection_agent._reflect_on does: the last 50 non-empty
 // messages, "[user]: " / "[assistant]: " transcript lines capped at 800
 // characters each, headed by the full message count and stamped with the
-// session's own date.
-func notesReflectionMessage(item Item, index int) (string, bool) {
+// session's own date (when the replay supplies one; a zero when keeps the
+// live clock, as upstream's now=None does).
+func notesReflectionMessage(item Item, index int, when time.Time) (string, bool) {
 	turns := item.HaystackSessions[index]
 	messages := make([]Turn, 0, len(turns))
 	for _, turn := range turns {
@@ -225,10 +242,11 @@ func notesReflectionMessage(item Item, index int) (string, bool) {
 	if len(lines) == 0 {
 		return "", false
 	}
-	stamp := time.Now().Format("2006-01-02T15:04")
-	if parsed, err := ParseDate(item.HaystackDates[index]); err == nil {
-		stamp = parsed.Format("2006-01-02T15:04")
+	stampTime := when
+	if stampTime.IsZero() {
+		stampTime = time.Now()
 	}
+	stamp := stampTime.Format("2006-01-02T15:04")
 	userMsg := fmt.Sprintf("## Recent conversation (%d messages total)\n\n%s\n\nTimestamp: %s",
 		len(messages), strings.Join(lines, "\n"), stamp)
 	return userMsg, true

@@ -130,3 +130,71 @@ func TestDenyListBool(t *testing.T) {
 		t.Fatal("DenyListBool(blank) should fall through to the default")
 	}
 }
+
+// unsetEnv clears name for the test and restores it afterwards.
+func unsetEnv(t *testing.T, name string) {
+	t.Helper()
+	t.Setenv(name, "")
+	if err := os.Unsetenv(name); err != nil {
+		t.Fatalf("unsetenv %s: %v", name, err)
+	}
+}
+
+// Parity: core/tests/test_python_env.py::test_only_the_launchers_pythonhome_is_dropped
+func TestDropsOnlyTheLaunchersPythonHome(t *testing.T) {
+	const home = `C:\Python\cpython-3.11`
+	cases := []struct {
+		name      string
+		setHome   bool
+		home      string
+		setMarker bool
+		marker    string
+		dropped   bool
+	}{
+		{name: "launcher pair dropped", setHome: true, home: home, setMarker: true, marker: home, dropped: true},
+		{name: "user set without marker kept", setHome: true, home: home},
+		{name: "marker for another value kept", setHome: true, home: home, setMarker: true, marker: `C:\other`},
+		{name: "unset is a no-op"},
+	}
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			if testCase.setHome {
+				t.Setenv("PYTHONHOME", testCase.home)
+			} else {
+				unsetEnv(t, "PYTHONHOME")
+			}
+			if testCase.setMarker {
+				t.Setenv("UV_INTERNAL__PYTHONHOME", testCase.marker)
+			} else {
+				unsetEnv(t, "UV_INTERNAL__PYTHONHOME")
+			}
+
+			if got := DropLauncherPythonHome(); got != testCase.dropped {
+				t.Fatalf("DropLauncherPythonHome() = %v, want %v", got, testCase.dropped)
+			}
+			if testCase.dropped {
+				if _, ok := os.LookupEnv("PYTHONHOME"); ok {
+					t.Fatal("PYTHONHOME still set after the launcher pair was dropped")
+				}
+				if _, ok := os.LookupEnv("UV_INTERNAL__PYTHONHOME"); ok {
+					t.Fatal("UV_INTERNAL__PYTHONHOME still set after the launcher pair was dropped")
+				}
+				// A second call has nothing left to drop: the cleanup is idempotent.
+				if DropLauncherPythonHome() {
+					t.Fatal("second DropLauncherPythonHome() = true, want false")
+				}
+				return
+			}
+			if testCase.setHome {
+				if got := os.Getenv("PYTHONHOME"); got != testCase.home {
+					t.Fatalf("PYTHONHOME = %q, want the user's %q", got, testCase.home)
+				}
+			}
+			if testCase.setMarker {
+				if got := os.Getenv("UV_INTERNAL__PYTHONHOME"); got != testCase.marker {
+					t.Fatalf("UV_INTERNAL__PYTHONHOME = %q, want %q", got, testCase.marker)
+				}
+			}
+		})
+	}
+}

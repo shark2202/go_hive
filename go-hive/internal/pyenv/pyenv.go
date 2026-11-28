@@ -33,6 +33,33 @@ import (
 	"strings"
 )
 
+// uvPythonHomeMarker is the variable uv's Windows launcher writes beside
+// PYTHONHOME so an interpreter can tell the value its launcher set from one the
+// user set (astral-sh/uv#17821, until #19199 stopped writing it).
+const uvPythonHomeMarker = "UV_INTERNAL__PYTHONHOME"
+
+// DropLauncherPythonHome removes the PYTHONHOME uv's launcher set for this
+// interpreter, and the marker that identifies it. Every process Hive starts
+// inherits that value; an MCP server uvx runs on another Python version then
+// loads this interpreter's standard library and dies at import
+// (AssertionError: SRE module mismatch). A PYTHONHOME the user set is kept.
+//
+// It is called once before Hive starts any child process, matching upstream's
+// framework/cli.py::main call to core/framework/utils/python_env.py.
+//
+// Returns whether it removed anything.
+//
+// Parity: framework/utils/python_env.py::drop_launcher_pythonhome
+func DropLauncherPythonHome() bool {
+	home, ok := os.LookupEnv("PYTHONHOME")
+	if !ok || os.Getenv(uvPythonHomeMarker) != home {
+		return false
+	}
+	os.Unsetenv("PYTHONHOME")
+	os.Unsetenv(uvPythonHomeMarker)
+	return true
+}
+
 // Int mirrors Python int(os.environ.get(name, str(def))).
 func Int(name string, def int) int {
 	raw, ok := os.LookupEnv(name)

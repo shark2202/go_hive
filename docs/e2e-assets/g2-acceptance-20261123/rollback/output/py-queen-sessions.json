@@ -1,0 +1,14 @@
+[
+  {
+    "session_id": "session_20260201_000001_bbbbbbbb",
+    "phase": "?",
+    "agent_path": "",
+    "colony_fork": false
+  },
+  {
+    "session_id": "session_compat_probe_go",
+    "phase": "?",
+    "agent_path": "",
+    "colony_fork": false
+  }
+]

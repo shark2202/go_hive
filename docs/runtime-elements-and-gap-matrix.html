@@ -108,9 +108,9 @@ The Queen IS an agent loop. Every worker is a CLONE of that same loop.</pre>
 <tr><td><b>ParkReason（11）</b></td><td>声明「我为什么停下」，并提供三个消费视图</td><td>单个 <code>awaiting_input</code> 布尔分不清「正常等待」和「卡死」</td><td><code>agent_loop/reminders.py</code> / <code>agentloop/park_reason.go</code></td></tr>
 <tr><td><b>LoopActivity（3）</b></td><td>顶层三态 EXECUTING / AWAITING_USER / INTERRUPTED</td><td>散落事件无法汇总成「它现在在干嘛」</td><td>同上</td></tr>
 <tr><td><b>InterruptCause（3）</b></td><td>非 park 的中断：STREAM_STALL / CRASHED / STALE</td><td>崩溃、卡流、失联没有 ParkReason 可挂</td><td>同上</td></tr>
-<tr><td><b>doom-loop 检测</b></td><td>连续相同工具调用 → 警告 → park</td><td>模型对同一个错误反复开枪</td><td><code>internals/stall_detector.py</code> / <code>agentloop/doom_loop.go</code></td></tr>
+<tr><td><b>doom-loop 检测</b></td><td>连续相同工具调用 → 警告 → park；回复相似度另由 n-gram 守卫判停滞</td><td>模型对同一个错误反复开枪</td><td><code>internals/stall_detector.py</code> / <code>agentloop/doom_loop.go</code> + <code>agentloop/stall_detector.go</code></td></tr>
 <tr><td><b>replay breaker</b> <span class="pill bad">Go 缺</span></td><td>拒绝执行 + stub 同批兄弟调用（防悬空 <code>tool_use</code>）</td><td>重复调用产生 N 倍副作用</td><td><code>agent_loop.py:6417</code> / —</td></tr>
-<tr><td><b>n-gram stall</b> <span class="pill bad">Go 缺</span></td><td>回复互相似 → 判停滞（2-gram Jaccard，阈值 3）</td><td>「I'm still stuck」死循环</td><td><code>internals/stall_detector.py</code> / —</td></tr>
+<tr><td><b>n-gram stall</b> <span class="pill ok">Go 已有</span></td><td>回复互相似 → 判停滞（2-gram Jaccard，阈值 3）</td><td>「I'm still stuck」死循环</td><td><code>internals/stall_detector.py</code> / <code>agentloop/stall_detector.go</code></td></tr>
 <tr><td><b>stall_check</b></td><td>LLM 判「说要做却没做」</td><td>宣称动手、实际结束回合</td><td><code>server/stall_check.py</code> / <code>server/stall_check.go</code></td></tr>
 <tr><td><b>worker text-only stall</b></td><td>连续 N 轮只说话不调工具 → 自动失败/升级</td><td>worker 静默空转</td><td><code>host/colony_runtime.py</code> / <code>agentloop/worker_stall.go</code></td></tr>
 <tr><td><b>stream watchdog</b></td><td>TTFT / 事件间隔超时 → 取消该流并重流同一轮</td><td>通道卡死（非模型问题）</td><td><code>agent_loop/stream_stall.py</code> / <code>agentloop/stream_stall.go</code></td></tr>
@@ -149,7 +149,7 @@ The Queen IS an agent loop. Every worker is a CLONE of that same loop.</pre>
 <tr><td class="num">4</td><td>doom loop</td><td>连续 N 轮<b>工具集完全相同</b>（turn 级指纹，顺序敏感）</td><td>纯函数</td><td>发布 <code>NODE_TOOL_DOOM_LOOP</code>；可 park（<code>ParkReason.DOOM_LOOP</code>）</td></tr>
 <tr><td class="num">5</td><td>worker text-only stall</td><td>worker 连续 N 轮<b>只说话不调工具</b></td><td>确定性</td><td>并行 worker → 合成 <code>report_to_parent(failed)</code> 终止；legacy worker → <code>ESCALATION_REQUESTED</code> 等 Queen</td></tr>
 </tbody></table></div>
-<p class="sub">Go 侧现状：1 中 <code>stream_stall</code>、2、5 均已移植；3 <b>欠缺</b>（全仓 <code>ngram|jaccard</code> 命中 0）；4 有，但粒度为<b>单调用 streak</b>（warn 3 / park 5）而非 turn 级指纹窗口，且无 <code>replay_exempt_tools</code> 豁免表。见 <a href="#matrix">§07 P0</a>。</p>
+<p class="sub">Go 侧现状：1 中 <code>stream_stall</code>、2、3、5 均已移植；3 走 <code>agentloop/stall_detector.go</code>（<code>NgramSimilarity</code> / <code>IsResponseStalled</code>）并已接线 <code>ExecuteTurn</code> 6f；4 有，但粒度为<b>单调用 streak</b>（warn 3 / park 5）而非 turn 级指纹窗口，且无 <code>replay_exempt_tools</code> 豁免表。见 <a href="#matrix">§07 P0</a>。</p>
 
 <h3 id="park">4.2 族二：长会话会失忆、会漂移 → park 11 值 + reminder + compaction</h3>
 <p>单个 <code>awaiting_input</code> 布尔有两个盲点：分不清「正常等待」与「卡死」；分不清「用户自己按了停」与「崩了」。于是每个 <code>_await_user_input</code> 调用点必须声明原因，并用三个视图收敛给消费者用：</p>
@@ -269,7 +269,7 @@ Sentinel 判断：推一把 / 收工 / 升级给你
 <tr><td class="num">A3</td><td><b>doom-loop 粒度</b></td><td><code>DoomLoopDetector.Observe(name, input)</code>：单<b>调用</b> streak（warn 3 / park 5）</td><td>turn 级指纹窗口（<code>tool_doom_loop_threshold=3</code>，整个 turn 的工具集比对，顺序敏感）</td><td>交替 <code>A,B,A,B</code> <b>永不命中</b>；单 turn 内连发 3 次<b>误命中</b></td><td>中</td></tr>
 <tr><td class="num">A4</td><td><b>judge Level 2 隐式门</b></td><td><code>grep "Task incomplete\|No output keys have been set"</code> = <b>0</b>；<code>shouldJudge</code> 要求 <code>hasSuccessCriteria</code></td><td>有 <code>output_keys</code> 就检查 <code>missing_keys</code> → RETRY <code>"Task incomplete. Required outputs not yet produced: {missing}..."</code>；全 nullable 未设 → 另一条 RETRY</td><td><b><code>output_keys</code> 契约在 Go 里失效</b>：该被逼调 <code>set_output</code> 的回合直接判成功</td><td>中</td></tr>
 <tr><td class="num">A5</td><td>judge Level 0</td><td><code>SkipJudge → false</code></td><td><code>skip_judge → RETRY(feedback=None)</code>，<b>不写进对话</b></td><td>少一次 no-log 判定；影响 runtime log 与对话洁净度</td><td>小</td></tr>
-<tr><td class="num">A6</td><td><b>n-gram 停滞检测</b></td><td><code>grep -rni "ngram\|jaccard"</code> = <b>0</b></td><td><code>ngram_similarity</code> + <code>is_stalled</code>（阈值 3），命中即 <code>_publish_stalled</code> + continue</td><td>复读同一句话不触发停滞，只能等 judge 花一次 LLM 调用</td><td>小</td></tr>
+<tr><td class="num">A6</td><td><b>n-gram 停滞检测</b></td><td><code>stall_detector.go</code> 的 `NgramSimilarity` / `IsResponseStalled` 已接线 `ExecuteTurn` 6f</td><td><code>ngram_similarity</code> + <code>is_stalled</code>（阈值 3），命中即 <code>_publish_stalled</code> + continue</td><td>已移植；工具指纹那半仍有 warn/escalate/park 语义差</td><td>已完成 n-gram</td></tr>
 <tr><td class="num">A7</td><td>SubagentJudge 分层</td><td>无</td><td><code>remaining≤3</code> → URGENT / <code>≤max/2</code> → WARNING / 否则普通</td><td>子代理只见平铺缺键提示</td><td>裁决</td></tr>
 </tbody></table></div>
 
@@ -311,7 +311,7 @@ Sentinel 判断：推一把 / 收工 / 升级给你
 <tr><td><code>internal/memory/memory.go</code></td><td><code>agents/queen/queen_memory_v2.py</code>（13/13）</td></tr>
 <tr><td><code>internal/agentloop/memory_reminders.go</code></td><td><code>agent_loop/memory_reminders.py</code>（2/2，<b>同名文件</b>）</td></tr>
 <tr><td><code>internal/tools/coerce.go</code></td><td><code>agent_loop/internals/tool_input_coercer.py</code></td></tr>
-<tr><td><code>internal/colony/worker_doom_loop.go</code> + <code>server/chat_loop_guards.go</code></td><td><code>agent_loop/internals/stall_detector.py</code>（行为在）</td></tr>
+<tr><td><code>internal/agentloop/stall_detector.go</code> + <code>internal/agentloop/doom_loop.go</code> + <code>internal/colony/worker_doom_loop.go</code> + <code>server/chat_loop_guards.go</code></td><td><code>agent_loop/internals/stall_detector.py</code>（n-gram 与工具指纹均已接线；指纹 warn/escalate/park 仍 partial）</td></tr>
 <tr><td><code>internal/skills/errors.go</code></td><td><code>skills/skill_errors.py</code>（3/3）</td></tr>
 <tr><td><code>internal/credentials/keys.go</code></td><td><code>credentials/key_storage.py</code>（3/6）</td></tr>
 <tr><td><code>internal/tools/integrationkit/oauth.go</code></td><td><code>credentials/oauth2/{base_provider,lifecycle}.py</code>（Go 注释直引 <code>BaseOAuth2Provider</code>）</td></tr>
@@ -401,7 +401,7 @@ Sentinel 判断：推一把 / 收工 / 升级给你
 <section id="order"><h2><span class="num">08</span>建议执行顺序</h2>
 <div class="tablewrap"><table><thead><tr><th style="width:12%">批次</th><th style="width:26%">做什么</th><th>为什么这个顺序</th></tr></thead><tbody>
 <tr><td><b>第一批<br>修口径</b></td><td>F1（给 <code>unported</code> 加反向复验）→ P2-C 16 条改判 <code>ported</code>；P2-D 7 条改判 <code>out_of_scope</code>；F2 复采终端契约；F3 给快照加落后笔数；F5 清陈旧数字</td><td>几乎零代码改动，却让 <code>unported</code> 从 <b>51 → 约 19–28</b>。做完这一步，缺口清单第一次可信——否则后面所有排期都建立在错清单上</td></tr>
-<tr><td><b>第二批<br>修控制流</b></td><td>A1 豁免表 → A6 n-gram → A5/A4 judge Level 0/2 → A3 doom-loop 粒度 → A2 breaker</td><td>都是小改动但影响大：A1 会<b>误伤正常轮询</b>（唯一会让生产出现用户可见故障的一条）；A4 让 <code>output_keys</code> 契约失效</td></tr>
+<tr><td><b>第二批<br>修控制流</b></td><td>A1 豁免表 → A6 n-gram（已完成） → A5/A4 judge Level 0/2 → A3 doom-loop 粒度 → A2 breaker</td><td>都是小改动但影响大：A1 会<b>误伤正常轮询</b>（唯一会让生产出现用户可见故障的一条）；A4 让 <code>output_keys</code> 契约失效</td></tr>
 <tr><td><b>第三批<br>对外面与安全</b></td><td>B4 <code>exa_search</code> 收敛 → B5 <code>attach_file</code> 多模态 → D3 升 Go 工具链重建</td><td>D3 是唯一红灯，零代码改动，但必须先于任何公网暴露</td></tr>
 <tr><td><b>第四批<br>缺口补齐</b></td><td>C1 decision_tracker → C2/C3 pipeline 配置面 → C9 global_db CLI → C10 isolation → C5–C8 credentials → C4 GA 迁移 → C12 sentinel 工具面</td><td>按上游调用方权重排序：有生产调用方的先做</td></tr>
 </tbody></table></div>
@@ -425,7 +425,7 @@ Sentinel 判断：推一把 / 收工 / 升级给你
 grep -rn "ReplayExempt\|replay_exempt" --include=*.go . | wc -l                    # 现在 0  → A1
 grep -rni "replayBreaker\|_trip_replay\|replayDetector" --include=*.go . | wc -l  # 现在 0  → A2
 grep -rn "Task incomplete\|No output keys have been set" --include=*.go . | wc -l  # 现在 0  → A4
-grep -rni "ngram\|jaccard" --include=*.go . | wc -l                                # 现在 0  → A6
+go test ./internal/agentloop -run 'TestNgramSimilarity|TestIsResponseStalled|TestResponseStall' -count=1  # A6 已移植
 grep -n "func (d \*DoomLoopDetector) Observe" internal/agentloop/doom_loop.go      # 单调用 streak → A3
 
 # —— P0：孤岛（safe_eval / validator）确认 ——

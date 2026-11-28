@@ -31,7 +31,7 @@
       "go_emitter": true,
       "id": "event:client_input_received",
       "name": "client_input_received",
-      "notes": "all three layers present; emitter sites=2; frontend refs=9",
+      "notes": "all three layers present; emitter sites=3; frontend refs=9",
       "owner": "eventbus",
       "status": "ported",
       "upstream_anchor": "core/framework/host/event_bus.py:153 (CLIENT_INPUT_RECEIVED)"
@@ -74,7 +74,7 @@
     },
     {
       "frontend_handler": true,
-      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:103 (const); go_hive/go-hive/internal/cli/loader.go:1004 (emitter); go_hive/go-hive/frontend/src/api/types.ts:289 (frontend)",
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:103 (const); go_hive/go-hive/internal/cli/loader.go:874 (emitter); go_hive/go-hive/frontend/src/api/types.ts:289 (frontend)",
       "go_const": true,
       "go_emitter": true,
       "id": "event:colony_created",
@@ -374,7 +374,7 @@
     },
     {
       "frontend_handler": true,
-      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:124 (const); go_hive/go-hive/frontend/src/pages/colony-chat.tsx:2281 (frontend)",
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:124 (const); go_hive/go-hive/frontend/src/pages/colony-chat.tsx:2327 (frontend)",
       "go_const": true,
       "go_emitter": false,
       "id": "event:missed_triggers",
@@ -530,7 +530,7 @@
     },
     {
       "frontend_handler": true,
-      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:107 (const); go_hive/go-hive/internal/server/session_fork_handoff.go:274 (emitter); go_hive/go-hive/frontend/src/api/types.ts:314 (frontend)",
+      "go_anchor": "go_hive/go-hive/internal/eventbus/event_type.go:107 (const); go_hive/go-hive/internal/server/session_fork_handoff.go:284 (emitter); go_hive/go-hive/frontend/src/api/types.ts:314 (frontend)",
       "go_const": true,
       "go_emitter": true,
       "id": "event:session_forked",
@@ -943,7 +943,7 @@
       "go_anchor": "go_hive/go-hive/internal/cli/session_tools_task_pivot.go:101",
       "id": "gap:task_create_new_colony_pivot",
       "lane": "colony-suggestion-dispatch",
-      "notes": "The colony phase now exposes new_colony and the agentloop intercept/pending-pivot/event path landed. The lean-handoff accept endpoint is still 501 (separate open gap).",
+      "notes": "The colony phase now exposes new_colony and the agentloop intercept/pending-pivot/event path landed. The lean-handoff accept endpoint landed in colony_pivot_lean.go (gap:colony_pivot_lean_handoff is fixed).",
       "owner": "tasks",
       "status": "fixed",
       "tests": "internal/cli/colony_pivot_accept_test.go; internal/agentloop/colony_dispatch_test.go",
@@ -951,28 +951,40 @@
       "upstream_anchor": "core/framework/server/queen_orchestrator.py:929"
     },
     {
-      "commit": "",
-      "go_anchor": "go_hive/go-hive/internal/cli/loader.go:895",
+      "commit": "96e64c62",
+      "go_anchor": "go_hive/go-hive/internal/cli/colony_pivot_lean.go:49",
       "id": "gap:colony_pivot_lean_handoff",
       "lane": "",
-      "notes": "Accepting a colony-phase pivot currently returns 501. Upstream builds a sibling colony from goal/handoff/tasks, with no transcript copy, no compaction and no spawn lock.",
+      "notes": "Accepting a colony-phase pivot creates a sibling colony from goal/handoff/tasks: fresh queen session seeded with the handoff brief only, plan seeded before the session opens, no transcript copy, no compaction, source colony stays live and unlocked. The HTTP test asserts 201, handoff-only transcript, seeded plan, COLONY_CREATED skipped/colony and pivot cleared.",
       "owner": "server",
-      "status": "open",
-      "tests": "internal/cli/colony_pivot_accept_test.go::TestCreateColonyFromSourceRefusesColonyPivotAcceptPath",
-      "title": "colony pivot accept (lean-handoff sibling colony) is not implemented",
+      "status": "fixed",
+      "tests": "internal/cli/colony_pivot_accept_test.go::TestCreateColonyFromSourceSpawnsLeanHandoffSibling",
+      "title": "colony pivot accept (lean-handoff sibling colony) implemented",
       "upstream_anchor": "core/framework/server/routes_sessions.py:494"
     },
     {
-      "commit": "",
-      "go_anchor": "go_hive/go-hive/internal/cli/colony_worker_definition.go:31",
+      "commit": "2f73bbfd",
+      "go_anchor": "go_hive/go-hive/internal/cli/colony_fork_seed.go:76",
       "id": "gap:dm_fork_seed_compaction",
       "lane": "",
-      "notes": "Go creates metadata/worker.json and a fresh colony session only; upstream copytree's the queen session and schedules a background compaction into an inherited seed. Memories are not copied on either side (queen-scope memories stay shared).",
+      "notes": "The DM fork copytree-merges the queen session into a fresh colony session dir, rewrites meta.json, schedules a bounded background compaction into the colony's seed conversation and awaits the marker before opening the session; every stage is fail-soft to the raw copied transcript. Memories are not copied on either side (queen-scope memories stay shared).",
       "owner": "server",
-      "status": "open",
-      "tests": "internal/cli/colony_pivot_accept_test.go::TestCreateColonyFromSourceWakesSourceQueenAndPublishesColonyCreated",
-      "title": "DM fork into a colony does not copy/compact the source session",
+      "status": "fixed",
+      "tests": "internal/cli/colony_fork_seed_test.go::TestCreateColonyFromSourceCopiesQueenSessionAndRewritesMeta; internal/cli/colony_fork_seed_test.go::TestCreateColonyFromSourceAwaitsCompactionBeforeInitialPrompt",
+      "title": "DM fork into a colony copies and compacts the source session",
       "upstream_anchor": "core/framework/server/routes_execution.py:2105"
+    },
+    {
+      "commit": "de827224",
+      "go_anchor": "go_hive/go-hive/internal/cli/colony_worker_definition.go:38",
+      "id": "gap:dm_fork_worker_surface",
+      "lane": "",
+      "notes": "fork_session_into_colony now refuses a source without a queen executor or registered queen node with a 503 before the colony directory is created. writeColonyFromSession snapshots the live queen surface into worker.json: tool snapshot, rendered skills catalog filtered for her phase, protocols prompt, allowlisted skill dirs, loop config, queen phase/id, tracker binding in input_data, and the handoff goal. The fork also persists source provenance (agent_path/agent_name, spawn lock, colony binding on the source record) and metadata.json source_session_id/worker spawned_at.",
+      "owner": "server",
+      "status": "fixed",
+      "tests": "internal/cli/colony_fork_worker_surface_test.go::TestCreateColonyFromSourceDMForkWritesLiveQueenSurface; internal/cli/colony_fork_worker_surface_test.go::TestCreateColonyFromSourceDMFWritesForkMetadata; internal/cli/colony_fork_worker_surface_test.go::TestCreateColonyFromSourceDMFPersistsSourceProvenance; internal/cli/colony_fork_worker_surface_test.go::TestCreateColonyFromSourceDMForkRequiresLiveQueen; internal/cli/colony_fork_seed_test.go::TestCreateColonyFromSourceCopiesQueenSessionAndRewritesMeta; internal/cli/colony_fork_seed_test.go::TestCreateColonyFromSourceAwaitsCompactionBeforeInitialPrompt",
+      "title": "DM fork worker.json inherits the live queen surface",
+      "upstream_anchor": "core/framework/agents/queen/worker_definition.py:292"
     },
     {
       "commit": "f18d9e23 (merge 22170ab2)",
@@ -1011,20 +1023,32 @@
       "upstream_anchor": "core/framework/agents/queen/reflection_agent.py:1017"
     },
     {
+      "commit": "4f054249 (merge af771897)",
+      "go_anchor": "go_hive/go-hive/internal/credentials/aden_client.go:361",
+      "id": "gap:credentials_aden_client",
+      "lane": "",
+      "notes": "AdenCredentialClient ports the Aden platform endpoints over Bearer auth: list integrations, get credential (auto-refresh), request refresh and validate token, plus health/close. It keeps upstream's config/env resolution, retry/backoff on connection and 5xx failures, and typed auth/not-found/refresh/rate-limit errors. Production call sites are unchanged: agent_validation.go still records the Aden token pre-sync as a no-op, so this gap covers the client port only.",
+      "owner": "credentials",
+      "status": "fixed",
+      "tests": "internal/credentials/aden_client_test.go::TestAdenListIntegrations; internal/credentials/aden_client_test.go::TestAdenGetCredential; internal/credentials/aden_client_test.go::TestAdenRequestRefresh; internal/credentials/aden_client_test.go::TestAdenValidateToken; internal/credentials/aden_client_test.go::TestAdenHealthCheck; internal/credentials/aden_client_test.go::TestAdenAuthenticationError; internal/credentials/aden_client_test.go::TestAdenRateLimitError; internal/credentials/aden_client_test.go::TestAdenRefreshError; internal/credentials/aden_client_test.go::TestAdenRetriesOnConnectionFailure",
+      "title": "Aden credential HTTP client is ported",
+      "upstream_anchor": "core/framework/credentials/aden/client.py:235"
+    },
+    {
       "commit": "",
-      "go_anchor": "go_hive/go-hive/internal/server/routes_memories_extra.go:19",
+      "go_anchor": "go_hive/go-hive/internal/server/routes_memories_extra.go:20",
       "id": "gap:memory_cloud_sync_schedule_push",
       "lane": "",
-      "notes": "Go MemoryRouteDeps only carries Home; no SchedulePush seam and no cloud-sync implementation is wired. Upstream only pushes global/ and agents/queens/ paths via _maybe_sync_memory.",
+      "notes": "Reference baseline 6703b434 contains only core/framework/cloud_sync_hooks.py: core/framework/cloud_sync.py is absent (git cat-file -e exits 128) and no reachable commit ever added it. schedule_push imports framework.cloud_sync inside its try block, so the missing module raises ModuleNotFoundError and is swallowed by `except Exception`, returning before _safe_push is ever scheduled. The hook is therefore an observable no-op in the frozen baseline, and Go's nil MemoryRouteDeps.SchedulePush in internal/server/app.go is behaviorally equivalent. No cloud-sync scheduler/uploader was implemented; the hook could only do work if a deployed Python package supplied framework.cloud_sync outside this repo.",
       "owner": "memory",
-      "status": "open",
+      "status": "fixed",
       "tests": "",
-      "title": "memory routes do not schedule a cloud-sync push",
+      "title": "memory cloud-sync schedule_push is a no-op in the reference baseline",
       "upstream_anchor": "core/framework/server/routes_memories.py:42"
     },
     {
       "commit": "abd646b7 (merge bb1bf6b1)",
-      "go_anchor": "go_hive/contracts/config-support-ledger.json:599",
+      "go_anchor": "go_hive/contracts/config-support-ledger.json:605",
       "id": "gap:env_ledger_anchor",
       "lane": "wave83-fix",
       "notes": "The hand-maintained config-support-ledger anchor now points at writeCompactionReport(agentCtx, ratioBefore, ratioAfter, preInventory).",
@@ -1043,7 +1067,7 @@
       "events": "30a7ef9f8b59cec03bd5a3d8b3afe9d3c0c5f5556b2f042293cabad46caf3e26",
       "phase": "8b3b20225a9b2818dd02f03f6bcb384b7e4b57c657ad5984756591ada1ac879b",
       "synthetic": "6a8206bdea61c7a16c93cb36e495746508bc58e8de9ac24c82853e5e44fcc6b2",
-      "tests": "380b6d70a3a0018a13b0c3aab2c8c552849c8114c0e0f72c5fcd4b86315ee343"
+      "tests": "80c8783a831a72f167a293c137ea7dc8055f7c7b92f11f3f29d36d0514d85d33"
     },
     "note": "No wall-clock timestamp is emitted; reruns are byte-identical for identical inputs.",
     "upstream": [
@@ -1066,7 +1090,7 @@
       "upstream_anchor": "core/framework/agents/queen/nodes/__init__.py:143 (phase list); core/framework/agents/queen/nodes/__init__.py:144 (phase list)"
     },
     {
-      "go_anchor": "go_hive/go-hive/internal/colony/playbook_tools.go:139 (tool_def); go_hive/go-hive/internal/colony/playbook_tools.go:124 (builder); go_hive/go-hive/internal/cli/tool_surface_flat.go:488 (registration)",
+      "go_anchor": "go_hive/go-hive/internal/colony/playbook_tools.go:139 (tool_def); go_hive/go-hive/internal/colony/playbook_tools.go:124 (builder); go_hive/go-hive/internal/cli/tool_surface_flat.go:494 (registration)",
       "id": "phase_tool:get_playbook_status",
       "name": "get_playbook_status",
       "notes": "Python phases: colony; Go tool exists but has no explicit phase-list gate",
@@ -1102,7 +1126,7 @@
       "upstream_anchor": "core/framework/agents/queen/nodes/__init__.py:93 (phase list)"
     },
     {
-      "go_anchor": "go_hive/go-hive/internal/colony/playbook_tools.go:171 (tool_def); go_hive/go-hive/internal/colony/playbook_tools.go:126 (builder); go_hive/go-hive/internal/cli/tool_surface_flat.go:489 (registration)",
+      "go_anchor": "go_hive/go-hive/internal/colony/playbook_tools.go:171 (tool_def); go_hive/go-hive/internal/colony/playbook_tools.go:126 (builder); go_hive/go-hive/internal/cli/tool_surface_flat.go:495 (registration)",
       "id": "phase_tool:list_playbook_runs",
       "name": "list_playbook_runs",
       "notes": "Python phases: colony; Go tool exists but has no explicit phase-list gate",
@@ -1176,7 +1200,7 @@
       "upstream_anchor": "core/framework/agents/queen/nodes/__init__.py:100 (phase list)"
     },
     {
-      "go_anchor": "go_hive/go-hive/internal/colony/overseer_tools.go:145 (dispatch); go_hive/go-hive/internal/colony/queen_tools.go:80 (tool_def); go_hive/go-hive/internal/colony/queen_tools.go:28 (builder)",
+      "go_anchor": "go_hive/go-hive/internal/colony/overseer_tools.go:147 (dispatch); go_hive/go-hive/internal/colony/queen_tools.go:80 (tool_def); go_hive/go-hive/internal/colony/queen_tools.go:28 (builder)",
       "id": "phase_tool:run_worker",
       "name": "run_worker",
       "notes": "Python phases: colony; Go tool exists but has no explicit phase-list gate",
@@ -1213,7 +1237,7 @@
       "upstream_anchor": "core/framework/agents/queen/nodes/__init__.py:112 (phase list)"
     },
     {
-      "go_anchor": "go_hive/go-hive/internal/colony/playbook_tools.go:155 (tool_def); go_hive/go-hive/internal/colony/playbook_tools.go:125 (builder); go_hive/go-hive/internal/cli/tool_surface_flat.go:490 (registration)",
+      "go_anchor": "go_hive/go-hive/internal/colony/playbook_tools.go:155 (tool_def); go_hive/go-hive/internal/colony/playbook_tools.go:125 (builder); go_hive/go-hive/internal/cli/tool_surface_flat.go:496 (registration)",
       "id": "phase_tool:stop_playbook",
       "name": "stop_playbook",
       "notes": "Python phases: colony; Go tool exists but has no explicit phase-list gate",
@@ -1377,7 +1401,7 @@
       "go_anchor": "go_hive/go-hive/internal/cli/session_tools_task_pivot.go:71 (PivotHandler)",
       "id": "phase_pivot:new_colony",
       "name": "new_colony",
-      "notes": "Colony-phase pivot wired in the CLI session catalogue (tasks.NewColonyPivotField); the lean-handoff accept endpoint remains 501 (gap:colony_pivot_lean_handoff)",
+      "notes": "Colony-phase pivot wired in the CLI session catalogue (tasks.NewColonyPivotField); the lean-handoff accept landed in colony_pivot_lean.go (gap:colony_pivot_lean_handoff is fixed)",
       "owner": "tasks",
       "phases": [
         "colony"
@@ -1424,10 +1448,10 @@
       "python": 77
     },
     "known_gaps": {
-      "fixed": 6,
+      "fixed": 11,
       "in_fix": 0,
-      "open": 3,
-      "total": 9
+      "open": 0,
+      "total": 11
     },
     "phase_gates": {
       "builder_only": 0,
@@ -1448,17 +1472,17 @@
     },
     "test_mapping": {
       "directories": 22,
-      "go_tests": 5896,
-      "go_tests_no_parity_ref": 12,
-      "mapped": 10,
+      "go_tests": 6149,
+      "go_tests_no_parity_ref": 11,
+      "mapped": 11,
       "missing": 0,
-      "parity_refs": 6136,
+      "parity_refs": 6376,
       "python_tests": 6212
     }
   },
   "synthetic_dispatch": [
     {
-      "go_anchor": "go_hive/go-hive/internal/agentloop/loop.go:990 (dispatch); go_hive/go-hive/internal/agentloop/tool_batch_store.go:50 (dispatch); go_hive/go-hive/internal/colony/overseer_tools.go:149 (dispatch); go_hive/go-hive/internal/server/chat_runtime.go:1439 (dispatch)",
+      "go_anchor": "go_hive/go-hive/internal/agentloop/loop.go:990 (dispatch); go_hive/go-hive/internal/agentloop/tool_batch_store.go:50 (dispatch); go_hive/go-hive/internal/colony/overseer_tools.go:151 (dispatch); go_hive/go-hive/internal/server/chat_runtime.go:1444 (dispatch)",
       "id": "synthetic:ask_user",
       "notes": "",
       "owner": "agentloop",
@@ -1483,7 +1507,7 @@
       "upstream_anchor": "core/framework/agent_loop/agent_loop.py:6651 (dispatch branch)"
     },
     {
-      "go_anchor": "go_hive/go-hive/internal/agentloop/synthetic_tools.go:273 (builder); go_hive/go-hive/internal/agentloop/dynamic_tools.go:18 (registration); go_hive/go-hive/internal/cli/tool_surface_flat.go:174 (registration); go_hive/go-hive/internal/server/phase_tool_surface.go:36 (registration)",
+      "go_anchor": "go_hive/go-hive/internal/agentloop/synthetic_tools.go:273 (builder); go_hive/go-hive/internal/agentloop/dynamic_tools.go:18 (registration); go_hive/go-hive/internal/cli/tool_surface_flat.go:175 (registration); go_hive/go-hive/internal/server/phase_tool_surface.go:36 (registration)",
       "id": "synthetic:collect_result",
       "notes": "builder/definition only; no same-name dispatch/intercept in Go",
       "owner": "agentloop",
@@ -1496,7 +1520,7 @@
       "upstream_anchor": "core/framework/agent_loop/agent_loop.py:6550 (dispatch branch); core/framework/agent_loop/internals/synthetic_tools.py:191 (build_collect_result_tool)"
     },
     {
-      "go_anchor": "go_hive/go-hive/internal/agentloop/dynamic_tools.go:15 (registration); go_hive/go-hive/internal/cli/tool_surface_flat.go:175 (registration); go_hive/go-hive/internal/server/phase_tool_surface.go:37 (registration)",
+      "go_anchor": "go_hive/go-hive/internal/agentloop/dynamic_tools.go:15 (registration); go_hive/go-hive/internal/cli/tool_surface_flat.go:176 (registration); go_hive/go-hive/internal/server/phase_tool_surface.go:37 (registration)",
       "id": "synthetic:credentials",
       "notes": "name registered in Go but no callable tool definition",
       "owner": "agentloop",
@@ -1546,7 +1570,7 @@
       "upstream_anchor": "core/framework/agent_loop/agent_loop.py:6565 (dispatch branch)"
     },
     {
-      "go_anchor": "go_hive/go-hive/internal/sentinel/sentinel_tool.go:75 (tool_def); go_hive/go-hive/internal/sentinel/sentinel_tool.go:44 (builder); go_hive/go-hive/internal/agentloop/dynamic_tools.go:16 (registration); go_hive/go-hive/internal/cli/tool_surface_flat.go:177 (registration)",
+      "go_anchor": "go_hive/go-hive/internal/sentinel/sentinel_tool.go:75 (tool_def); go_hive/go-hive/internal/sentinel/sentinel_tool.go:44 (builder); go_hive/go-hive/internal/agentloop/dynamic_tools.go:16 (registration); go_hive/go-hive/internal/cli/tool_surface_flat.go:178 (registration)",
       "id": "synthetic:sentinel_setup",
       "notes": "",
       "owner": "agentloop",
@@ -1627,11 +1651,11 @@
       "go_packages": [
         "internal/agentloop"
       ],
-      "go_tests": 472,
+      "go_tests": 485,
       "id": "tests:core/framework/agent_loop/tests",
       "notes": "",
       "owner": "qa",
-      "parity_refs": 531,
+      "parity_refs": 567,
       "path": "core/framework/agent_loop/tests",
       "python_tests": 5,
       "status": "mapped",
@@ -1646,37 +1670,37 @@
       "id": "tests:core/framework/agents/queen/tests",
       "notes": "",
       "owner": "qa",
-      "parity_refs": 134,
+      "parity_refs": 139,
       "path": "core/framework/agents/queen/tests",
       "python_tests": 13,
       "status": "mapped",
       "upstream_anchor": "core/framework/agents/queen/tests/ (13 def test_)"
     },
     {
-      "go_anchor": "go_hive/go-hive/internal/credentials/ (first: go_hive/go-hive/internal/credentials/bootstrap_test.go)",
+      "go_anchor": "go_hive/go-hive/internal/credentials/ (first: go_hive/go-hive/internal/credentials/aden_client_test.go)",
       "go_packages": [
         "internal/credentials"
       ],
-      "go_tests": 88,
+      "go_tests": 126,
       "id": "tests:core/framework/credentials/aden/tests",
-      "notes": "Go tests exist but none cite this Python directory",
+      "notes": "",
       "owner": "qa",
-      "parity_refs": 0,
+      "parity_refs": 53,
       "path": "core/framework/credentials/aden/tests",
       "python_tests": 37,
-      "status": "go_tests_no_parity_ref",
+      "status": "mapped",
       "upstream_anchor": "core/framework/credentials/aden/tests/ (37 def test_)"
     },
     {
-      "go_anchor": "go_hive/go-hive/internal/credentials/ (first: go_hive/go-hive/internal/credentials/bootstrap_test.go)",
+      "go_anchor": "go_hive/go-hive/internal/credentials/ (first: go_hive/go-hive/internal/credentials/aden_client_test.go)",
       "go_packages": [
         "internal/credentials"
       ],
-      "go_tests": 88,
+      "go_tests": 126,
       "id": "tests:core/framework/credentials/tests",
       "notes": "",
       "owner": "qa",
-      "parity_refs": 54,
+      "parity_refs": 117,
       "path": "core/framework/credentials/tests",
       "python_tests": 63,
       "status": "mapped",
@@ -1717,11 +1741,11 @@
       "go_packages": [
         "internal/server"
       ],
-      "go_tests": 1043,
+      "go_tests": 1065,
       "id": "tests:core/framework/server/tests",
       "notes": "",
       "owner": "qa",
-      "parity_refs": 996,
+      "parity_refs": 1117,
       "path": "core/framework/server/tests",
       "python_tests": 293,
       "status": "mapped",
@@ -1732,11 +1756,11 @@
       "go_packages": [
         "internal/tasks"
       ],
-      "go_tests": 122,
+      "go_tests": 123,
       "id": "tests:core/framework/tasks/tests",
       "notes": "",
       "owner": "qa",
-      "parity_refs": 159,
+      "parity_refs": 163,
       "path": "core/framework/tasks/tests",
       "python_tests": 134,
       "status": "mapped",
@@ -1747,7 +1771,7 @@
       "go_packages": [
         "internal"
       ],
-      "go_tests": 5889,
+      "go_tests": 6142,
       "id": "tests:core/tests",
       "notes": "cross-cutting aggregate; overlaps package rows",
       "owner": "qa",
@@ -1908,11 +1932,11 @@
       "upstream_anchor": "tools/tests/ (447 def test_)"
     },
     {
-      "go_anchor": "go_hive/go-hive/internal/credentials/ (first: go_hive/go-hive/internal/credentials/bootstrap_test.go)",
+      "go_anchor": "go_hive/go-hive/internal/credentials/ (first: go_hive/go-hive/internal/credentials/aden_client_test.go)",
       "go_packages": [
         "internal/credentials"
       ],
-      "go_tests": 88,
+      "go_tests": 126,
       "id": "tests:tools/tests/credentials",
       "notes": "Go tests exist but none cite this Python directory",
       "owner": "qa",

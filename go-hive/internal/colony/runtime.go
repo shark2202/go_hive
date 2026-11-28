@@ -18,6 +18,7 @@ import (
 	"github.com/shark2202/go_hive/go-hive/internal/pipeline"
 	"github.com/shark2202/go_hive/go-hive/internal/schemas"
 	"github.com/shark2202/go_hive/go-hive/internal/skills"
+	"github.com/shark2202/go_hive/go-hive/internal/tasks"
 	"github.com/shark2202/go_hive/go-hive/internal/tools"
 	"github.com/shark2202/go_hive/go-hive/internal/tracker"
 )
@@ -44,67 +45,6 @@ const (
 	adaptiveBudgetSampleWindow    = 50
 )
 
-type RuntimeOptions struct {
-	AgentSpec          agentloop.AgentSpec
-	Goal               *schemas.Goal
-	StoragePath        string
-	LLM                llm.Completer
-	Tools              []llm.ToolDef
-	ToolExecutor       func(agentloop.ToolCallRequest) (agentloop.ToolResult, error)
-	EventBus           *eventbus.EventBus
-	StreamID           string
-	MCPToolNames       map[string]struct{}
-	WorkerKeepSet      func() map[string]struct{}
-	AdaptiveToolBudget *bool
-	// DeclaredTools is the optional tool pool a worker definition's "tools"
-	// list selects from (integration/MCP tools the caller resolved). A worker
-	// only receives pool entries it declares; an empty declaration keeps the
-	// colony's default worker surface. Nil is the same as empty.
-	DeclaredTools []llm.ToolDef
-	// MaxConcurrentWorkers caps how many spawned workers execute at once.
-	// Extra workers stay QUEUED until a slot opens. <=0 uses the colony
-	// default (HIVE_MAX_CONCURRENT_WORKERS, 4).
-	MaxConcurrentWorkers int
-
-	// WorkerLLM is the completer workers call. Nil falls back to LLM (the Go
-	// port does not split queen/worker models by default; upstream resolves
-	// worker_llm separately).
-	WorkerLLM llm.Completer
-	// SkillsProvider supplies the colony's skill catalog for the read surface
-	// (GET /colony/skills). Nil auto-wires the default colony hierarchy
-	// (framework + preset + user + queen_ui + colony_ui), matching upstream's
-	// always-constructed SkillsManager.
-	SkillsProvider func() ([]*skills.ParsedSkill, bool)
-	// QueenDir is the owning queen's home directory (…/queens/<queen_id>).
-	// When set, workers spawned by this colony see the queen's skill scope
-	// (queen_ui) ahead of the colony's own (colony_ui), with a colony skill
-	// overriding the queen's copy on a name collision — upstream's queen
-	// scope is visible to every colony she owns
-	// (framework/host/colony_runtime.py::_build_default_skills_config;
-	// 07-memory-and-skills.md §4.2). Empty omits the queen_ui scope; the
-	// framework/preset/user/colony scopes still load.
-	QueenDir string
-	// DefaultPresetSkills is the in-memory set of preset-scope skills this
-	// colony enables by default (upstream SkillsManagerConfig
-	// .default_preset_skills). Nil means "resolve it from the owning queen's
-	// profile at QueenDir" (framework/agents/queen/queen_profiles.py::
-	// default_skills_for plus a custom profile.yaml); an explicit empty map
-	// disables every preset.
-	DefaultPresetSkills map[string]struct{}
-	// ToolProviderMap attributes tool names to providers for the tools read
-	// surface (upstream ColonyRuntime._tool_provider_map).
-	ToolProviderMap map[string]string
-	// Binding is the colony's tracker binding. Hosts that already resolved
-	// one (fork flow, tests) pass it here; otherwise the runtime derives it
-	// from StoragePath when that path is a materialised colony directory.
-	Binding *tracker.Binding
-	// PipelineStages injects the trigger pipeline, upstream's
-	// `ColonyRuntime(pipeline_stages=[...])` argument. When empty the
-	// runtime loads `pipeline.stages` from configuration.json (empty is the
-	// no-op default).
-	PipelineStages []pipeline.Stage
-}
-
 type SpawnOptions struct {
 	Count    int
 	StreamID string
@@ -129,13 +69,29 @@ type BatchTask struct {
 	// it specializes the worker's report_to_parent `data` parameter and its
 	// system prompt — upstream's spawn_batch `report_schema` entry.
 	ReportSchema map[string]any
+	// WorkerSeq is the run-scoped dispatch ordinal a playbook run stamps on
+	// each of its size-1 batches, so peers that share one batch_id stay
+	// individually identifiable. 0 for ordinary fan-out.
+	//
+	// Parity: framework/host/colony_runtime.py::ColonyRuntime.spawn_batch
+	// (spec["worker_seq"])
+	WorkerSeq int
 }
 
 type SpawnBatchOptions struct {
 	LoopConfigOverrides map[string]any
 	// BatchID correlates the workers (and their reports) with the queen's
-	// run_worker call. Empty lets the runtime mint one for multi-task batches.
+	// run_worker call. Empty mints a fresh `rpw_…` id here, including for a
+	// size-1 batch, matching spawn_batch.
 	BatchID string
+	// ProfileName is the batch-level worker-profile default. A task's own
+	// ProfileName wins, matching spawn_batch's per-task override precedence.
+	ProfileName string
+	// solo marks the single-worker spawn() path, which upstream leaves
+	// batch-less (spawn_batch always mints an id; spawn count=n does not).
+	// It is unexported because it is an implementation detail of Spawn, not
+	// part of the batch surface.
+	solo bool
 }
 
 type WorkerBuildOptions struct {
@@ -148,6 +104,10 @@ type WorkerBuildOptions struct {
 	InputData    map[string]any
 	// ProfileName tags the worker with its colony worker profile.
 	ProfileName string
+	// Integrations / BrowserProfile are the resolved profile binding the
+	// spawn path applies (see Worker.Integrations / Worker.BrowserProfile).
+	Integrations   map[string]string
+	BrowserProfile string
 	// ReportSchema specializes report_to_parent and the worker prompt for a
 	// playbook dispatch (upstream spawn spec `report_schema`).
 	ReportSchema map[string]any
@@ -168,9 +128,29 @@ type ColonyRuntime struct {
 	tools         []llm.ToolDef
 	declaredTools []llm.ToolDef
 	toolExec      func(agentloop.ToolCallRequest) (agentloop.ToolResult, error)
-	bus           *eventbus.EventBus
-	streamID      string
-	keepSet       func() map[string]struct{}
+	// workerExecFactory builds a worker's own tool executor: it receives the
+	// worker's storage root and the colony-root executor to fall back to for
+	// tools that are not rooted per worker. Nil keeps every worker on toolExec
+	// (the colony-root executor). Installed before Start through
+	// SetWorkerToolExecutorFactory.
+	workerExecMu      sync.RWMutex
+	workerExecFactory func(root string, base agentloop.ToolExecutor) agentloop.ToolExecutor
+	// toolProber / toolKiller are the executor's liveness handles (see
+	// RuntimeOptions.ToolProber): every loop this runtime builds (worker and
+	// overseer) carries them so a timed-out tool call probes and reclaims its
+	// shared MCP transport instead of leaking it.
+	toolProber tools.LivenessProber
+	toolKiller tools.ToolKiller
+	bus        *eventbus.EventBus
+	streamID   string
+	// queenName is the id of the queen that owns this colony ("queen_growth",
+	// or "" for a colony with no recorded queen). It is spawn metadata only:
+	// meta.json records it so the UI can answer "whose worker is this?" after
+	// the runtime is gone.
+	//
+	// Parity: framework/host/colony_runtime.py::ColonyRuntime._queen_id
+	queenName string
+	keepSet   func() map[string]struct{}
 
 	toolsMu         sync.RWMutex
 	enabledMCPTools []string
@@ -184,12 +164,45 @@ type ColonyRuntime struct {
 	defaultPresetSkills map[string]struct{}
 	// queenDir is the owning queen's home; empty omits the queen_ui scope
 	// (see RuntimeOptions.QueenDir).
-	queenDir        string
+	queenDir string
+	// protocolsPrompt is the operational-protocols block workers and the
+	// overseer carry (RuntimeOptions.ProtocolsPrompt; upstream's
+	// ColonyRuntime.protocols_prompt). Empty drops the section.
+	protocolsPrompt string
 	toolProviderMap map[string]string
+	// accountsPrompt is the connected-accounts block a credential_resolver
+	// stage produced; it rides every worker/overseer system prompt.
+	accountsPrompt string
+	// credentialAccounts / connectedBrowserProfiles are the spawn-time
+	// profile-application hooks (RuntimeOptions). Nil credentialAccounts
+	// disables the MCP credential filter; nil connectedBrowserProfiles uses
+	// the local bridge probe.
+	credentialAccounts       func() []map[string]any
+	connectedBrowserProfiles func() ([]string, error)
+	// browserClose is the host-injected bridge closer the browser reaper
+	// calls on a per-worker stop and on colony stop. Nil disables reaping —
+	// the same degradation upstream has when its gcu browser tools are not
+	// loaded. browserReaped records the workers whose tab group this runtime
+	// already closed, so a per-worker stop overlapping a colony stop cannot
+	// double-close it. Both guarded by mu.
+	browserClose  CloseProfileContext
+	browserReaped map[string]struct{}
+	// stopTimeout bounds Stop's wait for workers to unwind. Zero uses
+	// DefaultStopTimeout (upstream's STOP_TIMEOUT_SEC).
+	stopTimeout time.Duration
 	// skillsCatalogMu guards the memoised colony catalog prompt in-flight
 	// workers read each iteration; ReloadSkills swaps it (skills_surface.go).
 	skillsCatalogMu     sync.RWMutex
 	skillsCatalogPrompt string
+	// skillsWatcherMu guards the colony's hot-reload watcher (started in
+	// Start, stopped in Stop). It polls the same origin roots
+	// workerSkillSurface discovers and rebuilds the memo through
+	// ReloadSkills, so a skill edit reaches in-flight workers like upstream's
+	// SkillsManager.start_watching in ColonyRuntime.start.
+	skillsWatcherMu     sync.Mutex
+	skillsWatcher       *skills.Watcher
+	skillsWatchInterval time.Duration
+	skillsWatchDebounce time.Duration
 	// dispatchBlocked stops queued workers from starting during a stop sweep
 	// (and, when a caller holds it, until UnblockDispatch). Guarded by mu.
 	dispatchBlocked bool
@@ -203,6 +216,10 @@ type ColonyRuntime struct {
 	ctx      context.Context
 	cancel   context.CancelFunc
 	wg       sync.WaitGroup
+	// background tracks fire-and-forget watchers (upstream's
+	// _background_tasks): a panic is reported instead of taking the process
+	// down, and Stop cancels what is still running.
+	background *tasks.Tracker
 
 	maxConcurrent int
 	// workerSlots is the admission gate every spawned worker enters through.
@@ -217,6 +234,11 @@ type ColonyRuntime struct {
 	// every worker's InputData and tracker tool call.
 	trackerMu      sync.Mutex
 	trackerBinding *tracker.Binding
+
+	// decision owns the colony-wide storage every worker/overseer decision
+	// stream persists through (decision_runtime.go). It materialises on the
+	// first worker context, so a runtime with no storage root stays unwired.
+	decision decisionRuntimes
 
 	budgetMu         sync.Mutex
 	budgetSamples    []int
@@ -269,14 +291,19 @@ func NewColonyRuntime(opts RuntimeOptions) *ColonyRuntime {
 		agentSpec:     opts.AgentSpec,
 		goal:          opts.Goal,
 		storagePath:   storage,
+		decision:      decisionRuntimes{root: opts.StoragePath},
 		llm:           opts.LLM,
 		tools:         append([]llm.ToolDef(nil), opts.Tools...),
 		declaredTools: append([]llm.ToolDef(nil), opts.DeclaredTools...),
 		toolExec:      opts.ToolExecutor,
+		toolProber:    opts.ToolProber,
+		toolKiller:    opts.ToolKiller,
 		bus:           opts.EventBus,
 		streamID:      opts.StreamID,
+		queenName:     strings.TrimSpace(opts.QueenName),
 		keepSet:       opts.WorkerKeepSet,
 		workers:       map[string]*Worker{},
+		background:    tasks.NewTracker(opts.StreamID),
 		maxConcurrent: maxConcurrent,
 		workerSlots:   newWorkerSlotGate(maxConcurrent),
 	}
@@ -291,8 +318,16 @@ func NewColonyRuntime(opts RuntimeOptions) *ColonyRuntime {
 		}
 	}
 	runtime.workerLLM = opts.WorkerLLM
+	runtime.skillsWatchInterval = opts.SkillsWatchInterval
+	runtime.skillsWatchDebounce = opts.SkillsWatchDebounce
 	runtime.skillsProvider = opts.SkillsProvider
 	runtime.queenDir = strings.TrimSpace(opts.QueenDir)
+	runtime.protocolsPrompt = opts.ProtocolsPrompt
+	runtime.credentialAccounts = opts.CredentialAccounts
+	runtime.connectedBrowserProfiles = opts.ConnectedBrowserProfiles
+	runtime.browserClose = opts.BrowserClose
+	runtime.browserReaped = map[string]struct{}{}
+	runtime.stopTimeout = opts.StopTimeout
 	runtime.defaultPresetSkills = opts.DefaultPresetSkills
 	if runtime.defaultPresetSkills == nil {
 		runtime.defaultPresetSkills = defaultPresetSkillsForQueenDir(runtime.queenDir)
@@ -459,8 +494,14 @@ func (r *ColonyRuntime) BuildWorker(opts WorkerBuildOptions) *Worker {
 	if spawnTools == nil {
 		spawnTools = appendMissingToolDefs(r.workerToolDefs(), skills.SkillViewToolDef(), skills.ListSkillsToolDef())
 	}
+	spawnTools = r.filterUnavailableMCPTools(spawnTools)
 	worker := NewWorker(opts.WorkerID, opts.Task, streamID)
 	worker.ProfileName = opts.ProfileName
+	worker.Integrations = copyStringMap(opts.Integrations)
+	worker.BrowserProfile = opts.BrowserProfile
+	if worker.BrowserProfile == "" {
+		worker.BrowserProfile = defaultBrowserProfile
+	}
 	worker.ReportSchema = opts.ReportSchema
 	worker.StoragePath = storage
 	worker.OutputFile = filepath.Join(storage, workerConversationsDir)
@@ -480,6 +521,18 @@ func (r *ColonyRuntime) BuildWorker(opts WorkerBuildOptions) *Worker {
 // Parity: framework/host/colony_runtime.py::ColonyRuntime._build_worker
 func (r *ColonyRuntime) buildWorkerContext(worker *Worker, spec agentloop.AgentSpec, spawnTools []llm.ToolDef, storage string, preload []string) *agentloop.AgentContext {
 	ctx := r.buildContext(worker, spec)
+	// The worker's system prompt is rebuilt from this context before each
+	// model call, so a skill written (or disabled) while the worker is in
+	// flight reaches its next turn without a respawn. Reading through the
+	// closure — not a snapshot — is what makes "base prompt + catalog +
+	// protocols" one live assembly instead of three copied strings.
+	//
+	// Parity: framework/agent_loop/agent_loop.py::_execute_impl step 6b3
+	// (dynamic prompt refresh -> build_system_prompt_parts_for_context)
+	overrides := workerPromptOverrides(spec)
+	ctx.DynamicSystemPromptProvider = func() (string, string) {
+		return agentloop.BuildSystemPromptPartsForContext(ctx, overrides)
+	}
 	ctx.AvailableTools = append([]llm.ToolDef(nil), spawnTools...)
 	// Colony skills are both discoverable (catalog prompt) and readable
 	// (SkillDirs turns view_file in the skill folder into skill content).
@@ -610,6 +663,10 @@ func (r *ColonyRuntime) Start(ctx context.Context) error {
 	if err := r.initializePipeline(); err != nil {
 		return err
 	}
+	// Watch the same skill roots the worker surface discovers. A change
+	// rebuilds the memo every in-flight worker reads through its dynamic
+	// provider — upstream's ColonyRuntime.start -> SkillsManager.start_watching.
+	r.startSkillsWatcher()
 	// HIVE_SPLIT_WORKER_EVENTS moves a parallel worker's per-turn chatter out
 	// of the queen's event log and into <worker storage>/events.jsonl. Off by
 	// default (the dashboard must render worker bubbles from META alone before
@@ -656,17 +713,54 @@ func splitWorkerEventsEnabled() bool {
 	return false
 }
 
+// Stop cancels every worker — the persistent overseer included — and waits,
+// bounded (DefaultStopTimeout, 10 s), for them to reach a terminal state. A
+// worker still running at the deadline is force-finished STOPPED so the
+// registry converges; its browser tab group is then reaped.
+//
 // Parity: framework/host/colony_runtime.py::ColonyRuntime.stop
 func (r *ColonyRuntime) Stop() {
+	r.stopSkillsWatcher()
+	// Snapshot the live set before cancelling: that set is what shutdown owes a
+	// browser reap, even for a worker whose goroutine reaches terminal while
+	// Stop waits out the deadline.
+	live := r.snapshotLiveWorkers()
 	r.mu.Lock()
 	cancel := r.cancel
 	started := r.started
+	background := r.background
 	r.running = false
 	r.mu.Unlock()
 	if started && cancel != nil {
 		cancel()
 	}
-	r.wg.Wait()
+	// Fire-and-forget watchers (batch timeouts) ride the runtime context; wait
+	// for them within a bounded slice of the stop budget so none outlives Stop.
+	if background != nil {
+		background.CancelAll(time.Second)
+	}
+	live = r.awaitWorkersStopped(live)
+	r.reapWorkerBrowsers(live)
+	// A worker admitted in the instant before running flipped would not be in
+	// the snapshot; converge it too instead of orphaning it in the registry.
+	if late := liveWorkers(r.snapshotWorkers()); len(late) > 0 {
+		timeout := r.effectiveStopTimeout()
+		for _, worker := range late {
+			r.forceStopWorker(worker, timeout)
+		}
+		r.reapWorkerBrowsers(late)
+	}
+}
+
+// backgroundTasks returns the tracker that owns fire-and-forget watchers,
+// creating it for a runtime assembled from a struct literal instead of New.
+func (r *ColonyRuntime) backgroundTasks() *tasks.Tracker {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.background == nil {
+		r.background = tasks.NewTracker(r.streamID)
+	}
+	return r.background
 }
 
 func (r *ColonyRuntime) runtimeContext(ctx context.Context) context.Context {
@@ -700,7 +794,9 @@ func (r *ColonyRuntime) Spawn(ctx context.Context, task string, opts SpawnOption
 	for i := 0; i < count; i++ {
 		tasks = append(tasks, BatchTask{Task: task, StreamID: opts.StreamID})
 	}
-	return r.SpawnBatch(ctx, tasks)
+	// Upstream spawn() leaves batch_id empty (only spawn_batch mints one), so
+	// the runtime is told not to stamp these workers with a batch.
+	return r.SpawnBatchWithOptions(ctx, tasks, SpawnBatchOptions{solo: true})
 }
 
 // Parity: framework/host/colony_runtime.py::ColonyRuntime.spawn_batch
@@ -710,95 +806,36 @@ func (r *ColonyRuntime) SpawnBatch(ctx context.Context, tasks []BatchTask) ([]st
 
 // Parity: framework/host/colony_runtime.py::ColonyRuntime.spawn_batch (worker
 func (r *ColonyRuntime) SpawnBatchWithOptions(ctx context.Context, tasks []BatchTask, opts SpawnBatchOptions) ([]string, error) {
-	// A fresh spawn is a new work request (a resumed queen turn), so it
-	// re-opens dispatch after a stop sweep. The block exists to keep workers
-	// from starting *into* a sweep, not to gate the next turn.
-	r.UnblockDispatch()
+	// Parity: Python's spawn raises when the runtime is not running. Follow
+	// that for a stopped runtime; a never-started runtime still lazily arms its
+	// context below, which embedded hosts (and the chat wiring) rely on.
+	r.mu.Lock()
+	stopped := r.started && !r.running
+	r.mu.Unlock()
+	if stopped {
+		return nil, fmt.Errorf("ColonyRuntime is not running")
+	}
+	// Parity: spawn_batch funnels every worker through
+	// _enqueue_or_admit_worker, whose first gate is _dispatch_blocked: a stop
+	// sweep refuses the spawn (terminal STOPPED + synthesised report) instead
+	// of re-opening admission. The block is released by the next user turn
+	// (resume_dispatch), never by the spawn itself — auto-unblocking here let
+	// a queen turn that was still unwinding spawn workers into the sweep.
 	if err := r.provisionTracker(); err != nil {
 		return nil, fmt.Errorf("spawn in colony %q: provision tracker.db: %w", r.streamID, err)
 	}
 	runCtx := r.runtimeContext(ctx)
 	batchID := strings.TrimSpace(opts.BatchID)
-	if batchID == "" && len(tasks) > 1 {
-		batchID = r.newID("batch")
+	// Upstream mints a short timestamped batch id for every spawn_batch call,
+	// including a size-1 one, so the queen-side report formatter can always
+	// correlate a report back to its dispatch. A caller-supplied id wins (the
+	// queen's run_worker and the playbook runner both mint their own), and a
+	// solo spawn() keeps no batch at all (opts.solo) — that is the one path
+	// upstream leaves batch-less.
+	if batchID == "" && !opts.solo {
+		batchID = newWorkerBatchID()
 	}
 	return r.spawnBatchOn(runCtx, tasks, opts, batchID)
-}
-
-// spawnBatchOn registers and starts one goroutine per task. Every worker gets
-// its own context so a single run/worker can be stopped without touching its
-// siblings. Admission is gated by workerSlots: workers beyond the colony cap
-// stay QUEUED until a running peer releases its slot.
-func (r *ColonyRuntime) spawnBatchOn(runCtx context.Context, tasks []BatchTask, opts SpawnBatchOptions, batchID string) ([]string, error) {
-	cfg, err := BuildWorkerLoopConfig(opts.LoopConfigOverrides)
-	if err != nil {
-		return nil, err
-	}
-	pinned := false
-	if _, ok := opts.LoopConfigOverrides["tool_call_lifetime_budget"]; ok {
-		pinned = true
-	}
-
-	ids := make([]string, 0, len(tasks))
-	r.mu.Lock()
-	for range tasks {
-		ids = append(ids, r.newIDLocked("worker"))
-	}
-	r.mu.Unlock()
-
-	workers := make([]*Worker, 0, len(tasks))
-	for index, task := range tasks {
-		worker := r.BuildWorker(WorkerBuildOptions{
-			WorkerID:     ids[index],
-			Task:         task.Task,
-			StreamID:     task.StreamID,
-			InputData:    r.workerInputData(task.Data, ids[index], task.Task),
-			ProfileName:  task.ProfileName,
-			PreloadTools: task.PreloadTools,
-			ReportSchema: task.ReportSchema,
-		})
-		worker.Goal = task.Goal
-		worker.BatchID = batchID
-		worker.BatchIndex = index
-		worker.BatchSize = len(tasks)
-		worker.loopOverrides = opts.LoopConfigOverrides
-		workerConfig := cfg
-		worker.loopConfig = &workerConfig
-		worker.BudgetPinned = pinned
-		// Lineage breadcrumb: resume needs the original task/profile, and the
-		// colony id is the cross-colony guard a later resume checks.
-		r.writeWorkerMeta(worker)
-		workers = append(workers, worker)
-	}
-
-	r.mu.Lock()
-	for _, worker := range workers {
-		r.workers[worker.ID] = worker
-	}
-	r.mu.Unlock()
-
-	for _, worker := range workers {
-		r.startWorker(runCtx, worker)
-	}
-	return ids, nil
-}
-
-// startWorker launches one worker under the colony's admission gate. Every
-// worker gets its own context so a single run/worker can be stopped without
-// touching its siblings; resumed workers enter through the same path.
-func (r *ColonyRuntime) startWorker(runCtx context.Context, worker *Worker) {
-	// Every worker enters the run-state record here, including a resumed one
-	// whose meta predates the record: the restarted colony must see it as
-	// in flight until it reaches a terminal status.
-	r.writeWorkerRunState(worker, string(WorkerQueued))
-	workerCtx, cancel := context.WithCancel(runCtx)
-	worker.setCancel(cancel)
-	r.wg.Add(1)
-	go func() {
-		defer r.wg.Done()
-		defer cancel()
-		r.runGatedWorker(workerCtx, worker)
-	}()
 }
 
 // Parity: framework/host/colony_runtime.py::ColonyRuntime.wait_for_worker_reports
@@ -825,11 +862,7 @@ func (r *ColonyRuntime) WaitForWorkerReports(ctx context.Context, ids []string, 
 		select {
 		case <-worker.Done():
 		case <-time.After(time.Until(deadline)):
-			reports = append(reports, map[string]any{
-				"worker_id": id,
-				"status":    "failed",
-				"error":     "timeout",
-			})
+			reports = append(reports, r.timedOutWorkerReport(worker))
 			continue
 		case <-ctx.Done():
 			reports = append(reports, map[string]any{
@@ -844,6 +877,113 @@ func (r *ColonyRuntime) WaitForWorkerReports(ctx context.Context, ids []string, 
 	return reports, nil
 }
 
+// stopWaitGrace bounds how long the wait path gives a force-stopped worker to
+// unwind, publish and close its terminal result. Upstream's stop_worker awaits
+// the cancellation; the Go wait must stay bounded so a wedged worker cannot
+// hang the queen's wait — a caller that hits the bound still gets the synthetic
+// entry below.
+const stopWaitGrace = 2 * time.Second
+
+// stopTailMaxChars mirrors upstream's _STOP_TAIL_MAX_CHARS: the assistant
+// excerpt attached to a timed-out worker's stopped report.
+const stopTailMaxChars = 500
+
+// timedOutWorkerReport is the wait path's timeout branch. Upstream force-stops
+// each still-pending worker, then surfaces the worker's own result (explicit
+// report or the canned cancel result) plus the tail of its last assistant
+// message; the old Go port synthesised failed/timeout and left the worker
+// running behind the queen's back.
+//
+// Parity: framework/host/colony_runtime.py::ColonyRuntime.wait_for_worker_reports
+// (timeout branch: stop_worker -> worker._result -> last_assistant_excerpt)
+func (r *ColonyRuntime) timedOutWorkerReport(worker *Worker) map[string]any {
+	if worker == nil {
+		return map[string]any{"status": "failed", "error": "timeout"}
+	}
+	r.StopWorker(worker.ID)
+	select {
+	case <-worker.Done():
+	case <-time.After(stopWaitGrace):
+	}
+
+	payload := worker.reportPayload()
+	payload["worker_id"] = worker.ID
+	if stringValue(payload["status"]) == "" {
+		// Upstream: result.status or "timeout" — a worker whose handle exists
+		// but never recorded a terminal status is the timeout case.
+		payload["status"] = "timeout"
+	}
+	if _, ok := payload["error"]; !ok {
+		result := worker.Result()
+		if result.Error != nil && *result.Error != "" {
+			payload["error"] = *result.Error
+		} else {
+			payload["error"] = "timeout"
+		}
+	}
+	if stringValue(payload["summary"]) == "" {
+		payload["summary"] = "Worker did not report within the configured timeout."
+	}
+	// Copy the data map before enriching it: reportPayload hands back the
+	// worker's live result map, and the excerpt is a report-only annotation.
+	data := map[string]any{}
+	if existing, ok := payload["data"].(map[string]any); ok {
+		for key, value := range existing {
+			data[key] = value
+		}
+	}
+	if stringValue(payload["status"]) == "stopped" {
+		if excerpt := lastAssistantExcerpt(worker); excerpt != "" {
+			data["last_assistant_excerpt"] = excerpt
+		}
+	}
+	payload["data"] = data
+	return payload
+}
+
+// lastAssistantExcerpt is the upstream stop-path enrichment: the most recent
+// non-empty assistant turn, trimmed and capped at stopTailMaxChars characters
+// (code points, with an ellipsis when truncated). Best-effort — a worker with
+// no conversation yields "".
+//
+// Parity: framework/host/colony_runtime.py::_tail_last_assistant_message
+func lastAssistantExcerpt(worker *Worker) string {
+	if worker == nil {
+		return ""
+	}
+	conv := worker.Conversation()
+	if conv == nil {
+		return ""
+	}
+	messages := conv.Messages()
+	for index := len(messages) - 1; index >= 0; index-- {
+		if messages[index].Role != "assistant" {
+			continue
+		}
+		content := strings.TrimSpace(messages[index].Content)
+		if content == "" {
+			continue
+		}
+		runes := []rune(content)
+		if len(runes) > stopTailMaxChars {
+			return string(runes[:stopTailMaxChars]) + "…"
+		}
+		return content
+	}
+	return ""
+}
+
+// StartOverseer starts the colony's persistent overseer: the runtime-side
+// incarnation of the queen (a Worker with ID "overseer:<colony>"), not a
+// second agent.
+//
+// Legacy (2026-11-26): the production serve path does not call this. Hive
+// 1.0.15 starts the colony runtime without attaching an overseer — the
+// colony-bound queen chat session is the executor (internal/cli/
+// loader_colony_host.go::startColonyHost). This entry remains for upstream
+// parity, self-host/e2e paths and tests; do not add new production callers.
+// Removal is to be coordinated with upstream.
+//
 // Parity: framework/host/colony_runtime.py::ColonyRuntime.start_overseer
 func (r *ColonyRuntime) StartOverseer(ctx context.Context, queenSpec agentloop.AgentSpec, seedConversation []SeedMessage) (*Worker, error) {
 	r.mu.Lock()
@@ -953,40 +1093,6 @@ func systemPromptFor(spec agentloop.AgentSpec) string {
 	return "You are " + spec.Name + "."
 }
 
-func (r *ColonyRuntime) buildContext(worker *Worker, spec agentloop.AgentSpec) *agentloop.AgentContext {
-	colonyID := r.streamID
-	// Workers run on the dedicated worker model when one is configured
-	// (worker_llm); the persistent overseer is the colony's own Queen and
-	// keeps the colony completer. The split mirrors upstream, where a worker
-	// spawned through run_worker inherits the colony runtime's `_llm` — the
-	// provider SessionManager built from worker_llm (falling back to
-	// session.llm when the slot is unset).
-	completer := r.llm
-	if worker != nil && !worker.Persistent {
-		completer = r.workerCompleter()
-	}
-	ctx := &agentloop.AgentContext{
-		AgentID:   spec.ID,
-		AgentSpec: spec,
-		LLM:       completer,
-		StreamID:  worker.StreamID,
-		ColonyID:  &colonyID,
-	}
-	// Workers carry the colony goal into their prompt: criteria, MUST/SHOULD
-	// constraints, and context. The persistent overseer keeps an empty goal
-	// context (upstream StartOverseer sets goal_context=""), so the worker
-	// goal never leaks into the queen's identity.
-	//
-	// Parity: framework/host/colony_runtime.py::ColonyRuntime._build_worker
-	// (goal_context=self._goal.to_prompt_context()); framework/host/
-	// colony_runtime.py::start_overseer (goal_context="").
-	if !worker.Persistent && r.goal != nil {
-		ctx.GoalContext = r.goal.ToPromptContext()
-	}
-	ctx.StopAfterToolBatch = func() bool { return worker.ExplicitReport() != nil }
-	return ctx
-}
-
 // specForWorker is the agent spec a worker runs under: the colony's spec with
 // the playbook receipt schema overlaid when the dispatch carried one
 // (upstream's spawn_batch `report_schema` entry specializes the worker's
@@ -1014,8 +1120,8 @@ func (r *ColonyRuntime) reportSchemaFor(worker *Worker) map[string]any {
 	return r.agentSpec.ReportSchema
 }
 
-// workerCompleter is the completer a worker and its judge use: the colony's
-// worker model when configured, otherwise the colony completer.
+// workerCompleter is the completer a worker runs on: the colony's worker model
+// when configured, otherwise the colony completer.
 func (r *ColonyRuntime) workerCompleter() llm.Completer {
 	if r == nil {
 		return nil
@@ -1036,11 +1142,13 @@ func (r *ColonyRuntime) workerTools(worker *Worker) []llm.ToolDef {
 		return r.overseerToolDefs()
 	}
 	if !strings.HasPrefix(worker.StreamID, "worker:") {
-		return r.applyToolAllowlist(r.tools)
+		return r.filterUnavailableMCPTools(r.applyToolAllowlist(r.tools))
 	}
 	// worker.json's declared tool set selects the worker's optional tools
 	// (integration/MCP); the overseer keeps the colony surface untouched.
-	tools := r.baseWorkerTools()
+	// The spawn-time credential filter drops tools whose provider has no live
+	// account, so the worker's prompt never advertises an unusable tool.
+	tools := r.filterUnavailableMCPTools(r.baseWorkerTools())
 	// Workers get the worker-role tracker table: tracker_upsert is their
 	// durable progress channel and tracker_query their read surface. The
 	// queen-only pair stays out.
@@ -1068,6 +1176,22 @@ func (r *ColonyRuntime) workerTools(worker *Worker) []llm.ToolDef {
 	return tools
 }
 
+// WorkerToolScope is the live worker tool surface run_worker hands to a
+// resume: the port's counterpart of upstream tools_override. It is the same
+// post-allowlist, credential-filtered surface a fresh spawn gets, so resuming
+// a worker can never widen its tools beyond what the colony currently exposes.
+//
+// Parity: framework/tools/queen_lifecycle_tools.py::run_worker
+// (tools_override_parallel built from colony._tools after queen-only and
+// unavailable-credential filtering)
+func (r *ColonyRuntime) WorkerToolScope() []llm.ToolDef {
+	if r == nil {
+		return nil
+	}
+	out := appendMissingToolDefs(r.workerToolDefs(), skills.SkillViewToolDef(), skills.ListSkillsToolDef())
+	return r.filterUnavailableMCPTools(out)
+}
+
 // baseWorkerTools is the surface every worker starts from: the colony's
 // configured tools after the MCP allowlist, merged with the tools the worker
 // definition declares (worker.json "tools").
@@ -1087,6 +1211,26 @@ func (r *ColonyRuntime) baseWorkerTools() []llm.ToolDef {
 	return base
 }
 
+// attachToolLiveness gives a loop this runtime builds the tool executor's
+// probe/kill handles. On a tool timeout the loop probes the shared MCP
+// connection first and only force-disconnects a server that is provably dead
+// (or unprobeable), which is upstream's timeout recovery — reclaiming a hung
+// MCP connection without killing a merely-slow shared transport. The executor
+// this runtime receives is a closure and cannot carry the methods, so the
+// handles travel separately. Nil handles are a no-op.
+//
+// Parity: framework/agent_loop/internals/tool_result_handler.py (timeout
+// handler: probe_for_tool / kill_for_tool)
+func (r *ColonyRuntime) attachToolLiveness(loop *agentloop.AgentLoop) {
+	if r == nil || loop == nil {
+		return
+	}
+	loop.ToolProber = r.toolProber
+	loop.ToolKiller = r.toolKiller
+}
+
+// Parity: framework/host/colony_runtime.py::ColonyRuntime._build_worker (executor
+// closure; the probe/kill pair is attached through attachToolLiveness)
 func (r *ColonyRuntime) executorFor(worker *Worker) func(agentloop.ToolCallRequest) (agentloop.ToolResult, error) {
 	var trackerRegistry *tracker.Registry
 	var overseerTracker *tracker.Registry
@@ -1107,6 +1251,26 @@ func (r *ColonyRuntime) executorFor(worker *Worker) func(agentloop.ToolCallReque
 		// The overseer's tracker tools are the queen table over the colony's
 		// shared ledger; its run_worker dispatches through this runtime.
 		overseerTracker = r.overseerTrackerRegistry()
+	}
+	// A worker's built-in file tools and terminal default cwd resolve under
+	// its own storage directory, not the colony workspace. The host installs
+	// the root-aware executor; the persistent overseer never takes it (it
+	// stays the colony's own client-facing session, rooted at the colony).
+	workerRoot := workerExecutionRoot(worker)
+	executor := r.toolExec
+	if workerRoot != "" {
+		if factory := r.workerExecutorFactory(); factory != nil {
+			if rooted := factory(workerRoot, executor); rooted != nil {
+				executor = rooted
+			}
+		}
+	}
+	// Skill reads are scoped to the same session root the worker's own tools
+	// use: a worker's transient state (global skill requests) belongs in its
+	// storage directory, while the overseer keeps the colony root.
+	sessionDir := r.storagePath
+	if workerRoot != "" {
+		sessionDir = workerRoot
 	}
 	return func(req agentloop.ToolCallRequest) (agentloop.ToolResult, error) {
 		if req.Name == "report_to_parent" && strings.HasPrefix(worker.StreamID, "worker:") {
@@ -1139,12 +1303,15 @@ func (r *ColonyRuntime) executorFor(worker *Worker) func(agentloop.ToolCallReque
 		if content, isError, handled := skills.ExecuteAgentTool(req.Name, req.Input, skills.ToolDirs{
 			ColonyDir:  r.storagePath,
 			QueenDir:   r.queenDir,
-			SessionDir: r.storagePath,
+			SessionDir: sessionDir,
 		}); handled {
 			return agentloop.ToolResult{Content: content, IsError: isError}, nil
 		}
-		if r.toolExec != nil {
-			return r.toolExec(req)
+		if executor != nil {
+			// Worker-profile credential aliases apply to every provider-mapped
+			// tool call (upstream account_overrides). An explicit account on
+			// the call wins.
+			return executor(r.applyProfileAccountDefault(worker, req))
 		}
 		return agentloop.ToolResult{Content: "ok"}, nil
 	}
@@ -1155,13 +1322,21 @@ func (r *ColonyRuntime) executorFor(worker *Worker) func(agentloop.ToolCallReque
 // stopped while queued never starts but still reaches a terminal state and
 // publishes a report, so batch counters and SSE consumers never wait forever.
 func (r *ColonyRuntime) runGatedWorker(ctx context.Context, worker *Worker) {
+	// The dispatch gate is the first admission check (upstream
+	// _enqueue_or_admit_worker checks _dispatch_blocked before the cap): a
+	// stopped colony refuses the worker immediately instead of parking it in
+	// the slot queue. The summary is upstream's stopped-report text.
+	if r.DispatchBlocked() {
+		r.finishWorkerStopped(worker, "Colony was stopped — this task was never started.")
+		return
+	}
 	if !r.acquireWorkerSlot(ctx) {
 		r.finishWorkerStopped(worker, "Worker was stopped before it started — the colony stopped while it was queued.")
 		return
 	}
 	defer r.releaseWorkerSlot()
 	if r.DispatchBlocked() {
-		r.finishWorkerStopped(worker, "Worker was not started — colony dispatch is blocked.")
+		r.finishWorkerStopped(worker, "Colony was stopped — this task was never started.")
 		return
 	}
 	if !worker.beginRun(ctx) {
@@ -1181,159 +1356,6 @@ func (r *ColonyRuntime) releaseWorkerSlot() {
 	r.workerSlots.release()
 }
 
-func (r *ColonyRuntime) finishWorkerStopped(worker *Worker, summary string) {
-	// A report that landed just before cancellation is more informative than
-	// the stop marker — preserve it instead of masking a delivered result.
-	if worker.ExplicitReport() != nil {
-		worker.finishOnce(WorkerCompleted, r.workerTerminalResult(worker, map[string]any{}, nil), func() {
-			r.publishReport(worker, summary)
-		})
-		return
-	}
-	errorText := summary
-	worker.finishOnce(WorkerStopped, WorkerResult{Output: map[string]any{}, Error: &errorText}, func() {
-		r.publishStopped(worker, summary)
-	})
-}
-
-// StopWorker stops one live or queued worker. Running workers unwind through
-// their own context; queued workers wake from the admission gate and publish a
-// stopped report. Returns false when the worker is unknown or already terminal.
-// Parity: framework/host/colony_runtime.py::ColonyRuntime.stop_worker
-func (r *ColonyRuntime) StopWorker(id string) bool {
-	worker := r.GetWorker(id)
-	if worker == nil {
-		return false
-	}
-	cancel, active := worker.requestStop()
-	if !active {
-		return false
-	}
-	if cancel != nil {
-		cancel()
-	}
-	return true
-}
-
-func (r *ColonyRuntime) runWorker(ctx context.Context, worker *Worker) {
-	if err := ctx.Err(); err != nil {
-		r.finishWorkerStopped(worker, "Worker was stopped before it started.")
-		return
-	}
-
-	spec := r.specForWorker(worker)
-	if worker.Context == nil {
-		worker.Context = r.buildWorkerContext(worker, spec, r.workerToolDefs(), r.workerStorage(worker.ID), nil)
-	}
-	// The worker's transcript is persisted before the first LLM call, so a
-	// worker stopped mid-run can be resumed from exactly where it stopped.
-	// A fresh worker owns an empty store: stray parts from a previous process
-	// that reused this id must not leak into its conversation.
-	conv := worker.conversation
-	if conv == nil {
-		store := r.workerConversationStore(worker.ID)
-		_ = store.Destroy()
-		conv = agentloop.NewNodeConversationWithOptions(agentloop.ConversationOptions{
-			SystemPrompt: r.workerSystemPrompt(worker, spec),
-			Store:        store,
-		})
-		if worker.Task != "" {
-			_, _ = conv.AddUserMessage(worker.Task, agentloop.UserMessageOptions{})
-		} else {
-			_, _ = conv.AddUserMessage("Hello", agentloop.UserMessageOptions{})
-		}
-	}
-	worker.conversation = conv
-
-	cfg := worker.loopConfig
-	if cfg == nil {
-		built, err := BuildWorkerLoopConfig(worker.loopOverrides)
-		if err != nil {
-			errorText := err.Error()
-			worker.finishOnce(WorkerFailed, WorkerResult{Error: &errorText, Output: map[string]any{}}, func() {
-				r.publishFailed(worker, errorText)
-			})
-			return
-		}
-		cfg = &built
-	}
-	tools := r.workerTools(worker)
-	loop, stopHub := r.newWorkerAgentLoop(worker, *cfg, tools)
-	defer stopHub()
-	// The deterministic doom-loop detection is published as
-	// node_tool_doom_loop at the threshold that also raises the escalation, so
-	// the session event log and a watching SSE client see the repetition.
-	loop.DoomLoopSink = r.workerDoomLoopSink(worker)
-	// A goal that declares criteria but whose spec carries no compiled
-	// criteria paragraph still gets a judge: the criteria come from the goal.
-	judgeSpec := worker.Context.AgentSpec
-	if !agentloop.HasSuccessCriteria(judgeSpec) {
-		if goalCriteria := agentloop.GoalCriteriaText(r.goal); goalCriteria != nil {
-			judgeSpec.SuccessCriteria = goalCriteria
-		}
-	}
-	loop.ConfigureJudge(judgeSpec, r.workerCompleter(), r.judgeEventWriter())
-	// The judge's RETRY/ESCALATE verdict is the in-band miss the improvement
-	// loop consumes; record it as soon as the loop normalizes it.
-	loop.OnJudgeVerdict = func(verdict agentloop.JudgeVerdict, iteration int) {
-		r.recordJudgeImprovementSignal(worker, verdict, iteration)
-	}
-	worker.SetAgentLoop(loop)
-	r.ApplyAdaptiveBudget(worker)
-
-	// Publish the worker's live turn progress on the colony bus. The session
-	// bridge re-stamps text/tool/token events onto the session stream with
-	// relayed_from=<worker id>, so the worker is visible while it runs.
-	previousObserver := worker.Context.Observer
-	if r.bus != nil {
-		executionID := worker.Context.ExecutionID
-		if executionID == "" {
-			executionID = worker.ID
-		}
-		worker.Context.Observer = newWorkerEmitter(r.bus, worker.StreamID, executionID)
-	}
-
-	turn, err := loop.ExecuteTurn(ctx, worker.Context, conv, tools)
-	worker.Context.Observer = previousObserver
-
-	if err != nil {
-		if ctx.Err() != nil {
-			r.finishWorkerStopped(worker, "Worker was cancelled before completion.")
-			return
-		}
-		errorText := err.Error()
-		worker.finishOnce(WorkerFailed, r.workerTerminalResult(worker, map[string]any{}, &errorText), func() {
-			r.publishFailed(worker, errorText)
-		})
-		return
-	}
-
-	// Execute the goal's weighted success criteria against the worker's final
-	// output and turn misses into improvement signals. No declared criteria
-	// means no evaluation and no signal (nil is "nothing to execute").
-	evaluation := r.evaluateWorkerGoal(ctx, worker, loop, turn)
-	worker.SetGoalEvaluation(evaluation)
-	r.recordGoalImprovementSignals(worker, evaluation)
-
-	output := map[string]any{"text": turn.FinalText}
-	if evaluation != nil {
-		output["goal_evaluation"] = evaluation.Map()
-	}
-	worker.finishOnce(WorkerCompleted, r.workerTerminalResult(worker, output, nil), func() {
-		r.publishReport(worker, turn.FinalText)
-	})
-}
-
-// Parity: framework/host/worker.py::Worker._build_result (telemetry)
-func (r *ColonyRuntime) workerTerminalResult(worker *Worker, output map[string]any, errorText *string) WorkerResult {
-	return WorkerResult{
-		Output:        output,
-		Error:         errorText,
-		ToolCallsUsed: worker.LoopToolCallsUsed(),
-		BudgetLimited: worker.LoopBudgetLimited(),
-	}
-}
-
 func (r *ColonyRuntime) runOverseer(ctx context.Context, worker *Worker, seed []SeedMessage) {
 	worker.SetStatus(WorkerRunning)
 	worker.MarkStarted(time.Now())
@@ -1350,25 +1372,35 @@ func (r *ColonyRuntime) runOverseer(ctx context.Context, worker *Worker, seed []
 	}
 
 	// The overseer runs the same loop shape as a worker (hub + inferno guards
-	// included); upstream builds a full AgentLoop for it too.
-	loop := agentloop.NewAgentLoop(agentloop.DefaultLoopConfig(), r.executorFor(worker))
+	// included); upstream builds a full AgentLoop for it too, with the
+	// colony-queen profile rather than the generic defaults.
+	loop := agentloop.NewAgentLoop(overseerLoopConfig(r.storagePath), r.executorFor(worker))
+	// The overseer restores its transcript across a restart; its loop-owned
+	// cursor state (cumulative tool calls, doom fingerprint window) must
+	// resume with it, exactly like a worker's.
+	//
+	// Parity: framework/agent_loop/internals/cursor_persistence.py::restore
+	// Parity: framework/agent_loop/agent_loop.py::execute (restored counters)
+	if worker.conversation != nil {
+		_ = loop.RestoreCursorState(worker.conversation)
+	}
+	// P0-14: an overseer's cross-turn replay publishes
+	// tool_call_replay_detected on the colony bus like a worker's.
+	//
+	// Parity: framework/host/event_bus.py::emit_tool_call_replay_detected
+	if r.bus != nil {
+		loop.ReplayEvents = r.bus
+	}
+	r.attachToolLiveness(loop)
 	// The overseer is the colony's lead: give it the queen-role reminder
 	// sources its own loop was missing (fleet, tracker, parallel nudge,
 	// stream-stall). No ticker is started (see overseer_reminders.go).
 	stopReminders := r.startOverseerReminders(loop, worker, loop.Config, r.workerTools(worker))
 	defer stopReminders()
-	// The overseer is the colony's lead: when the queen spec carries no
-	// criteria of its own it inherits the colony goal's, exactly like a
-	// worker. With neither, ConfigureJudge leaves the judge off (no extra
-	// model call on the overseer's turn).
-	judgeSpec := worker.Context.AgentSpec
-	if !agentloop.HasSuccessCriteria(judgeSpec) {
-		if goalCriteria := agentloop.GoalCriteriaText(r.goal); goalCriteria != nil {
-			judgeSpec.SuccessCriteria = goalCriteria
-			worker.Context.AgentSpec.SuccessCriteria = goalCriteria
-		}
-	}
-	loop.ConfigureJudge(judgeSpec, r.workerCompleter(), r.judgeEventWriter())
+	// Hive 1.0.15 constructs the overseer loop with judge=None; the queen spec
+	// it receives sets skip_judge=True. The port consequently does not arm a
+	// loop judge here, so a natural stop costs no extra model call and injects
+	// no [Judge feedback].
 	// Worker.Inject routes new input through this loop, so an overseer that
 	// sits between turns still wakes on the next message.
 	worker.SetAgentLoop(loop)

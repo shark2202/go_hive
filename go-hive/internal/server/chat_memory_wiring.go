@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/json"
 	"log"
 	"os"
 	"path/filepath"
@@ -14,11 +15,15 @@ import (
 	"github.com/shark2202/go_hive/go-hive/internal/soul"
 )
 
-// memoryTimelineStopFlushTimeout bounds the timeline flush Close runs after a
-// session stops. Upstream spawns the flush fire-and-forget; the port waits on
-// it (see ChatRuntime.Close) so a stopped session's directory is complete
-// before teardown returns, hence the explicit bound.
-const memoryTimelineStopFlushTimeout = 30 * time.Second
+// chatShutdownGrace is the one budget a session teardown gives the work
+// stopping a session starts: the final short reflection and the timeline flush.
+// Upstream starts both fire-and-forget from stop_session and spends exactly this
+// long at server exit before cancelling what is left
+// (loader/cli.py::_SHUTDOWN_GRACE_S = 6.0,
+// session_manager.finish_background_tasks(6s)); the port keeps the same single
+// budget for one session, so a stop cannot take longer than the whole server
+// used to get.
+const chatShutdownGrace = 6 * time.Second
 
 // chatTurnMaxTokens is the session's output budget: the main llm slot's
 // max_tokens (config, then model catalog, then 8192). Without a home the
@@ -35,14 +40,15 @@ func chatTurnMaxTokens(homeRoot string) int {
 	return 8192
 }
 
-// chatLoopConfig is the queen loop's configuration: the defaults, the
+// chatLoopConfig is the queen loop's configuration: the queen profile (a
+// 999_999-iteration autonomous loop with the 30/150 tool-call envelope), the
 // session-scoped spillover directory large tool results are written to, the
 // global loop.max_tool_result_chars override, and — for a queen with a model of
 // her own — her max_context_tokens window.
 //
 // Parity: core/framework/server/queen_orchestrator.py::_queen_loop
 func chatLoopConfig(root, homeRoot, queenID string) agentloop.LoopConfig {
-	config := agentloop.DefaultLoopConfig()
+	config := agentloop.QueenLoopConfig()
 	if root != "" {
 		config.SpilloverDir = filepath.Join(root, "data")
 	}
@@ -57,7 +63,7 @@ func chatLoopConfig(root, homeRoot, queenID string) agentloop.LoopConfig {
 	// HIVE_MAX_ITER caps the queen's reply loop for single-reply chat
 	// deployments (upstream reads it in place of the 999_999 autonomous
 	// default). Only a positive integer counts; anything else keeps the
-	// configured default.
+	// queen profile's default.
 	//
 	// Parity: core/framework/server/queen_orchestrator.py (HIVE_MAX_ITER)
 	if cap, ok := envPositiveInt("HIVE_MAX_ITER"); ok {
@@ -143,42 +149,30 @@ func envBool(name string) (bool, bool) {
 	}
 }
 
-// injectPastConversationRecall appends the dated excerpts of earlier
-// conversations that match the latest user message. It runs before the user
-// message joins the conversation — upstream's USER_PROMPT_SUBMIT ordering,
-// where the reminder frame precedes the queued request — so related history is
-// in front of the model even when it does not call search_messages.
+// pastConversationRecall returns the dated excerpts of earlier conversations
+// that match the user's message, or "" when nothing clears the relevance bar.
+// It is the provider behind PastConversationsReminderSource, which the hub
+// consults before the user message joins the conversation — so related
+// history is in front of the model even when it does not call
+// search_messages.
 //
+// Parity: core/framework/server/queen_orchestrator.py::_recall_past_conversations
 // Parity: core/framework/agent_loop/past_conversations_reminder.py::PastConversationsReminderSource
-// Parity: core/framework/agent_loop/agent_loop.py::_fire_reminder (the hub
-// wraps a bare source body in the shared <system-reminder> envelope) and
-// core/framework/agent_loop/reminders.py::wrap_reminder.
-func (r *ChatRuntime) injectPastConversationRecall(query string) {
-	if r == nil || r.conv == nil || r.deps.HomeRoot == "" || r.deps.Root == "" {
-		return
+func (r *ChatRuntime) pastConversationRecall(query string) string {
+	if r == nil || r.deps.HomeRoot == "" || r.deps.Root == "" {
+		return ""
 	}
-	if len([]rune(strings.TrimSpace(query))) < memory.PastRecallMinMessageChars {
-		return
+	text := strings.TrimSpace(query)
+	if len([]rune(text)) < memory.PastRecallMinMessageChars {
+		return ""
 	}
 	ref := memory.ScopeRef{Scope: memory.SearchScopeQueens, Owner: r.queenName}
-	block := memory.PastConversationRecallBlock(
+	return memory.PastConversationRecallBlock(
 		r.deps.HomeRoot,
 		ref,
-		query,
+		text,
 		filepath.Base(r.deps.Root),
 	)
-	// Upstream (past_conversations_reminder.py) renders on every
-	// USER_PROMPT_SUBMIT, so an identical message gets the excerpts again;
-	// there is no repeat guard to port.
-	if block == "" {
-		return
-	}
-	reminder := agentloop.WrapReminder([]string{block})
-	if reminder == "" {
-		return
-	}
-	// Excerpt recall is context, never a reason to fail a turn.
-	_, _ = r.conv.AddUserMessage(reminder, agentloop.UserMessageOptions{IsSystemReminder: true})
 }
 
 // startTimeline enables the per-session timeline writer when the feature flag
@@ -266,13 +260,23 @@ func (r *ChatRuntime) sedimentSoul(result memory.LoopResult) {
 	for _, conclusion := range conclusions {
 		items = append(items, soul.SedimentConclusion{Text: conclusion.Text, Source: conclusion.Filename})
 	}
-	if _, err := soul.Sediment(soul.SedimentOptions{
+	sent, err := soul.Sediment(soul.SedimentOptions{
 		QueensDir:   home.QueensDir(),
 		QueenID:     r.queenName,
 		Config:      cfg,
 		Conclusions: items,
-	}); err != nil {
+	})
+	if err != nil {
 		log.Printf("chat runtime %s: soul sediment skipped: %v", r.sessionID, err)
+		return
+	}
+	// Review mode (the soul default) only stages a proposal: say so, because the
+	// pass's work does not reach the soul until the owner decides.
+	if sent.Proposed {
+		log.Printf("chat runtime %s: soul sediment proposed %s for %s", r.sessionID, sent.ProposalID, r.queenName)
+	}
+	if sent.Blocked {
+		log.Printf("chat runtime %s: soul sediment waits for %s's pending soul proposal", r.sessionID, r.queenName)
 	}
 }
 
@@ -315,17 +319,49 @@ func (r *ChatRuntime) configureMemoryScopes() {
 func chatMemoryReflectionConfig(homeRoot string) memory.ReflectionConfig {
 	cfg := memory.DefaultReflectionConfig()
 	section, _ := HiveConfig(hivehome.Home{Root: homeRoot})["memory_reflection"].(map[string]any)
-	positive := func(key string, fallback int) int {
-		value, ok := toFloat(section[key])
-		if !ok || value < 1 || value != float64(int(value)) {
-			return fallback
-		}
-		return int(value)
-	}
-	cfg.EveryTurns = positive("every_turns", cfg.EveryTurns)
-	cfg.LongEvery = positive("long_every", cfg.LongEvery)
+	cfg.EveryTurns = reflectionPositiveInt(section["every_turns"], cfg.EveryTurns)
+	cfg.LongEvery = reflectionPositiveInt(section["long_every"], cfg.LongEvery)
 	if model, ok := section["model"].(string); ok && (model == "main" || model == "worker") {
 		cfg.Model = model
 	}
 	return cfg
+}
+
+// reflectionPositiveInt ports get_memory_reflection_config's positive(): the
+// configured value counts only when Python would see a real int of at least 1
+// — `isinstance(value, int) and not isinstance(value, bool)`. true, "2" and
+// 2.0 all fall back to the default, exactly as upstream.
+//
+// Parity: framework/config.py::get_memory_reflection_config
+func reflectionPositiveInt(value any, fallback int) int {
+	count, ok := strictJSONInteger(value)
+	if !ok || count < 1 {
+		return fallback
+	}
+	return count
+}
+
+// strictJSONInteger accepts only a genuine integer. hiveconf.Load decodes with
+// UseNumber, so a configuration value arrives as json.Number carrying its
+// literal text: Int64() succeeds for 7 but fails for 2.0 and 1e1, which keeps
+// an integral float from being mistaken for an int (as a Float64 + truncation
+// check would). Strings, bools and null are rejected outright; int and int64
+// cover values tests construct directly.
+func strictJSONInteger(value any) (int, bool) {
+	switch typed := value.(type) {
+	case json.Number:
+		parsed, err := typed.Int64()
+		if err != nil || int64(int(parsed)) != parsed {
+			return 0, false
+		}
+		return int(parsed), true
+	case int:
+		return typed, true
+	case int64:
+		if int64(int(typed)) != typed {
+			return 0, false
+		}
+		return int(typed), true
+	}
+	return 0, false
 }

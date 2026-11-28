@@ -810,9 +810,11 @@ func DeepCleanWorker(home hivehome.Home, colonyID, workerID, wdir string, dispos
 		}
 		if !disposer.DryRun() {
 			data, err := marshalNoEscape(tombstone)
+			// retention.py writes the tombstone through atomic_write (mkstemp
+			// 0600); keep the preserved worker summary owner-only.
 			if err != nil {
 				report.Errors = append(report.Errors, workerID+"/result.json: "+err.Error())
-			} else if err := atomicfs.WriteFile(resultPath, data, 0o644); err != nil {
+			} else if err := atomicfs.WriteFile(resultPath, data, 0o600); err != nil {
 				report.Errors = append(report.Errors, workerID+"/result.json: "+err.Error())
 			}
 		}
@@ -1274,7 +1276,7 @@ func PruneQueenSession(home hivehome.Home, sessionDir string, cfg RetentionConfi
 			"bytes_freed": report.BytesFreed,
 		}
 		if data, err := json.Marshal(pruned); err == nil {
-			_ = atomicfs.WriteFile(filepath.Join(sessionDir, ".pruned.json"), data, 0o644)
+			_ = atomicfs.WriteFile(filepath.Join(sessionDir, ".pruned.json"), data, 0o600)
 		}
 	}
 	return report

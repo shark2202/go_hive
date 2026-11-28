@@ -14,20 +14,121 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/shark2202/go_hive/go-hive/internal/eventbus"
+	"github.com/shark2202/go_hive/go-hive/internal/hivehome"
 	"github.com/shark2202/go_hive/go-hive/internal/queen"
+	"github.com/shark2202/go_hive/go-hive/internal/soul"
 	"github.com/shark2202/go_hive/go-hive/internal/storage"
 )
 
-// queenLiveDM reports whether a live session is a DM of this queen. Python
-// additionally excludes channel sessions and sessions retired by a fork
-// (`superseded_by`); Go's Session models neither, and a channel or forked
-// session is never registered here as a DM.
+// queenLiveDM reports whether a live session is a DM of this queen. Upstream
+// additionally excludes channel sessions (a QQ group's chat is the channel's,
+// not the user's DM) and sessions retired by a fork (`superseded_by`): a
+// forked-away session must not be served as live or parked by /session/new.
+//
+// Parity: framework/server/routes_queens.py::handle_queen_session
 func queenLiveDM(session *Session, queenID string) bool {
 	return session != nil &&
 		session.QueenName == queenID &&
 		session.ColonyID == "" &&
 		session.WorkerPath == "" &&
-		session.Colony == nil
+		session.Colony == nil &&
+		session.Channel() == "" &&
+		session.SupersededBy == ""
+}
+
+// refreshQueenLiveIdentity re-materializes the identity of every live session
+// of queenID after a profile or persona edit. Upstream's
+// _refresh_live_queen_identity sets the phase state's queen profile (the next
+// AgentLoop turn reads it) and re-publishes QUEEN_IDENTITY_SELECTED so the
+// conversation header updates; this port also rebases the runtime's baked
+// system prompt so the change reaches the next model request.
+//
+// Parity: framework/server/routes_queens.py::_refresh_live_queen_identity
+func refreshQueenLiveIdentity(manager *SessionManager, queenID string, profile map[string]any) {
+	if manager == nil {
+		return
+	}
+	name, _ := profile["name"].(string)
+	title, _ := profile["title"].(string)
+	for _, session := range manager.ListSessions() {
+		if session == nil || session.QueenName != queenID {
+			continue
+		}
+		// Upstream skips a session without phase_state: only a materialized
+		// queen carries an identity to refresh.
+		phase, ok := session.PhaseState.(SessionPhaseState)
+		if !ok || phase == nil {
+			continue
+		}
+		if setter, ok := session.PhaseState.(interface {
+			SetQueenIdentity(string, map[string]any)
+		}); ok {
+			setter.SetQueenIdentity(queenID, profile)
+		}
+		if session.Chat != nil {
+			session.Chat.RefreshQueenIdentity(profile)
+		}
+		if session.EventBus != nil {
+			event := eventbus.NewAgentEvent(eventbus.EventQueenIdentitySelected, chatStreamID)
+			event.Data = map[string]any{
+				"queen_id": queenID,
+				"name":     name,
+				"title":    title,
+			}
+			session.EventBus.Publish(event)
+		}
+	}
+}
+
+// chatQueenIdentityFromProfile renders a loaded profile's persona as the live
+// identity prompt (max_examples=0, like materialize_queen_identity) and appends
+// her soul, the same composition chatQueenIdentityPrompt builds at session
+// creation. A nil profile keeps the generic chat identity.
+func chatQueenIdentityFromProfile(homeRoot, queenName string, profile map[string]any) string {
+	identity := chatIdentityPrompt
+	if profile != nil {
+		maxExamples := 0
+		if prompt := strings.TrimSpace(queen.FormatQueenIdentityPrompt(profile, &maxExamples)); prompt != "" {
+			identity = prompt
+		}
+	}
+	if homeRoot != "" {
+		home := hivehome.Home{Root: homeRoot}
+		if soulPrompt := soul.PromptFor(HiveConfig(home), home.QueensDir(), queenName); soulPrompt != "" {
+			identity = identity + "\n\n" + soulPrompt
+		}
+	}
+	return identity
+}
+
+// chatQueenStaticPromptWithIdentity assembles the same cache-stable prompt
+// chatQueenStaticPrompt builds, with the identity segment supplied by the
+// caller: identity + the phase base prompt + the ambient credentials block.
+func chatQueenStaticPromptWithIdentity(deps ChatRuntimeDeps, identity string) string {
+	return queen.StaticPrompt(queen.StaticPromptOptions{
+		Identity:    identity,
+		Base:        queen.PhasePrompt(chatPhaseLabel(deps)),
+		Credentials: chatCredentialsAmbientBlock(deps),
+		MCPCLI:      chatMCPCLIPrompt(deps),
+	})
+}
+
+// RefreshQueenIdentity rebases this runtime's cache-stable system prompt on a
+// just-saved profile, so the next model request carries the new persona. The
+// turn goroutine is the conversation's only writer, so an edit landing while a
+// turn runs waits for the next idle edit; the phase state and the identity
+// event already carry the change immediately.
+func (r *ChatRuntime) RefreshQueenIdentity(profile map[string]any) {
+	if r == nil || r.conv == nil || r.agentCtx == nil {
+		return
+	}
+	if r.turnActive.Load() {
+		return
+	}
+	identity := chatQueenIdentityFromProfile(r.deps.HomeRoot, r.queenName, profile)
+	r.agentCtx.IdentityPrompt = identity
+	r.conv.UpdateSystemPrompt(chatQueenStaticPromptWithIdentity(r.deps, identity), nil)
 }
 
 func queenReadMeta(sessionDir string) map[string]any {
@@ -285,7 +386,7 @@ func handleQueenNewSession(w http.ResponseWriter, r *http.Request, deps QueenRou
 	if queenCanReadBody(r) {
 		decoded, err := decodeJSONValue(r)
 		if err != nil {
-			writeJSON(w, http.StatusBadRequest, map[string]any{"error": "Invalid JSON body"})
+			writeJSONBodyFailure(w, err, http.StatusBadRequest, "Invalid JSON body")
 			return
 		}
 		object, ok := decoded.(map[string]any)
@@ -406,7 +507,7 @@ func queenOptionalJSONBody(w http.ResponseWriter, r *http.Request) (map[string]a
 	}
 	decoded, err := decodeJSONValue(r)
 	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": internalServerError})
+		writeJSONBodyFailure(w, err, http.StatusInternalServerError, internalServerError)
 		return nil, false
 	}
 	object, ok := decoded.(map[string]any)

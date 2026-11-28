@@ -23,13 +23,9 @@ import (
 )
 
 func decodeTriggerBody(r *http.Request) (map[string]any, error) {
-	var data []byte
-	if r.Body != nil {
-		var err error
-		data, err = io.ReadAll(r.Body)
-		if err != nil {
-			return nil, err
-		}
+	data, err := readLimitedBody(r, maxJSONBodyBytes)
+	if err != nil {
+		return nil, err
 	}
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.UseNumber()
@@ -315,11 +311,31 @@ func handleUpdateTrigger(w http.ResponseWriter, r *http.Request, deps SessionRou
 		if subID := session.PopActiveWebhookSub(triggerID); subID != "" && session.EventBus != nil {
 			session.EventBus.Unsubscribe(subID)
 		}
+		var startErr error
 		switch def.TriggerType {
 		case "timer":
-			_ = StartTriggerTimer(session, triggerID, &def)
+			startErr = StartTriggerTimer(session, triggerID, &def)
 		case "webhook":
-			_ = StartTriggerWebhook(session, triggerID, &def)
+			startErr = StartTriggerWebhook(session, triggerID, &def)
+		}
+		if startErr != nil {
+			// The old timer/subscription is already stopped, so a failed restart
+			// must not answer 200, publish TRIGGER_UPDATED, or persist the
+			// trigger as enabled: the caller would believe the new config is
+			// live while nothing can fire. StartTriggerWebhook subscribes before
+			// its listener starts, so drop that half-installed subscription too.
+			if subID := session.PopActiveWebhookSub(triggerID); subID != "" && session.EventBus != nil {
+				session.EventBus.Unsubscribe(subID)
+			}
+			session.PopTriggerNextFire(triggerID)
+			session.DeactivateTrigger(triggerID)
+			def.Enabled = false
+			session.PutTrigger(def)
+			PersistActiveTriggers(session, sessionID)
+			writeJSON(w, http.StatusInternalServerError, map[string]any{
+				"error": "Failed to start trigger: " + startErr.Error(),
+			})
+			return
 		}
 	}
 
@@ -408,7 +424,7 @@ func handleResolveMissedTriggers(w http.ResponseWriter, r *http.Request, deps Se
 
 	body, err := decodeTriggerBody(r)
 	if err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid JSON body"})
+		writeJSONBodyFailure(w, err, http.StatusBadRequest, "invalid JSON body")
 		return
 	}
 

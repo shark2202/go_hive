@@ -1,6 +1,6 @@
 {
- "generated_at": "2026-11-22 18:30 ",
- "baseline": "9cebd5a6",
+ "generated_at": "2026-11-23 22:52 ",
+ "baseline": "42f2b932",
  "totals": {
   "python_files": 351,
   "non_test_files": 295,
@@ -1842,35 +1842,35 @@
  "external": [
   [
    "__future__",
-   200
+   202
   ],
   [
    "logging",
-   184
+   187
   ],
   [
    "typing",
-   184
+   185
   ],
   [
    "json",
-   116
+   118
   ],
   [
    "pathlib",
-   106
+   107
   ],
   [
    "datetime",
-   89
+   90
+  ],
+  [
+   "os",
+   82
   ],
   [
    "asyncio",
    81
-  ],
-  [
-   "os",
-   80
   ],
   [
    "dataclasses",
@@ -1909,16 +1909,16 @@
    22
   ],
   [
-   "enum",
-   21
-  ],
-  [
-   "shutil",
-   21
+   "httpx",
+   22
   ],
   [
    "sys",
-   20
+   21
+  ],
+  [
+   "enum",
+   21
   ]
  ],
  "aden_by_pkg": [

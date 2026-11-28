@@ -1,11 +1,14 @@
 # Reminders 覆盖对齐说明（source 矩阵 / 生命周期 / 预载 colony queen scope）
 
+> 可视化资料：[reminders-and-nudges.html](reminders-and-nudges.html)（点-线-面：15 源、9 注入点、8 条链路、9 个维度、Go 15/15 行为对齐；生成器 `gen_reminders_and_nudges.py`）
+
 本文回答 `queen-worker-colony-parity-audit.html` 维度 #12（Reminders / idle tick）与 GAP-06 的
 修复情况：Go 侧 reminder source 的注册矩阵、触发/抑制边界、会话启停生命周期，以及预载
 colony 会话的 queen scope 解析。基线：`main@46939ab5` 之上的 `reminders-coverage` 分支；
 上游参考为 `core/framework`（hive 1.0.14）。**2026-11-21 在本工作树（main@c4eb266d）逐条
-复核了生产代码并做了真实 serve 实测（§8.1），其中 past_conversations 的注入顺序/包装已按
-上游修正；审查记录见 `docs/e2e-assets/reminders/2026-11-21-audit.md`。**
+复核了生产代码并做了真实 serve 实测（§8.1），其中 past_conversations 已在 `dfbf65b2`
+进 chat ReminderHub（SESSION_START / USER_PROMPT_SUBMIT 双 point）；审查记录见
+`docs/e2e-assets/reminders/2026-11-21-audit.md`。**
 
 ## 1. 结论
 
@@ -13,20 +16,36 @@ colony 会话的 queen scope 解析。基线：`main@46939ab5` 之上的 `remind
   TTFT / 事件间静默看门狗在 `internal/server/chat_stream.go` 里判定，循环把判定转成
   `<system-reminder>` 并**重跑同一 inner turn**（上游 continue-nudge 语义）。
 - worker hub 从 task + idle 扩到 **task + worker_tracker_snapshot + idle + stream_stall**；
-  overseer loop 从 **nil hub** 变成 queen role 的 5 个 source（parallel / active_workers /
-  tracker / fleet / stream_stall）。
+  overseer loop 从 **nil hub** 变成 queen role 的 6 个 source（parallel / active_workers /
+  tracker / fleet / tasks / stream_stall）。
 - queen chat hub 补入 `colony_worker_snapshot`（tool-budget checkpoint 的 fleet 快照）。
 - 预载 colony 会话不再固定 `default` queen scope：从 colony `metadata.json` 的 `queen_name`
   解析（与上游 `_create_session_for_existing_colony` 一致），会话目录、记忆目录与 skills
   catalog 一并按该 queen 落位。
-- **2026-11-21 修正**：`past_conversations` 仍在 hub 外直接注入，但注入顺序已对齐上游
-  `USER_PROMPT_SUBMIT`（提醒帧在用户消息**之前**）且改用共享 `WrapReminder` 包装
-  （去掉 Go 专有标题 / `[External event]` 前缀，补回 hub footer）。残余（见 §7）：
-  仍不在 hub、SESSION_START 不重复召回、overseer 的 skills catalog 走既有 relay、
-  worker 没有 searchable_tools tier。这些均登记为「实现形态差异」而非静默缺口。
+- **2026-11-21 修正**：`past_conversations` 曾在 hub 外直接注入，注入顺序已对齐上游
+  `USER_PROMPT_SUBMIT`（提醒帧在用户消息**之前**）并改用共享 `WrapReminder` 包装。
+  **2026-11-23 `dfbf65b2` 已把它搬进 chat ReminderHub**：`SESSION_START` 与
+  `USER_PROMPT_SUBMIT` 两个 point 都触发，`PastConversationRecallProvider` 由
+  `chat_reminders.go` 接线；`chat_past_conversations_test.go` 覆盖两个 point。此项已关闭。
 - **2026-11-22 计数修正**：上游注册数 **13 → 15**，补 `memory_recall` / `memory_index`
   （两者均在 `chat_reminders.go:221-222` 注册，provider 由 `queen_orchestrator.py:1722-1723`
   接线）；`ReminderPoint` 共 **9** 个（含 `STREAM_STALLED`）。
+- **2026-11-23 复核（main@2ea9caa6）**：15/15 个 source 类型都已实现；按行为面计
+  **12 个完全对齐、3 个有条件差异**（`tasks`、`stream_stall`、`idle_nudge`，见 §7），
+  不是 15/15 逐字一致。Go 四个包 **2,422 tests PASS**；Python 8 个 reminder 测试文件
+  **155 passed**。
+- **2026-11-23 17:18 复核（main@d403b0a6）**：`w86/stream-stall` 把 worker/overseer 的
+  completer 接到共享 `StreamingCompleter`（TTFT 600s / inter-event 120s 看门狗），
+  `stream_stall` 已从“仅 chat queen 真触发”变为 worker/overseer 也走同一 recovery 路径；
+  行为面计 **13 个完全对齐、2 个有条件差异**（`tasks`、`idle_nudge`，见 §7）。
+  全量 CI **5,976 tests / 6,685 refs / 0 missing**；Python reminder 155 仍 PASS。
+- **2026-11-23 `w87/reminders-residual` 收尾**：两条残余均已关闭。worker 的 task source 绑定其
+  私有 store（`workerDir` / `workerID`），overseer 的 task source 绑定 `overseerTaskSet`
+  （`<colony>/_misc/overseer`）；worker 的 reminder context 接上 `OpenTasksProvider` /
+  `SessionGoalProvider`，`parked_open_tasks` 与 goal 前缀按上游语义工作。行为面计
+  **15 个完全对齐、0 个有条件差异**；旧代码上 worker task snapshot / worker real turn、worker
+  idle open-task、overseer hub / real turn 相关行为测试均红，修复后绿。目标包
+  `go test ./internal/colony ./internal/agentloop ./internal/tasks` PASS（测试提交 `edd40f3d`）。
 
 ## 2. 上游 source 全量清单
 
@@ -82,16 +101,16 @@ colony 会话的 queen scope 解析。基线：`main@46939ab5` 之上的 `remind
 | idle_nudge | ✅ | ✅ | ticker 随会话启停 |
 | sentinel_escalation | ✅ | ✅ | `sentinel_runtime.go` 注册 |
 | stream_stall | ❌（零注册） | ✅ | 本分支补 + 真实触发 |
-| past_conversations | 注入在 hub 外 | 注入在 hub 外 | 形态差异；2026-11-21 已把顺序/包装对齐上游（§7） |
+| past_conversations | 注入在 hub 外 | ✅ 已进 hub（dfbf65b2） | 2026-11-23 起 `SESSION_START` / `USER_PROMPT_SUBMIT` 两个 point 都触发；provider 由 `chat_reminders.go` 接线 |
 
 ### 3.2 Colony worker（`internal/colony/worker_reminders.go`）
 
 | source | before | after |
 | --- | --- | --- |
-| tasks | ✅ | ✅ |
+| tasks | ✅ | ✅（绑定 worker 私有 store：`workerDir` + `workerID`，与 `task_*` 工具同 scope；§7-5 已关闭） |
 | worker_tracker_snapshot | ❌ | ✅（cadence 20 calls，tracker_* 重置，空表不自耗） |
-| idle_nudge | ✅ | ✅ |
-| stream_stall | ❌ | ✅（注册；worker completer 目前非流式，见 §7） |
+| idle_nudge | ✅ | ✅（worker context 已接 `OpenTasksProvider` / `SessionGoalProvider`，`parked_open_tasks` 与 goal 前缀可触发；§7-6 已关闭） |
+| stream_stall | ❌ | ✅（worker completer 已接 `StreamingCompleter`，TTFT/idle 看门狗真实触发，见 §7） |
 | colony_parallel / active_workers / tracker_snapshot / colony_worker_snapshot / skills_catalog / turn_context / memory_recall / memory_index | ❌ | ❌（上游 `applies_to` 对 worker 为 False，注册也会被 bind 过滤） |
 | searchable_tools | ❌ | ❌（Go worker 无 search_tools tier；上游同样只在 provider 存在时绑定） |
 
@@ -109,7 +128,7 @@ colony 会话的 queen scope 解析。基线：`main@46939ab5` 之上的 `remind
 | stream_stall | ❌ | ✅ | 与 chat/worker 同一 source |
 | idle_nudge | ❌ | ❌ | 会话级 idle 由 chat runtime 唯一持有，避免同一会话双 ticker 双唤醒 |
 | skills_catalog | ❌ | ❌ | 预载会话首次客户端消息的 relay 已携带 catalog（上游 overseer 也是 prompt 路径） |
-| tasks | ❌ | ❌ | task 提醒读进程级 task store，overseer 任务在 colony 存储域；注册会变成空转 |
+| tasks | ❌ | ✅ | 绑定 colony 存储域的 `overseerTaskSet`（`<colony>/_misc/overseer`），与 overseer 的 `task_*` 工具同 scope |
 | memory_recall / memory_index | ❌ | ❌ | 上游需 memory provider；overseer 无 recall/index provider，注册也会自跳过 |
 
 ## 4. 触发 / 抑制边界
@@ -183,23 +202,63 @@ default scope 的 probe 不出现）、`TestPreloadedColonySessionRestartReusesI
 
 ## 7. 残余 / 未实现项（显式登记）
 
-1. **past_conversations 未搬进 hub**：Go 在 `runTurn` 里对客户端输入调用
-   `injectPastConversationRecall`。2026-11-21 起顺序与包装已对齐上游
-   (`USER_PROMPT_SUBMIT` → 提醒帧在用户消息之前；共享 `WrapReminder` 包装 + hub footer)，
-   但仍不在 ReminderHub 注册矩阵里；SESSION_START 时不会重复召回（上游会两个 point 都触发）。
-2. **worker 的 searchable_tools**：Go worker 没有分层工具表（无 `search_tools`），上游的
+1. **worker 的 searchable_tools**：Go worker 没有分层工具表（无 `search_tools`），上游的
    `applies_to` 也只在 provider 存在时绑定，因此不注册；若将来给 worker 加 tier，需要同时接线
    `SearchableToolsProvider`。
-3. **overseer 无 idle ticker**：同一会话已有 chat runtime 的 idle ticker 并把唤醒 relay 给
+2. **overseer 无 idle ticker**：同一会话已有 chat runtime 的 idle ticker 并把唤醒 relay 给
    overseer；再加一条会双唤醒。上游 overseer 即会话 queen，只有一条 ticker。
-4. **overseer 的 skills catalog**：走预载会话首次客户端消息的 relay（与上游 overseer 的
+3. **overseer 的 skills catalog**：走预载会话首次客户端消息的 relay（与上游 overseer 的
    prompt 路径对应），不在其 hub 重复注册，避免同一 catalog 两次公告。
-5. **worker/overseer 的 STREAM_STALLED 触发面**：source 已注册且 recovery 路径与 queen 相同，
+4. ~~**worker/overseer 的 STREAM_STALLED 触发面**：source 已注册且 recovery 路径与 queen 相同，
    但 worker/overseer 的 completer 目前没有流式适配器，因此该点只在 chat queen 会话上真实
-   触发；一旦 worker/overseer 接流式传输，触发面自动打开（无需再改接线）。
-6. **tasks 源在 worker/overseer**：worker 的 task 工具用 worker 私有 task store，而
-   `TaskReminderSource` 读进程级 store；overseer 同理（`overseerTaskSet` 在 colony 存储域）。
-   现状注册但实际自跳过，属既有行为，未在本分支改变。
+   触发；一旦 worker/overseer 接流式传输，触发面自动打开（无需再改接线）。~~
+   **已关闭（2026-11-23，`w86/stream-stall`）**：worker/overseer 的 `AgentContext.LLM`
+   现由 `internal/colony/stream_wiring.go` 包装共享 `agentloop.StreamingCompleter`，
+   worker/overseer 的 `LoopSignals` 读取适配器的 live `StreamActive` / `FirstEventSeen`；
+   fake streaming provider 的生产路径测试证明 TTFT stall → `<system-reminder>` → 同 inner
+   turn 重试 → cap 抑制。真实网络 worker/overseer 的 serve E2E 仍属外部验证项，不以 fake
+   冒充。
+5. ~~**tasks 源在 worker/overseer**：worker 的 task 工具写 `workerDir` 下的私有 store，
+   session id 是 `workerID`；而 `TaskReminderSource` 读进程级 `GetTaskStore()`，session id 是
+   `<colony>/<workerID>`。所以 worker hub 虽注册 `tasks`，`Render` 实际自跳过，属**无效注册**。
+   overseer 的 `overseerTaskSet` 在 colony 存储域，且 `tasks` **未注册**（见 §3.3），属
+   **未实现**。~~ **已关闭（2026-11-23，`w87/reminders-residual`）**：`TaskReminderSource` 新增
+   `NewTaskReminderSourceFor(store, sessionID)`，worker source 绑定 `workerDir` + `workerID`，
+   overseer source 绑定 `overseerTaskSet` 的 colony 存储域；两边与各自的 `task_*` 工具同
+   scope。`TestWorkerTaskReminderRendersTheWorkersOwnPlan` /
+   `TestWorkerTaskUpdateReminderRendersForTheWorkerSession` /
+   `TestWorkerTaskReminderReachesARealWorkerTurn` / `TestOverseerTaskReminderReadsTheOverseerPlan` /
+   `TestOverseerTaskReminderReachesARealOverseerTurn` 覆盖；旧代码分别红在空 snapshot、无
+   `tasks` active source、真实首请求无 `<system-reminder>`。
+6. ~~**worker 的 idle_nudge open-task 变体**：worker 的 `ReminderAgentContext` 只接了
+   `ColonyBindingProvider`，没有 `OpenTasksProvider` / `SessionGoalProvider`。因此
+   `parked_open_tasks` 永远看不到 worker 的任务列表；`TURN_DONE` + open tasks 会被
+   `turn_done_idle` 抑制，goal 前缀也缺失。chat 侧 provider 已接，worker 侧未接；这是
+   **注册了但变体不工作**，不是完全对齐。~~ **已关闭（2026-11-23，`w87/reminders-residual`）**：
+   `attachWorkerTaskReminderProviders` 在 worker 的 `AgentContext` 上装 `OpenTasksProvider` /
+   `SessionGoalProvider`，读同一个 `workerDir` / `workerID` store；ticker 的
+   `ReminderAgentContext` 也由 `workerReminderContext` 接同一对 provider。
+   `TestWorkerLoopInstallsTaskReminderProvidersOnTheTurnContext` 与
+   `TestWorkerIdleNudgeParkedOpenTasksCarriesGoalAndNamesTasks` 覆盖；旧代码红在 provider 为
+   nil、nudge 退化为 `parked_no_question`。`TURN_DONE` + 无 open task 仍按上游
+   `is_silent_park` 保持安静。
+7. ~~**用户 Stop / `user_stopped`（2026-11-25 新发现，非 hub source）**：`/api/sessions/{id}/cancel-queen`
+   依赖 `CancelCurrentTurn` / `MarkUserStopped` 类型断言，但生产注册的 queen node 是
+   `*ChatRuntime`（`internal/cli/loader_session_runtime.go:122-124`），其方法集没有这两个方法，
+   Stop 实际是空操作（响应 `cancelled` 恒为 `false`），`idle_nudge` 的 `gate=user_stopped` 永不
+   触发；路由测试用实现接口的 fake node，未覆盖真实装配。~~
+   **已关闭（2026-11-25，`w147`，提交 `3425aecf6`，合并 `b5fc7ac23`）**：`*ChatRuntime` 实现
+   `CancelCurrentTurn` / `MarkUserStopped` 并引入 per-turn 取消句柄——Stop 返回
+   `{"cancelled": true, "workers": ...}`，只取消在飞 turn（`turnMu` + 序号，旧取消不会打到后续
+   turn），被 Stop 的 turn 以 `user_stopped` park + `client_input_requested` 收尾，不再发布
+   `execution_failed`；`user_stopped` 闸门自下一个 tick 起抑制 idle nudge，且只有下一次真实
+   客户端输入才清除（对齐上游 `inject_event`）。回归以真实 `ChatRuntime` + 阻塞模型注册为
+   queen node 驱动 `POST /cancel-queen`：`TestCancelQueenStopsRealChatRuntimeTurn`、
+   `TestCancelQueenKeepsQueuedTurnRunning`、`TestCancelCurrentTurnWithoutInflightTurn`
+   （`internal/server/chat_turn_cancel_test.go`）。`user_stopped` 的 cursor 持久化/冷启动恢复
+   由提交 `53fd28042`（合并 `049738d80`）补齐。详见
+   `docs/reports/park-reminder-budget-audit-20261125.md`（P0 已闭环；P2 设计差异与 P3 验证边界
+   仍按该报告开放）。
 
 ## 8. 测试与真实触发证据
 
@@ -211,10 +270,23 @@ default scope 的 probe 不出现）、`TestPreloadedColonySessionRestartReusesI
 | `TestChatRuntimeStreamStallReminderReachesTheModel` | **真实 ChatRuntime 会话**：Deliver → 流 stall → 重试请求携带 `<system-reminder>` 与 TTFT 文案；总线收到 `stream_ttft_exceeded` / `stream_nudge_sent` / `reminder_injected` |
 | `TestChatHubRegistersStreamStallAndFleetSources` | chat hub 注册矩阵 + Close 不泄漏 |
 | `TestWorkerAgentLoopRegistersWorkerRoleSources` | worker hub 注册矩阵（无 queen-only 源） |
+| `TestWorkerTaskReminderRendersTheWorkersOwnPlan` | worker `SESSION_START` snapshot 读自己的 store；旧代码为空 |
+| `TestWorkerTaskUpdateReminderRendersForTheWorkerSession` | worker `POST_TOOL_USE` drift/goal 读 worker session |
+| `TestWorkerTaskReminderReachesARealWorkerTurn` | **真实 SpawnBatch worker**：`task_create` 后 worker 转录出现任务 snapshot |
+| `TestWorkerLoopInstallsTaskReminderProvidersOnTheTurnContext` | worker `AgentContext` 带 `workerID` + `OpenTasksProvider` / `SessionGoalProvider` |
+| `TestWorkerIdleNudgeParkedOpenTasksCarriesGoalAndNamesTasks` | worker `parked_open_tasks` body 含 goal 前缀并点名 open tasks；旧代码退化为 `parked_no_question` |
+| `TestOverseerTaskReminderReadsTheOverseerPlan` | overseer hub 的 `tasks` active source 读 `overseerTaskSet` |
+| `TestOverseerTaskReminderReachesARealOverseerTurn` | **真实 `StartOverseer` loop**：首个模型请求携带 overseer 计划 snapshot |
 | `TestWorkerTrackerSnapshotReachesARealWorkerTurn` | **真实 SpawnBatch worker**：tracker 有 1 行 → 工具调用后 worker 转录出现 tracker 提醒 |
-| `TestOverseerReminderWiringRegistersQueenSources` | overseer hub 5 个 queen-role 源 + 无 ticker |
+| `TestWorkerLoopStreamStallTripsAndRecovers` | **生产 worker loop + fake streaming provider**：TTFT stall → `<system-reminder>` → 同 inner turn 重试；live `StreamActive`/`FirstEventSeen` |
+| `TestOverseerLoopStreamStallTripsAndRecovers` | **生产 overseer loop + fake streaming provider**：同一 recovery 路径；非流式 provider 保持不包装 |
+| `TestOverseerReminderWiringRegistersQueenSources` | overseer hub 6 个 queen-role 源（含 tasks）+ 无 ticker |
 | `TestColonyWorkerSnapshotGatesAndBody` / `TestWorkerTrackerSnapshotCadenceAndGates` | 触发/抑制边界 |
 | `TestPreloadedColonySessionInjectsSkillsCatalog` / `...RestartReusesID` | queen scope 解析 |
+
+上表的“真实 worker / overseer”指生产 `SpawnBatch` / `StartOverseer` + 真实 `AgentLoop` 与持久化
+task store；模型是脚本化 provider。真实网络 `hive serve` 下的 worker/overseer `tasks` 与
+`idle_nudge` 触发仍属外部验证项，不以 in-process 测试冒充 serve E2E。
 
 ### 8.1 真实 serve 实测（2026-11-21，无假组件）
 
@@ -225,7 +297,7 @@ default scope 的 probe 不出现）、`TestPreloadedColonySessionRestartReusesI
 | STREAM_STALLED 触发 | `HIVE_LLM_STREAM_TTFT_TIMEOUT_SECONDS=0.002` 下真实会话事件：`stream_ttft_exceeded` → `stream_nudge_sent(nudge_count=1)` → `reminder_injected(stream_stall)` → 重试仍 stall → `execution_failed`；会话 parts 含注入的 `<system-reminder>The previous stream stalled ...` | `docs/e2e-assets/reminders/stream-stall/trigger-events.txt`、`trigger-conversation-parts.txt` |
 | STREAM_STALLED 抑制（cap / enabled=false） | 首 stall 用满 `HIVE_CONTINUE_NUDGE_MAX_PER_TURN=1` 后第二次不再注入；`HIVE_CONTINUE_NUDGE_ENABLED=false` 时完全无 `stream_*`/`reminder_injected(stream_stall)` 事件 | 同上 + `suppressed-events.txt` |
 | worker_tracker_snapshot 注入 | 真实 `run_worker` 派生的 SpawnBatch worker，第一次工具批次后工具结果尾部出现 `Tracker state right now: - notes: 1 row ... tracker_upsert` | `docs/e2e-assets/reminders/worker-tracker/` |
-| past_conversations 位置 | 修正前：用户消息之后 + Go 专有标题；修正后：用户消息之前 + 与上游 `wrap_reminder` 相同的包装 | `docs/e2e-assets/reminders/past-conversations/before-fix-parts.txt` / `after-fix-parts.txt` |
+| past_conversations 位置 | 已进 hub（dfbf65b2）：`SESSION_START` / `USER_PROMPT_SUBMIT` 两个 point 都触发；包装与上游 `wrap_reminder` 相同 | `docs/e2e-assets/reminders/past-conversations/before-fix-parts.txt` / `after-fix-parts.txt` |
 
 复现：
 
@@ -246,11 +318,15 @@ make ci
 | `internal/agentloop/reminder_hub.go` | `TurnResetter` 接口与 `ResetTurn` |
 | `internal/agentloop/tracker_snapshot_reminder.go` | 新增 `WorkerTrackerSnapshotReminderSource` |
 | `internal/agentloop/colony_worker_snapshot_reminder.go` | 新增 queen fleet 快照 source |
-| `internal/server/chat_stream.go` | 流看门狗 + `StreamStalledError` 判定 |
+| `internal/server/chat_stream.go` | 流看门狗 + `StreamStalledError` 判定；watchdog 预算委托 `agentloop.StreamWatchdogBudgets` |
+| `internal/agentloop/streaming_completer.go` | worker/overseer 共享流式 watchdog 适配器（live signals、fallback、prompt scope） |
+| `internal/colony/stream_wiring.go` | worker/overseer `AgentContext.LLM` 包装与 `LoopSignals` live 状态叠加 |
 | `internal/server/chat_reminders.go` | chat hub 注册 stream_stall / colony_worker_snapshot |
 | `internal/server/chat_memory_wiring.go` | `chatLoopConfig` 的 env 覆盖 |
-| `internal/colony/worker_reminders.go` | worker hub 新源 + binding/stats provider |
-| `internal/colony/overseer_reminders.go` | overseer hub（queen role 源） |
+| `internal/colony/worker_reminders.go` | worker hub + worker 私有 task source / idle providers |
+| `internal/colony/overseer_reminders.go` | overseer hub（queen role 源含 colony 存储域 tasks） |
+| `internal/colony/worker_task_tools.go` | worker 私有 task store（`workerDir` / `workerID`） |
+| `internal/colony/overseer_tools.go` | `overseerTaskSet`（colony 存储域 / `overseer` session） |
 | `internal/cli/loader_preloaded_session.go` | 预载 colony 的 queen scope |
 
 （`docs/support-matrix.md` 的「提醒中枢」一行同步更新。）

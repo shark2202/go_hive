@@ -2,8 +2,8 @@
 
 > 对象：`core/framework/server/streamtoken_refresh.py`（419 行）——运行时自轮换 `hive` streamToken 的后台任务。
 > 问题：Go 端口是否要实现它（实现），还是登记为范围外（out_of_scope）？
-> 结论：**out_of_scope(cloud)** —— 不移植；该模块属于云端登录态/凭据生命周期宿主，Go 端口只消费外部提供的云凭据。
-> 基线：main `52672d1c`（audit-docs 车道，2026-11-22）；数字均来自 §附录 实测命令。
+> 结论：**ported**（w168 车道重开并实现）——调度/过期/重试引擎在 `internal/streamtoken`，serve 装配在 `internal/server/streamtoken.go`，LLM 调用侧旁路在 `internal/llm/streamtoken.go`；原 `out_of_scope(cloud)` 裁定保留为决策历史（§1-§3、§4）。
+> 基线：main `52672d1c`（audit-docs 车道，2026-11-22）裁定 out_of_scope；w168 车道（2026-11-25）重开并移植，数字均来自 §附录 实测命令。
 
 ## 1. 现状（Python 侧）
 
@@ -46,45 +46,63 @@
 
 即：Go 把云凭据当**外部输入**（env 或 `POST /api/credentials` 推送），没有云登录/续期生命周期，也没有 refresh endpoint 客户端——正是 Python 模块诞生前的那套模型（模块头 `:7-16` 所述 desktop-owned 模型）。
 
-## 4. 结论：out_of_scope(cloud)
+## 4. 结论：ported（w168 车道重开并实现）
 
-对 C12 的 out_of_scope 口径（Python 调用链锚点 + Go 锚点证明端口停在该宿主之前）逐条成立：
+原裁定为 `out_of_scope(cloud)`（§1-§3 保留为决策历史）。w168 车道重开并移植，重开理由：
 
-1. 该任务只在**云模式**存在（`HIVE_CLOUD_BASE` 门控，未设置直接 return）；
-2. 它操作的是**云签发**的 `hive` streamToken（24h TTL、`/user/refresh-stream-token-from-stream` 端点、sid 黑名单/master-secret 撤销都是云端契约）；
-3. Go 端口没有云登录/会话生命周期可挂靠（§3 表：只有 env 门控与 JWT 消费）；桌面宿主部署时 token 仍由外部推入（`POST /api/credentials`）；
-4. 所以它不是「排期缺口」（`unported`），而是**宿主边界**——与 graph 执行引擎同类，登记为 `out_of_scope`。
+1. 上节重开条件之一的宿主问题已不成立——Go serve 进程现在**自己持有**轮换挂靠点（启动装配 + LLM 调用侧 seam），不再需要桌面端推 token 才能续期；
+2. C12 要求「未移植模块必须有结论」，而 token 轮换的**调度/过期/重试语义**（阈值、睡眠边界、失败不覆盖凭据、强制刷新）是可测试的纯逻辑，与「云登录态是否由 Go 拥有」解耦，按 unported 排期不合理；
+3. 实现不引入云登录生命周期：仍只消费 `hive` 凭据库里的 streamToken，仅在设置 `HIVE_CLOUD_BASE` 时启动（未设置直接 no-op，与 Python 的 early return 一致）。
 
-**何时重开**（避免决策僵化；满足任一条件应把它提回 backlog 的实现车道）：
+### 4.1 实现映射（Python -> Go）
 
-- Go 需要在**无桌面**环境长期（>24h）以 `HIVE_CLOUD_BASE` 云模式无人值守运行；或
-- Go 开始自己拥有云登录/JWT 生命周期（届时才有挂靠点）。
+| Python 面 | Go 面 | 说明 |
+| --- | --- | --- |
+| `decode_jwt_exp` (:96) | `internal/streamtoken/token.go` `DecodeJWTExp` | 手动 base64url + `json.Number`，不验签 |
+| `compute_sleep_seconds` (:121) | `internal/streamtoken/token.go` `Policy.SleepSeconds` | 阈值 7200s，睡眠 `[60, 3600]`，无 exp 睡 min |
+| `post_refresh` (:153) | `internal/streamtoken/client.go` `Client.Refresh` | `POST {base}/user/refresh-stream-token-from-stream`，body `{"streamToken": ...}`，200 + 非空 `streamToken` 才算成功，15s 超时 |
+| `_refresh_loop` (:226) | `internal/streamtoken/refresher.go` `Refresher.Run` / `tick` | 读凭据 → 算睡眠 → 醒后复读（别人已刷新则跳过）→ 强制标记 → 刷新 → 写回；失败只记日志，下一 tick 重试；`MIN_SLEEP` 兜底防忙等 |
+| `_sleep_with_force` (:310) | `Refresher.sleepWithForce` | 先快照 wake channel 再查强制标记，避免 set/clear 竞态 |
+| `try_refresh_now` (:351) | `Refresher.RefreshNow` | 串行锁 + 新鲜度复检：并发调用只产生一次 POST |
+| `_force_refresh` (:407) | `Refresher.ForceRefresh` | 幂等唤醒（多次调用折叠为一次强制 tick） |
+| `start_streamtoken_refresh` (:401) | `internal/server/streamtoken.go` `StartStreamTokenRefresh` | `HIVE_CLOUD_BASE` 门控、凭据库装配、llm seam 注册、stop 取消并等待 |
+| 启动注册 `app.py:1072` | `internal/cli/loader_background_services.go:36` | 与 turn-context/bridge/soul 同批启动 |
+| 调用侧旁路 `litellm.py:2008` | `internal/llm/streamtoken.go` + `stream_openai.go` / `stream_anthropic.go` / `complete.go` | 401 且 body 含 `hive_stream_token_invalid` 时刷新一次并用新 token 重放同一调用；其它 401/403 保持终态 |
 
-重开后的验收（对齐 Python 行为）：同阈值 `exp-7200s`、同睡眠边界 `[60, 3600]`、`hive`/`api_key` 写回、`hive_stream_token_invalid` 强制刷新并重试一次、失败不崩循环；测试用假端点 + 假时钟（用例面参考 `core/tests/test_streamtoken_refresh.py`）。
+### 4.2 有意保留的 Go 差异（可靠性）
+
+| 差异 | 原因 |
+| --- | --- |
+| 循环用 `context.Context` 取消，而非 `asyncio.CancelledError` | Go 生命周期惯例；stop 函数取消并等待 goroutine 退出，测试断言无泄漏 |
+| 凭据库以 `WithCacheTTL(0)` 构建（每次 tick 直读加密文件） | Go 的 credential 路由按请求各建一个 store 实例，桌面经 `POST /api/credentials` 推送的 token 不会失效本循环的缓存；关缓存后下一 tick 即可见（Python 共享单 store，`save_credential` 自带失效）。每分钟一次文件读可接受 |
+| 强制刷新用 mutex + `force` 标记代替 `asyncio.Event` | 语义等价（幂等 set / 醒后 clear），且能在任意 goroutine 调用 |
+
+### 4.3 验收对照
+
+Python 测试面（`core/tests/test_streamtoken_refresh.py`）逐条对应到 `internal/streamtoken/*_test.go` 与 `internal/server`、`internal/llm` 的 seam 测试；额外补了参考模块缺少的循环级用例（过期 token 仍刷新、瞬时失败下一 tick 重试、永久失败不覆盖凭据、取消、强制唤醒、负向回归：200 缺 token 不写库 / 新鲜 token 不 POST / 非 streamToken 401 不触发刷新）。
 
 ## 5. registry 登记同步
 
-`contracts/module-inventory.json` 对应条目已同步（2026-11-22）：
+`contracts/module-inventory.json` 对应条目已更新为 `ported`（2026-11-25，w168 车道）：
 
 ```json
 {
   "python_path": "core/framework/server/streamtoken_refresh.py",
   "domain": "server",
-  "status": "out_of_scope",
-  "kind": "call_chain",
-  "go_counterpart": null,
-  "go_counterparts": [],
-  "basis": "python call chain: core/framework/server/app.py:1072 (...) -> core/framework/llm/litellm.py:2001 (...); go_hive/go-hive/internal/llm/catalog.go:525 // ... ; go_hive/go-hive/internal/sentinel/notifier.go:129 (...)",
-  "evidence": "n/a (cloud host not ported; 归属决策与调用链见 go_hive/docs/streamtoken-scope.md)",
-  "note": "Go 无 streamToken/refresh-stream-token 实现（grep 0 命中，含测试）；云端凭据由 env/凭据库外部提供，轮换属云登录态宿主"
+  "status": "ported",
+  "kind": "parity",
+  "go_counterpart": "go_hive/go-hive/internal/streamtoken/refresher.go",
+  "go_counterparts": ["go_hive/go-hive/internal/streamtoken/refresher.go", "go_hive/go-hive/internal/streamtoken/token.go", "go_hive/go-hive/internal/streamtoken/client.go", "go_hive/go-hive/internal/server/streamtoken.go", "go_hive/go-hive/internal/llm/streamtoken.go", "go_hive/go-hive/internal/cli/loader_background_services.go"],
+  "basis": "python call chain: core/framework/server/app.py:1072 -> core/framework/server/streamtoken_refresh.py:226; try_refresh_now:351 <- core/framework/llm/litellm.py:2008; go: go_hive/go-hive/internal/streamtoken/refresher.go:111 / :218, serve 装配 go_hive/go-hive/internal/server/streamtoken.go:52, seam go_hive/go-hive/internal/llm/streamtoken.go:33",
+  "evidence": "go_hive/go-hive/internal/streamtoken/refresher_test.go（含 server/llm seam 测试）",
+  "note": "Go 可靠性差异见 §4.2"
 }
 ```
 
-（上为节选；完整 `basis` 以 registry 为准。）
-
-**维护注意**：`contracts/module-inventory.json` 由 `scripts/gen_module_inventory.py` 重建，人工边界写在脚本的 `CURATED` 表。本次按 lane 的允许修改清单只更新了 JSON 条目；若下次重建 registry，需把同一条目补进 `CURATED`，否则会回退为 scan 的 `unported`。
+脚本 `CURATED` 同步：`scripts/gen_module_inventory.py` 的该条目已改为 `ported`，并让重建时保留 `go_counterparts`（否则 registry 会丢多文件清单）。
 
 ## 附录：实测命令与输出
+
 
 命令均在仓库根执行（`cd <repo root>`；本工作树为 `.wt/audit-docs`）。
 
@@ -118,3 +136,33 @@ verdict=PASS
 ```
 
 核对日期：2026-11-22（CST）；基线 main `52672d1c`。
+
+## 附录 B：w168 移植后实测（2026-11-25，工作树 `.wt/w168-streamtoken`）
+
+```text
+# W1 Go 实现面（非测试）
+$ grep -rln 'streamtoken\|streamToken' go_hive/go-hive --include='*.go' | grep -v _test
+go_hive/go-hive/internal/streamtoken/token.go
+go_hive/go-hive/internal/streamtoken/client.go
+go_hive/go-hive/internal/streamtoken/refresher.go
+go_hive/go-hive/internal/server/streamtoken.go
+go_hive/go-hive/internal/llm/streamtoken.go
+go_hive/go-hive/internal/cli/loader_background_services.go
+（另：internal/llm/stream_openai.go、stream_anthropic.go、complete.go 各加一处 401 旁路）
+
+# W2 包测试（CGO_ENABLED=0）
+$ CGO_ENABLED=0 go test ./internal/streamtoken ./internal/server ./internal/llm -count=1
+ok  github.com/shark2202/go_hive/go-hive/internal/streamtoken
+ok  github.com/shark2202/go_hive/go-hive/internal/server
+ok  github.com/shark2202/go_hive/go-hive/internal/llm
+
+# W3 门禁
+$ make parity                     # 全部 TestXxx 带 // Parity: 或 // Parity-exempt:
+$ gofmt -l .                      # 无输出
+$ go vet ./internal/streamtoken ./internal/server ./internal/llm
+$ uv run --no-project python scripts/check_module_inventory.py --check
+module-inventory: total=273 registered=273 unregistered=0 ported=228 partial=27 out_of_scope=8 unported=10
+verdict=PASS
+```
+
+核对日期：2026-11-25（CST）；基线 `4b90c9e08`。
