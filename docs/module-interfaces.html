@@ -94,6 +94,7 @@ ul,ol{margin:7px 0 7px 20px;padding:0} li{margin:4px 0;color:#c6d2df} footer{mar
 </section>
 
 <section id="invariants"><h2><span class="num">03</span>不变量清单（INV-01 … INV-20）</h2>
+<div class="callout info"><b>对外八面：</b>CLI / HTTP+WS / 存储 / config+env / prompt / skill 扫描 / tool / MCP 的当前不变量与证据追踪见 <a href="invariants.html">invariants.html</a>（source <code>contracts/invariants.json</code>，生成器 <code>scripts/gen_invariants.py --check</code>）。本表 INV-01…20 是技术/运行时接缝；两者不互相替代。</div>
 <div class="tablewrap"><table><thead><tr><th style="width:6%">编号</th><th style="width:34%">不变量</th><th style="width:28%">单一事实源</th><th>校验方式</th></tr></thead><tbody>
 <tr><td><code>INV-01</code></td><td>HTTP 路由 method+path 与 Python 同名同方法；豁免需 allowlist + reason</td><td><code>scripts/surface_audit_allowlist.json</code></td><td><code>surface_audit.py --strict</code></td></tr>
 <tr><td><code>INV-02</code></td><td>事件类型名跨语言同名（77 个 Go 常量）</td><td><code>internal/eventbus/event_type.go</code></td><td>parity 注解 + 事件抓包对比</td></tr>

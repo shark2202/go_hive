@@ -105,7 +105,7 @@ Go 代码与配套文档在 `go_hive/` 下：`go-hive/`（模块）、`contracts
 | slot | 每 2 小时 `dist/slots/<slot>` | artifact+manifest+compat | 已产至 **20261122-22（1.0.27-go.1）**；试用包 `dist/trial/20261122-22/`（SHA 12/12 OK） |
 | 公开预览 | GitHub `shark2202/go_hive` | pre-release ≥7 资产 | **v1.0.27-go.1 已发**（六平台+SHA256SUMS，7/7 uploaded） |
 
-> 逐项核查（三轴）：`docs/consistency-matrix.html` / `docs/consistency-matrix.json`（静态结构 + 功能契约 + 行为证据，逐条 trace id 与输入 SHA-256；生成器 `scripts/gen_consistency_matrix.py`）。`docs/consistency-audit.md` 保留为历史快照。
+> 逐项核查（三轴）：`docs/consistency-matrix.html` / `docs/consistency-matrix.json`（静态结构 + 功能契约 + 行为证据，逐条 trace id 与输入 SHA-256；生成器 `scripts/gen_consistency_matrix.py`）。对外八面不变量：`docs/invariants.html` / `contracts/invariants.json`（生成器 `scripts/gen_invariants.py --check`）。`docs/consistency-audit.md` 保留为历史快照。
 > 目标模型参考：`docs/goal-design.html`（Goal/成功标准/约束/驱动回路；生成器 `scripts/gen_goal_doc.py`，`--check` 防漂移）。
 
 ## 9. 与 Python 上游的关系

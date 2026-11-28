@@ -52,7 +52,7 @@
 - **特性**：`docs/e2e-assets/`（dashboard-memory-1015 5 截图 · installer-verify Docker · reliability 27/27 · longmemeval 60q/200q · memory-notes 探针）
 - **迁移**：`dist/slots/*/compat.json`（v1/v2/v3）· `docs/exports-baseline-decision.md`
 - **性能**：`docs/perf-recall-15k.md`（15k 轮：冷建 388.5ms、warm p50 **12.7ms**（perf-opt 9.7×，p95 13.5ms）、索引 7.05MB、RSS +12%）
-- **逐项核查（三轴）**：`docs/consistency-matrix.html` / `docs/consistency-matrix.json`（静态结构 + 功能契约 + 行为证据，逐条 trace id、输入 SHA-256；生成器 `scripts/gen_consistency_matrix.py`）。`docs/consistency-audit.md` 保留为 2026-11-22 历史快照。
+- **逐项核查（三轴）**：`docs/consistency-matrix.html` / `docs/consistency-matrix.json`（静态结构 + 功能契约 + 行为证据，逐条 trace id、输入 SHA-256；生成器 `scripts/gen_consistency_matrix.py`）。对外八面不变量：`docs/invariants.html` / `contracts/invariants.json`（生成器 `scripts/gen_invariants.py --check`）。`docs/consistency-audit.md` 保留为 2026-11-22 历史快照。
 
 ## 6. 与 Python 上游的关系
 

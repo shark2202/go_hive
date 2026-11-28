@@ -1,0 +1,237 @@
+{
+  "schema": "hive-invariants/1",
+  "description": "go_hive ↔ Hive 对外不变量注册表。判定线：模型、客户端、持久化数据或 CLI 任一方可观察的差异，必须逐字一致或显式登记；进程内实现可自由。",
+  "levels": {
+    "hard": "可观察契约；字段/路径/默认值/退出码必须一致，或在本条 exceptions 中登记。",
+    "scoped": "只在 scope 声明的子面成立；不得外推到整个包或整条运行时。",
+    "candidate": "应成为不变量但尚未冻结；不得用本项证明已对齐。"
+  },
+  "statuses": {
+    "aligned": "当前证据支持在声明范围内一致。",
+    "partial": "有一部分可观察差异或未验证项；明细见 current / evidence。",
+    "not_frozen": "规则尚未形成契约或无人维护；不能作为验收依据。",
+    "unverified": "有定义但缺少可复算证据。"
+  },
+  "invariants": [
+    {
+      "id": "INV-CLI-01",
+      "surface": "cli",
+      "title": "公开 CLI 命令树、参数、默认值、帮助与退出码",
+      "level": "hard",
+      "observable": ["client", "cli"],
+      "rule": "公开 command path / flag 名 / 默认值 / help 文案 / usage 错误的退出码必须一致；Go-only 内部扩展必须隐藏并登记。",
+      "status": "aligned",
+      "current": "hive 47 路径 + hive-browser 27 路径 = 74/74；probe drift 0、text diff 0；默认值字面量比对 4/4，--timeout-ms 为仅符号。",
+      "evidence": [
+        {"path": "go_hive/contracts/cli-surface.json", "kind": "contract", "selector": "summary"},
+        {"path": "go_hive/docs/cli-surface.html", "kind": "report"},
+        {"path": "go_hive/docs/module-interfaces.html", "kind": "doc", "anchor": "invariants"}
+      ],
+      "exceptions": ["Go 内部命令/flag 从 help 面隐藏，但仍在解析/执行路径可用；不得出现在公开面对照中。"],
+      "check": "make -C go_hive/go-hive compat-check (C11)"
+    },
+    {
+      "id": "INV-HTTP-01",
+      "surface": "http",
+      "title": "HTTP API method、path、状态码与请求/响应字段",
+      "level": "hard",
+      "observable": ["client", "api"],
+      "rule": "Python 上游路由的 method+path、错误状态码、请求/响应字段必须一致；Go 额外路由必须逐条登记。",
+      "status": "partial",
+      "current": "Python 222 / Go 226；effective missing 0；method mismatch 0；Go 额外 5 条；DELETE /api/sessions/history/{session_id} 由 alias 服务。",
+      "evidence": [
+        {"path": "go_hive/contracts/api-routes.json", "kind": "contract", "selector": "summary"},
+        {"path": "go_hive/docs/api-contract-diff.md", "kind": "report"},
+        {"path": "go_hive/docs/module-interfaces.html", "kind": "doc", "anchor": "invariants"}
+      ],
+      "exceptions": ["5 条 Go 额外路由：POST /api/mcp/reload、GET/DELETE /api/sessions/{session_id}/reminders、DELETE /api/sessions/{first}/{second}、POST /api/skills/reload。"],
+      "check": "make -C go_hive/go-hive compat-check (C6/C7)"
+    },
+    {
+      "id": "INV-WS-01",
+      "surface": "ws",
+      "title": "WS/SSE 事件名、字段、顺序、心跳与过滤语义",
+      "level": "hard",
+      "observable": ["client", "ws", "sse"],
+      "rule": "事件类型名及其字段、SSE data 帧、心跳、types 过滤和背压语义必须与上游一致；缺 emitter 或前端 handler 必须登记。",
+      "status": "partial",
+      "current": "事件 77/77；ported 55、partial 21、emitter missing 20、frontend missing 3；phase_gates.port_ungated 24。",
+      "evidence": [
+        {"path": "go_hive/docs/coverage-registry.json", "kind": "contract", "selector": "summary.events"},
+        {"path": "go_hive/docs/sse-payload-parity.md", "kind": "report"},
+        {"path": "go_hive/docs/event-bus.html", "kind": "doc"}
+      ],
+      "exceptions": ["部分事件只有常量/类型，没有生产 emitter 或前端 handler；不能按“事件类型存在”算对齐。"],
+      "check": "go test ./internal/eventbus ./internal/server (SSE/event routes); scripts/sse_payload_parity.py"
+    },
+    {
+      "id": "INV-STORE-01",
+      "surface": "storage",
+      "title": "HIVE_HOME 文件布局、JSON 键、SQLite schema 与迁移",
+      "level": "hard",
+      "observable": ["disk", "client", "migration"],
+      "rule": "HIVE_HOME 下的路径语义、JSON 键、SQLite schema/版本、迁移输入输出与凭据互读必须一致；SQLite 页布局、Fernet 随机 IV 不要求逐字节一致。",
+      "status": "partial",
+      "current": "storage-verbatim v1 20/20、v2 59/59、colony-fork 32/32、probes 14/14；G2 v1-rich 50/50、v2-rich 99/99；凭据双向互读 PASS；生命周期差异 F1–F8 未完全收口，P0-G2-1 待拍板。",
+      "evidence": [
+        {"path": "go_hive/docs/storage-compat.html", "kind": "report"},
+        {"path": "go_hive/docs/g2-lossless-replacement.html", "kind": "report"},
+        {"path": "go_hive/docs/module-interfaces.html", "kind": "doc", "anchor": "invariants"}
+      ],
+      "exceptions": ["SQLite 页布局、Fernet 随机 IV 不逐字节比较；F1 内置 skill 临时目录、F2 queen profile 原子写、F3/F4 预建目录、F5/F6 attached credentials/.play.json/runs.jsonl 单向等生命周期差异仍在。"],
+      "check": "make -C go_hive/go-hive compat-check (C4/C5); storage_compat_diff.py; g2-lossless-replacement.html"
+    },
+    {
+      "id": "INV-STORE-02",
+      "surface": "storage",
+      "title": "会话/colony 生命周期落盘状态",
+      "level": "scoped",
+      "scope": "sessions、colonies、park/resume、worker 目录",
+      "observable": ["disk", "client", "resume"],
+      "rule": "活动会话的 state.json/conversations/parts/artifacts/logs 与 colony worker 目录必须在重启、park、resume、cleanup 后保持可恢复；差异必须登记。",
+      "status": "partial",
+      "current": "park 的盘上状态与冷启动恢复已有证据；默认 queen profile 非原子写、启动/会话预建目录、attached credentials 与 .play.json/runs.jsonl 单向等 F1–F8 生命周期差异仍开放。",
+      "evidence": [
+        {"path": "go_hive/docs/module-interfaces.html", "kind": "doc", "anchor": "invariants"},
+        {"path": "go_hive/docs/storage-compat.html", "kind": "report"}
+      ],
+      "exceptions": ["生命周期差异 F1–F8 逐条登记；在拍板前不得称整个存储生命周期等价。"],
+      "check": "storage lifecycle probes + resume/cold-start tests"
+    },
+    {
+      "id": "INV-CONFIG-01",
+      "surface": "config",
+      "title": "configuration.json 键、默认值、读取点与写回规则",
+      "level": "hard",
+      "observable": ["config", "client", "disk"],
+      "rule": "上游读取的键、类型、默认值、读取点、环境覆盖和未知键写回规则必须一致。",
+      "status": "partial",
+      "current": "137 keys / 22 sections；aligned 131、go_only 4、go_partial 1、unread 1；boundary rules 9。",
+      "evidence": [
+        {"path": "go_hive/contracts/config-keys.json", "kind": "contract", "selector": "summary"},
+        {"path": "go_hive/docs/env-config-contract-diff.md", "kind": "report"},
+        {"path": "go_hive/docs/configuration.html", "kind": "doc"}
+      ],
+      "exceptions": ["go_only 4 与 go_partial 1 必须逐项决定保留/移植；unread 1 不得算读取成功。"],
+      "check": "make -C go_hive/go-hive compat-check (C1/C3)"
+    },
+    {
+      "id": "INV-ENV-01",
+      "surface": "env",
+      "title": "环境变量名称、默认值、解析与优先级",
+      "level": "hard",
+      "observable": ["env", "config", "client"],
+      "rule": "上游读取的 env 名、默认值、空值/布尔/数值解析、与 configuration.json 的覆盖优先级必须一致。",
+      "status": "partial",
+      "current": "Python 90 / Go 127；common 84；py-only 6（均为 HIVE_GCU_MEMTRACE*）；go-only 43；parse differs 5；default+parse differ 1；aligned 68。",
+      "evidence": [
+        {"path": "go_hive/contracts/env-vars.json", "kind": "contract", "selector": "summary"},
+        {"path": "go_hive/docs/environment-variables.html", "kind": "doc"},
+        {"path": "go_hive/docs/env-config-contract-diff.md", "kind": "report"}
+      ],
+      "exceptions": ["HIVE_GCU_MEMTRACE* 6 个为 GCU 平台差异；go-only 43 个扩展和 parse 差异须逐项登记，不能整体算对齐。"],
+      "check": "make -C go_hive/go-hive compat-check (C1/C2)"
+    },
+    {
+      "id": "INV-PROMPT-01",
+      "surface": "prompt",
+      "title": "已冻结的 queen/judge/catalog 提示词文本",
+      "level": "scoped",
+      "scope": "queen 首轮 system prompt、skill catalog 渲染、judge prompt golden",
+      "observable": ["model", "client"],
+      "rule": "已冻结的 prompt 模板、变量顺序、section 边界和 catalog 渲染必须逐字一致；动态拼接只在其冻结范围内比较。",
+      "status": "aligned",
+      "current": "queen live system prompt Python/Go 均 21,584 chars，整段逐字一致；skill catalog golden 10/10；judge prompt 205-char golden 有测试拦截漂移。",
+      "evidence": [
+        {"path": "go_hive/docs/prompt-parity.md", "kind": "report"},
+        {"path": "go_hive/docs/queen-defaults-prompt-mapping.html", "kind": "doc"},
+        {"path": "go_hive/go-hive/internal/llmjudge/testdata/prompt-parity/judge.prompt.txt", "kind": "golden"}
+      ],
+      "exceptions": ["证据只覆盖声明 scope；不得外推到 worker、memory 和所有 queen 相位。"],
+      "check": "scripts/prompt_system_parity.py; scripts/prompt_catalog_parity.py; judge prompt golden test"
+    },
+    {
+      "id": "INV-PROMPT-02",
+      "surface": "prompt",
+      "title": "Worker/colony 通用 system prompt 动态装配",
+      "level": "candidate",
+      "observable": ["model", "worker"],
+      "rule": "worker 应拼入 identity、binding、accounts、skills_catalog、protocols、memory、focus、report_schema，并在 catalog/memory/phase 变化时刷新。",
+      "status": "not_frozen",
+      "current": "Python 走 build_system_prompt_parts_for_context 并每轮刷新；Go 通用 worker 只拿 system_prompt + goal，skills_catalog 字段无消费者，protocols/identity/memory 未拼。",
+      "evidence": [
+        {"path": "go_hive/docs/worker-prompt-parity-gap.md", "kind": "report"},
+        {"path": "go_hive/docs/prompt-parity.md", "kind": "doc"}
+      ],
+      "exceptions": ["queen DM / colony-bound queen chat 走 static prompt 是已对位路径，不属于本缺口。"],
+      "check": "worker prompt assembly tests (not yet frozen)"
+    },
+    {
+      "id": "INV-SKILL-01",
+      "surface": "skill",
+      "title": "Skill 扫描根、优先级、深度/目录预算与跳过规则",
+      "level": "candidate",
+      "observable": ["disk", "model", "client"],
+      "rule": "framework/preset/user/queen_ui/colony_ui/project 的扫描根、last-wins 顺序、depth 4 / 2000 dirs、8 个跳过目录名和 .gitignore 行为必须冻结并按契约测试。",
+      "status": "not_frozen",
+      "current": "代码实际 9 个扫描根、6 类 scope；last-wins；depth 4 / 2000 dirs；8 个跳过目录名；不读取 .gitignore；当前只有内置 25 个 skill 文件 hash 契约，没有扫描面契约。",
+      "evidence": [
+        {"path": "go_hive/docs/skill-discovery.html", "kind": "report"},
+        {"path": "go_hive/contracts/builtin-skills.json", "kind": "contract", "selector": "count"}
+      ],
+      "exceptions": ["扫描规则尚无机器契约；文档与 PRD 的 five directories/.gitignore 说法已漂移。"],
+      "check": "skill-discovery contract (to be created)"
+    },
+    {
+      "id": "INV-TOOL-01",
+      "surface": "tool",
+      "title": "模型可见 tool 的 name、description、input/output schema",
+      "level": "hard",
+      "observable": ["model", "client"],
+      "rule": "同一模型可见 tool 的名称、描述、JSON Schema（类型/必填/默认值/枚举）和输出契约必须一致；扩展工具必须显式登记。",
+      "status": "partial",
+      "current": "Python 59 / Go 149；shared 46；Python-only 13；Go-only 103；描述不同 25；schema 不同 30；原始 schema 逐字 16、归一化后 48（工具面统计口径）。",
+      "evidence": [
+        {"path": "go_hive/contracts/tool-definitions.json", "kind": "contract", "selector": "statistics"},
+        {"path": "go_hive/docs/tool-contract-diff.md", "kind": "report"},
+        {"path": "go_hive/docs/tool-parity-matrix.html", "kind": "report"}
+      ],
+      "exceptions": ["Go-only 工具和 schema/description 差异必须逐项登记；不能把 46 个 shared 当作全部 59 个上游工具已对齐。"],
+      "check": "make -C go_hive/go-hive compat-check (C8/C10); tool contract freeze"
+    },
+    {
+      "id": "INV-MCP-01",
+      "surface": "mcp",
+      "title": "MCP 握手、tools/list/call、schema 透传与默认命名",
+      "level": "hard",
+      "observable": ["model", "protocol", "client"],
+      "rule": "MCP initialize/tools list/call、JSON-RPC 错误、inputSchema 透传、默认 server 裸名和 first-wins 必须一致；Go 扩展必须显式登记。",
+      "status": "partial",
+      "current": "自建 stdio server 真实握手、description/schema 透传、默认裸名、first-wins、启停语义已双跑；Go reload、timeout 文件配置、可选 namespace 前缀为已登记扩展；真实第三方 server 未全面验证。",
+      "evidence": [
+        {"path": "go_hive/docs/mcp-crosscheck.md", "kind": "report"},
+        {"path": "go_hive/docs/mcp-namespace-residuals.md", "kind": "report"},
+        {"path": "go_hive/docs/mcp-registry/README.md", "kind": "contract"}
+      ],
+      "exceptions": ["Go-only：POST /api/mcp/reload、configuration.json mcp.timeout_seconds、mcp.namespace 前缀模式；默认裸名路径不启用 namespace 折叠。"],
+      "check": "scripts/mcp_crosscheck.py; internal/cli/mcp_crosscheck_dump_test.go; validate_mcp_registry.py"
+    }
+  ],
+  "maintenance": {
+    "source": "go_hive/contracts/invariants.json",
+    "generator": "go_hive/scripts/gen_invariants.py",
+    "outputs": ["go_hive/docs/invariants.html", "go_hive/docs/invariants.json"],
+    "commands": {
+      "generate": "uv run --no-project python3 go_hive/scripts/gen_invariants.py",
+      "check": "uv run --no-project python3 go_hive/scripts/gen_invariants.py --check",
+      "contract_gate": "make -C go_hive/go-hive compat-check"
+    },
+    "rules": [
+      "新增/改变可观察行为时先改本文件的对应 INV，再改代码和测试。",
+      "证据文件或 selector 改变后必须重跑生成器；--check 会因证据 SHA-256 变化而失败。",
+      "level=hard 必须有至少一条 contract/report/golden 证据；没有则用 candidate。",
+      "status=aligned 只允许在 scope 内成立；跨包结论升级前先补证据。",
+      "不精确的内部实现（包布局、goroutine、SQLite 页、随机 IV、临时目录）不进入本注册表。"
+    ]
+  }
+}

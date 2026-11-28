@@ -1,0 +1,702 @@
+{
+  "schema": "hive-invariants-generated/1",
+  "source": "go_hive/contracts/invariants.json",
+  "source_sha256": "87270b0564dcf4cbc0e359af4e85a897a756ae9b5193e98984cf38929a3289ee",
+  "source_bytes": 15069,
+  "summary": {
+    "total": 12,
+    "by_level": {
+      "candidate": 2,
+      "hard": 8,
+      "scoped": 2
+    },
+    "by_status": {
+      "aligned": 2,
+      "not_frozen": 2,
+      "partial": 8
+    },
+    "by_surface": {
+      "cli": 1,
+      "config": 1,
+      "env": 1,
+      "http": 1,
+      "mcp": 1,
+      "prompt": 2,
+      "skill": 1,
+      "storage": 2,
+      "tool": 1,
+      "ws": 1
+    }
+  },
+  "invariants": [
+    {
+      "id": "INV-CLI-01",
+      "surface": "cli",
+      "title": "公开 CLI 命令树、参数、默认值、帮助与退出码",
+      "level": "hard",
+      "observable": [
+        "client",
+        "cli"
+      ],
+      "rule": "公开 command path / flag 名 / 默认值 / help 文案 / usage 错误的退出码必须一致；Go-only 内部扩展必须隐藏并登记。",
+      "status": "aligned",
+      "current": "hive 47 路径 + hive-browser 27 路径 = 74/74；probe drift 0、text diff 0；默认值字面量比对 4/4，--timeout-ms 为仅符号。",
+      "evidence": [
+        {
+          "path": "go_hive/contracts/cli-surface.json",
+          "kind": "contract",
+          "selector": "summary",
+          "sha256": "c49d1b70053ad2dfd851a898a32e8b64e1884629cea4d495cddcd21aefafb290",
+          "bytes": 364643
+        },
+        {
+          "path": "go_hive/docs/cli-surface.html",
+          "kind": "report",
+          "selector": null,
+          "sha256": "5d8e1dae44e8c7da2fa8b1fd59d81f2a1c307a60d6524ffd057a352b90da8c9f",
+          "bytes": 169245
+        },
+        {
+          "path": "go_hive/docs/module-interfaces.html",
+          "kind": "doc",
+          "selector": null,
+          "sha256": "c8bb9d586955f9db716c385f6d8407d4ebd8d097c9a60f0779c4275213d83778",
+          "bytes": 26814,
+          "anchor": "invariants"
+        }
+      ],
+      "exceptions": [
+        "Go 内部命令/flag 从 help 面隐藏，但仍在解析/执行路径可用；不得出现在公开面对照中。"
+      ],
+      "check": "make -C go_hive/go-hive compat-check (C11)",
+      "trace_id": "inv:INV-CLI-01"
+    },
+    {
+      "id": "INV-HTTP-01",
+      "surface": "http",
+      "title": "HTTP API method、path、状态码与请求/响应字段",
+      "level": "hard",
+      "observable": [
+        "client",
+        "api"
+      ],
+      "rule": "Python 上游路由的 method+path、错误状态码、请求/响应字段必须一致；Go 额外路由必须逐条登记。",
+      "status": "partial",
+      "current": "Python 222 / Go 226；effective missing 0；method mismatch 0；Go 额外 5 条；DELETE /api/sessions/history/{session_id} 由 alias 服务。",
+      "evidence": [
+        {
+          "path": "go_hive/contracts/api-routes.json",
+          "kind": "contract",
+          "selector": "summary",
+          "sha256": "24026da74b38963719398d5bde233d169611e3e41a32180a6d65d33952605fe4",
+          "bytes": 134931
+        },
+        {
+          "path": "go_hive/docs/api-contract-diff.md",
+          "kind": "report",
+          "selector": null,
+          "sha256": "ab117682d3e5ca68da0a831b49be153a78938ba1ddb2eaba97cd00900e88d5ba",
+          "bytes": 62310
+        },
+        {
+          "path": "go_hive/docs/module-interfaces.html",
+          "kind": "doc",
+          "selector": null,
+          "sha256": "c8bb9d586955f9db716c385f6d8407d4ebd8d097c9a60f0779c4275213d83778",
+          "bytes": 26814,
+          "anchor": "invariants"
+        }
+      ],
+      "exceptions": [
+        "5 条 Go 额外路由：POST /api/mcp/reload、GET/DELETE /api/sessions/{session_id}/reminders、DELETE /api/sessions/{first}/{second}、POST /api/skills/reload。"
+      ],
+      "check": "make -C go_hive/go-hive compat-check (C6/C7)",
+      "trace_id": "inv:INV-HTTP-01"
+    },
+    {
+      "id": "INV-WS-01",
+      "surface": "ws",
+      "title": "WS/SSE 事件名、字段、顺序、心跳与过滤语义",
+      "level": "hard",
+      "observable": [
+        "client",
+        "ws",
+        "sse"
+      ],
+      "rule": "事件类型名及其字段、SSE data 帧、心跳、types 过滤和背压语义必须与上游一致；缺 emitter 或前端 handler 必须登记。",
+      "status": "partial",
+      "current": "事件 77/77；ported 55、partial 21、emitter missing 20、frontend missing 3；phase_gates.port_ungated 24。",
+      "evidence": [
+        {
+          "path": "go_hive/docs/coverage-registry.json",
+          "kind": "contract",
+          "selector": "summary.events",
+          "sha256": "9c9c68153869e592fb0137d0858c0c23fe118b40b0a86a267a8e5c8e19b9b0dc",
+          "bytes": 93218
+        },
+        {
+          "path": "go_hive/docs/sse-payload-parity.md",
+          "kind": "report",
+          "selector": null,
+          "sha256": "4a9be1e74f9a5ca6cc3592d09a3773e22bebd94fc41295d244be5a02df88ef06",
+          "bytes": 20214
+        },
+        {
+          "path": "go_hive/docs/event-bus.html",
+          "kind": "doc",
+          "selector": null,
+          "sha256": "df3ad7e684831fed9006ef16b78303cfa43c75688fafc43ede6fa7e79c60dec3",
+          "bytes": 31289
+        }
+      ],
+      "exceptions": [
+        "部分事件只有常量/类型，没有生产 emitter 或前端 handler；不能按“事件类型存在”算对齐。"
+      ],
+      "check": "go test ./internal/eventbus ./internal/server (SSE/event routes); scripts/sse_payload_parity.py",
+      "trace_id": "inv:INV-WS-01"
+    },
+    {
+      "id": "INV-STORE-01",
+      "surface": "storage",
+      "title": "HIVE_HOME 文件布局、JSON 键、SQLite schema 与迁移",
+      "level": "hard",
+      "observable": [
+        "disk",
+        "client",
+        "migration"
+      ],
+      "rule": "HIVE_HOME 下的路径语义、JSON 键、SQLite schema/版本、迁移输入输出与凭据互读必须一致；SQLite 页布局、Fernet 随机 IV 不要求逐字节一致。",
+      "status": "partial",
+      "current": "storage-verbatim v1 20/20、v2 59/59、colony-fork 32/32、probes 14/14；G2 v1-rich 50/50、v2-rich 99/99；凭据双向互读 PASS；生命周期差异 F1–F8 未完全收口，P0-G2-1 待拍板。",
+      "evidence": [
+        {
+          "path": "go_hive/docs/storage-compat.html",
+          "kind": "report",
+          "selector": null,
+          "sha256": "807c12924b8e5a217ed31f459db3a8e84ca9a5c43762b0045adfc4b55a2fdbfd",
+          "bytes": 25860
+        },
+        {
+          "path": "go_hive/docs/g2-lossless-replacement.html",
+          "kind": "report",
+          "selector": null,
+          "sha256": "cf9f892ceead7d054e06cb8b938b487e0784df385cc4e8dd1ca4063dd88ee5c8",
+          "bytes": 27281
+        },
+        {
+          "path": "go_hive/docs/module-interfaces.html",
+          "kind": "doc",
+          "selector": null,
+          "sha256": "c8bb9d586955f9db716c385f6d8407d4ebd8d097c9a60f0779c4275213d83778",
+          "bytes": 26814,
+          "anchor": "invariants"
+        }
+      ],
+      "exceptions": [
+        "SQLite 页布局、Fernet 随机 IV 不逐字节比较；F1 内置 skill 临时目录、F2 queen profile 原子写、F3/F4 预建目录、F5/F6 attached credentials/.play.json/runs.jsonl 单向等生命周期差异仍在。"
+      ],
+      "check": "make -C go_hive/go-hive compat-check (C4/C5); storage_compat_diff.py; g2-lossless-replacement.html",
+      "trace_id": "inv:INV-STORE-01"
+    },
+    {
+      "id": "INV-STORE-02",
+      "surface": "storage",
+      "title": "会话/colony 生命周期落盘状态",
+      "level": "scoped",
+      "scope": "sessions、colonies、park/resume、worker 目录",
+      "observable": [
+        "disk",
+        "client",
+        "resume"
+      ],
+      "rule": "活动会话的 state.json/conversations/parts/artifacts/logs 与 colony worker 目录必须在重启、park、resume、cleanup 后保持可恢复；差异必须登记。",
+      "status": "partial",
+      "current": "park 的盘上状态与冷启动恢复已有证据；默认 queen profile 非原子写、启动/会话预建目录、attached credentials 与 .play.json/runs.jsonl 单向等 F1–F8 生命周期差异仍开放。",
+      "evidence": [
+        {
+          "path": "go_hive/docs/module-interfaces.html",
+          "kind": "doc",
+          "selector": null,
+          "sha256": "c8bb9d586955f9db716c385f6d8407d4ebd8d097c9a60f0779c4275213d83778",
+          "bytes": 26814,
+          "anchor": "invariants"
+        },
+        {
+          "path": "go_hive/docs/storage-compat.html",
+          "kind": "report",
+          "selector": null,
+          "sha256": "807c12924b8e5a217ed31f459db3a8e84ca9a5c43762b0045adfc4b55a2fdbfd",
+          "bytes": 25860
+        }
+      ],
+      "exceptions": [
+        "生命周期差异 F1–F8 逐条登记；在拍板前不得称整个存储生命周期等价。"
+      ],
+      "check": "storage lifecycle probes + resume/cold-start tests",
+      "trace_id": "inv:INV-STORE-02"
+    },
+    {
+      "id": "INV-CONFIG-01",
+      "surface": "config",
+      "title": "configuration.json 键、默认值、读取点与写回规则",
+      "level": "hard",
+      "observable": [
+        "config",
+        "client",
+        "disk"
+      ],
+      "rule": "上游读取的键、类型、默认值、读取点、环境覆盖和未知键写回规则必须一致。",
+      "status": "partial",
+      "current": "137 keys / 22 sections；aligned 131、go_only 4、go_partial 1、unread 1；boundary rules 9。",
+      "evidence": [
+        {
+          "path": "go_hive/contracts/config-keys.json",
+          "kind": "contract",
+          "selector": "summary",
+          "sha256": "4a6e900751c2246dabc90f8ca0776defb6ca5cc625f59001792ede2a2643fb29",
+          "bytes": 148259
+        },
+        {
+          "path": "go_hive/docs/env-config-contract-diff.md",
+          "kind": "report",
+          "selector": null,
+          "sha256": "356fe8f9390b8a0ed30b1b5c7e0491ddfcb96c6286f9d4797ea35fc56109fb7d",
+          "bytes": 72883
+        },
+        {
+          "path": "go_hive/docs/configuration.html",
+          "kind": "doc",
+          "selector": null,
+          "sha256": "a6c14253ef5fac313d47d6576cae3ccd16ed3d6b817ae5df4e83a0a6ae4fe61b",
+          "bytes": 103897
+        }
+      ],
+      "exceptions": [
+        "go_only 4 与 go_partial 1 必须逐项决定保留/移植；unread 1 不得算读取成功。"
+      ],
+      "check": "make -C go_hive/go-hive compat-check (C1/C3)",
+      "trace_id": "inv:INV-CONFIG-01"
+    },
+    {
+      "id": "INV-ENV-01",
+      "surface": "env",
+      "title": "环境变量名称、默认值、解析与优先级",
+      "level": "hard",
+      "observable": [
+        "env",
+        "config",
+        "client"
+      ],
+      "rule": "上游读取的 env 名、默认值、空值/布尔/数值解析、与 configuration.json 的覆盖优先级必须一致。",
+      "status": "partial",
+      "current": "Python 90 / Go 127；common 84；py-only 6（均为 HIVE_GCU_MEMTRACE*）；go-only 43；parse differs 5；default+parse differ 1；aligned 68。",
+      "evidence": [
+        {
+          "path": "go_hive/contracts/env-vars.json",
+          "kind": "contract",
+          "selector": "summary",
+          "sha256": "bed743cbb359ced8d803a15aa10fbfe7defe8044fbd7d419cc1febb5cb490d75",
+          "bytes": 181056
+        },
+        {
+          "path": "go_hive/docs/environment-variables.html",
+          "kind": "doc",
+          "selector": null,
+          "sha256": "2b9453b83c80d86b2dbcca0b44487b76bb8c91ffeece37ed4ae67776430c4dee",
+          "bytes": 43903
+        },
+        {
+          "path": "go_hive/docs/env-config-contract-diff.md",
+          "kind": "report",
+          "selector": null,
+          "sha256": "356fe8f9390b8a0ed30b1b5c7e0491ddfcb96c6286f9d4797ea35fc56109fb7d",
+          "bytes": 72883
+        }
+      ],
+      "exceptions": [
+        "HIVE_GCU_MEMTRACE* 6 个为 GCU 平台差异；go-only 43 个扩展和 parse 差异须逐项登记，不能整体算对齐。"
+      ],
+      "check": "make -C go_hive/go-hive compat-check (C1/C2)",
+      "trace_id": "inv:INV-ENV-01"
+    },
+    {
+      "id": "INV-PROMPT-01",
+      "surface": "prompt",
+      "title": "已冻结的 queen/judge/catalog 提示词文本",
+      "level": "scoped",
+      "scope": "queen 首轮 system prompt、skill catalog 渲染、judge prompt golden",
+      "observable": [
+        "model",
+        "client"
+      ],
+      "rule": "已冻结的 prompt 模板、变量顺序、section 边界和 catalog 渲染必须逐字一致；动态拼接只在其冻结范围内比较。",
+      "status": "aligned",
+      "current": "queen live system prompt Python/Go 均 21,584 chars，整段逐字一致；skill catalog golden 10/10；judge prompt 205-char golden 有测试拦截漂移。",
+      "evidence": [
+        {
+          "path": "go_hive/docs/prompt-parity.md",
+          "kind": "report",
+          "selector": null,
+          "sha256": "3be70633e722b0b1d1cedd3a0e8c0880e3e71f11ef8fd7ce0ea9bfba899645e5",
+          "bytes": 25449
+        },
+        {
+          "path": "go_hive/docs/queen-defaults-prompt-mapping.html",
+          "kind": "doc",
+          "selector": null,
+          "sha256": "88932268bf7368f027cd4288828e1b06d954efb0fada6836ccc61ef1c679ea20",
+          "bytes": 25829
+        },
+        {
+          "path": "go_hive/go-hive/internal/llmjudge/testdata/prompt-parity/judge.prompt.txt",
+          "kind": "golden",
+          "selector": null,
+          "sha256": "f1cbb2fbaeea648f9ac9d4d9b7f0ef7da8a3b942926ec4d054b363ec108b4038",
+          "bytes": 205
+        }
+      ],
+      "exceptions": [
+        "证据只覆盖声明 scope；不得外推到 worker、memory 和所有 queen 相位。"
+      ],
+      "check": "scripts/prompt_system_parity.py; scripts/prompt_catalog_parity.py; judge prompt golden test",
+      "trace_id": "inv:INV-PROMPT-01"
+    },
+    {
+      "id": "INV-PROMPT-02",
+      "surface": "prompt",
+      "title": "Worker/colony 通用 system prompt 动态装配",
+      "level": "candidate",
+      "observable": [
+        "model",
+        "worker"
+      ],
+      "rule": "worker 应拼入 identity、binding、accounts、skills_catalog、protocols、memory、focus、report_schema，并在 catalog/memory/phase 变化时刷新。",
+      "status": "not_frozen",
+      "current": "Python 走 build_system_prompt_parts_for_context 并每轮刷新；Go 通用 worker 只拿 system_prompt + goal，skills_catalog 字段无消费者，protocols/identity/memory 未拼。",
+      "evidence": [
+        {
+          "path": "go_hive/docs/worker-prompt-parity-gap.md",
+          "kind": "report",
+          "selector": null,
+          "sha256": "2b0ff1d3f33fe819531c23672314c77cc7203534fef06dd839d6e4fbca4bfd08",
+          "bytes": 11961
+        },
+        {
+          "path": "go_hive/docs/prompt-parity.md",
+          "kind": "doc",
+          "selector": null,
+          "sha256": "3be70633e722b0b1d1cedd3a0e8c0880e3e71f11ef8fd7ce0ea9bfba899645e5",
+          "bytes": 25449
+        }
+      ],
+      "exceptions": [
+        "queen DM / colony-bound queen chat 走 static prompt 是已对位路径，不属于本缺口。"
+      ],
+      "check": "worker prompt assembly tests (not yet frozen)",
+      "trace_id": "inv:INV-PROMPT-02"
+    },
+    {
+      "id": "INV-SKILL-01",
+      "surface": "skill",
+      "title": "Skill 扫描根、优先级、深度/目录预算与跳过规则",
+      "level": "candidate",
+      "observable": [
+        "disk",
+        "model",
+        "client"
+      ],
+      "rule": "framework/preset/user/queen_ui/colony_ui/project 的扫描根、last-wins 顺序、depth 4 / 2000 dirs、8 个跳过目录名和 .gitignore 行为必须冻结并按契约测试。",
+      "status": "not_frozen",
+      "current": "代码实际 9 个扫描根、6 类 scope；last-wins；depth 4 / 2000 dirs；8 个跳过目录名；不读取 .gitignore；当前只有内置 25 个 skill 文件 hash 契约，没有扫描面契约。",
+      "evidence": [
+        {
+          "path": "go_hive/docs/skill-discovery.html",
+          "kind": "report",
+          "selector": null,
+          "sha256": "d9325fa34ae7c94050f615235c12744b7bc0f4316e32eee8885818c20b0cd2a0",
+          "bytes": 24191
+        },
+        {
+          "path": "go_hive/contracts/builtin-skills.json",
+          "kind": "contract",
+          "selector": "count",
+          "sha256": "c0ae86d4a5eb04ec25a54fb916372a30f102e6b36dcd275d3a5c0e6c76f15ece",
+          "bytes": 4752
+        }
+      ],
+      "exceptions": [
+        "扫描规则尚无机器契约；文档与 PRD 的 five directories/.gitignore 说法已漂移。"
+      ],
+      "check": "skill-discovery contract (to be created)",
+      "trace_id": "inv:INV-SKILL-01"
+    },
+    {
+      "id": "INV-TOOL-01",
+      "surface": "tool",
+      "title": "模型可见 tool 的 name、description、input/output schema",
+      "level": "hard",
+      "observable": [
+        "model",
+        "client"
+      ],
+      "rule": "同一模型可见 tool 的名称、描述、JSON Schema（类型/必填/默认值/枚举）和输出契约必须一致；扩展工具必须显式登记。",
+      "status": "partial",
+      "current": "Python 59 / Go 149；shared 46；Python-only 13；Go-only 103；描述不同 25；schema 不同 30；原始 schema 逐字 16、归一化后 48（工具面统计口径）。",
+      "evidence": [
+        {
+          "path": "go_hive/contracts/tool-definitions.json",
+          "kind": "contract",
+          "selector": "statistics",
+          "sha256": "283115647283d01ef53bd74fa78bda8e3da16dcd1865120e7da63a7ff94d6ff8",
+          "bytes": 561723
+        },
+        {
+          "path": "go_hive/docs/tool-contract-diff.md",
+          "kind": "report",
+          "selector": null,
+          "sha256": "6ddbd8398a54293f641ed1b94349ed96b17ace87bf599697e60d4a75081f1242",
+          "bytes": 88737
+        },
+        {
+          "path": "go_hive/docs/tool-parity-matrix.html",
+          "kind": "report",
+          "selector": null,
+          "sha256": "0d7a57426c3b840b9a048e626484687b924dcc0f76857f58f0b5c8f735c5a769",
+          "bytes": 156058
+        }
+      ],
+      "exceptions": [
+        "Go-only 工具和 schema/description 差异必须逐项登记；不能把 46 个 shared 当作全部 59 个上游工具已对齐。"
+      ],
+      "check": "make -C go_hive/go-hive compat-check (C8/C10); tool contract freeze",
+      "trace_id": "inv:INV-TOOL-01"
+    },
+    {
+      "id": "INV-MCP-01",
+      "surface": "mcp",
+      "title": "MCP 握手、tools/list/call、schema 透传与默认命名",
+      "level": "hard",
+      "observable": [
+        "model",
+        "protocol",
+        "client"
+      ],
+      "rule": "MCP initialize/tools list/call、JSON-RPC 错误、inputSchema 透传、默认 server 裸名和 first-wins 必须一致；Go 扩展必须显式登记。",
+      "status": "partial",
+      "current": "自建 stdio server 真实握手、description/schema 透传、默认裸名、first-wins、启停语义已双跑；Go reload、timeout 文件配置、可选 namespace 前缀为已登记扩展；真实第三方 server 未全面验证。",
+      "evidence": [
+        {
+          "path": "go_hive/docs/mcp-crosscheck.md",
+          "kind": "report",
+          "selector": null,
+          "sha256": "71d3df813e340c4feace536ec8e2b82b2a69cc04ad973c3e0cc3fb229d17b0a6",
+          "bytes": 22671
+        },
+        {
+          "path": "go_hive/docs/mcp-namespace-residuals.md",
+          "kind": "report",
+          "selector": null,
+          "sha256": "f21f147c768a37eaf82a912d091f1688f50bcd8fbd76886c2eed53de8c0e545f",
+          "bytes": 14892
+        },
+        {
+          "path": "go_hive/docs/mcp-registry/README.md",
+          "kind": "contract",
+          "selector": null,
+          "sha256": "89ff5ab02b8cc9e44269e60b0f423810de4dd0cbc6d26887195c4249d46994da",
+          "bytes": 3313
+        }
+      ],
+      "exceptions": [
+        "Go-only：POST /api/mcp/reload、configuration.json mcp.timeout_seconds、mcp.namespace 前缀模式；默认裸名路径不启用 namespace 折叠。"
+      ],
+      "check": "scripts/mcp_crosscheck.py; internal/cli/mcp_crosscheck_dump_test.go; validate_mcp_registry.py",
+      "trace_id": "inv:INV-MCP-01"
+    }
+  ],
+  "evidence_manifest": [
+    {
+      "id": "artifact:go_hive/contracts/api-routes.json",
+      "path": "go_hive/contracts/api-routes.json",
+      "sha256": "24026da74b38963719398d5bde233d169611e3e41a32180a6d65d33952605fe4",
+      "bytes": 134931
+    },
+    {
+      "id": "artifact:go_hive/contracts/builtin-skills.json",
+      "path": "go_hive/contracts/builtin-skills.json",
+      "sha256": "c0ae86d4a5eb04ec25a54fb916372a30f102e6b36dcd275d3a5c0e6c76f15ece",
+      "bytes": 4752
+    },
+    {
+      "id": "artifact:go_hive/contracts/cli-surface.json",
+      "path": "go_hive/contracts/cli-surface.json",
+      "sha256": "c49d1b70053ad2dfd851a898a32e8b64e1884629cea4d495cddcd21aefafb290",
+      "bytes": 364643
+    },
+    {
+      "id": "artifact:go_hive/contracts/config-keys.json",
+      "path": "go_hive/contracts/config-keys.json",
+      "sha256": "4a6e900751c2246dabc90f8ca0776defb6ca5cc625f59001792ede2a2643fb29",
+      "bytes": 148259
+    },
+    {
+      "id": "artifact:go_hive/contracts/env-vars.json",
+      "path": "go_hive/contracts/env-vars.json",
+      "sha256": "bed743cbb359ced8d803a15aa10fbfe7defe8044fbd7d419cc1febb5cb490d75",
+      "bytes": 181056
+    },
+    {
+      "id": "artifact:go_hive/contracts/tool-definitions.json",
+      "path": "go_hive/contracts/tool-definitions.json",
+      "sha256": "283115647283d01ef53bd74fa78bda8e3da16dcd1865120e7da63a7ff94d6ff8",
+      "bytes": 561723
+    },
+    {
+      "id": "artifact:go_hive/docs/api-contract-diff.md",
+      "path": "go_hive/docs/api-contract-diff.md",
+      "sha256": "ab117682d3e5ca68da0a831b49be153a78938ba1ddb2eaba97cd00900e88d5ba",
+      "bytes": 62310
+    },
+    {
+      "id": "artifact:go_hive/docs/cli-surface.html",
+      "path": "go_hive/docs/cli-surface.html",
+      "sha256": "5d8e1dae44e8c7da2fa8b1fd59d81f2a1c307a60d6524ffd057a352b90da8c9f",
+      "bytes": 169245
+    },
+    {
+      "id": "artifact:go_hive/docs/configuration.html",
+      "path": "go_hive/docs/configuration.html",
+      "sha256": "a6c14253ef5fac313d47d6576cae3ccd16ed3d6b817ae5df4e83a0a6ae4fe61b",
+      "bytes": 103897
+    },
+    {
+      "id": "artifact:go_hive/docs/coverage-registry.json",
+      "path": "go_hive/docs/coverage-registry.json",
+      "sha256": "9c9c68153869e592fb0137d0858c0c23fe118b40b0a86a267a8e5c8e19b9b0dc",
+      "bytes": 93218
+    },
+    {
+      "id": "artifact:go_hive/docs/env-config-contract-diff.md",
+      "path": "go_hive/docs/env-config-contract-diff.md",
+      "sha256": "356fe8f9390b8a0ed30b1b5c7e0491ddfcb96c6286f9d4797ea35fc56109fb7d",
+      "bytes": 72883
+    },
+    {
+      "id": "artifact:go_hive/docs/environment-variables.html",
+      "path": "go_hive/docs/environment-variables.html",
+      "sha256": "2b9453b83c80d86b2dbcca0b44487b76bb8c91ffeece37ed4ae67776430c4dee",
+      "bytes": 43903
+    },
+    {
+      "id": "artifact:go_hive/docs/event-bus.html",
+      "path": "go_hive/docs/event-bus.html",
+      "sha256": "df3ad7e684831fed9006ef16b78303cfa43c75688fafc43ede6fa7e79c60dec3",
+      "bytes": 31289
+    },
+    {
+      "id": "artifact:go_hive/docs/g2-lossless-replacement.html",
+      "path": "go_hive/docs/g2-lossless-replacement.html",
+      "sha256": "cf9f892ceead7d054e06cb8b938b487e0784df385cc4e8dd1ca4063dd88ee5c8",
+      "bytes": 27281
+    },
+    {
+      "id": "artifact:go_hive/docs/mcp-crosscheck.md",
+      "path": "go_hive/docs/mcp-crosscheck.md",
+      "sha256": "71d3df813e340c4feace536ec8e2b82b2a69cc04ad973c3e0cc3fb229d17b0a6",
+      "bytes": 22671
+    },
+    {
+      "id": "artifact:go_hive/docs/mcp-namespace-residuals.md",
+      "path": "go_hive/docs/mcp-namespace-residuals.md",
+      "sha256": "f21f147c768a37eaf82a912d091f1688f50bcd8fbd76886c2eed53de8c0e545f",
+      "bytes": 14892
+    },
+    {
+      "id": "artifact:go_hive/docs/mcp-registry/README.md",
+      "path": "go_hive/docs/mcp-registry/README.md",
+      "sha256": "89ff5ab02b8cc9e44269e60b0f423810de4dd0cbc6d26887195c4249d46994da",
+      "bytes": 3313
+    },
+    {
+      "id": "artifact:go_hive/docs/module-interfaces.html",
+      "path": "go_hive/docs/module-interfaces.html",
+      "sha256": "c8bb9d586955f9db716c385f6d8407d4ebd8d097c9a60f0779c4275213d83778",
+      "bytes": 26814
+    },
+    {
+      "id": "artifact:go_hive/docs/prompt-parity.md",
+      "path": "go_hive/docs/prompt-parity.md",
+      "sha256": "3be70633e722b0b1d1cedd3a0e8c0880e3e71f11ef8fd7ce0ea9bfba899645e5",
+      "bytes": 25449
+    },
+    {
+      "id": "artifact:go_hive/docs/queen-defaults-prompt-mapping.html",
+      "path": "go_hive/docs/queen-defaults-prompt-mapping.html",
+      "sha256": "88932268bf7368f027cd4288828e1b06d954efb0fada6836ccc61ef1c679ea20",
+      "bytes": 25829
+    },
+    {
+      "id": "artifact:go_hive/docs/skill-discovery.html",
+      "path": "go_hive/docs/skill-discovery.html",
+      "sha256": "d9325fa34ae7c94050f615235c12744b7bc0f4316e32eee8885818c20b0cd2a0",
+      "bytes": 24191
+    },
+    {
+      "id": "artifact:go_hive/docs/sse-payload-parity.md",
+      "path": "go_hive/docs/sse-payload-parity.md",
+      "sha256": "4a9be1e74f9a5ca6cc3592d09a3773e22bebd94fc41295d244be5a02df88ef06",
+      "bytes": 20214
+    },
+    {
+      "id": "artifact:go_hive/docs/storage-compat.html",
+      "path": "go_hive/docs/storage-compat.html",
+      "sha256": "807c12924b8e5a217ed31f459db3a8e84ca9a5c43762b0045adfc4b55a2fdbfd",
+      "bytes": 25860
+    },
+    {
+      "id": "artifact:go_hive/docs/tool-contract-diff.md",
+      "path": "go_hive/docs/tool-contract-diff.md",
+      "sha256": "6ddbd8398a54293f641ed1b94349ed96b17ace87bf599697e60d4a75081f1242",
+      "bytes": 88737
+    },
+    {
+      "id": "artifact:go_hive/docs/tool-parity-matrix.html",
+      "path": "go_hive/docs/tool-parity-matrix.html",
+      "sha256": "0d7a57426c3b840b9a048e626484687b924dcc0f76857f58f0b5c8f735c5a769",
+      "bytes": 156058
+    },
+    {
+      "id": "artifact:go_hive/docs/worker-prompt-parity-gap.md",
+      "path": "go_hive/docs/worker-prompt-parity-gap.md",
+      "sha256": "2b0ff1d3f33fe819531c23672314c77cc7203534fef06dd839d6e4fbca4bfd08",
+      "bytes": 11961
+    },
+    {
+      "id": "artifact:go_hive/go-hive/internal/llmjudge/testdata/prompt-parity/judge.prompt.txt",
+      "path": "go_hive/go-hive/internal/llmjudge/testdata/prompt-parity/judge.prompt.txt",
+      "sha256": "f1cbb2fbaeea648f9ac9d4d9b7f0ef7da8a3b942926ec4d054b363ec108b4038",
+      "bytes": 205
+    }
+  ],
+  "maintenance": {
+    "source": "go_hive/contracts/invariants.json",
+    "generator": "go_hive/scripts/gen_invariants.py",
+    "outputs": [
+      "go_hive/docs/invariants.html",
+      "go_hive/docs/invariants.json"
+    ],
+    "commands": {
+      "generate": "uv run --no-project python3 go_hive/scripts/gen_invariants.py",
+      "check": "uv run --no-project python3 go_hive/scripts/gen_invariants.py --check",
+      "contract_gate": "make -C go_hive/go-hive compat-check"
+    },
+    "rules": [
+      "新增/改变可观察行为时先改本文件的对应 INV，再改代码和测试。",
+      "证据文件或 selector 改变后必须重跑生成器；--check 会因证据 SHA-256 变化而失败。",
+      "level=hard 必须有至少一条 contract/report/golden 证据；没有则用 candidate。",
+      "status=aligned 只允许在 scope 内成立；跨包结论升级前先补证据。",
+      "不精确的内部实现（包布局、goroutine、SQLite 页、随机 IV、临时目录）不进入本注册表。"
+    ]
+  },
+  "boundary": "The registry records declared invariants and evidence freshness. A status is not a fresh behavioral test unless its check/evidence says so."
+}
