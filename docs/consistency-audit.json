@@ -1,5 +1,7 @@
 {
   "schema": "consistency-audit/v1",
+  "status": "historical",
+  "superseded_by": "go_hive/docs/consistency-matrix.html",
   "generated_at": "2026-11-22T21:45:06",
   "head": "80c82a08",
   "snapshot": "wave-71 @ 3bea069f",

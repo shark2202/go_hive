@@ -113,6 +113,9 @@ def main() -> int:
 
     add("# hive ↔ go_hive 逐项一致性核查表")
     add("")
+    add("> **历史快照：** 本生成器保留 wave-71 的 2026-11-22 数据，当前三轴一致性矩阵以 "
+        "`consistency-matrix.html` / `consistency-matrix.json` 为准；本文件不再作为当前核查结论。")
+    add("")
     add(f"> 生成：{datetime.now().strftime('%Y-%m-%d %H:%M %Z')} · HEAD `{git('rev-parse', '--short', 'HEAD')}` · "
         "核查快照 = wave-71（`3bea069f`，ci=0 / govuln=0 / qc=0，之后仅文档提交）")
     add("> 数据源：`contracts/module-inventory.json`（C12）、`hive-concepts-inventory.json`、"
@@ -202,6 +205,8 @@ def main() -> int:
 
     payload = {
         "schema": "consistency-audit/v1",
+        "status": "historical",
+        "superseded_by": "go_hive/docs/consistency-matrix.html",
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "head": git("rev-parse", "--short", "HEAD"),
         "snapshot": "wave-71 @ 3bea069f",

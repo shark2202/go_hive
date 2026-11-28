@@ -314,7 +314,7 @@ LoadAgentSpec → Goal{{ID:"&lt;colony&gt;-goal", Status:"draft", criteria:[sc-0
  f"<code>docs/hive-concepts-inventory.html</code>：18 原语与机制定位（Goal 属 Plan/Tracker 族）",
  f"<code>docs/loop-vocabulary.html</code>：等待/注意力/守卫/自治术语",
  f"<code>docs/module-interfaces.html</code> 与 <code>docs/hive-package-atlas.html</code>：模块与包定位",
- f"<code>docs/consistency-audit.md</code>：逐项核查表（模块级）",
+ f"<code>docs/consistency-matrix.html</code> / <code>docs/consistency-matrix.json</code>：三轴一致性矩阵（三轴 + trace id + 输入 SHA-256）",
 ])}
 </ul>
 <footer>本页由 <code>go_hive/scripts/gen_goal_doc.py</code> 生成；改动源码后重跑即可刷新（数字全部现场重算）。CLI 子命令断言：{'全部命中 Go CLI 源' if not missing else '缺失 ' + ', '.join(missing)}</footer>
