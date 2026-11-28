@@ -191,7 +191,7 @@ footer{margin-top:60px;color:var(--muted);font-size:12px;border-top:1px solid va
 <h2 id="mcp">④ MCP 服务器（可选，用户自带）</h2>
 <ul>
   <li>配置：<code>~/.hive/mcp_registry/installed.json</code> + <code>configuration.json</code> 的 <code>mcp</code> 块</li>
-  <li>传输：<code>stdio</code>（子进程）或 HTTP/SSE；工具命名 <code>mcp__&lt;server&gt;__&lt;tool&gt;</code></li>
+  <li>传输：<code>stdio</code>（子进程）或 HTTP/SSE；默认工具名为 server 侧裸名（D3 B′）；仅显式 <code>mcp.namespace</code> 时使用 <code>mcp__&lt;namespace&gt;__&lt;server&gt;__&lt;tool&gt;</code>（可选 Go 扩展）</li>
   <li>为什么：把外部工具生态接进会话，而不写进内置 41 个工具</li>
   <li>风险：stdio 服务器继承当前用户权限；未配置白名单时 MCP 工具默认可见</li>
 </ul>

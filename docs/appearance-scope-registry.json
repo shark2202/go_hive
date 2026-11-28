@@ -673,7 +673,7 @@
     {
       "id": "mcp",
       "name": "MCP registry / transport / 命名空间",
-      "scope": "MCP 服务器注册（index/config/installed 文件 schema）、transport 枚举（stdio/sse/http）、工具命名空间（mcp__server__tool 形态）、reload 语义、白名单/启用面。",
+      "scope": "MCP 服务器注册（index/config/installed 文件 schema）、transport 枚举（stdio/sse/http）、默认工具名裸名（显式 mcp.namespace 时 mcp__<namespace>__<server>__<tool> 前缀模式）、reload 语义、白名单/启用面。",
       "reference": [
         "core/framework/loader/mcp_registry*.py",
         "core/framework/server/routes_mcp.py",

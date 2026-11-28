@@ -41,6 +41,9 @@ TOOLS_MODULE ?= tools
 DIST      ?= dist
 PARITY    ?= ../scripts/check_parity.sh
 PARITY_TARGETS ?= ../scripts/check_parity_targets.sh
+CONSISTENCY_MATRIX ?= ../scripts/gen_consistency_matrix.py
+CONSISTENCY_EVIDENCE ?= ../scripts/verify_consistency_evidence.py
+CONSISTENCY_EVIDENCE_TEST ?= ../scripts/test_verify_consistency_evidence.py
 # Python 参考树根目录（含 tests/）。默认指向本仓库内的 core/；
 # 独立检出（只有 go_hive）时找不到，parity-targets 自动 SKIP。
 PY_ROOT   ?= ../../core
@@ -51,7 +54,7 @@ PLATFORMS  = darwin/amd64 darwin/arm64 linux/amd64 linux/arm64 windows/amd64 win
 # test 门禁必须每次真跑。
 TEST_FLAGS ?= -count=1
 
-.PHONY: all test test-v vet fmt-check gofumpt-check staticcheck-check staticcheck-update tools deadcode-check deadcode-update gosec-check gosec-update gosec-report deps-check deps-update lint build embed-ui cross parity parity-targets specs-check tool-contract-check tool-contract-report tool-surface-check browser-tool-check tool-output-check cli-surface-check compat-check compat-cli-selftest module-inventory-check module-inventory-selftest upgrade-compat-check vulncheck install-verify arch-check refactor-freeze storage-sweep ci clean help
+.PHONY: all test test-v vet fmt-check gofumpt-check staticcheck-check staticcheck-update tools deadcode-check deadcode-update gosec-check gosec-update gosec-report deps-check deps-update lint build embed-ui cross parity parity-targets consistency-matrix consistency-matrix-check consistency-evidence-selftest consistency-evidence-test specs-check tool-contract-check tool-contract-report tool-surface-check browser-tool-check tool-output-check cli-surface-check compat-check compat-cli-selftest module-inventory-check module-inventory-selftest upgrade-compat-check vulncheck install-verify arch-check refactor-freeze storage-sweep ci clean help
 
 all: ci
 
@@ -78,6 +81,10 @@ help:
 	@echo "  make cross       交叉编译 6 平台到 dist/"
 	@echo "  make parity      校验每个 Test 的 // Parity: 注解"
 	@echo "  make parity-targets 校验注解引用的 Python 测试真实存在"
+	@echo "  make consistency-matrix       重建静态/契约/行为三轴矩阵与证据报告"
+	@echo "  make consistency-matrix-check 校验矩阵可复现、证据哈希/锚点/引用仍可解析"
+	@echo "  make consistency-evidence-selftest 验证证据器能识别缺失/哈希漂移/锚点歧义"
+	@echo "  make consistency-evidence-test     运行证据器单元测试"
 	@echo "  make tool-contract-check  校验 contracts/tool-definitions.json 自洽"
 	@echo "  make tool-contract-report 对拍冻结契约与当前工具面（只报告，不阻断）"
 	@echo "  make tool-output-check    工具输出 golden 产物自洽检查（docs/e2e-assets/tool-output）"
@@ -91,7 +98,7 @@ help:
 	@echo "  make vulncheck          依赖漏洞门禁（govulncheck；离线降级明确 UNVERIFIED，退出码 3）"
 	@echo "  make install-verify     安装/升级端到端复验（SLOT_DIR=<slot 目录> [OLD_DIR=...]）"
 	@echo "  make refactor-freeze  结构重构的行为冻结验收（compare wave15-base；不进 ci）"
-	@echo "  make ci          fmt-check + vet + staticcheck-check + test + cross + parity + parity-targets + wiring + compat-check + arch-check"
+	@echo "  make ci          fmt-check + vet + staticcheck-check + test + cross + parity + parity-targets + wiring + compat-check + consistency-matrix-check + consistency-evidence-test + arch-check"
 
 test:
 	$(OFFLINE) $(GO) test $(TEST_FLAGS) ./...
@@ -215,6 +222,40 @@ parity:
 
 parity-targets:
 	@bash $(PARITY_TARGETS) . "$(PY_ROOT)"
+
+# 一致性矩阵：三轴（静态结构 / 冻结契约 / 行为登记）+ 证据追踪。
+# consistency-matrix 写入 JSON/HTML/证据报告；check 只做可复现与证据可解析校验。
+consistency-matrix:
+	@if command -v uv >/dev/null 2>&1; then \
+		uv run --no-project python3 $(CONSISTENCY_MATRIX); \
+		uv run --no-project python3 $(CONSISTENCY_EVIDENCE) --write; \
+	else \
+		python3 $(CONSISTENCY_MATRIX); \
+		python3 $(CONSISTENCY_EVIDENCE) --write; \
+	fi
+
+consistency-matrix-check:
+	@if command -v uv >/dev/null 2>&1; then \
+		uv run --no-project python3 $(CONSISTENCY_MATRIX) --check; \
+		uv run --no-project python3 $(CONSISTENCY_EVIDENCE) --check; \
+	else \
+		python3 $(CONSISTENCY_MATRIX) --check; \
+		python3 $(CONSISTENCY_EVIDENCE) --check; \
+	fi
+
+consistency-evidence-selftest:
+	@if command -v uv >/dev/null 2>&1; then \
+		uv run --no-project python3 $(CONSISTENCY_EVIDENCE) --self-test; \
+	else \
+		python3 $(CONSISTENCY_EVIDENCE) --self-test; \
+	fi
+
+consistency-evidence-test:
+	@if command -v uv >/dev/null 2>&1; then \
+		uv run --no-project python3 $(CONSISTENCY_EVIDENCE_TEST); \
+	else \
+		python3 $(CONSISTENCY_EVIDENCE_TEST); \
+	fi
 
 # 工具契约冻结（不等于 parity 门禁）：manifest 是抓取到的 Python 基准面，
 # 本仓库工具面是待对齐方。check 只校验产物自洽（排序/唯一/覆盖率/文档数字），
@@ -375,7 +416,7 @@ arch-check:
 refactor-freeze:
 	@bash ../scripts/refactor_freeze.sh compare wave15-base
 
-ci: fmt-check gofumpt-check vet staticcheck-check deadcode-check gosec-check deps-check test cross parity parity-targets wiring-check compat-check arch-check
+ci: fmt-check gofumpt-check vet staticcheck-check deadcode-check gosec-check deps-check test cross parity parity-targets wiring-check compat-check consistency-matrix-check consistency-evidence-test arch-check
 
 clean:
 	rm -rf $(DIST) internal/server/uiembed/dist

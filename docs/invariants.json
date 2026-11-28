@@ -60,8 +60,8 @@
           "path": "go_hive/docs/module-interfaces.html",
           "kind": "doc",
           "selector": null,
-          "sha256": "c8bb9d586955f9db716c385f6d8407d4ebd8d097c9a60f0779c4275213d83778",
-          "bytes": 26814,
+          "sha256": "34c6c61852dbe4ba56ccdb6e8e4cbd876951cc31ecfd829e4080296ac92361f3",
+          "bytes": 26914,
           "anchor": "invariants"
         }
       ],
@@ -102,8 +102,8 @@
           "path": "go_hive/docs/module-interfaces.html",
           "kind": "doc",
           "selector": null,
-          "sha256": "c8bb9d586955f9db716c385f6d8407d4ebd8d097c9a60f0779c4275213d83778",
-          "bytes": 26814,
+          "sha256": "34c6c61852dbe4ba56ccdb6e8e4cbd876951cc31ecfd829e4080296ac92361f3",
+          "bytes": 26914,
           "anchor": "invariants"
         }
       ],
@@ -187,8 +187,8 @@
           "path": "go_hive/docs/module-interfaces.html",
           "kind": "doc",
           "selector": null,
-          "sha256": "c8bb9d586955f9db716c385f6d8407d4ebd8d097c9a60f0779c4275213d83778",
-          "bytes": 26814,
+          "sha256": "34c6c61852dbe4ba56ccdb6e8e4cbd876951cc31ecfd829e4080296ac92361f3",
+          "bytes": 26914,
           "anchor": "invariants"
         }
       ],
@@ -217,8 +217,8 @@
           "path": "go_hive/docs/module-interfaces.html",
           "kind": "doc",
           "selector": null,
-          "sha256": "c8bb9d586955f9db716c385f6d8407d4ebd8d097c9a60f0779c4275213d83778",
-          "bytes": 26814,
+          "sha256": "34c6c61852dbe4ba56ccdb6e8e4cbd876951cc31ecfd829e4080296ac92361f3",
+          "bytes": 26914,
           "anchor": "invariants"
         },
         {
@@ -461,8 +461,8 @@
           "path": "go_hive/docs/tool-parity-matrix.html",
           "kind": "report",
           "selector": null,
-          "sha256": "0d7a57426c3b840b9a048e626484687b924dcc0f76857f58f0b5c8f735c5a769",
-          "bytes": 156058
+          "sha256": "1be141a93dd4dd912e65678512578deabbc1a00e98ddc72119599b1f16721b8d",
+          "bytes": 156139
         }
       ],
       "exceptions": [
@@ -620,8 +620,8 @@
     {
       "id": "artifact:go_hive/docs/module-interfaces.html",
       "path": "go_hive/docs/module-interfaces.html",
-      "sha256": "c8bb9d586955f9db716c385f6d8407d4ebd8d097c9a60f0779c4275213d83778",
-      "bytes": 26814
+      "sha256": "34c6c61852dbe4ba56ccdb6e8e4cbd876951cc31ecfd829e4080296ac92361f3",
+      "bytes": 26914
     },
     {
       "id": "artifact:go_hive/docs/prompt-parity.md",
@@ -662,8 +662,8 @@
     {
       "id": "artifact:go_hive/docs/tool-parity-matrix.html",
       "path": "go_hive/docs/tool-parity-matrix.html",
-      "sha256": "0d7a57426c3b840b9a048e626484687b924dcc0f76857f58f0b5c8f735c5a769",
-      "bytes": 156058
+      "sha256": "1be141a93dd4dd912e65678512578deabbc1a00e98ddc72119599b1f16721b8d",
+      "bytes": 156139
     },
     {
       "id": "artifact:go_hive/docs/worker-prompt-parity-gap.md",

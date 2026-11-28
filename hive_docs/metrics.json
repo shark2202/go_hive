@@ -1,0 +1,172 @@
+{
+  "baseline": {
+    "package": "aden-hive",
+    "version": "1.0.15",
+    "tools_package": "aden-tools",
+    "tools_version": "1.0.15",
+    "repo_head": "f195ebaf3",
+    "survey_date": "2026-11-27",
+    "python": ">=3.11",
+    "license": "Apache-2.0"
+  },
+  "code_size": {
+    "framework_python_files_excluding_tests": 298,
+    "framework_python_lines_excluding_tests": 123900,
+    "agent_loop_lines": 10346,
+    "test_files": 215,
+    "test_lines": 62871,
+    "frontend_source_files": 230,
+    "frontend_lines": 65649,
+    "frontend_test_files": 38,
+    "tools_python_files": 400,
+    "tools_lines": 96651,
+    "http_route_registrations": 196,
+    "server_route_modules": 23
+  },
+  "catalog": {
+    "queens": 13,
+    "default_active_queens": 6,
+    "framework_skills": 12,
+    "preset_skills": 8,
+    "harness_tool_groups": 5,
+    "integration_directories": 104,
+    "integration_tool_registrations": 866,
+    "curated_model_providers": 12,
+    "model_presets": 8,
+    "event_types": 77
+  },
+  "prompts": {
+    "queen_character_core_chars": 529,
+    "queen_role_independent_chars": 2012,
+    "queen_role_colony_chars": 631,
+    "queen_tools_independent_chars": 1788,
+    "queen_tools_colony_chars": 1162,
+    "queen_behavior_always_chars": 13404,
+    "queen_behavior_independent_chars": 1087,
+    "queen_behavior_colony_chars": 5143,
+    "queen_dm_base_chars": 18820,
+    "queen_colony_base_chars": 20869,
+    "queen_identity_chars_min": 2500,
+    "queen_identity_chars_max": 3590,
+    "worker_system_prompt_chars": 7613,
+    "framework_skill_catalog_chars": 5527,
+    "local_user_skill_catalog_chars": 28419,
+    "local_user_skill_count": 187,
+    "tool_gated_browser_body_chars": 48905,
+    "tool_gated_terminal_body_chars": 10613,
+    "tool_gated_chart_body_chars": 9275,
+    "live_worker_system_prompt_chars": 0,
+    "skill_description_cap_chars": 300,
+    "catalog_compact_threshold_chars": 5000
+  },
+  "loop_defaults": {
+    "queen": {
+      "max_iterations": 999999,
+      "tool_call_budget": 30,
+      "tool_call_hard_multiple": 5,
+      "hard_stop": 150,
+      "tool_call_lifetime_budget": 0,
+      "max_context_tokens": 180000,
+      "grace_iterations": 0
+    },
+    "colony_queen": {
+      "max_iterations": 999999,
+      "tool_call_budget": 50,
+      "tool_call_hard_multiple": 10,
+      "hard_stop": 500,
+      "max_context_tokens": 180000
+    },
+    "worker": {
+      "max_iterations": 3,
+      "grace_iterations": 1,
+      "tool_call_budget": 30,
+      "tool_call_hard_multiple": 3,
+      "hard_stop": 90,
+      "tool_call_lifetime_budget": 200,
+      "max_context_tokens": 180000
+    },
+    "max_tool_result_chars": 30000,
+    "max_output_value_chars": 2000,
+    "max_retained_screenshots": 2,
+    "microcompact_keep_recent": 6,
+    "parallel_readonly_tool_cap": 10
+  },
+  "timeouts": {
+    "tool_call_seconds": 60,
+    "browser_tool_seconds": 180,
+    "mcp_result_ceiling_seconds": 240,
+    "background_tool_seconds": 235,
+    "tool_wait_limit_seconds": 600,
+    "stream_ttft_seconds": 600,
+    "stream_inter_event_idle_seconds": 120,
+    "capacity_retry_max_seconds": 600,
+    "session_idle_nudge_seconds": 120,
+    "session_idle_nudge_broken_seconds": 30,
+    "worker_soft_timeout_default_seconds": 600,
+    "worker_hard_timeout_cap_seconds": 3600,
+    "worker_stop_timeout_seconds": 10,
+    "fork_compaction_timeout_seconds": 180
+  },
+  "concurrency": {
+    "default_workers": 4,
+    "playbook_default": 8,
+    "playbook_max": 32,
+    "tool_executor_workers": 64,
+    "http_request_executor_workers": 32
+  },
+  "colony": {
+    "adaptive_budget_enabled": true,
+    "adaptive_min_samples": 3,
+    "adaptive_floor": 30,
+    "adaptive_multiplier": 2.0,
+    "adaptive_max_guard": 1.25,
+    "adaptive_dispersion_limit": 4.0,
+    "adaptive_sample_window": 50
+  },
+  "memory": {
+    "max_files_per_scope": 200,
+    "max_file_bytes": 4096,
+    "reflection_every_turns": 6,
+    "reflection_long_every": 4,
+    "recall_mode_default": "index",
+    "recall_wait_seconds": 10,
+    "past_recall_top_k": 6,
+    "past_recall_max_terms": 12,
+    "past_recall_chars_per_side": 500,
+    "past_recall_timeout_seconds": 3,
+    "timeline_default_enabled": false,
+    "timeline_batch_chars": 12000,
+    "timeline_batch_messages": 3,
+    "timeline_cooldown_seconds": 300
+  },
+  "sentinel": {
+    "classify_after_seconds": 300,
+    "max_nudges_before_escalate": 5,
+    "escalate_when_ui_attached": false,
+    "channels": ["hive", "telegram", "slack"],
+    "verdicts": ["continue", "needs_human", "done"]
+  },
+  "queen_mail": {
+    "daily_limit": 100,
+    "max_depth": 8,
+    "max_parallel_turns": 2
+  },
+  "longmemeval": {
+    "hive_v1_s": 0.884,
+    "hive_v1_m": 0.820,
+    "pre_v1_s": 0.770,
+    "whole_history_s": 0.968,
+    "answer_sessions_only_s": 0.976,
+    "answer_sessions_only_m": 0.978
+  },
+  "retention_days": {
+    "event_logs": 7,
+    "llm_logs": 7,
+    "compaction_log": 7,
+    "tool_artifacts": 14,
+    "rotated_logs": 30,
+    "worker_deep_clean": 14,
+    "queen_hygiene": 30,
+    "active_grace_hours": 48
+  }
+}

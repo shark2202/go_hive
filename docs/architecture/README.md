@@ -262,7 +262,7 @@ flowchart TB
 | `sse` | 单向流式帧：event 名、data 形状、心跳与重连语义 | `/api/sessions/{id}/events`、`/api/events/global`、`/api/sessions/live`、`workers/stream`、`browser/status/stream` | `internal/server` + `internal/eventbus` → 前端 |
 | `event` | 进程内事件：统一信封、EventType 注册表、worker 报告 payload | `AgentEvent`、`EventType` / `AllEventTypes`、`subagent_report` | `internal/eventbus` / `internal/colony` → server / colony / agentloop / 前端 |
 | `disk` | 跨进程、跨重启的状态格式 | `worker.json`、`metadata.json`、`meta.json`、`cursor.json`、`triggers.json`、`soul.json`、`tracker.db` | 各模块 → 各模块 / CLI |
-| `tool-schema` | 模型可见的工具面：工具名、描述、`input_schema`、MCP 命名空间 | `llm.ToolDef` / `tools.Tool.Schema`、`mcp__<server>__<tool>` | `internal/tools` / `internal/llm` → agentloop / LLM / MCP server |
+| `tool-schema` | 模型可见的工具面：工具名、描述、`input_schema`、MCP 默认裸名 / 可选 namespace 前缀 | `llm.ToolDef` / `tools.Tool.Schema`、默认 `mcp__` 仅显式 namespace 模式启用 | `internal/tools` / `internal/llm` → agentloop / LLM / MCP server |
 | `cli` | 运维入口：子命令、参数、退出码、`--json` 输出 | `hive serve`、`hive chat`、`hive colony list\|info\|delete` | `internal/cli` → 运维 |
 
 契约的每条都记录 `providers`、`consumers`、`definition`（文件:符号）、`guarantee`、`failure_behavior`、`compatibility`、`enforcement`、`owner_layer`。`providers` / `consumers` 里的 `ext:` 前缀是外部消费面，不是仓库内的包。

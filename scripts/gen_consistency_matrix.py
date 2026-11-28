@@ -530,7 +530,7 @@ main{{max-width:1600px;margin:auto;padding:28px 22px 70px}}h1{{font-size:27px;ma
 <li><b>集成面：</b>状态 <code>{html_escape(integration.get('status'))}</code>；{html_escape(integration.get('warning'))}</li>
 </ul>
 <h2>④ 证据追踪</h2>
-<p>每个结论都有稳定 trace id；下表展开 artifact、package、contract 与 behavior registry，C12 模块的 273 条逐文件 trace 保留在 JSON 的 <code>evidence_catalog</code> 中。artifact 行附输入文件 SHA-256。</p>
+<p>每个结论都有稳定 trace id；下表展开 artifact、package、contract 与 behavior registry，C12 模块的 273 条逐文件 trace 保留在 JSON 的 <code>evidence_catalog</code> 中。artifact 行附输入文件 SHA-256。可验证报告见 <a href="consistency-evidence-report.html">HTML</a> / <a href="consistency-evidence-report.md">Markdown</a> / <a href="consistency-evidence-report.json">JSON</a>；运行 <code>make consistency-matrix-check</code> 会逐条校验哈希、锚点与引用。</p>
 <div class="tablewrap"><table><thead><tr><th>Trace ID</th><th>Kind</th><th>Source</th><th>Selector</th><th>SHA-256</th></tr></thead><tbody>
 {''.join(catalog_rows)}
 </tbody></table></div>

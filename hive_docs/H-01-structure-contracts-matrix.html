@@ -1,0 +1,108 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>H-01 · Hive 静态结构 / 功能契约 / 行为矩阵</title><style>:root{--bg:#0f0d0a;--panel:#1d1812;--line:#3a2d20;--text:#f3ead9;--muted:#b7a88f;--dim:#8c7c64;--amber:#ffb100;--amber-soft:#ffd77a;--green:#78c091;--red:#e07a6a;--blue:#8ab4d8;--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;--sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}*{box-sizing:border-box}body{margin:0;background:radial-gradient(1000px 500px at 80% -10%,rgba(255,177,0,.09),transparent 60%),var(--bg);color:var(--text);font-family:var(--sans);line-height:1.65}a{color:var(--amber-soft);text-decoration:none}a:hover{text-decoration:underline}code{font-family:var(--mono);font-size:.9em;color:var(--amber-soft);background:rgba(255,177,0,.06);padding:1px 5px;border-radius:4px}.wrap{max-width:1400px;margin:0 auto;padding:0 26px}header.hero{padding:56px 0 30px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(255,177,0,.05),transparent 70%)}.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--amber);text-transform:uppercase}.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--amber);box-shadow:0 0 12px var(--amber);margin-right:8px}h1{font-size:clamp(30px,4vw,46px);line-height:1.1;margin:14px 0 10px;letter-spacing:-.02em}h1 span{color:var(--amber)}.lede{max-width:1000px;color:var(--muted);font-size:15.5px}.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}.chip{font-family:var(--mono);font-size:11px;color:var(--muted);border:1px solid var(--line);background:var(--panel);padding:5px 9px;border-radius:999px}.chip b{color:var(--text)}section{padding:40px 0;border-bottom:1px solid var(--line)}h2{font-size:23px;margin:0 0 5px}.sub{color:var(--dim);font-size:13px;font-family:var(--mono);margin:0 0 20px}.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}.stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}.stat .n{font-family:var(--mono);font-size:26px;color:var(--amber);line-height:1.1}.stat .l{font-size:12px;color:var(--muted);margin-top:4px}table{width:100%;border-collapse:collapse;font-size:12.5px}th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--dim);font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase}tbody tr:hover{background:rgba(255,177,0,.03)}.num{font-family:var(--mono);white-space:nowrap}.dim{color:var(--dim)}.quote{border-left:3px solid var(--amber);padding:8px 0 8px 14px;margin:16px 0;color:var(--muted);font-size:14px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}.panel h3{margin:0 0 8px;font-size:15px}.panel ul{margin:0;padding-left:18px;color:var(--muted);font-size:13px}.panel li{margin:5px 0}pre{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;overflow:auto;font-family:var(--mono);font-size:12px;color:var(--muted);line-height:1.55}.scroll{max-height:72vh;overflow:auto;border:1px solid var(--line);border-radius:10px}footer{padding:30px 0 56px;color:var(--dim);font-size:12px}@media(max-width:900px){.stats{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}table{display:block;overflow-x:auto;white-space:nowrap}}</style></head><body>
+<header class="hero"><div class="wrap"><div class="eyebrow"><span class="dot"></span>H-01 · structure · contracts · behavior</div><h1>Hive 源码静态结构<br><span>功能契约与行为矩阵清单</span></h1>
+<p class="lede">范围：Python 版 Hive 本体（<code>core/framework</code>、<code>core/hive</code>、<code>core/framework/tools</code>、测试）。按约定排除 <code>go_hive</code>、前端、866 个集成工具。目标：一张表看清“有哪些层、每层契约是什么、各角色实际行为如何”。</p>
+<div class="meta"><span class="chip">baseline <b>1.0.15</b></span><span class="chip">HEAD <b>8ad4dbf23</b></span><span class="chip">modules <b>298</b></span><span class="chip">lines <b>123,900</b></span><span class="chip">tests <b>218 / 62,871</b></span></div></div></header>
+
+<section><div class="wrap"><h2>0. 一句话结论</h2><div class="quote">Hive 的静态结构是“<b>一个执行原语 + 一层控制平面 + 一组入口</b>”：所有角色最终都落到 <code>AgentLoop.execute(ctx)</code>；差异不在“另一个引擎”，而在 <b>AgentSpec/AgentContext 的装配</b>、<b>工具表</b>、<b>预算</b>、<b>持久化目录</b> 与 <b>谁可以调用谁</b>。功能契约大多是 Python 类型 + JSON Schema + 事件；真正的边界由少量运行时检查拼成。</div>
+<div class="stats"><div class="stat"><div class="n">26</div><div class="l">framework 子目录</div></div><div class="stat"><div class="n">1</div><div class="l">执行原语</div></div><div class="stat"><div class="n">77</div><div class="l">EventType</div></div><div class="stat"><div class="n">25+29</div><div class="l">基础工具</div></div><div class="stat"><div class="n">0</div><div class="l">统一接口层</div></div></div></div></section>
+
+<section><div class="wrap"><h2>1. 静态结构</h2><p class="sub">按目录：文件/行数来自本机统计；职责是本报告各章结论</p><div class="scroll"><table><thead><tr><th>层</th><th>目录</th><th>规模</th><th>职责</th></tr></thead><tbody>
+<tr><td>公开面</td><td><code>core/hive/</code></td><td class="num">1 文件 / 187 行</td><td>惰性导出 50 个稳定符号；不实现逻辑</td></tr>
+<tr><td>执行内核</td><td><code>core/framework/agent_loop/</code></td><td class="num">10,346 行</td><td>唯一执行原语：回合、流、工具、预算、压缩、停泊、judge、视觉回退</td></tr>
+<tr><td>角色装配</td><td><code>agents/queen/</code></td><td class="num">nodes 793 行 + profiles</td><td>Queen 人格、阶段提示、Worker 定义、Soul、记忆/反思</td></tr>
+<tr><td>组织运行时</td><td><code>host/</code></td><td class="num">colony_runtime 2,935 / event_bus 2,269</td><td>Colony、Worker、事件总线、Tracker、Playbook、Trigger</td></tr>
+<tr><td>入口/控制面</td><td><code>server/</code></td><td class="num">23 路由模块 / 222 路由</td><td>SessionManager、QueenOrchestrator、HTTP/SSE、渠道、凭据表单</td></tr>
+<tr><td>模型层</td><td><code>llm/</code></td><td class="num">litellm 3,678 行</td><td>Provider、流事件、模型目录、缓存/重试、能力过滤</td></tr>
+<tr><td>工具层</td><td><code>tools/</code></td><td class="num">7,151 行</td><td>生命周期、Tracker、Playbook、分层、harness 5 组</td></tr>
+<tr><td>加载/发现</td><td><code>loader/</code></td><td class="num">registry / MCP / CLI</td><td>ToolRegistry、MCP client/registry、AgentLoader</td></tr>
+<tr><td>状态/持久化</td><td><code>storage/</code>、<code>tasks/</code>、<code>tracker*/</code></td><td class="num">多模块</td><td>conversation parts/cursor、tasks.json、DecisionTracker、Tracker schema</td></tr>
+<tr><td>方法与沉淀</td><td><code>skills/</code>、<code>host/playbook/</code></td><td class="num">多模块</td><td>技能发现/信任/目录、Playbook runner</td></tr>
+<tr><td>自治</td><td><code>sentinel/</code>、<code>server/channels.py</code></td><td class="num">多模块</td><td>停泊分类、升级、渠道插件</td></tr>
+<tr><td>辅助</td><td><code>credentials/</code>、<code>pipeline/</code>、<code>observability/</code>、<code>maintenance/</code>、<code>testing/</code>、<code>utils/</code></td><td class="num">多模块</td><td>凭据、请求中间件、日志、清理、测试框架</td></tr>
+<tr><td>Legacy</td><td><code>orchestrator/</code></td><td class="num">Node/Edge/Graph</td><td>传统图执行，仍服务 SDK/导出 Agent</td></tr>
+</tbody></table></div></div></section>
+
+<section><div class="wrap"><h2>2. 依赖方向</h2><pre>core/hive（公开面）
+  └─ framework.agent_loop / llm / host / loader / server.channels / server.turn_context
+
+server（HTTP/会话/编排）
+  └─ agents.queen / host / agent_loop / llm / skills / storage / tasks / credentials / tracker
+
+host（Colony/Worker/Playbook/EventBus）
+  └─ agent_loop / llm / tools / storage / skills / tasks / tracker
+
+agent_loop（执行内核）
+  └─ llm / loader.tool_registry / storage / tasks / tracker
+
+orchestrator（legacy 图）
+  └─ agent_loop / llm / loader
+
+tools / skills / credentials / storage（基础能力）
+  └─ config / schemas / utils</pre><p class="sub">没有 import-linter/分层门禁；依赖方向靠约定与代码评审维持。legacy orchestrator 与 agent_loop 是两条并行执行路径。</p></div></section>
+
+<section><div class="wrap"><h2>3. 功能契约（核心接口）</h2><div class="scroll"><table><thead><tr><th>组件</th><th>契约</th><th>输入</th><th>输出/副作用</th><th>不变量/错误</th></tr></thead><tbody>
+<tr><td><code>AgentProtocol</code></td><td><code>async execute(ctx) -> AgentResult</code>；<code>validate_input(ctx)</code></td><td><code>AgentContext</code></td><td><code>AgentResult(success, output, error, tokens, tool_calls_used)</code></td><td>缺 input_keys 在启动前失败；永久存活 Agent 由 skip_judge 控制</td></tr>
+<tr><td><code>AgentSpec</code></td><td>声明式蓝图</td><td>id/name/description、input/output keys、system_prompt、tools、policy、report_schema</td><td>被 AgentLoop 读取</td><td>Worker 是 Queen spec 的克隆；<code>tool_access_policy</code> 在 live 路径不执行</td></tr>
+<tr><td><code>AgentContext</code></td><td>运行时装配</td><td>llm、tools、goal、input_data、identity/narrative/memory、providers</td><td>驱动一次 execute</td><td>input_data 全量进入首条 user 消息</td></tr>
+<tr><td><code>LoopConfig</code></td><td>预算/超时/恢复</td><td>iterations、tool budgets、context、stream、stall、grace</td><td>每次 execute 的硬边界</td><td>grace 只允许 3 个收尾工具；上下文压缩先于 LLM</td></tr>
+<tr><td><code>Tool</code> / <code>ToolResult</code></td><td>工具描述 + 执行器</td><td>name/description/JSON Schema/concurrency_safe；executor(dict)</td><td>ToolResult(content,is_error,image,spill)</td><td>无输入 schema 校验；无结果 schema；错误只有 is_error</td></tr>
+<tr><td><code>EventBus</code></td><td>发布/订阅/历史/落盘</td><td><code>AgentEvent(type,stream_id,node_id,execution_id,data)</code></td><td>订阅者、events.jsonl、SSE</td><td>data 自由 dict；无 payload schema；流式 delta 合并</td></tr>
+<tr><td><code>ReminderSource</code></td><td><code>points()</code> / <code>applies_to()</code> / <code>render()</code></td><td><code>ReminderContext(point, agent_ctx, signals, user_text)</code></td><td>注入 <code>&lt;system-reminder&gt;</code> 文本</td><td>失败跳过；注册顺序=隐式优先级；PRE_COMPACT 死点</td></tr>
+<tr><td><code>Tracker</code></td><td>4 个工具：sql/register/upsert/query</td><td>SQL/表/行</td><td>tracker.db、_tracker_* 元数据</td><td>denylist；row_cap；<code>main._</code> 可绕过 _ 保护</td></tr>
+<tr><td><code>TaskStore</code></td><td><code>tasks.json</code> 文档</td><td>meta + tasks[]</td><td>任务状态/依赖/归档</td><td>ID 不复用；idle 30min → abandoned；hooks 可否决</td></tr>
+<tr><td><code>ConversationStore</code></td><td>parts/cursor</td><td>seq 消息、cursor</td><td>写穿磁盘、恢复</td><td>parts 与 cursor 非同一原子写</td></tr>
+<tr><td><code>ColonyRuntime</code></td><td><code>spawn/spawn_batch/stop_workers</code></td><td>task、profile、budget、tools</td><td>Worker + 事件 + 报告</td><td>并发上限/队列；grace；worker 只 report_to_parent</td></tr>
+<tr><td><code>SessionManager</code> / HTTP</td><td>会话/聊天/恢复/建群</td><td>REST/SSE</td><td>Session、queen_executor</td><td>无 per-route auth；桌面 token 可选</td></tr>
+<tr><td><code>PromptSpec</code></td><td>静态前缀 + 动态后缀</td><td>identity/focus/narrative/accounts/skills/protocols/memory/binding</td><td>system blocks</td><td>Queen 走 dynamic provider；缓存前缀必须字节稳定</td></tr>
+<tr><td><code>CredentialStoreAdapter</code></td><td><code>get(name, account)</code> / <code>get_by_alias</code></td><td>credential_id + alias + key</td><td>secret value</td><td>provider/alias/key 三维；过期抛 CredentialExpiredError</td></tr>
+<tr><td><code>Skill</code></td><td>SKILL.md frontmatter + catalog</td><td>name/description/visibility/allowed-tools</td><td>按需 cat；catalog 提醒</td><td>allowed-tools 不执行；project scope 需信任</td></tr>
+<tr><td><code>Playbook</code></td><td><code>meta</code> + <code>async run(args)</code></td><td>worker/converge/lane/tracker_query</td><td>colony.db run-log、tracker 行</td><td>进程内 exec；非沙箱；重启不自动续跑</td></tr>
+</tbody></table></div></div></section>
+
+<section><div class="wrap"><h2>4. 行为矩阵：角色 × 维度</h2><div class="scroll"><table><thead><tr><th>角色</th><th>入口</th><th>system prompt</th><th>工具面</th><th>预算/循环</th><th>持久化</th><th>恢复</th><th>升级/用户 IO</th></tr></thead><tbody>
+<tr><td><b>Queen DM</b></td><td>SessionManager → AgentLoop</td><td>身份+Soul+DM base+环境</td><td>24 并集 / 9 阶段 + MCP eager/searchable</td><td>999999 iter；30×5=150；0 lifetime</td><td>queen session parts/cursor/events</td><td>冷恢复；cursor</td><td>ask_user；suggest_colony；credentials</td></tr>
+<tr><td><b>Colony Queen</b></td><td>同上（colony 绑定）</td><td>Colony base + 委派规则</td><td>23 阶段 + tracker/playbook/worker</td><td>999999；50×10=500</td><td>colony session + tracker.db</td><td>同 DM + colony 绑定</td><td>Worker 报告；Sentinel；渠道</td></tr>
+<tr><td><b>Parallel Worker</b></td><td>ColonyRuntime.spawn</td><td>live 路径为空（worker.json 有 WORKER_SYSTEM_PROMPT 但未接）</td><td>Queen 工具 - 20 queen-only；继承 6 task/tracker</td><td>3+1 grace；30×3=90；200 lifetime</td><td>workers/&lt;id&gt; parts/cursor</td><td>可 resume；grace 收尾</td><td>无用户 IO；report_to_parent</td></tr>
+<tr><td><b>Playbook run</b></td><td>run_playbook</td><td>不适用（脚本）</td><td>worker/converge/lane/tracker_query</td><td>meta concurrency 8/32；软超时 600s</td><td>playbooks/*.py + colony.db</td><td>重跑即续跑（Tracker）</td><td>失败 dead-letter；[PLAYBOOK_COMPLETE]</td></tr>
+<tr><td><b>Trigger</b></td><td>timer/webhook</td><td>复用 Queen prompt</td><td>同 Queen</td><td>同 Queen</td><td>triggers.json + session</td><td>恢复 active triggers</td><td>触发注入；错过的 tick 静默</td></tr>
+<tr><td><b>Sentinel</b></td><td>停泊后 ticker</td><td>分类器专用 system</td><td>无（只判定）</td><td>classify 300s；nudge ≤5</td><td>escalations/*.json</td><td>恢复升级状态</td><td>continue/needs_human/done</td></tr>
+<tr><td><b>Channel</b></td><td>hive.channels 插件</td><td>复用 Queen prompt + 渠道前缀</td><td>同 Queen</td><td>同 Queen</td><td>渠道 session</td><td>open/resume session</td><td>入站消息；出站 QueenOutput</td></tr>
+<tr><td><b>Claude Code Queen</b></td><td>claude_code_queens</td><td>固定说明 + config.system_prompt</td><td>Claude Code 自身</td><td>外部进程</td><td>conversations.json</td><td>token/会话文件</td><td>queen_mail 信件</td></tr>
+<tr><td><b>SDK Agent</b></td><td>AgentLoop.execute</td><td>AgentSpec.system_prompt → focus</td><td>调用方 tools</td><td>LoopConfig</td><td>FileConversationStore</td><td>cursor</td><td>supports_direct_user_io</td></tr>
+<tr><td><b>Graph node</b></td><td>Orchestrator</td><td>NodeSpec prompt（focus 在后缀）</td><td>NodeSpec.tools + always</td><td>Graph limits</td><td>checkpoints/runs</td><td>checkpoint</td><td>set_output/escalate</td></tr>
+</tbody></table></div></div></section>
+
+<section><div class="wrap"><h2>5. 行为矩阵：生命周期 × 关键动作</h2><table><thead><tr><th>阶段</th><th>DM Queen</th><th>Colony Queen</th><th>Worker</th></tr></thead><tbody>
+<tr><td>启动</td><td>身份选择 → prompt 装配 → SESSION_START reminders → 首条消息</td><td>同左 + colony 绑定</td><td>spawn → worker spec（live 为空）→ 首条 task/binding</td></tr>
+<tr><td>回合</td><td>drain 注入 → LLM 流 → 工具 → judge（skip）</td><td>同左 + Worker 报告注入</td><td>drain → LLM → 工具 → report 终止</td></tr>
+<tr><td>工具</td><td>eager/searchable；预算/grace；30k 落盘</td><td>+ playbook/tracker/worker 控制</td><td>继承 6 工具；无 queen-only；fail-fast</td></tr>
+<tr><td>压缩</td><td>微压缩→prune→LLM 摘要；POST_COMPACT 重发目录</td><td>同左</td><td>同左；摘要保留任务/tracker</td></tr>
+<tr><td>停泊</td><td>ask_user/credential/colony/turn_done/broken</td><td>+ Sentinel 判定</td><td>awaiting_queen / 终止</td></tr>
+<tr><td>停止</td><td>用户 Stop → USER_STOPPED；不自动复活</td><td>stop_worker 停全部</td><td>STOP REQUESTED → report → hard stop</td></tr>
+<tr><td>恢复</td><td>冷恢复：parts+cursor；重刷 prompt</td><td>同左 + colony/tracker</td><td>resume_worker：会话续跑</td></tr>
+</tbody></table></div></section>
+
+<section><div class="wrap"><h2>6. 预算/失败/权限矩阵（摘要）</h2><div class="grid2"><div class="panel"><h3>预算</h3><ul><li>迭代：Queen 无限；Worker 3+1 grace。</li><li>每回合：Queen 30×5=150；Colony 50×10=500；Worker 30×3=90。</li><li>生命周期：Worker 200；Queen 0（可覆盖）。</li><li>上下文：180k 默认；压缩先于 LLM。</li><li>时间：TTFT 600s；事件间 120s；工具 60/180/240/235s。</li></ul></div><div class="panel"><h3>失败</h3><ul><li>LLM transient 5 次；capacity 600s；其它停泊。</li><li>工具错误只标记 <code>is_error</code>，不自动重试。</li><li>死循环 3 次指纹；文本停顿 3 次/0.85。</li><li>Worker 超时软 600s / 硬 3600s 上限。</li><li>Sentinel 默认 continue。</li></ul></div></div><div class="grid2" style="margin-top:14px"><div class="panel"><h3>权限</h3><ul><li>Queen-only 20 个工具；Worker 继承 6 个。</li><li>MCP allowlist + eager/searchable。</li><li><code>tool_access_policy</code> 仅图节点生效。</li><li>技能 <code>allowed-tools</code> 不执行。</li><li>无沙箱：终端/Playbook/浏览器 = 宿主权限。</li></ul></div><div class="panel"><h3>真相</h3><ul><li>会话 parts+cursor：继续运行必需。</li><li>tracker.db：业务事实。</li><li>tasks.json：意图。</li><li>events.jsonl：审计/回放。</li><li>memory/Soul/profile：连续性。</li><li>凭据：加密存储。</li></ul></div></div></div></section>
+
+<section><div class="wrap"><h2>7. 契约缺口清单</h2><table><thead><tr><th>声明</th><th>实际</th><th>影响</th></tr></thead><tbody>
+<tr><td><code>AgentSpec.tool_access_policy</code></td><td>live AgentLoop 不读取</td><td>工具面完全由装配方决定；策略字段是图路径专用</td></tr>
+<tr><td>Skill <code>allowed-tools</code></td><td>只解析/校验</td><td>不是安全边界</td></tr>
+<tr><td>Worker profile <code>prompt_override</code>/<code>tool_filter</code></td><td>只写 worker.json，live 不读</td><td>profile 配置不生效</td></tr>
+<tr><td>Worker <code>WORKER_SYSTEM_PROMPT</code></td><td>live AgentSpec.system_prompt 为空</td><td>并行规则/fail-fast 缺失</td></tr>
+<tr><td>Event payload</td><td>自由 dict</td><td>无 schema/版本；前端按字符串约定</td></tr>
+<tr><td>Tool result</td><td>content + is_error</td><td>无 error_kind/retryable；失败语义弱</td></tr>
+<tr><td>HTTP</td><td>无 per-route auth</td><td>本机进程可调；远程部署需反代</td></tr>
+<tr><td>Playbook</td><td>进程内 exec</td><td>非沙箱；作者必须可信</td></tr>
+</tbody></table></div></section>
+
+<section><div class="wrap"><h2>8. 相关深入文档</h2><div class="panel"><ul>
+<li>源码 AST 机器清单：<a href="H-02-ast-inventory.html">H-02</a> · <a href="ast-inventory.json">ast-inventory.json</a></li>
+<li>执行内核 / 生命周期：<a href="03-agent-loop.md">03</a>、<a href="16-lifecycles-and-sequences.md">16</a></li>
+<li>提示词 / Reminder：<a href="21-prompts-and-context.md">21</a>、<a href="20-reminder-mechanism.md">20</a></li>
+<li>文件 / 恢复 / Tracker：<a href="17-filesystem-and-persistence.md">17</a>、<a href="18-restart-recovery.md">18</a>、<a href="19-tracker-db.md">19</a></li>
+<li>工具 / 运行时 / MCP：<a href="B-01-builtin-tools.html">B-01</a>、<a href="B-02-tool-runtime.html">B-02</a>、<a href="B-03-tool-interface-mcp.html">B-03</a></li>
+<li>权限 / 真相 / 失败 / 预算 / 缓存 / 并发：<a href="C-01-permissions.html">C-01</a>、<a href="C-02-truth-ownership.html">C-02</a>、<a href="C-03-failure-semantics.html">C-03</a>、<a href="C-04-budget-arbitration.html">C-04</a>、<a href="C-05-cache-layers.html">C-05</a>、<a href="C-06-concurrency.html">C-06</a></li>
+<li>凭据：<a href="C-11-credentials.html">C-11</a>；附件：<a href="A-01-attachments.html">A-01</a></li>
+<li>测试：<a href="T-01-test-atlas.html">T-01</a>、<a href="T-02-test-quality.html">T-02</a></li>
+</ul></div></div></section>
+<footer><div class="wrap">H-01 · Hive 静态结构 / 功能契约 / 行为矩阵 · 2026-11-28 · 证据：本报告 00–21 章 + 补充 B/C/T/A 文档 + 源码。返回 <a href="gaps-index.html">逐项索引</a>。</div></footer></body></html>

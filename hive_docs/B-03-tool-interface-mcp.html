@@ -1,0 +1,56 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>B-03 · Tool 接口与 MCP 契约</title><style>:root{--bg:#0f0d0a;--panel:#1d1812;--line:#3a2d20;--text:#f3ead9;--muted:#b7a88f;--dim:#8c7c64;--amber:#ffb100;--amber-soft:#ffd77a;--green:#78c091;--red:#e07a6a;--blue:#8ab4d8;--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;--sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}*{box-sizing:border-box}body{margin:0;background:radial-gradient(1000px 500px at 80% -10%,rgba(255,177,0,.09),transparent 60%),var(--bg);color:var(--text);font-family:var(--sans);line-height:1.65}a{color:var(--amber-soft);text-decoration:none}a:hover{text-decoration:underline}code{font-family:var(--mono);font-size:.9em;color:var(--amber-soft);background:rgba(255,177,0,.06);padding:1px 5px;border-radius:4px}.wrap{max-width:1320px;margin:0 auto;padding:0 26px}header.hero{padding:56px 0 30px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(255,177,0,.05),transparent 70%)}.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--amber);text-transform:uppercase}.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--amber);box-shadow:0 0 12px var(--amber);margin-right:8px}h1{font-size:clamp(30px,4vw,46px);line-height:1.1;margin:14px 0 10px;letter-spacing:-.02em}h1 span{color:var(--amber)}.lede{max-width:980px;color:var(--muted);font-size:15.5px}.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}.chip{font-family:var(--mono);font-size:11px;color:var(--muted);border:1px solid var(--line);background:var(--panel);padding:5px 9px;border-radius:999px}.chip b{color:var(--text)}section{padding:40px 0;border-bottom:1px solid var(--line)}h2{font-size:23px;margin:0 0 5px}.sub{color:var(--dim);font-size:13px;font-family:var(--mono);margin:0 0 20px}.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}.stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}.stat .n{font-family:var(--mono);font-size:26px;color:var(--amber);line-height:1.1}.stat .l{font-size:12px;color:var(--muted);margin-top:4px}table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--dim);font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase}tbody tr:hover{background:rgba(255,177,0,.03)}.num{font-family:var(--mono);white-space:nowrap}.dim{color:var(--dim)}.quote{border-left:3px solid var(--amber);padding:8px 0 8px 14px;margin:16px 0;color:var(--muted);font-size:14px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}.panel h3{margin:0 0 8px;font-size:15px}.panel ul{margin:0;padding-left:18px;color:var(--muted);font-size:13px}.panel li{margin:5px 0}pre{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;overflow:auto;font-family:var(--mono);font-size:12px;color:var(--muted);line-height:1.55}footer{padding:30px 0 56px;color:var(--dim);font-size:12px}@media(max-width:900px){.stats{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}}</style></head><body>
+<header class="hero"><div class="wrap"><div class="eyebrow"><span class="dot"></span>B-03 · tool interface &amp; MCP</div><h1>Tool 接口与 MCP 契约<br><span>装饰器只是入口，真正的规范是 Tool + Registry + JSON Schema</span></h1>
+<p class="lede">回答：Hive 的 tool 是怎么注册的？有没有 spec/interface？MCP 怎么接进来？结论：核心工具是显式 <code>Tool</code> 对象 + <code>ToolRegistry.register</code>；<code>@tool</code> 与 <code>@mcp.tool</code> 是两条装饰器入口；MCP 遵循标准 <code>inputSchema</code>，但 Hive 侧没有统一的 Tool 版本/结果契约。</p>
+<div class="meta"><span class="chip">baseline <b>1.0.15</b></span><span class="chip">HEAD <b>8ad4dbf23</b></span><span class="chip">paths <b>4</b></span><span class="chip">tool fields <b>5</b></span><span class="chip">MCP transports <b>5</b></span></div></div></header>
+
+<section><div class="wrap"><h2>0. 结论先行</h2><div class="quote">不是“装饰器注册”。<b>核心工具</b>是 <code>Tool(...)</code> + <code>register()</code>；<b>@tool</b> 只用于 <code>discover_from_module</code> 的模块扫描；<b>@mcp.tool</b> 是集成 MCP server 的 FastMCP 装饰器；<b>harness</b> 用 <code>_Collector.tool</code> 模拟装饰器，把进程内函数收集成工具。规范是 OpenAI function-schema 形状的 <code>Tool.parameters</code>，不是一份独立 ToolSpec。</div>
+<div class="stats"><div class="stat"><div class="n">4</div><div class="l">注册路径</div></div><div class="stat"><div class="n">5</div><div class="l">Tool 字段</div></div><div class="stat"><div class="n">5</div><div class="l">MCP transport</div></div><div class="stat"><div class="n">2</div><div class="l">MCP 模式</div></div><div class="stat"><div class="n">0</div><div class="l">统一 ToolSpec 版本</div></div></div></div></section>
+
+<section><div class="wrap"><h2>1. 四条注册路径</h2><table><thead><tr><th>路径</th><th>怎么用</th><th>典型位置</th><th>是否装饰器</th></tr></thead><tbody>
+<tr><td><b>显式 Tool + Registry</b></td><td><code>Tool(name, description, parameters, concurrency_safe)</code> + <code>registry.register(name, tool, executor)</code></td><td><code>core/framework/tools/*.py</code> 的 25 个工具</td><td>否</td></tr>
+<tr><td><b>@tool 模块发现</b></td><td>函数打 <code>_tool_metadata</code>；<code>discover_from_module</code> 扫描并 <code>register_function</code></td><td><code>loader/tool_registry.py:1700</code>、<code>:338</code></td><td>是</td></tr>
+<tr><td><b>@mcp.tool（FastMCP）</b></td><td>MCP server 内用装饰器注册；Hive 通过 <code>register_mcp_server</code> 拉取 <code>tools/list</code></td><td><code>tools/src/aden_tools/tools/*/*.py</code>，如 <code>github_tool.py:633</code></td><td>是</td></tr>
+<tr><td><b>harness Collector</b></td><td><code>_Collector.tool</code> 模拟装饰器，把 <code>register_*</code> 收集成进程内工具</td><td><code>tools/harness_tools.py:77</code></td><td>伪装饰器</td></tr>
+</tbody></table></div></section>
+
+<section><div class="wrap"><h2>2. Tool / ToolUse / ToolResult 规范</h2><div class="grid2"><div class="panel"><h3>Tool</h3><pre>name: str
+description: str
+parameters: dict      # JSON Schema
+produces_image: bool
+concurrency_safe: bool</pre><p class="dim"><code>core/framework/llm/provider.py:42</code></p></div><div class="panel"><h3>调用与结果</h3><pre>ToolUse: id / name / input
+executor: Callable[[dict], Any]
+ToolResult:
+  tool_use_id / content / is_error
+  image_content / is_skill_content
+  spillover_path</pre><p class="dim"><code>provider.py:59/69</code></p></div></div><div class="quote">没有独立 ToolSpec 版本号；<code>parameters</code> 直接就是模型看到的 JSON Schema。没有输入 schema 校验器（只有 <code>coerce_tool_input</code> 做类型漂移修复），也没有结果 schema。</div></div></section>
+
+<section><div class="wrap"><h2>3. MCP 接入</h2><table><thead><tr><th>维度</th><th>行为</th></tr></thead><tbody>
+<tr><td>发现</td><td><code>register_mcp_server</code> → MCP <code>tools/list</code> → <code>MCPTool(name, description, input_schema)</code></td></tr>
+<tr><td>转换</td><td><code>inputSchema</code> → <code>Tool.parameters</code>；剥掉 <code>CONTEXT_PARAMS</code>（session_cwd/colony_id/profile/principal 等）</td></tr>
+<tr><td>传输</td><td><code>stdio</code> / <code>http</code> / <code>unix</code> / <code>sse</code> / 内置 <code>harness</code></td></tr>
+<tr><td>结果</td><td><code>TextContent</code> 拼接为 content；<code>ImageContent</code> 进 image_content；<code>isError</code> 抛 RuntimeError</td></tr>
+<tr><td>两种模式</td><td><b>工具模式</b>：注册成 Tool；<b>CLI 模式</b>：<code>hive mcp run</code> 经 mcp2cli 当命令跑，不注册</td></tr>
+<tr><td>权限</td><td>allowlist、凭据可用性过滤、Queen-only 剥离、eager/searchable 分层</td></tr>
+</tbody></table></div></section>
+
+<section><div class="wrap"><h2>4. 对比：framework / harness / MCP / CLI</h2><table><thead><tr><th>维度</th><th>framework tools</th><th>harness</th><th>MCP tools</th><th>MCP CLI</th></tr></thead><tbody>
+<tr><td>执行位置</td><td>Hive 进程</td><td>Hive 进程</td><td>MCP 子进程/远程</td><td>终端命令</td></tr>
+<tr><td>注册</td><td>显式 Tool + register</td><td>Collector → Tool</td><td>tools/list → Tool</td><td>不注册</td></tr>
+<tr><td>schema</td><td>Python dict</td><td>Python dict</td><td>MCP inputSchema</td><td>--help / --list</td></tr>
+<tr><td>身份注入</td><td>execution context</td><td>execution context</td><td>CONTEXT_PARAMS</td><td>环境变量</td></tr>
+<tr><td>超时</td><td>60s / browser 180s</td><td>同 framework</td><td>MCP 240s</td><td>终端工具超时</td></tr>
+</tbody></table></div></section>
+
+<section><div class="wrap"><h2>5. 缺口</h2><div class="grid2"><div class="panel"><h3>结构性问题</h3><ul><li>四条注册路径并存，没有统一清单/版本。</li><li>没有输入 schema 校验与结果 schema；错误只有 <code>is_error</code>。</li><li><code>@tool</code> 只给 metadata，不生成参数 schema；<code>register_function</code> 才推断类型。</li><li>MCP <code>isError</code> 被转成 RuntimeError，丢失结构化错误。</li><li>工具名全局唯一靠约定；集成/框架/harness 可能重名。</li></ul></div><div class="panel"><h3>建议</h3><ul><li>定义统一 <code>ToolSpec</code>：schema version + input/output schema + error codes + danger + roles。</li><li>为 registry 增加注册来源（framework/harness/mcp/cli）与冲突报告。</li><li>MCP 错误保留 code/data，不只转字符串。</li><li>生成全量 tool manifest，进 CI 对比。</li></ul></div></div></div></section>
+
+<section><div class="wrap"><h2>6. 源码地图</h2><table><thead><tr><th>关注点</th><th>位置</th></tr></thead><tbody>
+<tr><td>Tool/ToolUse/ToolResult</td><td><code>core/framework/llm/provider.py:42/59/69</code></td></tr>
+<tr><td>register</td><td><code>loader/tool_registry.py:262</code></td></tr>
+<tr><td>register_function</td><td><code>loader/tool_registry.py:278</code></td></tr>
+<tr><td>discover_from_module / @tool</td><td><code>loader/tool_registry.py:338/1700</code></td></tr>
+<tr><td>register_mcp_server</td><td><code>loader/tool_registry.py:871</code></td></tr>
+<tr><td>MCP → Tool 转换</td><td><code>loader/tool_registry.py:1405</code></td></tr>
+<tr><td>MCP client list/call</td><td><code>loader/mcp_client.py:665/677/823</code></td></tr>
+<tr><td>harness Collector</td><td><code>tools/harness_tools.py:77</code></td></tr>
+</tbody></table></div></section>
+<footer><div class="wrap">B-03 · Tool 接口与 MCP 契约 · 2026-11-28 · 证据：<code>llm/provider.py</code>、<code>loader/tool_registry.py</code>、<code>loader/mcp_client.py</code>、<code>tools/harness_tools.py</code>、集成 <code>@mcp.tool</code> 示例。返回 <a href="gaps-index.html">逐项索引</a>。</div></footer></body></html>

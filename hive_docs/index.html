@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Hive 全面调研报告 · 源码版</title>
+<style>
+  :root {
+    --bg: #0f0d0a;
+    --bg-2: #17130e;
+    --panel: #1d1812;
+    --panel-2: #241d15;
+    --line: #3a2d20;
+    --text: #f3ead9;
+    --muted: #b7a88f;
+    --dim: #8c7c64;
+    --amber: #ffb100;
+    --amber-2: #ff8a00;
+    --amber-soft: #ffd77a;
+    --green: #78c091;
+    --red: #e07a6a;
+    --blue: #8ab4d8;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(255,177,0,.10), transparent 60%),
+      radial-gradient(900px 500px at -10% 20%, rgba(255,138,0,.06), transparent 60%),
+      var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.65;
+  }
+  a { color: var(--amber-soft); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .wrap { max-width: 1160px; margin: 0 auto; padding: 0 28px; }
+  header.hero {
+    padding: 72px 0 40px;
+    border-bottom: 1px solid var(--line);
+    background: linear-gradient(180deg, rgba(255,177,0,.05), transparent 70%);
+  }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--mono); font-size: 12px; letter-spacing: .14em;
+    color: var(--amber); text-transform: uppercase;
+  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 12px var(--amber); }
+  h1 { font-size: clamp(34px, 5vw, 62px); line-height: 1.08; margin: 18px 0 14px; letter-spacing: -.02em; }
+  h1 span { color: var(--amber); }
+  .lede { max-width: 820px; color: var(--muted); font-size: 18px; }
+  .meta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 26px; }
+  .chip {
+    font-family: var(--mono); font-size: 12px; color: var(--muted);
+    border: 1px solid var(--line); background: var(--panel);
+    padding: 6px 10px; border-radius: 999px;
+  }
+  .chip b { color: var(--text); font-weight: 600; }
+  section { padding: 54px 0; border-bottom: 1px solid var(--line); }
+  h2 { font-size: 26px; margin: 0 0 8px; letter-spacing: -.01em; }
+  .sub { color: var(--dim); margin: 0 0 26px; font-size: 14px; font-family: var(--mono); }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .stat {
+    background: linear-gradient(160deg, var(--panel-2), var(--panel));
+    border: 1px solid var(--line); border-radius: 14px; padding: 18px;
+  }
+  .stat .n { font-family: var(--mono); font-size: 30px; color: var(--amber); line-height: 1.1; }
+  .stat .l { color: var(--muted); font-size: 13px; margin-top: 6px; }
+  .stat .s { color: var(--dim); font-size: 11px; font-family: var(--mono); margin-top: 4px; }
+  .stack { display: grid; gap: 8px; margin-top: 8px; }
+  .layer {
+    display: grid; grid-template-columns: 52px 150px 1fr 180px; gap: 14px; align-items: center;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    padding: 12px 16px;
+  }
+  .layer .idx { font-family: var(--mono); color: var(--amber); font-size: 13px; }
+  .layer .name { font-weight: 650; }
+  .layer .desc { color: var(--muted); font-size: 14px; }
+  .layer .q { color: var(--dim); font-size: 12px; font-family: var(--mono); }
+  .flow {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 8px;
+  }
+  .flow .step {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px;
+    position: relative;
+  }
+  .flow .step:not(:last-child)::after {
+    content: "→"; position: absolute; right: -9px; top: 50%; transform: translateY(-50%);
+    color: var(--amber); font-family: var(--mono); z-index: 2;
+  }
+  .flow .k { font-family: var(--mono); color: var(--amber-soft); font-size: 11px; letter-spacing: .08em; }
+  .flow .t { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px;
+    transition: border-color .15s, transform .15s;
+  }
+  .card:hover { border-color: #5a452e; transform: translateY(-2px); }
+  .card .no { font-family: var(--mono); color: var(--amber); font-size: 12px; }
+  .card h3 { margin: 6px 0 6px; font-size: 16px; }
+  .card p { margin: 0; color: var(--muted); font-size: 13px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--dim); font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+  td code, p code, li code { font-family: var(--mono); font-size: .92em; color: var(--amber-soft); background: rgba(255,177,0,.06); padding: 1px 5px; border-radius: 4px; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
+  .panel h3 { margin: 0 0 10px; font-size: 17px; }
+  .panel ul { margin: 0; padding-left: 18px; color: var(--muted); font-size: 14px; }
+  .panel li { margin: 7px 0; }
+  .good { color: var(--green); }
+  .bad { color: var(--red); }
+  .warn { color: var(--amber-soft); }
+  .quote {
+    border-left: 3px solid var(--amber); padding: 10px 0 10px 16px; margin: 18px 0;
+    color: var(--muted); font-size: 15px;
+  }
+  .readpaths { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .path { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+  .path .who { color: var(--amber); font-family: var(--mono); font-size: 11px; letter-spacing: .08em; }
+  .path .to { margin-top: 6px; font-size: 13px; color: var(--muted); }
+  footer { padding: 40px 0 70px; color: var(--dim); font-size: 13px; }
+  footer .rule { height: 1px; background: var(--line); margin: 0 0 22px; }
+  @media (max-width: 960px) {
+    .stats, .grid, .readpaths { grid-template-columns: repeat(2, 1fr); }
+    .flow { grid-template-columns: 1fr 1fr; }
+    .flow .step::after { display: none; }
+    .layer { grid-template-columns: 40px 1fr; }
+    .layer .desc, .layer .q { grid-column: 2; }
+    .two { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 560px) {
+    .stats, .grid, .readpaths, .flow { grid-template-columns: 1fr; }
+    section { padding: 40px 0; }
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow"><span class="dot"></span> source-based research · 2026-11-27</div>
+    <h1>Hive <span>全面调研报告</span></h1>
+    <p class="lede">
+      一个 Queen、若干 Worker、一个共享 Tracker。Hive 用一个 AgentLoop 驱动全部角色，
+      用磁盘状态替代图编排，用提醒注入替代长期记忆的缺失。这份报告从源码拆开它的执行内核、
+      控制平面、协调基底、入口与边界。
+    </p>
+    <div class="meta">
+      <span class="chip">基线 <b>aden-hive 1.0.15</b></span>
+      <span class="chip">HEAD <b>f195ebaf3</b></span>
+      <span class="chip">Python <b>3.11+</b></span>
+      <span class="chip">范围 <b>core/framework · core/hive · frontend · tools</b></span>
+      <span class="chip">方法 <b>源码 + 测试 + 仓库文档交叉核对</b></span>
+    </div>
+  </div>
+</header>
+
+<main>
+<section>
+  <div class="wrap">
+    <h2>关键数字</h2>
+    <p class="sub">从当前工作区实测，口径见 metrics.json</p>
+    <div class="stats">
+      <div class="stat"><div class="n">123,900</div><div class="l">运行时 Python 行数</div><div class="s">298 files · 非测试</div></div>
+      <div class="stat"><div class="n">7,501</div><div class="l">AgentLoop 单文件行数</div><div class="s">唯一执行原语</div></div>
+      <div class="stat"><div class="n">13</div><div class="l">内置 Queen 人格</div><div class="s">6 个新用户默认激活</div></div>
+      <div class="stat"><div class="n">4</div><div class="l">默认并发 Worker</div><div class="s">其余排队，不丢弃</div></div>
+      <div class="stat"><div class="n">196</div><div class="l">HTTP 路由注册点</div><div class="s">23 个路由模块</div></div>
+      <div class="stat"><div class="n">77</div><div class="l">EventType</div><div class="s">SSE / 审计 / 提醒</div></div>
+      <div class="stat"><div class="n">104</div><div class="l">集成目录</div><div class="s">866 个 @mcp.tool</div></div>
+      <div class="stat"><div class="n">82.0%</div><div class="l">LongMemEval-M</div><div class="s">整段历史直接读：S 集 96.8%</div></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>八层运行时栈</h2>
+    <p class="sub">从执行到边界 · 详见 02 章</p>
+    <div class="stack">
+      <div class="layer"><div class="idx">8</div><div class="name">能力与边界</div><div class="desc">Tools / MCP · Credentials · Budgets · Models</div><div class="q">能做什么、不能做什么？</div></div>
+      <div class="layer"><div class="idx">7</div><div class="name">沉淀</div><div class="desc">Memory · Soul</div><div class="q">学到了什么？成了谁？</div></div>
+      <div class="layer"><div class="idx">6</div><div class="name">自治</div><div class="desc">Trigger · Sentinel</div><div class="q">何时醒？何时找人？</div></div>
+      <div class="layer"><div class="idx">5</div><div class="name">方法</div><div class="desc">Skill · Playbook</div><div class="q">怎么做？如何批量做？</div></div>
+      <div class="layer"><div class="idx">4</div><div class="name">信号</div><div class="desc">Event Bus · Reminder Hub</div><div class="q">刚发生了什么？该注意什么？</div></div>
+      <div class="layer"><div class="idx">3</div><div class="name">状态</div><div class="desc">Plan（意图）· Tracker（事实）</div><div class="q">想做什么？实际做完什么？</div></div>
+      <div class="layer"><div class="idx">2</div><div class="name">组织</div><div class="desc">Colony · Queen · Worker</div><div class="q">谁负责什么？谁跟谁说话？</div></div>
+      <div class="layer"><div class="idx">1</div><div class="name">执行</div><div class="desc">AgentLoop（唯一原语）</div><div class="q">一个 Agent 如何走一步？</div></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>一条消息的生命周期</h2>
+    <p class="sub">从前端到磁盘 · 详见 02 / 03 / 05 章</p>
+    <div class="flow">
+      <div class="step"><div class="k">01 · INGRESS</div><div class="t">POST /chat 或 Channel / Trigger / Sentinel 注入</div></div>
+      <div class="step"><div class="k">02 · QUEUE</div><div class="t">inject_event 入队，迭代边界 drain，避免写竞争</div></div>
+      <div class="step"><div class="k">03 · TURN</div><div class="t">提醒 + 记忆 + 工具清单 → LLM stream</div></div>
+      <div class="step"><div class="k">04 · TOOLS</div><div class="t">只读工具并行（≤10），其余串行；大结果落盘</div></div>
+      <div class="step"><div class="k">05 · PARK</div><div class="t">游标写盘；等待用户 / Worker / 定时器 / 升级</div></div>
+    </div>
+    <div class="quote">
+      “没有图、没有边、没有节点、没有共享数据缓冲区。只有：启动 N 个独立克隆，让它们跑，收集结果。”
+      <br /><span style="font-family:var(--mono);font-size:12px;color:var(--dim)">— ColonyRuntime 模块注释</span>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>十个最重要的发现</h2>
+    <p class="sub">结论摘要 · 每条的机制与证据在对应章节</p>
+    <div class="grid">
+      <div class="card"><div class="no">01</div><h3>只有一个执行原语</h3><p>Queen、Worker、SDK Agent 都是 AgentLoop。可靠性能力只实现一次，代价是 7.5k 行核心文件。</p></div>
+      <div class="card"><div class="no">02</div><h3>磁盘是真相</h3><p>parts + cursor 写穿；停泊数天后可精确恢复；user_stopped 跨重启保持。</p></div>
+      <div class="card"><div class="no">03</div><h3>协调靠四种基底</h3><p>Tracker 事实、Plan 意图、EventBus 信号、Reminder 注意力；没有编译期拓扑。</p></div>
+      <div class="card"><div class="no">04</div><h3>预算是五层</h3><p>回合 / 每回合调用 / 生命周期调用 / 上下文 / 时间。超额先 grace 收尾，不静默死亡。</p></div>
+      <div class="card"><div class="no">05</div><h3>控制平面提示化</h3><p>9 个提醒时点、十余个源，把计划/Worker/Tracker/技能塞回上下文。独特也难测。</p></div>
+      <div class="card"><div class="no">06</div><h3>Tracker 是有护栏的 SQL 舞台</h3><p>Queen 建表，Worker 只能 upsert 注册表；_ 前缀保护，危险 SQL 拒绝。</p></div>
+      <div class="card"><div class="no">07</div><h3>记忆可测量</h3><p>markdown 笔记 + BM25 召回 + 可选时间线；公开 LongMemEval 与失败题型。</p></div>
+      <div class="card"><div class="no">08</div><h3>方法在运行中沉淀</h3><p>pilot → write_skill → run_playbook。Playbook 无状态，重跑即续跑；不是沙箱。</p></div>
+      <div class="card"><div class="no">09</div><h3>自治有人的边界</h3><p>建群必须确认；Sentinel 三选一；触发器只在会话加载时运行并补偿错过的 tick。</p></div>
+      <div class="card"><div class="no">10</div><h3>安全边界是操作系统</h3><p>终端、Playbook、浏览器桥、外部渠道——能力上限等于运行用户权限。</p></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>预算与限制速查</h2>
+    <p class="sub">完整表见 12 章</p>
+    <table>
+      <thead><tr><th>维度</th><th>Queen</th><th>Colony Queen</th><th>Worker</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td>回合数</td><td>999,999</td><td>999,999</td><td>3 + 1 grace</td><td>Queen 近乎无限；Worker 窄</td></tr>
+        <tr><td>每回合工具软预算</td><td>30</td><td>50</td><td>30</td><td>跨倍数注入检查点</td></tr>
+        <tr><td>每回合硬停</td><td>150</td><td>500</td><td>90</td><td>剩余调用不执行，但返回中性结果</td></tr>
+        <tr><td>生命周期工具预算</td><td>不限</td><td>不限</td><td>200</td><td>自适应预算可收缩</td></tr>
+        <tr><td>上下文</td><td>180k</td><td>180k</td><td>180k</td><td>随模型目录/配置调整</td></tr>
+        <tr><td>工具结果</td><td>30k 字符</td><td>30k</td><td>30k</td><td>超出落盘，只留预览与路径</td></tr>
+        <tr><td>并发</td><td>—</td><td>4 Workers</td><td>—</td><td>HIVE_MAX_CONCURRENT_WORKERS</td></tr>
+        <tr><td>单工具超时</td><td>60s</td><td>60s</td><td>60s</td><td>browser_ 180s；MCP 上限 240s</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>优势与风险</h2>
+    <p class="sub">分析见 14 章</p>
+    <div class="two">
+      <div class="panel">
+        <h3 class="good">真正的优势</h3>
+        <ul>
+          <li>统一原语带来的可靠性复利：恢复、压缩、预算、停顿、视觉只实现一次。</li>
+          <li>协调模型干净：Tracker 事实 + Plan 意图 + EventBus 信号 + Reminder 注意力。</li>
+          <li>状态恢复认真：11 种停泊原因、游标、悬空工具修复、用户停止持久化。</li>
+          <li>预算设计成熟：软检查点 → 中性硬停 → grace 收尾。</li>
+          <li>对记忆诚实：公开成绩，也公开“整段历史更强”的差距。</li>
+          <li>产品完整：Dashboard / CLI / Channel / Trigger / Sentinel / Mail 都有真实后端。</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3 class="bad">不能忽视的风险</h3>
+        <ul>
+          <li>复杂度集中：7.5k 行循环 + 4k 行 Queen 工具，变更成本高。</li>
+          <li>提示词即控制平面：模型换代可能改变行为，难单测。</li>
+          <li>隐式契约多：前后端 JSON、工具描述、Worker 工具面推导。</li>
+          <li>文件 + SQLite 的规模边界；单进程 SessionManager。</li>
+          <li>能力 = 宿主权限；Playbook 非沙箱；默认 HTTP 无认证。</li>
+          <li>没有美元级硬预算；无覆盖率/类型/性能门禁。</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>章节目录</h2>
+    <p class="sub">点击进入 Markdown 正文</p>
+    <div class="grid">
+      <a class="card" href="00-method-and-baseline.md"><div class="no">00</div><h3>方法与基线</h3><p>证据规则、代码规模、版本、复核命令。</p></a>
+      <a class="card" href="01-product-and-positioning.md"><div class="no">01</div><h3>产品与定位</h3><p>Hive 是什么、适用/不适用、双层结构。</p></a>
+      <a class="card" href="02-architecture.md"><div class="no">02</div><h3>总体架构</h3><p>八层栈、消息生命周期、目录与进程拓扑。</p></a>
+      <a class="card" href="03-agent-loop.md"><div class="no">03</div><h3>执行内核 AgentLoop</h3><p>回合、流、工具、预算、压缩、停泊、Judge。</p></a>
+      <a class="card" href="04-colony-queen-worker.md"><div class="no">04</div><h3>Colony / Queen / Worker</h3><p>组织模型、并发、超时、报告、自适应预算。</p></a>
+      <a class="card" href="05-state-and-coordination.md"><div class="no">05</div><h3>状态与协调</h3><p>Tracker、Plan、EventBus、ReminderHub、存储。</p></a>
+      <a class="card" href="06-memory-and-soul.md"><div class="no">06</div><h3>记忆与 Soul</h3><p>反思、召回、时间线、人格沉淀、LongMemEval。</p></a>
+      <a class="card" href="07-skills-and-playbooks.md"><div class="no">07</div><h3>技能与 Playbook</h3><p>格式/作用域/信任/门控；Playbook 契约。</p></a>
+      <a class="card" href="08-autonomy-and-ingress.md"><div class="no">08</div><h3>自治与入口</h3><p>Trigger、Sentinel、Channel、Queen Mail。</p></a>
+      <a class="card" href="09-tools-mcp-browser.md"><div class="no">09</div><h3>工具、MCP 与浏览器</h3><p>内置组、两种 MCP 模式、分层、浏览器桥。</p></a>
+      <a class="card" href="10-models-and-credentials.md"><div class="no">10</div><h3>模型与凭据</h3><p>Provider、槽位、目录、加密凭据、OAuth。</p></a>
+      <a class="card" href="11-server-api-frontend.md"><div class="no">11</div><h3>Server / API / 前端</h3><p>aiohttp、SSE、路由家族、页面、打包。</p></a>
+      <a class="card" href="12-configuration-and-limits.md"><div class="no">12</div><h3>配置与限制</h3><p>configuration.json、env、feature flag、限额表。</p></a>
+      <a class="card" href="13-quality-engineering.md"><div class="no">13</div><h3>工程质量</h3><p>测试、CI、打包、可观测性、Janitor。</p></a>
+      <a class="card" href="14-assessment-and-recommendations.md"><div class="no">14</div><h3>评估与建议</h3><p>优势、风险、适用边界、P0/P1/P2 建议。</p></a>
+      <a class="card" href="15-source-map.md"><div class="no">15</div><h3>源码地图</h3><p>逐模块职责、关键符号、追踪路径。</p></a>
+      <a class="card" href="16-lifecycles-and-sequences.md"><div class="no">16</div><h3>生命周期与交互序列</h3><p>14 个状态机、15 条关键序列、失败与超时矩阵。</p></a>
+      <a class="card" href="17-filesystem-and-persistence.md"><div class="no">17</div><h3>文件系统与持久化契约</h3><p>目录规范、逐文件 Schema、生命周期、内存对象映射。</p></a>
+      <a class="card" href="18-restart-recovery.md"><div class="no">18</div><h3>重启与状态恢复</h3><p>启动序列、恢复矩阵、崩溃点、Runbook、已知恢复缺口。</p></a>
+      <a class="card" href="19-tracker-db.md"><div class="no">19</div><h3>Tracker DB 机制深入</h3><p>schema、四个工具、写入门禁、SQL 安全、并发、变更日志。</p></a>
+      <a class="card" href="20-reminder-mechanism.md"><div class="no">20</div><h3>Reminder 机制穷举</h3><p>15 个 Source、9 个 Point、门禁/上限/状态、旁路提醒与缺口。</p></a>
+      <a class="card" href="21-prompts-and-context.md"><div class="no">21</div><h3>提示词与上下文构成</h3><p>初始系统提示词、Queen/Worker/图节点/SDK 全场景、辅助 LLM 提示、缓存与体积、实测缺口。</p></a>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>阅读路径</h2>
+    <p class="sub">按角色选择</p>
+    <div class="readpaths">
+      <div class="path"><div class="who">决策者</div><div class="to">01 → 14 → 12<br />判断是否采用、边界在哪</div></div>
+      <div class="path"><div class="who">二次开发</div><div class="to">01 → 02 → 03 → 04 → 05 → 07 → 09 → 10<br />基于 Hive 构建</div></div>
+      <div class="path"><div class="who">运维 / 部署</div><div class="to">02 → 17 → 18 → 11 → 12 → 13 → 08<br />私有化、监控、恢复</div></div>
+      <div class="path"><div class="who">核心贡献者</div><div class="to">03 → 16 → 17 → 04 → 05 → 15<br />先读状态机与磁盘契约，再改循环</div></div>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="rule"></div>
+    <p>
+      报告基线：<code>aden-hive 1.0.15</code> / HEAD <code>f195ebaf3</code> / 2026-11-27。<br />
+      方法：以 <code>core/framework</code>、<code>core/hive</code>、<code>core/frontend</code>、<code>tools</code> 的源码与测试为准；
+      仓库文档只用于交叉核对。不分析 go_hive 实现。
+    </p>
+    <p style="margin-top:14px">
+      机器可读指标：<a href="metrics.json">metrics.json</a> ·
+      证据索引：<a href="sources.md">sources.md</a> ·
+      研究空白地图：<a href="research-gaps.html">research-gaps.html</a> ·
+      逐项穷举：<a href="gaps-index.html">gaps-index.html</a> ·
+      总览：<a href="H-01-structure-contracts-matrix.html">H-01</a> ·
+      AST：<a href="H-02-ast-inventory.html">H-02</a> ·
+      凭证：<a href="C-11-credentials.html">C-11</a> ·
+      附件：<a href="A-01-attachments.html">A-01</a> ·
+      基础工具：<a href="B-01-builtin-tools.html">B-01</a> / <a href="B-02-tool-runtime.html">B-02</a> / <a href="B-03-tool-interface-mcp.html">B-03</a> ·
+      测试：<a href="T-01-test-atlas.html">T-01</a> / <a href="T-02-test-quality.html">T-02</a> ·
+      返回索引：<a href="README.md">README.md</a>
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>

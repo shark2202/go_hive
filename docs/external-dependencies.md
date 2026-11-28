@@ -45,7 +45,7 @@
 
 - 配置：`~/.hive/mcp_registry/installed.json` + `configuration.json` 的 `mcp` 块
 - 传输：`stdio`（子进程）或 HTTP/SSE
-- 命名：工具注册为 `mcp__<server>__<tool>`
+- 命名：默认注册 server 侧裸名（D3 终选 B′，与 Python 一致）；仅显式 `mcp.namespace` 时使用 `mcp__<namespace>__<server>__<tool>`（可选 Go 扩展）
 - **为什么依赖**：把外部工具生态（文件系统、浏览器、数据库等）接进会话，而不必写进 41 个内置工具
 - 风险：stdio 服务器继承当前用户权限；未配置白名单时 MCP 工具默认可见（`applyToolAllowlist` 可收紧）
 

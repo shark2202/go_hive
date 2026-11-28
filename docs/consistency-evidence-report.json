@@ -1,0 +1,2981 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-11-28T03:38:49.101253+00:00",
+  "git_commit": "7c3bdba13d32fd1c37673de1752256fa2711bb5b",
+  "matrix": {
+    "path": "go_hive/docs/consistency-matrix.json",
+    "sha256": "f589f4b5b08de2b1b4ab8c2c9eedf4e9aaa05b141b81ae308076a5f238aeafb7",
+    "generated_at_utc": "2026-11-28T03:38:11.612474+00:00"
+  },
+  "status": "ok",
+  "totals": {
+    "evidence": 321,
+    "by_status": {
+      "ok": 321
+    },
+    "by_kind": {
+      "artifact": {
+        "ok": 11
+      },
+      "behavior-registry": {
+        "ok": 4
+      },
+      "c12-module": {
+        "ok": 273
+      },
+      "contract": {
+        "ok": 8
+      },
+      "package": {
+        "ok": 25
+      }
+    },
+    "rows": 34,
+    "row_drift": 0,
+    "dangling_refs": 0
+  },
+  "failures": [],
+  "rows": [
+    {
+      "trace_id": "pkg:(root)",
+      "status": "ok"
+    },
+    {
+      "trace_id": "pkg:agent_loop",
+      "status": "ok"
+    },
+    {
+      "trace_id": "pkg:agents",
+      "status": "ok"
+    },
+    {
+      "trace_id": "pkg:credentials",
+      "status": "ok"
+    },
+    {
+      "trace_id": "pkg:debugger",
+      "status": "ok"
+    },
+    {
+      "trace_id": "pkg:global_db",
+      "status": "ok"
+    },
+    {
+      "trace_id": "pkg:host",
+      "status": "ok"
+    },
+    {
+      "trace_id": "pkg:llm",
+      "status": "ok"
+    },
+    {
+      "trace_id": "pkg:loader",
+      "status": "ok"
+    },
+    {
+      "trace_id": "pkg:maintenance",
+      "status": "ok"
+    },
+    {
+      "trace_id": "pkg:observability",
+      "status": "ok"
+    },
+    {
+      "trace_id": "pkg:orchestrator",
+      "status": "ok"
+    },
+    {
+      "trace_id": "pkg:pipeline",
+      "status": "ok"
+    },
+    {
+      "trace_id": "pkg:runtime",
+      "status": "ok"
+    },
+    {
+      "trace_id": "pkg:schemas",
+      "status": "ok"
+    },
+    {
+      "trace_id": "pkg:sentinel",
+      "status": "ok"
+    },
+    {
+      "trace_id": "pkg:server",
+      "status": "ok"
+    },
+    {
+      "trace_id": "pkg:skills",
+      "status": "ok"
+    },
+    {
+      "trace_id": "pkg:storage",
+      "status": "ok"
+    },
+    {
+      "trace_id": "pkg:tasks",
+      "status": "ok"
+    },
+    {
+      "trace_id": "pkg:testing",
+      "status": "ok"
+    },
+    {
+      "trace_id": "pkg:tools",
+      "status": "ok"
+    },
+    {
+      "trace_id": "pkg:tracker",
+      "status": "ok"
+    },
+    {
+      "trace_id": "pkg:trackerdb",
+      "status": "ok"
+    },
+    {
+      "trace_id": "pkg:utils",
+      "status": "ok"
+    },
+    {
+      "trace_id": "contract:api",
+      "status": "ok"
+    },
+    {
+      "trace_id": "contract:cli",
+      "status": "ok"
+    },
+    {
+      "trace_id": "contract:env",
+      "status": "ok"
+    },
+    {
+      "trace_id": "contract:config",
+      "status": "ok"
+    },
+    {
+      "trace_id": "contract:tools",
+      "status": "ok"
+    },
+    {
+      "trace_id": "contract:skills",
+      "status": "ok"
+    },
+    {
+      "trace_id": "contract:events",
+      "status": "ok"
+    },
+    {
+      "trace_id": "contract:c12",
+      "status": "ok"
+    },
+    {
+      "trace_id": "behavior:test-mapping",
+      "status": "ok"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "artifact:package-parity",
+      "kind": "artifact",
+      "path": "go_hive/docs/package-parity.json",
+      "status": "ok",
+      "problems": [],
+      "producer": "go_hive/scripts/gen_package_parity.py"
+    },
+    {
+      "id": "artifact:function-parity",
+      "kind": "artifact",
+      "path": "go_hive/docs/function-parity-matrix.json",
+      "status": "ok",
+      "problems": [],
+      "producer": "go_hive/scripts/gen_function_parity.py"
+    },
+    {
+      "id": "artifact:c12-module-inventory",
+      "kind": "artifact",
+      "path": "contracts/module-inventory.json",
+      "status": "ok",
+      "problems": [],
+      "producer": "go_hive/go-hive/Makefile::module-inventory-check"
+    },
+    {
+      "id": "artifact:api-routes",
+      "kind": "artifact",
+      "path": "go_hive/contracts/api-routes.json",
+      "status": "ok",
+      "problems": [],
+      "producer": "go_hive/scripts/export_api_routes.py"
+    },
+    {
+      "id": "artifact:cli-surface",
+      "kind": "artifact",
+      "path": "go_hive/contracts/cli-surface.json",
+      "status": "ok",
+      "problems": [],
+      "producer": "go_hive/scripts/cli_surface_contract.py"
+    },
+    {
+      "id": "artifact:env-vars",
+      "kind": "artifact",
+      "path": "go_hive/contracts/env-vars.json",
+      "status": "ok",
+      "problems": [],
+      "producer": "go_hive/scripts/freeze_env_config_contract.py"
+    },
+    {
+      "id": "artifact:config-keys",
+      "kind": "artifact",
+      "path": "go_hive/contracts/config-keys.json",
+      "status": "ok",
+      "problems": [],
+      "producer": "go_hive/scripts/freeze_env_config_contract.py"
+    },
+    {
+      "id": "artifact:tool-definitions",
+      "kind": "artifact",
+      "path": "go_hive/contracts/tool-definitions.json",
+      "status": "ok",
+      "problems": [],
+      "producer": "go_hive/scripts/freeze_tool_contract.py"
+    },
+    {
+      "id": "artifact:builtin-skills",
+      "kind": "artifact",
+      "path": "go_hive/contracts/builtin-skills.json",
+      "status": "ok",
+      "problems": [],
+      "producer": "go_hive/scripts/gen_builtin_skills_manifest.py"
+    },
+    {
+      "id": "artifact:coverage-registry",
+      "kind": "artifact",
+      "path": "go_hive/docs/coverage-registry.json",
+      "status": "ok",
+      "problems": [],
+      "producer": "go_hive/scripts/gen_coverage_registry.py"
+    },
+    {
+      "id": "artifact:integration-coverage",
+      "kind": "artifact",
+      "path": "go_hive/docs/integration-coverage.json",
+      "status": "ok",
+      "problems": [],
+      "producer": "go_hive/scripts/gen_package_parity.py"
+    },
+    {
+      "id": "pkg:(root)",
+      "kind": "package",
+      "path": "artifact:package-parity",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "pkg:agent_loop",
+      "kind": "package",
+      "path": "artifact:package-parity",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "pkg:agents",
+      "kind": "package",
+      "path": "artifact:package-parity",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "pkg:credentials",
+      "kind": "package",
+      "path": "artifact:package-parity",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "pkg:debugger",
+      "kind": "package",
+      "path": "artifact:package-parity",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "pkg:global_db",
+      "kind": "package",
+      "path": "artifact:package-parity",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "pkg:host",
+      "kind": "package",
+      "path": "artifact:package-parity",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "pkg:llm",
+      "kind": "package",
+      "path": "artifact:package-parity",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "pkg:loader",
+      "kind": "package",
+      "path": "artifact:package-parity",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "pkg:maintenance",
+      "kind": "package",
+      "path": "artifact:package-parity",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "pkg:observability",
+      "kind": "package",
+      "path": "artifact:package-parity",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "pkg:orchestrator",
+      "kind": "package",
+      "path": "artifact:package-parity",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "pkg:pipeline",
+      "kind": "package",
+      "path": "artifact:package-parity",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "pkg:runtime",
+      "kind": "package",
+      "path": "artifact:package-parity",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "pkg:schemas",
+      "kind": "package",
+      "path": "artifact:package-parity",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "pkg:sentinel",
+      "kind": "package",
+      "path": "artifact:package-parity",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "pkg:server",
+      "kind": "package",
+      "path": "artifact:package-parity",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "pkg:skills",
+      "kind": "package",
+      "path": "artifact:package-parity",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "pkg:storage",
+      "kind": "package",
+      "path": "artifact:package-parity",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "pkg:tasks",
+      "kind": "package",
+      "path": "artifact:package-parity",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "pkg:testing",
+      "kind": "package",
+      "path": "artifact:package-parity",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "pkg:tools",
+      "kind": "package",
+      "path": "artifact:package-parity",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "pkg:tracker",
+      "kind": "package",
+      "path": "artifact:package-parity",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "pkg:trackerdb",
+      "kind": "package",
+      "path": "artifact:package-parity",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "pkg:utils",
+      "kind": "package",
+      "path": "artifact:package-parity",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/__init__.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/__main__.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agent_loop/__init__.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agent_loop/active_workers_reminder.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agent_loop/agent_loop.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agent_loop/colony_parallel_nudge.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agent_loop/colony_worker_snapshot_reminder.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agent_loop/conversation.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agent_loop/idle_nudge.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agent_loop/internals/compaction.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agent_loop/internals/credential_tool.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agent_loop/internals/cursor_persistence.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agent_loop/internals/event_publishing.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agent_loop/internals/judge_pipeline.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agent_loop/internals/sentinel_tool.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agent_loop/internals/stall_detector.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agent_loop/internals/synthetic_tools.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agent_loop/internals/tool_input_coercer.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agent_loop/internals/tool_result_handler.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agent_loop/internals/types.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agent_loop/internals/vision_fallback.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agent_loop/memory_reminders.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agent_loop/past_conversations_reminder.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agent_loop/prompting.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agent_loop/reminders.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agent_loop/stream_stall.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agent_loop/tool_skill_reminders.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agent_loop/tracker_snapshot_reminder.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agent_loop/turn_context_reminder.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agent_loop/types.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agent_loop/visible_error.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agents/__init__.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agents/discovery.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agents/queen/__init__.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agents/queen/agent.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agents/queen/config.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agents/queen/memory_log.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agents/queen/nodes/__init__.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agents/queen/queen_memory_v2.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agents/queen/queen_profiles.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agents/queen/queen_tools_config.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agents/queen/queen_tools_defaults.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agents/queen/recall_selector.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agents/queen/reflection_agent.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agents/queen/soul.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agents/queen/soul_probes.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agents/queen/soul_reflection.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agents/queen/timeline.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agents/queen/tools_ga_migration.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/agents/queen/worker_definition.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/cli.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/cloud_sync_hooks.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/config.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/credentials/__init__.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/credentials/aden/client.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/credentials/aden/provider.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/credentials/aden/storage.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/credentials/catalog.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/credentials/cli.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/credentials/key_storage.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/credentials/local/models.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/credentials/local/registry.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/credentials/models.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/credentials/oauth2/base_provider.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/credentials/oauth2/hubspot_provider.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/credentials/oauth2/lifecycle.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/credentials/oauth2/provider.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/credentials/oauth2/zoho_provider.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/credentials/provider.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/credentials/resolve.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/credentials/setup.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/credentials/storage.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/credentials/store.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/credentials/template.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/credentials/validation.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/debugger/cli.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/global_db/cli.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/global_db/client.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/global_db/count_cache.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/global_db/grid_query.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/host/__init__.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/host/agent_host.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/host/colony_binding.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/host/colony_db.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/host/colony_metadata.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/host/colony_runtime.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/host/colony_tools_config.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/host/event_bus.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/host/event_log.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/host/events_policy.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/host/execution_manager.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/host/isolation.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/host/outcome_aggregator.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/host/playbook/runner.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/host/runtime_health.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/host/runtime_resources.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/host/shared_state.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/host/stream_runtime.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/host/tracker_db.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/host/triggers.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/host/webhook_server.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/host/worker.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/host/worker_profiles.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/llm/__init__.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/llm/anthropic.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/llm/antigravity.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/llm/capabilities.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/llm/endpoints.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/llm/key_check.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/llm/key_pool.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/llm/litellm.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/llm/mock.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/llm/model_catalog.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/llm/provider.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/llm/stream_events.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/loader/agent_loader.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/loader/cli.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/loader/mcp_cli.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/loader/mcp_client.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/loader/mcp_connection_manager.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/loader/mcp_errors.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/loader/mcp_registry.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/loader/mcp_registry_cli.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/loader/preload_validation.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/loader/tool_registry.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/maintenance/archive.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/maintenance/cli.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/maintenance/janitor.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/maintenance/retention.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/observability/logging.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/orchestrator/__init__.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/orchestrator/checkpoint_config.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/orchestrator/context.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/orchestrator/conversation_judge.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/orchestrator/edge.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/orchestrator/files.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/orchestrator/goal.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/orchestrator/node.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/orchestrator/node_worker.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/orchestrator/orchestrator.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/orchestrator/prompting.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/orchestrator/safe_eval.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/orchestrator/validator.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/pipeline/registry.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/pipeline/runner.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/pipeline/stage.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/pipeline/stages/cost_guard.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/pipeline/stages/credential_resolver.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/pipeline/stages/input_validation.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/pipeline/stages/llm_provider.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/pipeline/stages/mcp_registry.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/pipeline/stages/rate_limit.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/pipeline/stages/skill_registry.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/rate_limiter.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/schemas/agent_config.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/schemas/checkpoint.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/schemas/decision.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/schemas/goal.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/schemas/run.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/schemas/session_state.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/sentinel/classifier.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/sentinel/escalation_source.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/sentinel/listeners.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/sentinel/manager.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/sentinel/notifier.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/sentinel/runtime_identity.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/sentinel/store.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/sentinel/token.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/server/_session_report.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/server/app.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/server/boot_status.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/server/channels.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/server/claude_code_queens.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/server/compaction_status.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/server/judge.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/server/queen_mail.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/server/queen_mail_mcp.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/server/queen_models.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/server/queen_orchestrator.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/server/routes_claude_code_queens.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/server/routes_colonies.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/server/routes_colony_tools.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/server/routes_colony_workers.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/server/routes_config.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/server/routes_credentials.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/server/routes_events.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/server/routes_execution.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/server/routes_logs.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/server/routes_maintenance.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/server/routes_mcp.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/server/routes_memories.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/server/routes_messages.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/server/routes_models.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/server/routes_prompts.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/server/routes_queen_tools.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/server/routes_queens.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/server/routes_sentinel.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/server/routes_sessions.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/server/routes_skills.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/server/routes_soul.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/server/routes_tasks.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/server/routes_workers.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/server/session_fork.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/server/session_manager.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/server/session_titles.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/server/sse.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/server/stall_check.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/server/streamtoken_refresh.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/server/turn_context.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/skills/catalog.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/skills/cli.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/skills/config.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/skills/defaults.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/skills/discovery.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/skills/install_requests.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/skills/installer.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/skills/live_reload.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/skills/manager.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/skills/models.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/skills/overrides.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/skills/parser.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/skills/registry.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/skills/skill_errors.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/skills/skill_writer.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/skills/tool_gating.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/skills/trust.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/skills/validator.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/storage/checkpoint_store.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/storage/concurrent.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/storage/conversation_store.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/storage/migrate_colony_sessions.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/storage/migrate_v2.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/storage/migrate_v3.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/storage/session_store.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/storage/session_summary.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/tasks/events.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/tasks/hooks.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/tasks/models.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/tasks/reminders.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/tasks/scoping.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/tasks/store.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/tasks/tools/_context.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/tasks/tools/colony_tools.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/tasks/tools/names.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/tasks/tools/register.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/tasks/tools/session_tools.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/testing/approval_cli.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/testing/approval_types.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/testing/categorizer.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/testing/debug_tool.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/testing/llm_judge.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/testing/test_case.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/testing/test_result.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/testing/test_storage.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/tools/browser_tools.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/tools/harness_tools.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/tools/playbook_tools.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/tools/queen_lifecycle/context.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/tools/queen_lifecycle_tools.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/tools/queen_mail_tools.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/tools/tool_tiers.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/tools/tracker_tools.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/tools/worker_monitoring_tools.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/tracker/decision_tracker.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/tracker/llm_debug_logger.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/tracker/runtime_log_schemas.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/tracker/runtime_log_store.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/tracker/runtime_logger.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/trackerdb/errors.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/utils/io.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/utils/python_env.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/utils/task_registry.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "c12:core/framework/utils/text.py",
+      "kind": "c12-module",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "contract:api",
+      "kind": "contract",
+      "path": "artifact:api-routes",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "contract:cli",
+      "kind": "contract",
+      "path": "artifact:cli-surface",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "contract:env",
+      "kind": "contract",
+      "path": "artifact:env-vars",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "contract:config",
+      "kind": "contract",
+      "path": "artifact:config-keys",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "contract:tools",
+      "kind": "contract",
+      "path": "artifact:tool-definitions",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "contract:skills",
+      "kind": "contract",
+      "path": "artifact:builtin-skills",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "contract:events",
+      "kind": "contract",
+      "path": "artifact:coverage-registry",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "contract:c12",
+      "kind": "contract",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "behavior:c12",
+      "kind": "behavior-registry",
+      "path": "artifact:c12-module-inventory",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "behavior:events",
+      "kind": "behavior-registry",
+      "path": "artifact:coverage-registry",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "behavior:known-gaps",
+      "kind": "behavior-registry",
+      "path": "artifact:coverage-registry",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    },
+    {
+      "id": "behavior:test-mapping",
+      "kind": "behavior-registry",
+      "path": "artifact:coverage-registry",
+      "status": "ok",
+      "problems": [],
+      "producer": null
+    }
+  ],
+  "codegraph": {
+    "status": "ok",
+    "symbols": [
+      {
+        "name": "AgentLoop",
+        "expectation": "both",
+        "status": "ok",
+        "python": {
+          "file": "core/framework/agent_loop/agent_loop.py",
+          "line": 722,
+          "kind": "class",
+          "name": "AgentLoop"
+        },
+        "go": {
+          "file": "go_hive/go-hive/internal/agentloop/loop.go",
+          "line": 85,
+          "kind": "struct",
+          "name": "AgentLoop"
+        }
+      },
+      {
+        "name": "ToolRegistry",
+        "expectation": "both",
+        "status": "ok",
+        "python": {
+          "file": "core/framework/loader/tool_registry.py",
+          "line": 127,
+          "kind": "class",
+          "name": "ToolRegistry"
+        },
+        "go": {
+          "file": "go_hive/go-hive/internal/tools/registry.go",
+          "line": 104,
+          "kind": "struct",
+          "name": "ToolRegistry"
+        }
+      },
+      {
+        "name": "CredentialStore",
+        "expectation": "both",
+        "status": "ok",
+        "python": {
+          "file": "core/framework/credentials/store.py",
+          "line": 35,
+          "kind": "class",
+          "name": "CredentialStore"
+        },
+        "go": {
+          "file": "go_hive/go-hive/internal/credentials/store.go",
+          "line": 19,
+          "kind": "struct",
+          "name": "CredentialStore"
+        }
+      },
+      {
+        "name": "SessionManager",
+        "expectation": "both",
+        "status": "ok",
+        "python": {
+          "file": "core/framework/server/session_manager.py",
+          "line": 412,
+          "kind": "class",
+          "name": "SessionManager"
+        },
+        "go": {
+          "file": "go_hive/go-hive/internal/server/session.go",
+          "line": 476,
+          "kind": "struct",
+          "name": "SessionManager"
+        }
+      },
+      {
+        "name": "ColonyRuntime",
+        "expectation": "both",
+        "status": "ok",
+        "python": {
+          "file": "core/framework/host/colony_runtime.py",
+          "line": 301,
+          "kind": "class",
+          "name": "ColonyRuntime"
+        },
+        "go": {
+          "file": "go_hive/go-hive/internal/colony/runtime.go",
+          "line": 123,
+          "kind": "struct",
+          "name": "ColonyRuntime"
+        }
+      },
+      {
+        "name": "SkillsManager",
+        "expectation": "both",
+        "status": "ok",
+        "python": {
+          "file": "core/framework/skills/manager.py",
+          "line": 80,
+          "kind": "class",
+          "name": "SkillsManager"
+        },
+        "go": {
+          "file": "go_hive/go-hive/internal/skills/manager.go",
+          "line": 30,
+          "kind": "struct",
+          "name": "SkillsManager"
+        }
+      },
+      {
+        "name": "EventBus",
+        "expectation": "both",
+        "status": "ok",
+        "python": {
+          "file": "core/framework/host/event_bus.py",
+          "line": 388,
+          "kind": "class",
+          "name": "EventBus"
+        },
+        "go": {
+          "file": "go_hive/go-hive/internal/eventbus/bus.go",
+          "line": 72,
+          "kind": "struct",
+          "name": "EventBus"
+        }
+      },
+      {
+        "name": "ReminderHub",
+        "expectation": "both",
+        "status": "ok",
+        "python": {
+          "file": "core/framework/agent_loop/reminders.py",
+          "line": 356,
+          "kind": "class",
+          "name": "ReminderHub"
+        },
+        "go": {
+          "file": "go_hive/go-hive/internal/agentloop/reminder_hub.go",
+          "line": 48,
+          "kind": "struct",
+          "name": "ReminderHub"
+        }
+      },
+      {
+        "name": "MCPClient",
+        "expectation": "both",
+        "status": "ok",
+        "python": {
+          "file": "core/framework/loader/mcp_client.py",
+          "line": 142,
+          "kind": "class",
+          "name": "MCPClient"
+        },
+        "go": {
+          "file": "go_hive/go-hive/internal/tools/mcp.go",
+          "line": 33,
+          "kind": "interface",
+          "name": "MCPClient"
+        }
+      },
+      {
+        "name": "PlaybookRun",
+        "expectation": "both",
+        "status": "ok",
+        "python": {
+          "file": "core/framework/host/playbook/runner.py",
+          "line": 111,
+          "kind": "class",
+          "name": "PlaybookRun"
+        },
+        "go": {
+          "file": "go_hive/go-hive/internal/playbook/runner.go",
+          "line": 167,
+          "kind": "struct",
+          "name": "PlaybookRun"
+        }
+      },
+      {
+        "name": "TriggerDefinition",
+        "expectation": "both",
+        "status": "ok",
+        "python": {
+          "file": "core/framework/host/triggers.py",
+          "line": 32,
+          "kind": "class",
+          "name": "TriggerDefinition"
+        },
+        "go": {
+          "file": "go_hive/go-hive/internal/triggers/triggers.go",
+          "line": 12,
+          "kind": "struct",
+          "name": "TriggerDefinition"
+        }
+      },
+      {
+        "name": "MemoryFile",
+        "expectation": "both",
+        "status": "ok",
+        "python": {
+          "file": "core/framework/agents/queen/queen_memory_v2.py",
+          "line": 104,
+          "kind": "class",
+          "name": "MemoryFile"
+        },
+        "go": {
+          "file": "go_hive/go-hive/internal/memory/memory.go",
+          "line": 77,
+          "kind": "struct",
+          "name": "MemoryFile"
+        }
+      },
+      {
+        "name": "Orchestrator",
+        "expectation": "python",
+        "status": "ok",
+        "python": {
+          "file": "core/framework/orchestrator/orchestrator.py",
+          "line": 115,
+          "kind": "class",
+          "name": "Orchestrator"
+        },
+        "go": null
+      }
+    ],
+    "problems": [],
+    "index": {
+      "version": "1.6.4",
+      "lastIndexed": "2026-11-28T03:29:40.055Z",
+      "fileCount": 4096,
+      "nodeCount": 93195,
+      "edgeCount": 281961,
+      "pendingChanges": {
+        "added": 2,
+        "modified": 3,
+        "removed": 0
+      },
+      "state": "complete"
+    }
+  }
+}
